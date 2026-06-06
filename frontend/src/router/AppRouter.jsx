@@ -6,11 +6,16 @@ import MenuPage from "../pages/MenuPage";
 import EmployeesPage from "../pages/EmployeesPage";
 import CardsPage from "../pages/CardsPage";
 import GlobalExpensesPage from "../pages/GlobalExpensesPage";
+import SuperAdminPage from "../pages/SuperAdminPage";
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Super Admin панель — защищена токеном на самой странице */}
+        <Route path="/super-admin" element={<SuperAdminPage />} />
+
+        {/* Основное приложение */}
         <Route path="/" element={<Navigate to="/admin" replace />} />
         <Route path="/admin" element={<App />} />
         <Route path="/shop" element={<ShopPage />} />
