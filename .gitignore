@@ -18,3 +18,8 @@ backend/data/*.db-wal
 frontend/dist/
 frontend/node_modules/
 .env
+.env
+*.db
+*.db-shm
+*.db-wal
+.DS_Store
