@@ -33,6 +33,7 @@ func main() {
 	}
 
 	createTables()
+	initEmailJS()
 
 	r := gin.Default()
 
@@ -41,7 +42,7 @@ func main() {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Owner-Account-ID", "X-Data-Account-ID", "X-Super-Token"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Owner-Account-ID", "X-Data-Account-ID", "X-Super-Token", "X-Requested-With"},
 		AllowCredentials: true,
 	}))
 
@@ -50,6 +51,8 @@ func main() {
 	// Регистрация убрана из публичного доступа!
 	// ---------------------------------------------------------------------------
 	r.POST("/auth/login", login)
+	r.POST("/auth/login-otp/request", requestLoginOTP)
+	r.POST("/auth/login-otp/confirm", confirmLoginOTP)
 
 	// ---------------------------------------------------------------------------
 	// Super-admin маршруты — защищены токеном SUPER_ADMIN_TOKEN из .env

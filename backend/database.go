@@ -242,6 +242,17 @@ func createTables() {
 		qty REAL DEFAULT 0
 	);
 
+	CREATE TABLE IF NOT EXISTS login_otp_codes (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		code TEXT NOT NULL,
+		email TEXT NOT NULL,
+		expires_at TEXT NOT NULL,
+		used_at TEXT,
+		attempts INTEGER NOT NULL DEFAULT 0,
+		created_at TEXT NOT NULL
+	);
+
 	CREATE TABLE IF NOT EXISTS expenses (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		account_id INTEGER DEFAULT 1,
@@ -263,6 +274,7 @@ func createTables() {
 	}
 
 	migrations := []string{
+		`ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''`,
 		`ALTER TABLE users ADD COLUMN account_id INTEGER DEFAULT 1`,
 		`ALTER TABLE users ADD COLUMN owner_account_id INTEGER DEFAULT 0`,
 		`ALTER TABLE users ADD COLUMN workspace_id INTEGER DEFAULT 0`,
@@ -367,4 +379,7 @@ func createTables() {
 	db.Exec(`UPDATE product_recipes SET quantity = qty WHERE quantity = 0 AND qty IS NOT NULL`)
 
 	db.Exec(`UPDATE users SET role = 'worker' WHERE role = 'workspace'`)
+
+	// Автозаполнение email из username (если username выглядит как email)
+	db.Exec(`UPDATE users SET email = username WHERE (email IS NULL OR email = '') AND username LIKE '%@%'`)
 }

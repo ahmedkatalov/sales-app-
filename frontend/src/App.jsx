@@ -67,66 +67,137 @@ const workerLinks = [
 // Регистрация убрана: новые аккаунты создаются только через super-admin панель.
 // ---------------------------------------------------------------------------
 function LoginPage({ onAuth }) {
+  const [step, setStep] = useState("credentials"); // "credentials" | "otp"
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [otpValues, setOtpValues] = useState(Array(6).fill(""));
+  const [maskedEmail, setMaskedEmail] = useState("");
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const inputRefs = Array.from({ length: 6 }, () => null);
+  const otpRefs = [];
 
-  const submit = async (event) => {
-    event?.preventDefault?.();
-    if (loading) return;
+  useEffect(() => {
+    if (secondsLeft <= 0) return;
+    const t = setTimeout(() => setSecondsLeft(s => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [secondsLeft]);
 
-    const cleanUsername = (username || "").trim();
-    const cleanPassword = (password || "").trim();
+  const otpCode = otpValues.join("");
+  const isOtpComplete = otpCode.length === 6 && otpValues.every(Boolean);
 
-    setError("");
-    const errors = {};
-
-    if (!cleanUsername) errors.username = "Введи логин или email";
-    if (!cleanPassword) errors.password = "Введи пароль";
-
-    if (Object.keys(errors).length) {
-      setFieldErrors(errors);
+  const handleOtpChange = (index, rawValue) => {
+    const value = rawValue.replace(/\D/g, "");
+    if (!value) {
+      const next = [...otpValues]; next[index] = ""; setOtpValues(next); return;
+    }
+    if (value.length > 1) {
+      const digits = value.replace(/\D/g, "").slice(0, 6).split("");
+      const next = Array(6).fill("");
+      digits.forEach((d, i) => { next[i] = d; });
+      setOtpValues(next);
+      const focusIdx = Math.min(digits.length, 5);
+      otpRefs[focusIdx]?.focus();
       return;
     }
+    const next = [...otpValues]; next[index] = value; setOtpValues(next);
+    if (index < 5) otpRefs[index + 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === "Backspace") {
+      if (otpValues[index]) { const next = [...otpValues]; next[index] = ""; setOtpValues(next); return; }
+      if (index > 0) { otpRefs[index - 1]?.focus(); const next = [...otpValues]; next[index - 1] = ""; setOtpValues(next); }
+      return;
+    }
+    if (e.key === "ArrowLeft" && index > 0) otpRefs[index - 1]?.focus();
+    if (e.key === "ArrowRight" && index < 5) otpRefs[index + 1]?.focus();
+    if (e.key === "Enter" && isOtpComplete && !loading) submitOtp();
+  };
+
+  const submitCredentials = async (event) => {
+    event?.preventDefault?.();
+    if (loading) return;
+    const cleanUsername = (username || "").trim();
+    const cleanPassword = (password || "").trim();
+    setError("");
+    const errors = {};
+    if (!cleanUsername) errors.username = "Введи логин";
+    if (!cleanPassword) errors.password = "Введи пароль";
+    if (Object.keys(errors).length) { setFieldErrors(errors); return; }
     setFieldErrors({});
     setLoading(true);
-
     try {
-      const user = await post("/auth/login", {
-        username: cleanUsername,
-        password: cleanPassword,
-      });
-
-      if (!user || !user.accountId) {
-        throw new Error("Сервер ответил без данных аккаунта. Перезапусти backend и попробуй ещё раз.");
+      const res = await post("/auth/login-otp/request", { username: cleanUsername, password: cleanPassword });
+      setMaskedEmail(res.maskedEmail || "");
+      setOtpValues(Array(6).fill(""));
+      setStep("otp");
+      setSecondsLeft(60);
+      setTimeout(() => otpRefs[0]?.focus(), 100);
+    } catch (e) {
+      const msg = e?.message || "";
+      if (/неверн|unauthorized|invalid|not found/i.test(msg)) {
+        setError("Неверный логин или пароль");
+        setFieldErrors({ username: true, password: true });
+      } else if (/email/i.test(msg)) {
+        setError(msg);
+      } else if (/connect|ERR_CONNECTION|localhost:3000/i.test(msg)) {
+        setError("Не удаётся подключиться к серверу");
+      } else {
+        setError(msg || "Ошибка входа");
       }
+    } finally { setLoading(false); }
+  };
 
+  const submitOtp = async () => {
+    if (!isOtpComplete || loading) return;
+    setError("");
+    setLoading(true);
+    try {
+      const user = await post("/auth/login-otp/confirm", { username: username.trim(), code: otpCode });
+      if (!user || !user.accountId) throw new Error("Сервер ответил без данных аккаунта");
       setSession(user);
       onAuth(user);
     } catch (e) {
       const msg = e?.message || "";
-
-      if (/неверн|unauthorized|invalid credential|wrong password|не найден|not found/i.test(msg)) {
-        setError("Неверный логин или пароль. Проверь данные и попробуй снова.");
-        setFieldErrors({ username: true, password: true });
-      } else if (/connection reset|ERR_CONNECTION|net::/i.test(msg) || msg.includes("12 секунд") || msg.includes("localhost:3000")) {
-        setError("Не удаётся подключиться к серверу. Проверь что backend запущен (docker-compose up).");
+      if (/истёк|expired/i.test(msg)) {
+        setError("Код истёк. Запроси новый.");
+      } else if (/попытки|attempts/i.test(msg)) {
+        setError(msg);
+        setOtpValues(Array(6).fill(""));
+      } else if (/неверн|invalid|wrong/i.test(msg)) {
+        setError(msg || "Неверный код");
+        setOtpValues(Array(6).fill(""));
+        setTimeout(() => otpRefs[0]?.focus(), 50);
       } else {
-        setError(msg || "Ошибка входа. Попробуй ещё раз.");
+        setError(msg || "Ошибка подтверждения");
       }
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
+  };
+
+  const resendOtp = async () => {
+    if (secondsLeft > 0 || loading) return;
+    setError("");
+    setLoading(true);
+    try {
+      const res = await post("/auth/login-otp/request", { username: username.trim(), password: password.trim() });
+      setMaskedEmail(res.maskedEmail || maskedEmail);
+      setOtpValues(Array(6).fill(""));
+      setSecondsLeft(60);
+      setTimeout(() => otpRefs[0]?.focus(), 100);
+    } catch (e) {
+      setError(e?.message || "Ошибка при повторной отправке");
+    } finally { setLoading(false); }
   };
 
   const fieldClass = (key) =>
     `w-full rounded-2xl border-2 px-4 py-3.5 text-sm font-bold outline-none transition-all duration-200 bg-slate-950/60 text-white placeholder:text-slate-500 ${
       fieldErrors[key]
-        ? "border-red-500/70 focus:border-red-400 focus:ring-2 focus:ring-red-500/20"
-        : "border-white/10 focus:border-blue-500/70 focus:ring-2 focus:ring-blue-500/20 hover:border-white/20"
+        ? "border-red-500/70 focus:border-red-400"
+        : "border-white/10 focus:border-blue-500/70 hover:border-white/20"
     }`;
 
   return (
@@ -134,25 +205,29 @@ function LoginPage({ onAuth }) {
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-blue-600/10 blur-[120px]" />
         <div className="absolute -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-violet-600/10 blur-[120px]" />
-        <div className="absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/5 blur-[80px]" />
       </div>
 
       <div className="relative z-10 w-full max-w-[420px]">
-        <div className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-7 shadow-2xl shadow-black/40 backdrop-blur-xl">
+        <div className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-7 shadow-2xl backdrop-blur-xl">
 
           <div className="mb-8">
             <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 shadow-xl shadow-blue-600/30">
               <span className="text-2xl font-black text-white">S</span>
             </div>
-            <p className="mb-1 text-xs font-black uppercase tracking-widest text-blue-400">
-              Sales App
-            </p>
-            <h1 className="text-3xl font-black tracking-tight text-white">
-              Добро пожаловать
-            </h1>
-            <p className="mt-2 text-sm font-medium text-slate-400">
-              Войди чтобы продолжить работу
-            </p>
+            <p className="mb-1 text-xs font-black uppercase tracking-widest text-blue-400">Sales App</p>
+            {step === "credentials" ? (
+              <>
+                <h1 className="text-3xl font-black tracking-tight text-white">Добро пожаловать</h1>
+                <p className="mt-2 text-sm font-medium text-slate-400">Войди чтобы продолжить работу</p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-2xl font-black tracking-tight text-white">Подтверждение входа</h1>
+                <p className="mt-2 text-sm font-medium text-slate-400">
+                  Код отправлен на <span className="text-blue-400 font-bold">{maskedEmail || "твой email"}</span>
+                </p>
+              </>
+            )}
           </div>
 
           {error && (
@@ -162,71 +237,94 @@ function LoginPage({ onAuth }) {
             </div>
           )}
 
-          <div className="space-y-3" onKeyDown={(e) => e.key === "Enter" && !loading && submit(e)}>
-            <div>
-              <input
-                value={username}
-                onChange={(e) => { setUsername(e.target.value); setFieldErrors((p) => ({ ...p, username: false })); setError(""); }}
-                placeholder="Логин или email"
-                className={fieldClass("username")}
-                autoComplete="username"
-                autoFocus
-              />
-              {fieldErrors.username && typeof fieldErrors.username === "string" && (
-                <p className="mt-1.5 px-1 text-xs font-bold text-red-400">{fieldErrors.username}</p>
-              )}
-            </div>
-
-            <div className="relative">
-              <input
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); setFieldErrors((p) => ({ ...p, password: false })); setError(""); }}
-                placeholder="Пароль"
-                type={showPassword ? "text" : "password"}
-                className={fieldClass("password") + " pr-12"}
-                autoComplete="current-password"
-                onKeyDown={(e) => e.key === "Enter" && submit(e)}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((p) => !p)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                tabIndex={-1}
-              >
-                {showPassword ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          {step === "credentials" && (
+            <div className="space-y-3" onKeyDown={(e) => e.key === "Enter" && !loading && submitCredentials(e)}>
+              <div>
+                <input value={username} onChange={(e) => { setUsername(e.target.value); setFieldErrors(p => ({ ...p, username: false })); setError(""); }}
+                  placeholder="Логин или email" className={fieldClass("username")} autoComplete="username" autoFocus />
+                {fieldErrors.username && typeof fieldErrors.username === "string" && (
+                  <p className="mt-1.5 px-1 text-xs font-bold text-red-400">{fieldErrors.username}</p>
                 )}
+              </div>
+              <div className="relative">
+                <input value={password} onChange={(e) => { setPassword(e.target.value); setFieldErrors(p => ({ ...p, password: false })); setError(""); }}
+                  placeholder="Пароль" type={showPassword ? "text" : "password"} className={fieldClass("password") + " pr-12"}
+                  autoComplete="current-password" onKeyDown={(e) => e.key === "Enter" && submitCredentials(e)} />
+                <button type="button" onClick={() => setShowPassword(p => !p)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white" tabIndex={-1}>
+                  {showPassword ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  )}
+                </button>
+              </div>
+              <button type="button" onClick={submitCredentials} disabled={loading}
+                className="relative mt-1 w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-600/30 transition-all duration-200 hover:from-blue-500 hover:to-blue-400 disabled:cursor-not-allowed disabled:opacity-60">
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                    Отправляю код...
+                  </span>
+                ) : "Получить код"}
               </button>
             </div>
+          )}
 
-            <button
-              type="button"
-              onClick={submit}
-              disabled={loading}
-              className="relative mt-1 w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-600/30 transition-all duration-200 hover:from-blue-500 hover:to-blue-400 hover:shadow-blue-500/40 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                  </svg>
-                  Вхожу...
-                </span>
-              ) : "Войти"}
-            </button>
-          </div>
+          {step === "otp" && (
+            <div className="space-y-4">
+              <div className="flex gap-2 justify-between">
+                {otpValues.map((value, index) => (
+                  <input
+                    key={index}
+                    ref={el => { otpRefs[index] = el; }}
+                    value={value}
+                    onChange={e => handleOtpChange(index, e.target.value)}
+                    onKeyDown={e => handleOtpKeyDown(index, e)}
+                    onPaste={e => { e.preventDefault(); handleOtpChange(0, e.clipboardData.getData("text")); }}
+                    inputMode="numeric"
+                    maxLength={1}
+                    className="h-14 w-12 rounded-2xl border-2 border-white/10 bg-slate-950/60 text-center text-2xl font-black text-white outline-none transition focus:border-blue-500/70 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                ))}
+              </div>
+
+              <button type="button" onClick={submitOtp} disabled={!isOtpComplete || loading}
+                className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 py-3.5 text-sm font-black text-white shadow-lg disabled:opacity-60 disabled:cursor-not-allowed transition">
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                    Проверяю...
+                  </span>
+                ) : "Подтвердить вход"}
+              </button>
+
+              <div className="flex items-center justify-between gap-3">
+                <button type="button" onClick={() => { setStep("credentials"); setError(""); setOtpValues(Array(6).fill("")); }}
+                  className="text-sm font-bold text-slate-400 hover:text-white transition">
+                  ← Изменить данные
+                </button>
+                <button type="button" onClick={resendOtp} disabled={secondsLeft > 0 || loading}
+                  className="text-sm font-bold text-blue-400 hover:text-blue-300 disabled:text-slate-500 disabled:cursor-not-allowed transition">
+                  {secondsLeft > 0 ? `Повторно через ${secondsLeft} сек` : "Отправить снова"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        <p className="mt-5 text-center text-xs font-medium text-slate-600">
-          Управление бизнесом · Sales App
-        </p>
+        <p className="mt-5 text-center text-xs font-medium text-slate-600">Управление бизнесом · Sales App</p>
       </div>
     </div>
   );
 }
+
 
 export default function App() {
   const [session, setSessionState] = useState(getSession());
