@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import App from "../App";
 import ShopPage from "../pages/ShopPage";
@@ -15,14 +15,15 @@ export default function AppRouter() {
         {/* Super Admin панель — защищена токеном на самой странице */}
         <Route path="/super-admin" element={<SuperAdminPage />} />
 
-        {/* Основное приложение */}
-        <Route path="/" element={<Navigate to="/admin" replace />} />
-        <Route path="/admin" element={<App />} />
+        {/* Отдельные публичные страницы */}
         <Route path="/shop" element={<ShopPage />} />
         <Route path="/menu" element={<MenuPage />} />
         <Route path="/employees" element={<EmployeesPage />} />
         <Route path="/cards" element={<CardsPage />} />
-        <Route path="/expenses" element={<GlobalExpensesPage />} />
+        <Route path="/global-expenses" element={<GlobalExpensesPage />} />
+
+        {/* Основное приложение — обрабатывает все остальные роуты включая /work, /pos и т.д. */}
+        <Route path="/*" element={<App />} />
       </Routes>
     </BrowserRouter>
   );
