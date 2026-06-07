@@ -1817,35 +1817,19 @@ ${lines}${expense ? `
   };
 
     return (
-    <div className="box-border h-[calc(100vh-96px)] w-full overflow-hidden px-3 py-3 text-white sm:px-4 lg:px-6">
+    <div className="box-border h-[calc(100vh-88px)] w-full overflow-hidden px-2 py-2 text-white sm:px-4 lg:px-6">
       <div className="mx-auto flex h-full w-full max-w-[1500px] flex-col overflow-hidden">
-        <div className="mb-3 flex shrink-0 flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-emerald-400/10 px-3 py-1 text-[11px] font-black text-emerald-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+        <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-2.5 py-1 text-[11px] font-black text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               Онлайн
             </div>
-            <h2 className="text-xl font-black tracking-tight sm:text-2xl">
-              AI-ассистент бизнеса
-            </h2>
-            <p className="mt-1 max-w-3xl text-xs font-bold leading-5 text-slate-400 sm:text-sm">
-              Склад, меню, продажи, клиенты, долги, расходы, сотрудники, карты и отчёты в одном чате.
-            </p>
+            <h2 className="text-base font-black tracking-tight sm:text-xl">AI-ассистент</h2>
           </div>
-
-          <div className="flex shrink-0 flex-wrap gap-2">
-            <button
-              onClick={load}
-              className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-black text-white transition hover:bg-white/15"
-            >
-              ⟳ Обновить
-            </button>
-            <Link
-              to="/warehouse"
-              className="rounded-2xl bg-white px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-blue-50"
-            >
-              Обычный склад
-            </Link>
+          <div className="flex gap-2">
+            <button onClick={load} className="rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white">⟳</button>
+            <Link to="/warehouse" className="rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white">Склад</Link>
           </div>
         </div>
 
@@ -1854,20 +1838,18 @@ ${lines}${expense ? `
             activeRightPanels ? "xl:grid-cols-[minmax(0,1fr)_340px]" : "xl:grid-cols-1"
           }`}
         >
-          <section className="flex h-[calc(100vh-245px)] min-h-[520px] min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] shadow-2xl shadow-black/20">
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-600/30">
+          <section className="flex h-[calc(100vh-200px)] min-h-[400px] min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] shadow-2xl shadow-black/20">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3 py-2.5">
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm shadow-lg shadow-blue-600/30">
                   🤖
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-lg font-black sm:text-xl">Чат с нейронкой</p>
-                  <p className="truncate text-xs font-bold text-slate-400">
-                    Claude Sonnet 4.6 · понимает всё приложение и свободный диалог
-                  </p>
+                  <p className="truncate text-sm font-black">Чат с нейронкой</p>
+                  <p className="hidden truncate text-[11px] text-slate-400 sm:block">Claude Sonnet 4.6</p>
                 </div>
               </div>
-              <span className="shrink-0 rounded-full bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black text-emerald-300">
+              <span className="shrink-0 rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-black text-emerald-300">
                 AUTO SAVE
               </span>
             </div>
@@ -1886,48 +1868,51 @@ ${lines}${expense ? `
               <div ref={bottomRef} />
             </div>
 
-            <div className="shrink-0 border-t border-white/10 bg-slate-950/30 p-3">
-              <div className="rounded-[1.2rem] border border-blue-400/30 bg-slate-950/80 p-2 shadow-xl shadow-blue-950/10">
-                <div className="flex gap-2">
-                  <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        send();
-                      }
-                    }}
-                    placeholder="Напиши что угодно — закупку, расход, вопрос, или просто поговори..."
-                    className="h-[42px] max-h-[86px] flex-1 resize-none overflow-y-auto bg-transparent px-3 py-2 text-sm font-bold leading-5 text-white outline-none placeholder:text-slate-500"
-                  />
+            <div className="shrink-0 border-t border-white/10 bg-slate-950/50 px-3 py-2">
+              <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none" style={{scrollbarWidth:"none"}}>
+                {[
+                  "что заканчивается?",
+                  "продажи сегодня",
+                  "молоко 4 пачки по 1л за 420",
+                  "расход такси 1200",
+                  "какие типы меню?",
+                  "кто должен деньги?",
+                ].map((x) => (
                   <button
-                    onClick={send}
-                    disabled={loading}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1.1rem] bg-gradient-to-br from-blue-600 to-violet-600 text-xl font-black shadow-lg shadow-blue-900/30 transition hover:scale-[1.02] disabled:opacity-60"
+                    key={x}
+                    onClick={() => setInput(x)}
+                    className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-bold text-slate-300 active:bg-white/15"
                   >
-                    ↑
+                    {x}
                   </button>
-                </div>
-
-                <div className="mt-2 flex flex-wrap gap-2 px-1 pb-1">
-                  {[
-                    "что заканчивается?",
-                    "продажи сегодня",
-                    "молоко 4 пачки по 1л за 420",
-                    "расход такси 1200",
-                    "какие типы меню?",
-                    "кто должен деньги?",
-                  ].map((x) => (
-                    <button
-                      key={x}
-                      onClick={() => setInput(x)}
-                      className="rounded-full bg-white/5 px-3 py-1.5 text-[11px] font-black text-blue-200 hover:bg-white/10"
-                    >
-                      {x}
-                    </button>
-                  ))}
-                </div>
+                ))}
+              </div>
+              <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900 px-3 py-2">
+                <textarea
+                  value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    e.target.style.height = "auto";
+                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      send();
+                    }
+                  }}
+                  placeholder="Напиши закупку, расход или вопрос..."
+                  rows={1}
+                  className="flex-1 resize-none bg-transparent text-sm font-medium leading-5 text-white outline-none placeholder:text-slate-500"
+                  style={{minHeight: "24px", maxHeight: "120px"}}
+                />
+                <button
+                  onClick={send}
+                  disabled={loading}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-lg font-black shadow-lg transition active:scale-95 disabled:opacity-50"
+                >
+                  {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : "↑"}
+                </button>
               </div>
             </div>
           </section>
