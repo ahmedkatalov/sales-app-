@@ -324,7 +324,7 @@ export default function ProfilePage({
 
   return (
     <div
-      className="relative min-h-screen  pb-24 text-white sm:pb-10"
+      className="relative min-h-screen pb-nav text-white sm:pb-10"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
       <div className="pointer-events-none fixed inset-0 overflow-hidden">

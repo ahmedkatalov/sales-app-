@@ -688,7 +688,7 @@ export default function WarehousePage() {
   };
 
   return (
-    <div className="relative -m-4 min-h-screen overflow-hidden bg-[#050b1d] px-3 pb-20 pt-3 text-white sm:-m-6 sm:px-4 sm:pb-8 lg:px-5">
+    <div className="relative -m-4 min-h-screen overflow-hidden bg-[#050b1d] px-3 pb-nav pt-3 text-white sm:-m-6 sm:px-4 sm:pb-8 lg:px-5">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-28 -top-28 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
         <div className="absolute right-0 top-20 h-96 w-96 rounded-full bg-violet-600/20 blur-3xl" />

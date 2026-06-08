@@ -56,7 +56,7 @@ export default function PendingPaymentsPage() {
   );
 
   return (
-    <div className="pb-24 sm:pb-10">
+    <div className="pb-nav sm:pb-10">
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <p className="text-sm font-bold text-blue-400">Касса</p>

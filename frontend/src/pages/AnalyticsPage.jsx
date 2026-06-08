@@ -352,7 +352,7 @@ export default function AnalyticsPage() {
       <div className="pointer-events-none absolute right-0 top-20 h-96 w-96 rounded-full bg-violet-700/20 blur-3xl" />
       <div className="pointer-events-none absolute bottom-0 left-1/2 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl" />
 
-      <div className="relative mx-auto max-w-[1500px] pb-24 sm:pb-10">
+      <div className="relative mx-auto max-w-[1500px] pb-nav sm:pb-10">
         <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-300">

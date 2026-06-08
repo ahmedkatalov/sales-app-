@@ -1817,7 +1817,7 @@ ${lines}${expense ? `
   };
 
     return (
-    <div className="box-border h-[calc(100vh-88px)] w-full overflow-hidden px-2 py-2 text-white sm:px-4 lg:px-6">
+    <div className="box-border w-full overflow-hidden px-2 py-2 text-white sm:px-4 lg:px-6" style={{height:"calc(100dvh - 88px)"}}>
       <div className="mx-auto flex h-full w-full max-w-[1500px] flex-col overflow-hidden">
         <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -1838,7 +1838,7 @@ ${lines}${expense ? `
             activeRightPanels ? "xl:grid-cols-[minmax(0,1fr)_340px]" : "xl:grid-cols-1"
           }`}
         >
-          <section className="flex h-[calc(100vh-200px)] min-h-[400px] min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] shadow-2xl shadow-black/20">
+          <section className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] shadow-2xl shadow-black/20" style={{height:"calc(100dvh - 200px)",minHeight:"300px"}}>
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3 py-2.5">
               <div className="flex min-w-0 items-center gap-2">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm shadow-lg shadow-blue-600/30">
@@ -1919,7 +1919,7 @@ ${lines}${expense ? `
 
           {activeRightPanels > 0 && (
             <aside
-              className="hidden h-[calc(100vh-245px)] min-w-0 gap-4 overflow-hidden xl:grid xl:self-start"
+              className="hidden min-w-0 gap-4 overflow-hidden xl:grid xl:self-start" style={{height:"calc(100dvh - 245px)"}}
               style={{ gridTemplateRows: rightPanelRows }}
             >
               {sidePanels.recent && (

@@ -7,3 +7,44 @@
   .btn-dark { @apply bg-slate-950 hover:bg-slate-800 text-white px-5 py-3 rounded-2xl font-bold shadow; }
   .btn-white { @apply bg-white hover:bg-slate-50 text-slate-950 px-5 py-3 rounded-2xl font-bold shadow border border-slate-200; }
 }
+
+/* ── Мобильная высота с учётом адресной строки браузера ── */
+:root {
+  --nav-h: 72px; /* высота нижнего нава */
+}
+
+/* dvh — динамическая высота вьюпорта (iOS Safari/Chrome корректно) */
+.h-screen-mobile {
+  height: 100dvh;
+}
+
+/* Паддинг снизу = высота нава + safe area */
+.pb-nav {
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+}
+
+/* Для страниц с фиксированной высотой (AI-чат) */
+.h-content-mobile {
+  height: calc(100dvh - env(safe-area-inset-top, 0px));
+}
+
+/* Нижний нав — правильное позиционирование с safe area */
+.mobile-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Плавное скрытие нава при появлении клавиатуры */
+@media (max-height: 500px) {
+  .hide-on-keyboard {
+    display: none !important;
+  }
+}
+
+/* Скрываем scrollbar везде где нужно */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

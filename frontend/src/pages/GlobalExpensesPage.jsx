@@ -63,7 +63,7 @@ export default function GlobalExpensesPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 p-4 sm:p-6 pb-24 sm:pb-10">
+    <div className="min-h-screen bg-slate-950 p-4 sm:p-6 pb-nav sm:pb-10">
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <p className="text-sm font-bold text-blue-400">Финансы</p>

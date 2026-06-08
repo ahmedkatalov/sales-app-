@@ -83,7 +83,7 @@ export default function SalesAnalyticsPage() {
   const avgCheck = Number(stats.salesCount || 0) > 0 ? Number(stats.totalRevenue || 0) / Number(stats.salesCount || 1) : 0;
 
   return (
-    <div className="relative min-h-screen overflow-hidden pb-24 text-white sm:pb-10">
+    <div className="relative min-h-screen overflow-hidden pb-nav text-white sm:pb-10">
       <div className="pointer-events-none absolute -top-28 left-1/4 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
       <div className="pointer-events-none absolute right-0 top-24 h-80 w-80 rounded-full bg-violet-700/20 blur-3xl" />
 

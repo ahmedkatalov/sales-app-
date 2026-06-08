@@ -335,6 +335,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [toasts, setToasts] = useState([]);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [desktopNavMode, setDesktopNavMode] = useState(() => localStorage.getItem("sales_app_desktop_nav_mode") || "header");
   const location = useLocation();
   const isAIWarehouseRoute = location.pathname === "/ai-warehouse";
@@ -418,6 +419,33 @@ export default function App() {
     window.addEventListener("sales-pending-change", loadPendingCount);
     return () => window.removeEventListener("sales-pending-change", loadPendingCount);
   }, [session, workspace]);
+
+  // Скрываем нижний нав когда открывается клавиатура
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onFocus = () => setKeyboardVisible(true);
+    const onBlur = () => setTimeout(() => setKeyboardVisible(false), 100);
+    document.addEventListener("focusin", onFocus);
+    document.addEventListener("focusout", onBlur);
+    // visualViewport для iOS Safari
+    const vvp = window.visualViewport;
+    if (vvp) {
+      const onResize = () => {
+        const threshold = window.innerHeight * 0.75;
+        setKeyboardVisible(vvp.height < threshold);
+      };
+      vvp.addEventListener("resize", onResize);
+      return () => {
+        document.removeEventListener("focusin", onFocus);
+        document.removeEventListener("focusout", onBlur);
+        vvp.removeEventListener("resize", onResize);
+      };
+    }
+    return () => {
+      document.removeEventListener("focusin", onFocus);
+      document.removeEventListener("focusout", onBlur);
+    };
+  }, []);
 
   if (!session) {
     return <LoginPage onAuth={(u) => setSessionState(u)} />;
@@ -580,9 +608,10 @@ export default function App() {
       )}
 
       <main
-        className={`h-screen flex-1 overflow-x-hidden p-4 pb-28 sm:p-5 lg:pb-5 ${
-          isAIWarehouseRoute ? "overflow-hidden" : "overflow-y-auto"
+        className={`flex-1 overflow-x-hidden p-4 pb-nav sm:p-5 lg:pb-5 ${
+          isAIWarehouseRoute ? "h-screen overflow-hidden" : "min-h-screen overflow-y-auto"
         }`}
+        style={isAIWarehouseRoute ? { height: "100dvh" } : {}}
       >
         {useHeaderNav && (
           <DesktopNavigation
@@ -696,7 +725,7 @@ export default function App() {
       )}
 
       {mobileMoreOpen && mobileMoreLinks.length > 0 && (
-        <div className="fixed inset-x-3 bottom-24 z-40 rounded-[1.7rem] border border-white/20 bg-slate-950/95 p-3 text-white shadow-2xl shadow-slate-950/30 backdrop-blur lg:hidden">
+        <div className="fixed inset-x-3 bottom-20 z-40 rounded-[1.7rem] border border-white/20 bg-slate-950/95 p-3 text-white shadow-2xl shadow-slate-950/30 backdrop-blur lg:hidden">
           <div className="mb-2 flex items-center justify-between px-2">
             <p className="text-sm font-black text-slate-300">Еще разделы</p>
             <button
@@ -737,7 +766,8 @@ export default function App() {
       )}
 
       <nav
-        className="fixed inset-x-3 bottom-3 z-40 grid grid-flow-col auto-cols-fr gap-2 rounded-[1.7rem] border border-white/20 bg-slate-950/95 p-2 text-white shadow-2xl shadow-slate-950/30 backdrop-blur lg:hidden"
+        className={`fixed inset-x-3 z-40 grid grid-flow-col auto-cols-fr gap-2 rounded-[1.7rem] border border-white/20 bg-slate-950/95 p-2 text-white shadow-2xl shadow-slate-950/30 backdrop-blur lg:hidden transition-all duration-200 ${keyboardVisible ? "bottom-[-100px] pointer-events-none opacity-0" : "bottom-3 opacity-100"}`}
+        style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}
         aria-label="Нижняя навигация"
       >
         {mobileMainLinks.map(([to, label, Icon, badge]) => (

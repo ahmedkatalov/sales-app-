@@ -146,7 +146,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   };
 
   return (
-    <div className="pb-28 text-slate-100 sm:pb-10">
+    <div className="pb-nav text-slate-100 sm:pb-10">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_0%,rgba(37,99,235,.22),transparent_30%),radial-gradient(circle_at_88%_8%,rgba(124,58,237,.22),transparent_30%),linear-gradient(135deg,#050914_0%,#071128_45%,#10194a_100%)]" />
 
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
