@@ -1,7 +1,158 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { del, get, post } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, money, num } from "../utils/format";
+
+
+// ─── AI-компонент автодополнения ингредиентов ────────────────────────────────
+function SmartIngredientInput({ value, onChange, warehouseItems = [], onSelectItem }) {
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const debounceRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const searchSuggestions = useCallback(async (text) => {
+    if (!text || text.length < 2) {
+      setSuggestions([]);
+      setOpen(false);
+      return;
+    }
+
+    setLoading(true);
+    const lower = text.toLowerCase();
+
+    // Локальный поиск по складу сразу
+    const localMatches = warehouseItems
+      .filter((item) => item.name.toLowerCase().includes(lower))
+      .slice(0, 5)
+      .map((item) => ({ id: item.id, name: item.name, source: "warehouse", unit: item.unit, qty: item.quantity }));
+
+    if (localMatches.length >= 3) {
+      setSuggestions(localMatches);
+      setOpen(true);
+      setLoading(false);
+      return;
+    }
+
+    // Если мало совпадений — спрашиваем AI
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 300,
+          messages: [{
+            role: "user",
+            content: `Пользователь пишет ингредиент для рецепта кофейни/ресторана: "${text}"
+Склад (уже есть): ${warehouseItems.slice(0, 30).map(i => i.name).join(", ")}
+
+Ответь ТОЛЬКО JSON массивом (без markdown) — топ-5 предложений:
+[{"name": "точное название", "source": "warehouse|ai", "warehouseId": id или null}]
+
+Правила:
+- Если есть похожее на складе — source="warehouse" и укажи warehouseId
+- Если нет — source="ai", предложи правильное название для этого типа заведения
+- Исправь опечатки, нормализуй название
+- Только русские названия`
+          }]
+        })
+      });
+      const data = await res.json();
+      const text_response = data.content?.[0]?.text || "[]";
+      const clean = text_response.replace(/```json|```/g, "").trim();
+      const aiSuggestions = JSON.parse(clean);
+
+      // Мержим локальные + AI
+      const merged = [...localMatches];
+      for (const s of aiSuggestions) {
+        if (!merged.find(m => m.name.toLowerCase() === s.name.toLowerCase())) {
+          const warehouseMatch = warehouseItems.find(i => i.id === s.warehouseId);
+          merged.push({
+            id: warehouseMatch?.id || null,
+            name: s.name,
+            source: warehouseMatch ? "warehouse" : "ai",
+            unit: warehouseMatch?.unit || "",
+            qty: warehouseMatch?.quantity || null,
+          });
+        }
+      }
+      setSuggestions(merged.slice(0, 6));
+      setOpen(true);
+    } catch {
+      setSuggestions(localMatches);
+      setOpen(localMatches.length > 0);
+    } finally {
+      setLoading(false);
+    }
+  }, [warehouseItems]);
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    onChange(val);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => searchSuggestions(val), 350);
+  };
+
+  const handleSelect = (suggestion) => {
+    onChange(suggestion.name);
+    if (suggestion.id) onSelectItem(suggestion.id);
+    setSuggestions([]);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={handleChange}
+          onFocus={() => value.length >= 2 && suggestions.length > 0 && setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder="Название ингредиента (добавим на склад позже)"
+          className="w-full rounded-2xl border border-yellow-400/30 bg-yellow-500/5 px-4 py-2.5 pr-8 text-sm font-bold text-yellow-100 outline-none placeholder:text-yellow-600/60 focus:border-yellow-400/60"
+        />
+        {loading && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2">
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-yellow-400/30 border-t-yellow-400 inline-block" />
+          </span>
+        )}
+        {!loading && value && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-yellow-600">✨</span>
+        )}
+      </div>
+
+      {open && suggestions.length > 0 && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
+          {suggestions.map((s, i) => (
+            <button
+              key={i}
+              type="button"
+              onMouseDown={() => handleSelect(s)}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-bold transition hover:bg-white/10"
+            >
+              <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black ${
+                s.source === "warehouse"
+                  ? "bg-emerald-500/20 text-emerald-300"
+                  : "bg-blue-500/20 text-blue-300"
+              }`}>
+                {s.source === "warehouse" ? "склад" : "AI"}
+              </span>
+              <span className="flex-1 text-white">{s.name}</span>
+              {s.source === "warehouse" && s.qty !== null && (
+                <span className="text-xs text-slate-400">{s.qty} {s.unit}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function WorkPage() {
   const [types, setTypes] = useState([]);
@@ -287,6 +438,7 @@ export default function WorkPage() {
       ...rows,
       {
         warehouseItemId: "",
+        ingredientName: "",
         quantity: "",
       },
     ]);
@@ -309,10 +461,12 @@ export default function WorkPage() {
     if (!productForm.name.trim()) return setError("Введите название товара");
 
     const cleanRecipe = recipe
-      .filter((row) => row.warehouseItemId && num(row.quantity) > 0)
+      .filter((row) => (row.warehouseItemId || row.ingredientName) && num(row.quantity) > 0)
       .map((row) => ({
-        warehouseItemId: Number(row.warehouseItemId),
-        warehouse_item_id: Number(row.warehouseItemId),
+        warehouseItemId: Number(row.warehouseItemId) || 0,
+        warehouse_item_id: Number(row.warehouseItemId) || 0,
+        ingredientName: row.ingredientName || "",
+        itemName: row.ingredientName || "",
         quantity: num(row.quantity),
       }));
 
@@ -1077,48 +1231,66 @@ export default function WorkPage() {
                 const selected = safeWarehouseItems.find(
                   (item) => String(item.id) === String(row.warehouseItemId)
                 );
+                const isUnlinked = !row.warehouseItemId && row.ingredientName;
 
                 return (
-                  <div
-                    key={index}
-                    className="grid gap-2 sm:grid-cols-[1fr_170px_44px]"
-                  >
-                    <select
-                      value={row.warehouseItemId}
-                      onChange={(e) =>
-                        updateRecipeRow(
-                          index,
-                          "warehouseItemId",
-                          e.target.value
-                        )
-                      }
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
-                    >
-                      <option value="">Выбери сырьё со склада</option>
-                      {safeWarehouseItems.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name} — остаток {item.quantity} {item.unit}
-                        </option>
-                      ))}
-                    </select>
+                  <div key={index} className="flex flex-col gap-1.5">
+                    <div className="grid gap-2 sm:grid-cols-[1fr_170px_44px]">
+                      <div className="relative">
+                        <select
+                          value={row.warehouseItemId || ""}
+                          onChange={(e) =>
+                            updateRecipeRow(index, "warehouseItemId", e.target.value)
+                          }
+                          className={`w-full rounded-2xl border px-4 py-3 font-bold text-white outline-none shadow-inner shadow-black/10 focus:ring-4 focus:ring-blue-500/10 ${
+                            isUnlinked
+                              ? "border-yellow-400/40 bg-yellow-500/10 focus:border-yellow-400/60"
+                              : "border-white/10 bg-white/5 focus:border-blue-400/60"
+                          }`}
+                        >
+                          <option value="">— не выбрано (виртуальный) —</option>
+                          {safeWarehouseItems.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.name} — остаток {item.quantity} {item.unit}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                    <input
-                      type="number"
-                      value={row.quantity}
-                      onChange={(e) =>
-                        updateRecipeRow(index, "quantity", e.target.value)
-                      }
-                      placeholder={selected ? `Кол-во, ${selected.unit}` : "Кол-во"}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
-                    />
+                      <input
+                        type="number"
+                        value={row.quantity}
+                        onChange={(e) =>
+                          updateRecipeRow(index, "quantity", e.target.value)
+                        }
+                        placeholder={selected ? `Кол-во, ${selected.unit}` : "Кол-во"}
+                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
+                      />
 
-                    <button
-                      type="button"
-                      onClick={() => removeRecipeRow(index)}
-                      className="rounded-2xl bg-red-500/10 font-black text-red-400"
-                    >
-                      ×
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => removeRecipeRow(index)}
+                        className="rounded-2xl bg-red-500/10 font-black text-red-400"
+                      >
+                        ×
+                      </button>
+                    </div>
+
+                    {/* AI-поле имени ингредиента — если не выбран со склада */}
+                    {!row.warehouseItemId && (
+                      <SmartIngredientInput
+                        value={row.ingredientName || ""}
+                        onChange={(val) => updateRecipeRow(index, "ingredientName", val)}
+                        warehouseItems={safeWarehouseItems}
+                        onSelectItem={(id) => updateRecipeRow(index, "warehouseItemId", id)}
+                      />
+                    )}
+
+                    {isUnlinked && (
+                      <p className="px-1 text-xs font-bold text-yellow-500">
+                        ⚠ «{row.ingredientName}» не найден на складе — себестоимость не считается. Добавь на склад и он привяжется автоматически.
+                      </p>
+                    )}
                   </div>
                 );
               })}

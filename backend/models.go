@@ -65,6 +65,8 @@ type ProductRecipe struct {
 	WarehouseItemID      int     `json:"warehouseItemId"`
 	WarehouseItemIDSnake int     `json:"warehouse_item_id"`
 	ItemName             string  `json:"itemName"`
+	IngredientName       string  `json:"ingredientName"`
+	Unlinked             bool    `json:"unlinked"`
 	Unit                 string  `json:"unit"`
 	Quantity             float64 `json:"quantity"`
 	QuantityUnit         string  `json:"quantityUnit"`

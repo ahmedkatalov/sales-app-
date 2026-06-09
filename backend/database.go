@@ -128,6 +128,7 @@ func createTables() {
 		account_id INTEGER DEFAULT 1,
 		product_id INTEGER DEFAULT 0,
 		warehouse_item_id INTEGER DEFAULT 0,
+		ingredient_name TEXT DEFAULT '',
 		quantity REAL DEFAULT 0,
 		input_quantity REAL DEFAULT 0,
 		input_unit TEXT DEFAULT '',

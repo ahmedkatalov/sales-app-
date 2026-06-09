@@ -356,6 +356,8 @@ func createWarehouseItem(c *gin.Context) {
 	`, item.AccountID, itemID, item.Quantity, item.Note, now)
 
 	recalcWarehouseItem(itemID, item.AccountID)
+	// Автоматически линкуем виртуальные ингредиенты рецептов с этим товаром
+	go linkUnlinkedRecipes(item.AccountID, itemID, item.Name)
 	var hiddenInt int
 	_ = db.QueryRow(`
 		SELECT id, account_id, name, unit, quantity, price, unit_cost, IFNULL(supplier, ''), IFNULL(expiry_date, ''), IFNULL(min_quantity, 0), IFNULL(note, ''), IFNULL(hidden, 0), IFNULL(created_at, ''), IFNULL(control_mode, 'exact'), IFNULL(loss_percent, 0), IFNULL(inventory_method, 'fifo'), IFNULL(packaging_quantity, 1)

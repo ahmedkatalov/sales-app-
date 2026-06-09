@@ -9,8 +9,9 @@ import (
 
 func loadProductRecipe(productID int, accID int) []ProductRecipe {
 	rows, err := db.Query(`
-		SELECT r.id, r.product_id, r.warehouse_item_id, IFNULL(w.name, ''), IFNULL(w.unit, ''),
-		       IFNULL(NULLIF(r.input_quantity, 0), r.quantity), IFNULL(NULLIF(r.input_unit, ''), w.unit),
+		SELECT r.id, r.product_id, r.warehouse_item_id, IFNULL(r.ingredient_name, ''),
+		       IFNULL(w.name, ''), IFNULL(w.unit, ''),
+		       IFNULL(NULLIF(r.input_quantity, 0), r.quantity), IFNULL(NULLIF(r.input_unit, ''), IFNULL(w.unit, 'г')),
 		       r.quantity, IFNULL(r.conversion_note, ''), IFNULL(w.unit_cost, 0)
 		FROM product_recipes r
 		LEFT JOIN warehouse_items w ON w.id = r.warehouse_item_id AND w.account_id = r.account_id
@@ -26,13 +27,60 @@ func loadProductRecipe(productID int, accID int) []ProductRecipe {
 	list := []ProductRecipe{}
 	for rows.Next() {
 		var item ProductRecipe
-		_ = rows.Scan(&item.ID, &item.ProductID, &item.WarehouseItemID, &item.ItemName, &item.Unit, &item.Quantity, &item.QuantityUnit, &item.StorageQuantity, &item.ConversionNote, &item.UnitCost)
+		var ingredientName string
+		_ = rows.Scan(&item.ID, &item.ProductID, &item.WarehouseItemID, &ingredientName,
+			&item.ItemName, &item.Unit, &item.Quantity, &item.QuantityUnit,
+			&item.StorageQuantity, &item.ConversionNote, &item.UnitCost)
 		item.QuantityUnitSnake = item.QuantityUnit
 		item.Cost = item.StorageQuantity * item.UnitCost
+		// Если склад не привязан — показываем имя из рецепта
+		if item.WarehouseItemID <= 0 {
+			item.Unlinked = true
+			item.IngredientName = ingredientName
+			if item.ItemName == "" {
+				item.ItemName = ingredientName
+			}
+		} else {
+			item.IngredientName = item.ItemName
+		}
 		list = append(list, item)
 	}
 
 	return list
+}
+
+// linkUnlinkedRecipes — при добавлении товара на склад автоматически линкует рецепты по имени
+func linkUnlinkedRecipes(accID int, warehouseItemID int, itemName string) {
+	normName := strings.ToLower(strings.TrimSpace(itemName))
+	rows, err := db.Query(`
+		SELECT id, ingredient_name FROM product_recipes
+		WHERE account_id = ? AND warehouse_item_id = 0 AND ingredient_name != ''
+	`, accID)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	type candidate struct {
+		id   int
+		name string
+	}
+	var candidates []candidate
+	for rows.Next() {
+		var c candidate
+		_ = rows.Scan(&c.id, &c.name)
+		candidates = append(candidates, c)
+	}
+
+	for _, c := range candidates {
+		cName := strings.ToLower(strings.TrimSpace(c.name))
+		// Простое совпадение: точное или одно содержит другое
+		if cName == normName || strings.Contains(normName, cName) || strings.Contains(cName, normName) {
+			_, _ = db.Exec(`
+				UPDATE product_recipes SET warehouse_item_id = ? WHERE id = ? AND account_id = ?
+			`, warehouseItemID, c.id, accID)
+		}
+	}
 }
 
 func calculateRecipeCost(productID int, accID int) float64 {
@@ -148,7 +196,14 @@ func createMenuProduct(c *gin.Context) {
 			warehouseItemID = recipeItem.WarehouseItemIDSnake
 		}
 
-		if warehouseItemID <= 0 || recipeItem.Quantity <= 0 {
+		// Получаем имя ингредиента
+		ingredientName := strings.TrimSpace(recipeItem.IngredientName)
+		if ingredientName == "" {
+			ingredientName = strings.TrimSpace(recipeItem.ItemName)
+		}
+
+		// Пропускаем если нет ни id ни имени, или нет количества
+		if (warehouseItemID <= 0 && ingredientName == "") || recipeItem.Quantity <= 0 {
 			continue
 		}
 
@@ -156,16 +211,47 @@ func createMenuProduct(c *gin.Context) {
 		if inputUnit == "" {
 			inputUnit = strings.TrimSpace(recipeItem.QuantityUnitSnake)
 		}
-		storageQty, conversionNote, convErr := convertRecipeToStorage(p.AccountID, warehouseItemID, recipeItem.Quantity, inputUnit)
-		if convErr != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": conversionNote})
-			return
+		if inputUnit == "" {
+			inputUnit = "g"
+		}
+
+		var storageQty float64
+		var conversionNote string
+
+		if warehouseItemID > 0 {
+			// Есть связь со складом — конвертируем нормально
+			var convErr error
+			storageQty, conversionNote, convErr = convertRecipeToStorage(p.AccountID, warehouseItemID, recipeItem.Quantity, inputUnit)
+			if convErr != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": conversionNote})
+				return
+			}
+		} else {
+			// Виртуальный ингредиент — сохраняем как есть, конвертация позже
+			storageQty = recipeItem.Quantity
+			conversionNote = "pending_link"
+			// Пробуем найти на складе по имени
+			var foundID int
+			_ = db.QueryRow(`
+				SELECT id FROM warehouse_items
+				WHERE account_id = ? AND LOWER(TRIM(name)) LIKE LOWER(TRIM(?)) AND (hidden IS NULL OR hidden = 0)
+				LIMIT 1
+			`, p.AccountID, "%"+strings.ToLower(strings.TrimSpace(ingredientName))+"%").Scan(&foundID)
+			if foundID > 0 {
+				warehouseItemID = foundID
+				var convErr error
+				storageQty, conversionNote, convErr = convertRecipeToStorage(p.AccountID, warehouseItemID, recipeItem.Quantity, inputUnit)
+				if convErr != nil {
+					storageQty = recipeItem.Quantity
+					conversionNote = "auto_linked"
+				}
+			}
 		}
 
 		if _, err := tx.Exec(`
-			INSERT INTO product_recipes(account_id, product_id, warehouse_item_id, quantity, input_quantity, input_unit, conversion_note)
-			VALUES(?, ?, ?, ?, ?, ?, ?)
-		`, p.AccountID, p.ID, warehouseItemID, storageQty, recipeItem.Quantity, inputUnit, conversionNote); err != nil {
+			INSERT INTO product_recipes(account_id, product_id, warehouse_item_id, ingredient_name, quantity, input_quantity, input_unit, conversion_note)
+			VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+		`, p.AccountID, p.ID, warehouseItemID, ingredientName, storageQty, recipeItem.Quantity, inputUnit, conversionNote); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
