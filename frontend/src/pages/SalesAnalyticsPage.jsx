@@ -45,13 +45,20 @@ function StatCard({ title, value, subtitle, icon, tone = "blue" }) {
 }
 
 export default function SalesAnalyticsPage() {
-  const today = new Date().toISOString().slice(0, 10);
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(today);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const monthStartStr = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10); })();
+  const monthEndStr = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10); })();
+  const formatDateRu = (s) => { if (!s) return ""; const [y,m,d] = s.split("-"); return `${d}.${m}.${y}`; };
+  const [from, setFrom] = useState(monthStartStr);
+  const [to, setTo] = useState(monthEndStr);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [stats, setStats] = useState({ topProducts: [] });
   const [sales, setSales] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Safe array guards
+  const safe_sales = Array.isArray(sales) ? sales : [];
 
   const load = async () => {
     setError("");
@@ -77,13 +84,13 @@ export default function SalesAnalyticsPage() {
   }, [from, to]);
 
   const normalizedSales = useMemo(() => {
-    return sales.map((sale) => ({ ...sale, ...saleDateParts(sale.createdAt) }));
+    return safe_sales.map((sale) => ({ ...sale, ...saleDateParts(sale.createdAt) }));
   }, [sales]);
 
   const avgCheck = Number(stats.salesCount || 0) > 0 ? Number(stats.totalRevenue || 0) / Number(stats.salesCount || 1) : 0;
 
   return (
-    <div className="relative min-h-screen overflow-hidden pb-nav text-white sm:pb-10">
+    <div className="relative pb-nav text-white sm:pb-10">
       <div className="pointer-events-none absolute -top-28 left-1/4 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
       <div className="pointer-events-none absolute right-0 top-24 h-80 w-80 rounded-full bg-violet-700/20 blur-3xl" />
 
@@ -119,41 +126,60 @@ export default function SalesAnalyticsPage() {
           </div>
         )}
 
-        <div className="mb-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:p-5">
-          <div className="grid gap-3 lg:grid-cols-[1fr_1fr_220px]">
-            <label className="block">
-              <span className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-400">От даты</span>
-              <input
-                type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                className="h-14 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 font-bold text-white outline-none transition [color-scheme:dark] placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-400">До даты</span>
-              <input
-                type="date"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="h-14 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 font-bold text-white outline-none transition [color-scheme:dark] placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
-              />
-            </label>
-
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setFrom(today);
-                  setTo(today);
-                }}
-                className="h-14 w-full rounded-2xl bg-white px-5 font-black text-slate-950 shadow-[0_16px_40px_rgba(255,255,255,0.08)] transition hover:scale-[1.01] hover:bg-blue-50"
-              >
-                Сегодня
-              </button>
+        <div className="mb-5 rounded-[2rem] border border-white/10 bg-white/[0.04] shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl overflow-hidden">
+          {/* Компактная шапка */}
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+            <div className="flex flex-1 flex-wrap items-center gap-2">
+              {[
+                ["month", "Этот месяц", () => { setFrom(monthStartStr); setTo(monthEndStr); }],
+                ["today", "Сегодня",    () => { setFrom(todayStr); setTo(todayStr); }],
+                ["all",   "Всё время",  () => { setFrom(""); setTo(""); }],
+              ].map(([key, label, action]) => {
+                const active =
+                  (key === "month" && from === monthStartStr && to === monthEndStr) ||
+                  (key === "today" && from === todayStr && to === todayStr) ||
+                  (key === "all"   && !from && !to);
+                return (
+                  <button key={key} type="button" onClick={action}
+                    className={active
+                      ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
+                      : "rounded-xl border border-white/10 bg-white/8 px-4 py-2 text-sm font-black text-slate-300 transition hover:bg-white/15"}>
+                    {label}
+                  </button>
+                );
+              })}
+              {from && to && !(from === monthStartStr && to === monthEndStr) && !(from === todayStr && to === todayStr) && (
+                <span className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2 text-sm font-black text-blue-200">
+                  {formatDateRu(from)} — {formatDateRu(to)}
+                </span>
+              )}
             </div>
+            <button type="button" onClick={() => setFilterOpen((v) => !v)}
+              className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-black transition ${
+                filterOpen ? "border-blue-400/40 bg-blue-500/15 text-blue-200" : "border-white/10 bg-white/8 text-slate-300 hover:bg-white/15"
+              }`}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+              Фильтр
+            </button>
           </div>
+
+          {/* Раскрытый фильтр */}
+          {filterOpen && (
+            <div className="border-t border-white/10 px-4 py-4 sm:px-5">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">От даты</span>
+                  <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
+                    className="h-12 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 font-bold text-white outline-none transition [color-scheme:dark] focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"/>
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">До даты</span>
+                  <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
+                    className="h-12 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 font-bold text-white outline-none transition [color-scheme:dark] focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"/>
+                </label>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">

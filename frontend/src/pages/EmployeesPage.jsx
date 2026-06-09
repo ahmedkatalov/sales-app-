@@ -6,6 +6,9 @@ export default function EmployeesPage() {
   const [name, setName] = useState("");
   const [search, setSearch] = useState("");
 
+  // Safe array guards
+  const safe_employees = Array.isArray(employees) ? employees : [];
+
   const load = async () => {
     const data = await apiGet("/employees");
     setEmployees(data || []);
@@ -36,7 +39,7 @@ export default function EmployeesPage() {
   const visibleEmployees = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return employees.filter((e) =>
+    return safe_employees.filter((e) =>
       String(e.name || "")
         .toLowerCase()
         .includes(q)
@@ -75,7 +78,7 @@ export default function EmployeesPage() {
           </p>
 
           <p className="mt-3 text-4xl font-black text-white">
-            {employees.length}
+            {safe_employees.length}
           </p>
 
           <p className="mt-1 text-sm font-bold text-slate-400">

@@ -31,6 +31,9 @@ export default function WorkPage() {
   const [recipe, setRecipe] = useState([]);
   const [error, setError] = useState("");
 
+  // Safe array guards
+  const safe_recipe = Array.isArray(recipe) ? recipe : [];
+
   const fileInputRef = useRef(null);
 
   const load = async () => {
@@ -64,15 +67,21 @@ export default function WorkPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const selectedType = types.find(
+  const safeTypes = Array.isArray(types) ? types : [];
+  const safeFolders = Array.isArray(folders) ? folders : [];
+  const safeSales = Array.isArray(sales) ? sales : [];
+  const safeProducts = Array.isArray(products) ? products : [];
+  const safeWarehouseItems = Array.isArray(warehouseItems) ? warehouseItems : [];
+
+  const selectedType = safeTypes.find(
     (t) => String(t.id) === String(selectedTypeId)
   );
 
-  const typeFolders = folders.filter(
+  const typeFolders = safeFolders.filter(
     (f) => String(f.typeId || "") === String(selectedTypeId)
   );
 
-  const selectedFolder = folders.find(
+  const selectedFolder = safeFolders.find(
     (f) => String(f.id) === String(selectedFolderId)
   );
 
@@ -82,7 +91,7 @@ export default function WorkPage() {
       return;
     }
 
-    const list = folders.filter(
+    const list = safeFolders.filter(
       (f) => String(f.typeId || "") === String(selectedTypeId)
     );
 
@@ -138,7 +147,7 @@ export default function WorkPage() {
       map[key].quantity += qty;
     };
 
-    sales.forEach((sale) => {
+    safeSales.forEach((sale) => {
       if (Array.isArray(sale.items)) {
         sale.items.forEach(addItem);
       }
@@ -154,7 +163,7 @@ export default function WorkPage() {
   const visibleProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return products.filter((p) => {
+    return safeProducts.filter((p) => {
       const sameType =
         !selectedTypeId || String(p.typeId || "") === String(selectedTypeId);
 
@@ -246,8 +255,8 @@ export default function WorkPage() {
   };
 
   const recipeCost = useMemo(() => {
-    return recipe.reduce((sum, row) => {
-      const warehouseItem = warehouseItems.find(
+    return safe_recipe.reduce((sum, row) => {
+      const warehouseItem = safeWarehouseItems.find(
         (item) => String(item.id) === String(row.warehouseItemId)
       );
 
@@ -258,13 +267,13 @@ export default function WorkPage() {
   }, [recipe, warehouseItems]);
 
   useEffect(() => {
-    if (recipe.length) {
+    if (safe_recipe.length) {
       setProductForm((p) => ({
         ...p,
         cost: recipeCost ? String(recipeCost.toFixed(2)) : "",
       }));
     }
-  }, [recipeCost, recipe.length]);
+  }, [recipeCost, safe_recipe.length]);
 
   const openProductModal = () => {
     setError("");
@@ -376,7 +385,7 @@ export default function WorkPage() {
 
     if (!clean) throw new Error("В Excel не заполнен тип");
 
-    const existing = types.find(
+    const existing = safeTypes.find(
       (t) => String(t.name).trim().toLowerCase() === clean.toLowerCase()
     );
 
@@ -485,7 +494,7 @@ export default function WorkPage() {
   };
 
   return (
-    <div className="relative -m-4 min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_right,rgba(124,58,237,0.25),transparent_35%),linear-gradient(135deg,#020617,#0f172a_45%,#111827)] p-4 pb-nav text-slate-100 sm:-m-6 sm:p-6 sm:pb-10">
+    <div className="relative -m-4 bg-[radial-gradient(circle_at_top_right,rgba(124,58,237,0.25),transparent_35%),linear-gradient(135deg,#020617,#0f172a_45%,#111827)] p-4 pb-nav text-slate-100 sm:-m-6 sm:p-6 sm:pb-10">
       <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
       <div className="pointer-events-none absolute left-1/3 top-20 h-64 w-64 rounded-full bg-violet-600/10 blur-3xl" />
       <div className="relative">
@@ -728,7 +737,7 @@ export default function WorkPage() {
                 className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 w-full"
               >
                 <option value="">Все типы</option>
-                {types.map((t) => (
+                {safeTypes.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
                   </option>
@@ -795,7 +804,7 @@ export default function WorkPage() {
               </div>
 
               <div className="space-y-2">
-                {types.map((t) => (
+                {safeTypes.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => setSelectedTypeId(String(t.id))}
@@ -809,7 +818,7 @@ export default function WorkPage() {
                   </button>
                 ))}
 
-                {!types.length && (
+                {!safeTypes.length && (
                   <p className="text-slate-400">
                     Пока нет типов. Создай “Напитки” или “Еда”.
                   </p>
@@ -951,7 +960,7 @@ export default function WorkPage() {
             className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 mb-3 w-full"
           >
             <option value="">Выбери тип</option>
-            {types.map((t) => (
+            {safeTypes.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
@@ -992,7 +1001,7 @@ export default function WorkPage() {
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 sm:col-span-2"
             >
               <option value="">Выбери тип</option>
-              {types.map((t) => (
+              {safeTypes.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
@@ -1029,7 +1038,7 @@ export default function WorkPage() {
               }
               placeholder="Себестоимость"
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
-              readOnly={recipe.length > 0}
+              readOnly={safe_recipe.length > 0}
             />
 
             <input
@@ -1064,8 +1073,8 @@ export default function WorkPage() {
             </div>
 
             <div className="space-y-3">
-              {recipe.map((row, index) => {
-                const selected = warehouseItems.find(
+              {safe_recipe.map((row, index) => {
+                const selected = safeWarehouseItems.find(
                   (item) => String(item.id) === String(row.warehouseItemId)
                 );
 
@@ -1086,7 +1095,7 @@ export default function WorkPage() {
                       className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
                     >
                       <option value="">Выбери сырьё со склада</option>
-                      {warehouseItems.map((item) => (
+                      {safeWarehouseItems.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.name} — остаток {item.quantity} {item.unit}
                         </option>
@@ -1114,14 +1123,14 @@ export default function WorkPage() {
                 );
               })}
 
-              {!recipe.length && (
+              {!safe_recipe.length && (
                 <p className="rounded-2xl bg-[#0f172a]/90 px-4 py-3 text-sm text-slate-400">
                   Состав пока не добавлен. Без состава товар будет продаваться
                   без списания со склада.
                 </p>
               )}
 
-              {!warehouseItems.length && (
+              {!safeWarehouseItems.length && (
                 <p className="rounded-2xl bg-amber-500/10 px-4 py-3 text-sm font-bold text-amber-300">
                   На складе пока нет сырья. Сначала добавь зерно, молоко,
                   курицу, рис и т.д. на странице “Склад”.

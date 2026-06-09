@@ -131,6 +131,16 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
 
   const [error, setError] = useState("");
 
+  // Safe array guards
+  const safe_sections = Array.isArray(sections) ? sections : [];
+  const safe_categories = Array.isArray(categories) ? categories : [];
+  const safe_products = Array.isArray(products) ? products : [];
+  const safe_cards = Array.isArray(cards) ? cards : [];
+  const safe_warehouseItems = Array.isArray(warehouseItems) ? warehouseItems : [];
+  const safe_cart = Array.isArray(cart) ? cart : [];
+  const safe_debtCustomers = Array.isArray(debtCustomers) ? debtCustomers : [];
+  const safe_recipe = Array.isArray(recipe) ? recipe : [];
+
   const activeWorkerName =
     currentProfile?.name ||
     ownerName ||
@@ -161,9 +171,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
   }, []);
 
   const visibleCategories = useMemo(() => {
-    if (selectedSectionId === "all") return categories;
+    if (selectedSectionId === "all") return safe_categories;
 
-    return categories.filter(
+    return safe_categories.filter(
       (c) => String(c.typeId) === String(selectedSectionId)
     );
   }, [categories, selectedSectionId]);
@@ -173,14 +183,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
 
     const q = search.trim().toLowerCase();
 
-    return products.filter((p) => {
+    return safe_products.filter((p) => {
       const okCategory = String(p.categoryId) === String(openedCategory.id);
       const okSearch = !q || String(p.name || "").toLowerCase().includes(q);
       return okCategory && okSearch;
     });
   }, [products, openedCategory, search]);
 
-  const subtotal = cart.reduce((s, i) => s + money(i.price) * money(i.qty), 0);
+  const subtotal = safe_cart.reduce((s, i) => s + money(i.price) * money(i.qty), 0);
   const discountAmount = (subtotal * num(discount)) / 100;
   const total = Math.max(0, subtotal - discountAmount);
   const change =
@@ -188,8 +198,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
 
   const debtSuggestions = useMemo(() => {
     const q = debtName.trim().toLowerCase();
-    if (!q) return debtCustomers.slice(0, 5);
-    return debtCustomers
+    if (!q) return safe_debtCustomers.slice(0, 5);
+    return safe_debtCustomers
       .filter((c) => String(c.name || "").toLowerCase().includes(q))
       .slice(0, 5);
   }, [debtCustomers, debtName]);
@@ -214,8 +224,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
   };
 
   const recipeCost = useMemo(() => {
-    return recipe.reduce((sum, row) => {
-      const warehouseItem = warehouseItems.find(
+    return safe_recipe.reduce((sum, row) => {
+      const warehouseItem = safe_warehouseItems.find(
         (item) => String(item.id) === String(row.warehouseItemId)
       );
 
@@ -227,13 +237,13 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
   }, [recipe, warehouseItems]);
 
   useEffect(() => {
-    if (recipe.length) {
+    if (safe_recipe.length) {
       setNewProduct((p) => ({
         ...p,
         cost: recipeCost ? String(recipeCost.toFixed(2)) : "",
       }));
     }
-  }, [recipeCost, recipe.length]);
+  }, [recipeCost, safe_recipe.length]);
 
   const addRecipeRow = () => {
     setRecipe((rows) => [
@@ -383,7 +393,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
     employeeName: activeWorkerName,
     sellerName: activeWorkerName,
     discountPercent: num(discount),
-    items: cart.map((item) => ({
+    items: safe_cart.map((item) => ({
       productId: Number(item.productId || item.id || 0),
       name: item.name,
       type: item.type,
@@ -414,7 +424,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
       return setError("Выбери сотрудника смены");
     }
 
-    if (!cart.length) return setError("Корзина пустая");
+    if (!safe_cart.length) return setError("Корзина пустая");
 
     setPaymentType("cash");
     setPaymentModal(true);
@@ -527,7 +537,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
                     Все
                   </button>
 
-                  {sections.map((s) => (
+                  {safe_sections.map((s) => (
                     <button
                       key={s.id}
                       onClick={() => {
@@ -682,7 +692,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-2xl font-black">Корзина</h3>
 
-            {cart.length > 0 && (
+            {safe_cart.length > 0 && (
               <button
                 onClick={() => setCart([])}
                 className="rounded-2xl bg-red-500/10 px-3 py-2 text-sm font-black text-red-300"
@@ -693,7 +703,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           </div>
 
           <div className="max-h-72 space-y-2 overflow-auto">
-            {cart.map((i) => (
+            {safe_cart.map((i) => (
               <div
                 key={i.productId}
                 className="flex items-center justify-between gap-3 rounded-3xl border border-white/10 bg-white/[0.03] p-3"
@@ -723,7 +733,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               </div>
             ))}
 
-            {!cart.length && (
+            {!safe_cart.length && (
               <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-center text-slate-400">
                 Корзина пустая
               </div>
@@ -836,7 +846,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 mt-4 w-full"
             >
               <option value="">Выбери карту</option>
-              {cards.map((c) => (
+              {safe_cards.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                   {c.owner ? ` · ${c.owner}` : ""}
@@ -855,7 +865,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
                 list="debt-customers"
               />
               <datalist id="debt-customers">
-                {debtCustomers.map((c) => (
+                {safe_debtCustomers.map((c) => (
                   <option key={c.id} value={c.name} />
                 ))}
               </datalist>
@@ -920,7 +930,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
             className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
           >
             <option value="">Выбери раздел меню</option>
-            {sections.map((s) => (
+            {safe_sections.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>
@@ -965,7 +975,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 sm:col-span-2"
             >
               <option value="">Выбери категорию</option>
-              {categories.map((c) => (
+              {safe_categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.typeName || c.type} / {c.name}
                 </option>
@@ -988,7 +998,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               }
               placeholder="Себестоимость"
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
-              readOnly={recipe.length > 0}
+              readOnly={safe_recipe.length > 0}
             />
 
             <input
@@ -1021,8 +1031,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
             </div>
 
             <div className="space-y-3">
-              {recipe.map((row, index) => {
-                const selected = warehouseItems.find(
+              {safe_recipe.map((row, index) => {
+                const selected = safe_warehouseItems.find(
                   (item) => String(item.id) === String(row.warehouseItemId)
                 );
 
@@ -1034,14 +1044,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
                     <select
                       value={row.warehouseItemId}
                       onChange={(e) => {
-                        const item = warehouseItems.find((w) => String(w.id) === String(e.target.value));
+                        const item = safe_warehouseItems.find((w) => String(w.id) === String(e.target.value));
                         updateRecipeRow(index, "warehouseItemId", e.target.value);
                         if (item) updateRecipeRow(index, "quantityUnit", item.unit);
                       }}
                       className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
                     >
                       <option value="">Выбери сырьё со склада</option>
-                      {warehouseItems.map((item) => (
+                      {safe_warehouseItems.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.name} — остаток {item.quantity} {UNIT_LABELS[item.unit] || item.unit}
                         </option>
@@ -1085,13 +1095,13 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
                 );
               })}
 
-              {!recipe.length && (
+              {!safe_recipe.length && (
                 <p className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-400">
                   Состав можно не указывать. Без состава позиция будет продаваться без списания со склада.
                 </p>
               )}
 
-              {!warehouseItems.length && (
+              {!safe_warehouseItems.length && (
                 <p className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 text-sm font-bold text-yellow-300">
                   На складе пока нет сырья. Сначала добавь зерно, молоко, курицу, рис и т.д. на странице “Склад”.
                 </p>

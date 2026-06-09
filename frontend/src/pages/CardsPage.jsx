@@ -7,6 +7,9 @@ export default function CardsPage() {
   const [owner, setOwner] = useState("");
   const [search, setSearch] = useState("");
 
+  // Safe array guards
+  const safe_cards = Array.isArray(cards) ? cards : [];
+
   const load = async () => {
     const data = await apiGet("/cards");
     setCards(data || []);
@@ -39,7 +42,7 @@ export default function CardsPage() {
   const visibleCards = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return cards.filter((card) => {
+    return safe_cards.filter((card) => {
       const text = `${card.name || ""} ${card.owner || ""}`.toLowerCase();
       return !q || text.includes(q);
     });
@@ -75,7 +78,7 @@ export default function CardsPage() {
           </p>
 
           <p className="mt-3 text-4xl font-black text-white">
-            {cards.length}
+            {safe_cards.length}
           </p>
 
           <p className="mt-1 text-sm font-bold text-slate-400">

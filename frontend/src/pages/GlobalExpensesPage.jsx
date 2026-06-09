@@ -12,6 +12,10 @@ export default function GlobalExpensesPage() {
   const [search, setSearch] = useState("");
   const [expenseToDelete, setExpenseToDelete] = useState(null);
 
+  // Safe array guards
+  const safe_expenses = Array.isArray(expenses) ? expenses : [];
+  const safe_employees = Array.isArray(employees) ? employees : [];
+
   const load = async () => {
     const [expenseData, employeeData] = await Promise.all([
       apiGet("/global-expenses"),
@@ -51,7 +55,7 @@ export default function GlobalExpensesPage() {
   const visibleExpenses = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return expenses.filter((e) => {
+    return safe_expenses.filter((e) => {
       const text = `${e.name || ""} ${e.employeeName || ""}`.toLowerCase();
       return !q || text.includes(q);
     });
@@ -120,7 +124,7 @@ export default function GlobalExpensesPage() {
           </p>
 
           <p className="mt-3 text-4xl font-black text-white">
-            {employees.length}
+            {safe_employees.length}
           </p>
 
           <p className="mt-1 text-sm font-bold text-slate-400">
@@ -138,7 +142,7 @@ export default function GlobalExpensesPage() {
           >
             <option value="">Сотрудник</option>
 
-            {employees.map((e) => (
+            {safe_employees.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.name}
               </option>

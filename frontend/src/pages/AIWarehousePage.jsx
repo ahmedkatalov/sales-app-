@@ -1068,6 +1068,13 @@ export default function AIWarehousePage() {
     lastAction: "",
     recentContext: [],
   });
+
+  // Safe array guards
+  const safe_items = Array.isArray(items) ? items : [];
+  const safe_movements = Array.isArray(movements) ? movements : [];
+  const safe_menuProducts = Array.isArray(menuProducts) ? menuProducts : [];
+  const safe_productTypes = Array.isArray(productTypes) ? productTypes : [];
+  const safe_productCategories = Array.isArray(productCategories) ? productCategories : [];
   const bottomRef = useRef(null);
   const messagesRef = useRef(null);
 
@@ -1124,7 +1131,7 @@ export default function AIWarehousePage() {
     box.scrollTo({ top: box.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
-  const recentAdded = useMemo(() => movements.filter((m) => String(m.movementType || m.movement_type) === "in").slice(0, 5), [movements]);
+  const recentAdded = useMemo(() => safe_movements.filter((m) => String(m.movementType || m.movement_type) === "in").slice(0, 5), [movements]);
   const topItems = useMemo(() => [...items].filter((x) => !(x.hidden || x.isHidden || x.is_hidden)).sort((a, b) => num(b.quantity) - num(a.quantity)).slice(0, 7), [items]);
   const activeRightPanels = useMemo(() => Object.values(sidePanels).filter(Boolean).length, [sidePanels]);
   const rightPanelRows = useMemo(() => [
@@ -1442,7 +1449,7 @@ export default function AIWarehousePage() {
     let target = findBestWarehouseItem(text, items);
 
     if (!target && isPronounOnlyVisibilityCommand(text) && lastEntity?.type === "warehouse_item") {
-      target = items.find((item) => Number(item.id) === Number(lastEntity.id)) || lastEntity.item || null;
+      target = safe_items.find((item) => Number(item.id) === Number(lastEntity.id)) || lastEntity.item || null;
     }
 
     if (!target) {
@@ -1557,18 +1564,18 @@ export default function AIWarehousePage() {
   };
 
   const answerMenuTypes = () => {
-    if (!productTypes.length) return "В меню пока нет типов. Можешь написать: «создай типы Еда и Напитки» — я создам.";
-    return `Типы меню (${productTypes.length}):\n${productTypes.map((x) => `• ${x.name}`).join("\n")}`;
+    if (!safe_productTypes.length) return "В меню пока нет типов. Можешь написать: «создай типы Еда и Напитки» — я создам.";
+    return `Типы меню (${safe_productTypes.length}):\n${safe_productTypes.map((x) => `• ${x.name}`).join("\n")}`;
   };
 
   const answerMenuCategories = () => {
-    if (!productCategories.length) return "В меню пока нет папок/категорий.";
-    return `Категории меню (${productCategories.length}):\n${productCategories.map((x) => `• ${x.name}${x.typeName || x.type ? ` — ${x.typeName || x.type}` : ""}`).join("\n")}`;
+    if (!safe_productCategories.length) return "В меню пока нет папок/категорий.";
+    return `Категории меню (${safe_productCategories.length}):\n${safe_productCategories.map((x) => `• ${x.name}${x.typeName || x.type ? ` — ${x.typeName || x.type}` : ""}`).join("\n")}`;
   };
 
 
   const answerWarehouseItems = () => {
-    const active = items.filter((item) => !(item.hidden || item.isHidden || item.is_hidden));
+    const active = safe_items.filter((item) => !(item.hidden || item.isHidden || item.is_hidden));
     if (!active.length) return "Сейчас на складе нет активных товаров. Можно написать: «купил молоко 5 шт за 500» — я добавлю.";
     return `Товары склада (${active.length}):\n${active.map((item) => {
       const price = num(item.price);
@@ -1588,7 +1595,7 @@ export default function AIWarehousePage() {
     if (!pattern) return "По какому товару посмотреть цену закупки?";
     const re = new RegExp(pattern, "i");
 
-    const item = items.find((x) => re.test(normalizeProductEntityName(x.name || "")));
+    const item = safe_items.find((x) => re.test(normalizeProductEntityName(x.name || "")));
     if (item) {
       const price = num(item.price);
       const unitCost = num(item.unitCost ?? item.unit_cost);
@@ -1621,7 +1628,7 @@ export default function AIWarehousePage() {
     const result = await post("/ai/menu/parse", {
       text,
       items: itemRefs(items),
-      menuProducts: menuProducts.map((p) => ({ id: p.id, name: p.name, category: p.category, type: p.type || p.typeName, price: p.price, cost: p.cost })),
+      menuProducts: safe_menuProducts.map((p) => ({ id: p.id, name: p.name, category: p.category, type: p.type || p.typeName, price: p.price, cost: p.cost })),
     });
     const questionText = normalizeQuestionText(result.questions);
     if (questionText) throw new Error(questionText);
@@ -1682,8 +1689,8 @@ export default function AIWarehousePage() {
       const intentRes = await post("/ai/intent", {
         text: rawText,
         items: itemRefs(items),
-        menuTypes: productTypes.map((x) => x.name),
-        menuCats: productCategories.map((x) => x.name),
+        menuTypes: safe_productTypes.map((x) => x.name),
+        menuCats: safe_productCategories.map((x) => x.name),
         hasPending: pendingItems.length > 0 || !!pendingVisibility || pendingMenuTypeCreation,
       });
 
@@ -1703,8 +1710,8 @@ export default function AIWarehousePage() {
             const payload = payloadFromForm(form);
             const computed = computeWarehouseAmount(form);
             const matched = p.matchedItemId
-              ? items.find((i) => Number(i.id) === Number(p.matchedItemId))
-              : items.find((i) => normalizeProductEntityName(i.name || "") === normalizeProductEntityName(p.name || ""));
+              ? safe_items.find((i) => Number(i.id) === Number(p.matchedItemId))
+              : safe_items.find((i) => normalizeProductEntityName(i.name || "") === normalizeProductEntityName(p.name || ""));
             const one = await saveParsedPurchase({ originalText: rawText, result: p, form, payload, computed, matched, questions: [] });
             saved.push(one);
           }
@@ -1799,8 +1806,8 @@ ${lines}${expense ? `
             memory: {
               lastEntity,
               warehouseItems: itemRefs(items).slice(0, 50),
-              menuTypes: productTypes.map((x) => x.name),
-              menuCategories: productCategories.map((x) => x.name),
+              menuTypes: safe_productTypes.map((x) => x.name),
+              menuCategories: safe_productCategories.map((x) => x.name),
             },
           });
           const answer = sanitizeAssistantAnswer(res.answer || "Готово.");
@@ -1817,41 +1824,34 @@ ${lines}${expense ? `
   };
 
     return (
-    <div className="box-border w-full overflow-hidden px-2 py-2 text-white sm:px-4 lg:px-6" style={{height:"calc(100dvh - 88px)"}}>
+    <div className="flex h-full w-full flex-col overflow-hidden text-white" style={{height:"100%"}}>
       <div className="mx-auto flex h-full w-full max-w-[1500px] flex-col overflow-hidden">
-        <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-2.5 py-1 text-[11px] font-black text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              Онлайн
-            </div>
-            <h2 className="text-base font-black tracking-tight sm:text-xl">AI-ассистент</h2>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={load} className="rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white">⟳</button>
-            <Link to="/warehouse" className="rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white">Склад</Link>
-          </div>
-        </div>
-
         <div
-          className={`grid w-full min-w-0 gap-4 ${
-            activeRightPanels ? "xl:grid-cols-[minmax(0,1fr)_340px]" : "xl:grid-cols-1"
+          className={`grid min-h-0 flex-1 w-full min-w-0 ${
+            activeRightPanels ? "xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-4 xl:px-4 xl:py-4" : "xl:grid-cols-1"
           }`}
         >
-          <section className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] shadow-2xl shadow-black/20" style={{height:"calc(100dvh - 200px)",minHeight:"300px"}}>
+          <section className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden xl:rounded-2xl xl:border xl:border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] xl:shadow-2xl xl:shadow-black/20">
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3 py-2.5">
               <div className="flex min-w-0 items-center gap-2">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm shadow-lg shadow-blue-600/30">
                   🤖
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black">Чат с нейронкой</p>
-                  <p className="hidden truncate text-[11px] text-slate-400 sm:block">Claude Sonnet 4.6</p>
+                  <p className="truncate text-sm font-black">AI-ассистент</p>
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    <p className="truncate text-[11px] text-emerald-300 font-bold">Онлайн</p>
+                  </div>
                 </div>
               </div>
-              <span className="shrink-0 rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-black text-emerald-300">
-                AUTO SAVE
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="hidden rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-black text-emerald-300 sm:inline">
+                  AUTO SAVE
+                </span>
+                <button onClick={load} className="rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white hover:bg-white/15">⟳</button>
+                <Link to="/warehouse" className="rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white hover:bg-white/15">Склад →</Link>
+              </div>
             </div>
 
             <div
@@ -1869,6 +1869,11 @@ ${lines}${expense ? `
             </div>
 
             <div className="shrink-0 border-t border-white/10 bg-slate-950/50 px-3 py-2">
+              <div className="mb-2 flex justify-end lg:hidden">
+                <Link to="/work" className="text-xs font-bold text-slate-500 hover:text-slate-300 transition">
+                  ✕ Завершить чат
+                </Link>
+              </div>
               <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none" style={{scrollbarWidth:"none"}}>
                 {[
                   "что заканчивается?",

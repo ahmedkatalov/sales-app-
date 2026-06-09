@@ -44,7 +44,7 @@ const ownerLinks = [
   ["/work", "Работа", Briefcase],
   ["/pos", "Магазин", ShoppingCart],
   ["/pending-payments", "Ожидание оплаты", Clock3, "pending"],
-  ["/debts", "Долги", FileText],
+  ["/debts", "Долги", FileText, "debt"],
   ["/expenses", "Расходы", Wallet],
   ["/ai-warehouse", "AI-бизнес", Bot],
   ["/warehouse", "Склад", Package],
@@ -58,7 +58,7 @@ const adminLinks = ownerLinks;
 const workerLinks = [
   ["/pos", "Магазин", ShoppingCart],
   ["/pending-payments", "Ожидание оплаты", Clock3, "pending"],
-  ["/debts", "Долги", FileText],
+  ["/debts", "Долги", FileText, "debt"],
   ["/expenses", "Расходы", Wallet],
 ];
 
@@ -332,6 +332,7 @@ export default function App() {
   const [profile, setProfile] = useState(getCurrentProfile());
   const [employees, setEmployees] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [debtCount, setDebtCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [toasts, setToasts] = useState([]);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
@@ -412,22 +413,43 @@ export default function App() {
     if (!session) return;
     const loadPendingCount = () => {
       get("/pending-sales")
-        .then((list) => setPendingCount((list || []).length))
+        .then((list) => setPendingCount(Array.isArray(list) ? list.length : 0))
         .catch(() => setPendingCount(0));
     };
+    const loadDebtCount = () => {
+      get("/debts")
+        .then((list) => {
+          const active = Array.isArray(list) ? list.filter((d) => !d.paid && !d.isPaid && !d.is_paid) : [];
+          setDebtCount(active.length);
+        })
+        .catch(() => setDebtCount(0));
+    };
     loadPendingCount();
+    loadDebtCount();
+    const interval = setInterval(() => { loadPendingCount(); loadDebtCount(); }, 30000);
     window.addEventListener("sales-pending-change", loadPendingCount);
-    return () => window.removeEventListener("sales-pending-change", loadPendingCount);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("sales-pending-change", loadPendingCount);
+    };
   }, [session, workspace]);
 
-  // Скрываем нижний нав когда открывается клавиатура
+  // Скрываем нижний нав только когда открывается клавиатура (фокус в инпут/textarea)
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const onFocus = () => setKeyboardVisible(true);
-    const onBlur = () => setTimeout(() => setKeyboardVisible(false), 100);
-    document.addEventListener("focusin", onFocus);
-    document.addEventListener("focusout", onBlur);
-    // visualViewport для iOS Safari
+
+    const isTextInput = (el) => {
+      if (!el) return false;
+      const tag = el.tagName?.toLowerCase();
+      if (tag === "textarea") return true;
+      if (tag === "input") {
+        const type = (el.type || "text").toLowerCase();
+        return !["button", "submit", "reset", "checkbox", "radio", "file", "image", "range", "color"].includes(type);
+      }
+      return false;
+    };
+
+    // visualViewport — самый надёжный способ для iOS Safari
     const vvp = window.visualViewport;
     if (vvp) {
       const onResize = () => {
@@ -435,12 +457,14 @@ export default function App() {
         setKeyboardVisible(vvp.height < threshold);
       };
       vvp.addEventListener("resize", onResize);
-      return () => {
-        document.removeEventListener("focusin", onFocus);
-        document.removeEventListener("focusout", onBlur);
-        vvp.removeEventListener("resize", onResize);
-      };
+      return () => vvp.removeEventListener("resize", onResize);
     }
+
+    // Fallback для браузеров без visualViewport
+    const onFocus = (e) => { if (isTextInput(e.target)) setKeyboardVisible(true); };
+    const onBlur = (e) => { if (isTextInput(e.target)) setTimeout(() => setKeyboardVisible(false), 150); };
+    document.addEventListener("focusin", onFocus);
+    document.addEventListener("focusout", onBlur);
     return () => {
       document.removeEventListener("focusin", onFocus);
       document.removeEventListener("focusout", onBlur);
@@ -586,8 +610,13 @@ export default function App() {
               </span>
               {sidebarOpen && <span className="min-w-0 flex-1 truncate">{label}</span>}
               {badge === "pending" && pendingCount > 0 && (
+                <span className="ml-auto rounded-full bg-blue-500 px-2 py-1 text-xs font-black text-white">
+                  {pendingCount > 99 ? "99+" : pendingCount}
+                </span>
+              )}
+              {badge === "debt" && debtCount > 0 && (
                 <span className="ml-auto rounded-full bg-red-600 px-2 py-1 text-xs font-black text-white">
-                  {pendingCount}
+                  {debtCount > 99 ? "99+" : debtCount}
                 </span>
               )}
             </NavLink>
@@ -608,8 +637,10 @@ export default function App() {
       )}
 
       <main
-        className={`flex-1 overflow-x-hidden p-4 pb-nav sm:p-5 lg:pb-5 ${
-          isAIWarehouseRoute ? "h-screen overflow-hidden" : "min-h-screen overflow-y-auto"
+        className={`flex-1 overflow-x-hidden ${
+          isAIWarehouseRoute
+            ? "overflow-hidden p-0"
+            : "p-4 pb-nav sm:p-5 lg:pb-5 min-h-screen overflow-y-auto"
         }`}
         style={isAIWarehouseRoute ? { height: "100dvh" } : {}}
       >
@@ -622,6 +653,7 @@ export default function App() {
             isWorker={isWorker}
             workerName={workerName}
             pendingCount={pendingCount}
+            debtCount={debtCount}
             isProfileRoute={isProfileRoute}
             onToggleMode={toggleDesktopNavMode}
             onLogout={logout}
@@ -640,7 +672,7 @@ export default function App() {
           </div>
         )}
 
-        <div className="mb-3 flex items-center justify-between gap-2 rounded-2xl bg-slate-950/80 px-3 py-2 text-white lg:hidden">
+        <div className={`mb-3 flex items-center justify-between gap-2 rounded-2xl bg-slate-950/80 px-3 py-2 text-white lg:hidden${isAIWarehouseRoute ? " hidden" : ""}`}>
           <div className="flex min-w-0 items-center gap-2">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-xs font-black">
               {(isWorker ? workerName : session.username)?.[0]?.toUpperCase() || "U"}
@@ -753,8 +785,13 @@ export default function App() {
                 <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
                   <Icon size={20} strokeWidth={2.5} />
                   {badge === "pending" && pendingCount > 0 && (
-                    <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
+                    <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
                       {pendingCount > 99 ? "99+" : pendingCount}
+                    </span>
+                  )}
+                  {badge === "debt" && debtCount > 0 && (
+                    <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
+                      {debtCount > 99 ? "99+" : debtCount}
                     </span>
                   )}
                 </span>
@@ -766,7 +803,7 @@ export default function App() {
       )}
 
       <nav
-        className={`fixed inset-x-3 z-40 grid grid-flow-col auto-cols-fr gap-2 rounded-[1.7rem] border border-white/20 bg-slate-950/95 p-2 text-white shadow-2xl shadow-slate-950/30 backdrop-blur lg:hidden transition-all duration-200 ${keyboardVisible ? "bottom-[-100px] pointer-events-none opacity-0" : "bottom-3 opacity-100"}`}
+        className={`fixed inset-x-3 z-40 grid grid-flow-col auto-cols-fr gap-2 rounded-[1.7rem] border border-white/20 bg-slate-950/95 p-2 text-white shadow-2xl shadow-slate-950/30 backdrop-blur lg:hidden transition-all duration-200 ${keyboardVisible || isAIWarehouseRoute ? "bottom-[-100px] pointer-events-none opacity-0" : "bottom-3 opacity-100"}`}
         style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}
         aria-label="Нижняя навигация"
       >
@@ -786,8 +823,13 @@ export default function App() {
             <span className="relative flex h-6 w-6 items-center justify-center">
               <Icon size={22} strokeWidth={2.2} />
               {badge === "pending" && pendingCount > 0 && (
-                <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
+                <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
                   {pendingCount > 99 ? "99+" : pendingCount}
+                </span>
+              )}
+              {badge === "debt" && debtCount > 0 && (
+                <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
+                  {debtCount > 99 ? "99+" : debtCount}
                 </span>
               )}
             </span>

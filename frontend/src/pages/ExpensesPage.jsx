@@ -4,6 +4,19 @@ import Modal from "../components/Modal";
 import { formatMoney, money, num } from "../utils/format";
 
 const today = () => new Date().toISOString().slice(0, 10);
+const monthStart = () => {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+};
+const monthEnd = () => {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
+};
+const formatDateRu = (dateStr) => {
+  if (!dateStr) return "";
+  const [y, m, d] = dateStr.split("-");
+  return `${d}.${m}.${y}`;
+};
 
 const HOUSEHOLD_TYPES = [
   "Уборка",
@@ -21,8 +34,9 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   const [expenses, setExpenses] = useState([]);
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterType, setFilterType] = useState("all");
-  const [fromDate, setFromDate] = useState(today());
-  const [toDate, setToDate] = useState(today());
+  const [fromDate, setFromDate] = useState(monthStart());
+  const [toDate, setToDate] = useState(monthEnd());
+  const [filterOpen, setFilterOpen] = useState(false);
   const [expenseModal, setExpenseModal] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState(null);
   const [error, setError] = useState("");
@@ -34,6 +48,10 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
     amount: "",
     comment: "",
   });
+
+  // Safe array guards
+  const safe_types = Array.isArray(types) ? types : [];
+  const safe_expenses = Array.isArray(expenses) ? expenses : [];
 
   const load = async () => {
     const [typeList, expenseList] = await Promise.all([
@@ -50,7 +68,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   }, []);
 
   const productTypes = useMemo(() => {
-    const menuTypes = (types || [])
+    const menuTypes = safe_types
       .map((t) => String(t.name || "").trim())
       .filter(Boolean);
 
@@ -67,7 +85,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   };
 
   const visibleExpenses = useMemo(() => {
-    return expenses.filter((e) => {
+    return safe_expenses.filter((e) => {
       const category = e.category || "household";
       const okCategory = filterCategory === "all" || category === filterCategory;
       const okType = filterType === "all" || String(e.type) === String(filterType);
@@ -163,12 +181,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           </p>
         </div>
 
-        <button
-          onClick={() => setExpenseModal(true)}
-          className="hidden rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-6 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] transition hover:scale-[1.01] sm:inline-flex"
-        >
-          + Добавить расход
-        </button>
+    
       </div>
 
       {error && (
@@ -177,102 +190,140 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         </div>
       )}
 
-      <div className="mb-5 rounded-[2rem] border border-white/10 bg-white/[0.06] p-4 shadow-2xl backdrop-blur-xl sm:p-5">
-        <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
-          <label>
-            <span className="mb-2 block text-sm font-black text-slate-300">От даты</span>
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
-            />
-          </label>
-
-          <label>
-            <span className="mb-2 block text-sm font-black text-slate-300">До даты</span>
-            <input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
-            />
-          </label>
-
-          <button
-            onClick={() => {
-              const d = today();
-              setFromDate(d);
-              setToDate(d);
-            }}
-            className="w-full rounded-2xl border border-white/10 bg-white/10 px-5 py-4 font-black text-white shadow-lg transition hover:bg-white/15"
-          >
-            Сегодня
-          </button>
-
-          <button
-            onClick={() => {
-              setFromDate("");
-              setToDate("");
-            }}
-            className="w-full rounded-2xl border border-white/10 bg-white/10 px-5 py-4 font-black text-white shadow-lg transition hover:bg-white/15"
-          >
-            Всё время
-          </button>
-        </div>
-
-        <div className="mt-5">
-          <p className="mb-2 text-sm font-black text-slate-300">Категория</p>
-          <div className="flex flex-wrap gap-2">
+      <div className="mb-5 rounded-[2rem] border border-white/10 bg-white/[0.06] shadow-2xl backdrop-blur-xl overflow-hidden">
+        {/* Компактная шапка фильтра — всегда видна */}
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            {/* Быстрые пресеты периода */}
             {[
-              ["all", "Все"],
-              ["household", "Бытовой расход"],
-              ["products", "Продукты"],
-            ].map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => setCategory(key)}
-                className={
-                  filterCategory === key
-                    ? "rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-[0_12px_35px_rgba(37,99,235,.35)]"
-                    : "rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-black text-slate-200 transition hover:bg-white/15"
-                }
-              >
-                {label}
-              </button>
-            ))}
+              ["month", "Этот месяц", () => { setFromDate(monthStart()); setToDate(monthEnd()); }],
+              ["today", "Сегодня",    () => { const d = today(); setFromDate(d); setToDate(d); }],
+              ["all",   "Всё время",  () => { setFromDate(""); setToDate(""); }],
+            ].map(([key, label, action]) => {
+              const isMonth = key === "month" && fromDate === monthStart() && toDate === monthEnd();
+              const isToday = key === "today" && fromDate === today() && toDate === today();
+              const isAll   = key === "all"   && !fromDate && !toDate;
+              const active  = isMonth || isToday || isAll;
+              return (
+                <button
+                  key={key}
+                  onClick={action}
+                  className={active
+                    ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
+                    : "rounded-xl border border-white/10 bg-white/8 px-4 py-2 text-sm font-black text-slate-300 transition hover:bg-white/15"}
+                >
+                  {label}
+                </button>
+              );
+            })}
+
+            {/* Показываем активный диапазон если не стандартный пресет */}
+            {fromDate && toDate && fromDate !== monthStart() && toDate !== monthEnd() && fromDate !== today() && (
+              <span className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2 text-sm font-black text-blue-200">
+                {formatDateRu(fromDate)} — {formatDateRu(toDate)}
+              </span>
+            )}
           </div>
+
+          {/* Кнопка открытия расширенного фильтра */}
+          <button
+            onClick={() => setFilterOpen((v) => !v)}
+            className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-black transition ${
+              filterOpen
+                ? "border-blue-400/40 bg-blue-500/15 text-blue-200"
+                : "border-white/10 bg-white/8 text-slate-300 hover:bg-white/15"
+            }`}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+            Фильтр
+            {(filterCategory !== "all" || filterType !== "all" || (fromDate && fromDate !== monthStart())) && (
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[9px] font-black text-white">!</span>
+            )}
+          </button>
         </div>
 
-        {filterCategory !== "all" && (
-          <div className="mt-5">
-            <p className="mb-2 text-sm font-black text-slate-300">Тип внутри категории</p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setFilterType("all")}
-                className={
-                  filterType === "all"
-                    ? "rounded-2xl bg-slate-100 px-5 py-3 font-black text-slate-950"
-                    : "rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-black text-slate-200 transition hover:bg-white/15"
-                }
-              >
-                Все типы
-              </button>
-
-              {(filterCategory === "household" ? HOUSEHOLD_TYPES : productTypes).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setFilterType(type)}
-                  className={
-                    filterType === type
-                      ? "rounded-2xl bg-slate-100 px-5 py-3 font-black text-slate-950"
-                      : "rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-black text-slate-200 transition hover:bg-white/15"
-                  }
-                >
-                  {type}
-                </button>
-              ))}
+        {/* Расширенный фильтр — скрыт по умолчанию */}
+        {filterOpen && (
+          <div className="border-t border-white/10 px-4 py-4 sm:px-5">
+            {/* Даты от/до */}
+            <div className="mb-4 grid gap-3 sm:grid-cols-2">
+              <label>
+                <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">От даты</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
+                />
+              </label>
+              <label>
+                <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">До даты</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
+                />
+              </label>
             </div>
+
+            {/* Категория */}
+            <div className="mb-3">
+              <p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-400">Категория</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  ["all", "Все"],
+                  ["household", "Бытовой расход"],
+                  ["products", "Продукты"],
+                ].map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setCategory(key)}
+                    className={
+                      filterCategory === key
+                        ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
+                        : "rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/15"
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Тип внутри категории */}
+            {filterCategory !== "all" && (
+              <div>
+                <p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-400">Тип</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setFilterType("all")}
+                    className={
+                      filterType === "all"
+                        ? "rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-950"
+                        : "rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/15"
+                    }
+                  >
+                    Все типы
+                  </button>
+                  {(filterCategory === "household" ? HOUSEHOLD_TYPES : productTypes).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setFilterType(type)}
+                      className={
+                        filterType === type
+                          ? "rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-950"
+                          : "rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/15"
+                      }
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

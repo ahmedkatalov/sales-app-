@@ -18,6 +18,12 @@ export default function ShopPage() {
   const [cartOpen, setCartOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Safe array guards
+  const safe_products = Array.isArray(products) ? products : [];
+  const safe_employees = Array.isArray(employees) ? employees : [];
+  const safe_cards = Array.isArray(cards) ? cards : [];
+  const safe_cart = Array.isArray(cart) ? cart : [];
+
   const load = async () => {
     setLoading(true);
     try {
@@ -40,7 +46,7 @@ export default function ShopPage() {
   }, []);
 
   const addToCart = (product) => {
-    const existing = cart.find((i) => i.productId === product.id);
+    const existing = safe_cart.find((i) => i.productId === product.id);
 
     if (existing) {
       setCart((prev) =>
@@ -84,7 +90,7 @@ export default function ShopPage() {
   };
 
   const subtotal = useMemo(
-    () => cart.reduce((s, i) => s + Number(i.qty || 0) * Number(i.price || 0), 0),
+    () => safe_cart.reduce((s, i) => s + Number(i.qty || 0) * Number(i.price || 0), 0),
     [cart]
   );
 
@@ -106,7 +112,7 @@ export default function ShopPage() {
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return (products || []).filter((p) => {
+    return safe_products.filter((p) => {
       const category = String(p.category || p.type || "Без категории").trim();
       const okCategory = activeCategory === "all" || category === activeCategory;
       const okSearch =
@@ -127,7 +133,7 @@ export default function ShopPage() {
     }, {});
   }, [filteredProducts]);
 
-  const currentEmployee = employees.find((e) => String(e.id) === String(employeeId));
+  const currentEmployee = safe_employees.find((e) => String(e.id) === String(employeeId));
 
   const confirmSale = async () => {
     if (!employeeId) {
@@ -135,7 +141,7 @@ export default function ShopPage() {
       return;
     }
 
-    if (!cart.length) {
+    if (!safe_cart.length) {
       alert("Корзина пустая");
       return;
     }
@@ -194,7 +200,7 @@ export default function ShopPage() {
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
-        {cart.map((item) => (
+        {safe_cart.map((item) => (
           <div
             key={item.productId}
             className="rounded-3xl border border-white/10 bg-white/[0.04] p-4"
@@ -242,7 +248,7 @@ export default function ShopPage() {
           </div>
         ))}
 
-        {!cart.length && (
+        {!safe_cart.length && (
           <div className="flex h-full min-h-[220px] flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-8 text-center">
             <div className="mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-cyan-500/10 text-3xl">
               🛒
@@ -272,7 +278,7 @@ export default function ShopPage() {
             className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-cyan-400"
           >
             <option value="">Карта</option>
-            {cards.map((c) => (
+            {safe_cards.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} / {c.owner}
               </option>
@@ -330,7 +336,7 @@ export default function ShopPage() {
         <button
           type="button"
           onClick={confirmSale}
-          disabled={!cart.length}
+          disabled={!safe_cart.length}
           className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-4 text-lg font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
         >
           Подтвердить покупку
@@ -370,7 +376,7 @@ export default function ShopPage() {
                   className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-cyan-400"
                 >
                   <option value="">Сотрудник</option>
-                  {employees.map((e) => (
+                  {safe_employees.map((e) => (
                     <option key={e.id} value={e.id}>
                       {e.name}
                     </option>
@@ -480,7 +486,7 @@ export default function ShopPage() {
         onClick={() => setCartOpen(true)}
         className="fixed bottom-4 left-4 right-4 z-40 flex items-center justify-between rounded-3xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-4 font-black text-slate-950 shadow-2xl shadow-cyan-500/30 xl:hidden"
       >
-        <span>Корзина · {cart.reduce((s, i) => s + i.qty, 0)} шт</span>
+        <span>Корзина · {safe_cart.reduce((s, i) => s + i.qty, 0)} шт</span>
         <span>{formatMoney(total)}</span>
       </button>
 

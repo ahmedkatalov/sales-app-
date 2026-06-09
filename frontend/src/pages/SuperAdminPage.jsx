@@ -49,6 +49,9 @@ export default function SuperAdminPage() {
   const [showForm, setShowForm] = useState(false);
   const [showPasswords, setShowPasswords] = useState({});
 
+  // Safe array guards
+  const safe_accounts = Array.isArray(accounts) ? accounts : [];
+
   const api = useSuperApi(token);
 
   const load = useCallback(async () => {
@@ -274,14 +277,14 @@ export default function SuperAdminPage() {
           <div className="rounded-3xl border border-white/10 bg-slate-900 p-8 text-center text-slate-400 font-black">
             Загрузка...
           </div>
-        ) : accounts.length === 0 ? (
+        ) : safe_accounts.length === 0 ? (
           <div className="rounded-3xl border border-white/10 bg-slate-900 p-10 text-center">
             <p className="text-xl font-black text-white">Компаний пока нет</p>
             <p className="mt-1 text-slate-400">Создай первую компанию выше</p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {accounts.map((acc) => (
+            {safe_accounts.map((acc) => (
               <article key={acc.id} className="rounded-[1.5rem] border border-white/10 bg-slate-900 p-5">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div>

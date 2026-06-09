@@ -9,6 +9,9 @@ export default function MenuPage() {
   const [type, setType] = useState("drink");
   const [price, setPrice] = useState("");
 
+  // Safe array guards
+  const safe_products = Array.isArray(products) ? products : [];
+
   const load = async () => {
     const data = await apiGet("/menu-products");
     setProducts(data || []);
@@ -90,7 +93,7 @@ export default function MenuPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {products.map((p) => (
+        {safe_products.map((p) => (
           <div
             key={p.id}
             className="rounded-[28px] border border-white/10 bg-[#111827] p-5 shadow-xl"

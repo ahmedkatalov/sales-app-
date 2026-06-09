@@ -12,6 +12,10 @@ export default function PendingPaymentsPage() {
   const [paidAmount, setPaidAmount] = useState("");
   const [error, setError] = useState("");
 
+  // Safe array guards
+  const safe_list = Array.isArray(list) ? list : [];
+  const safe_cards = Array.isArray(cards) ? cards : [];
+
   const load = async () => {
     const [pending, crds] = await Promise.all([
       get("/pending-sales").catch(() => []),
@@ -49,8 +53,8 @@ export default function PendingPaymentsPage() {
     await load();
   };
 
-  const totalWaiting = list.reduce((sum, sale) => sum + num(sale.total), 0);
-  const totalItems = list.reduce(
+  const totalWaiting = safe_list.reduce((sum, sale) => sum + num(sale.total), 0);
+  const totalItems = safe_list.reduce(
     (sum, sale) => sum + (sale.items || []).reduce((s, i) => s + num(i.qty || 1), 0),
     0
   );
@@ -87,7 +91,7 @@ export default function PendingPaymentsPage() {
           <p className="text-xs font-black uppercase tracking-wide text-blue-200">
             Чеков ждёт
           </p>
-          <p className="mt-3 text-4xl font-black text-white">{list.length}</p>
+          <p className="mt-3 text-4xl font-black text-white">{safe_list.length}</p>
           <p className="mt-1 text-sm font-bold text-slate-400">неоплаченных</p>
         </div>
 
@@ -119,9 +123,9 @@ export default function PendingPaymentsPage() {
           </p>
         </div>
 
-        {list.length > 0 ? (
+        {safe_list.length > 0 ? (
           <div className="grid gap-4 p-4 sm:p-6 lg:grid-cols-2">
-            {list.map((s) => (
+            {safe_list.map((s) => (
               <div
                 key={s.id}
                 className="rounded-[28px] border border-white/10 bg-[#111827] p-5 shadow-xl"
@@ -243,7 +247,7 @@ export default function PendingPaymentsPage() {
               className="mt-4 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none"
             >
               <option value="">Выбери карту</option>
-              {cards.map((c) => (
+              {safe_cards.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                   {c.owner ? ` · ${c.owner}` : ""}

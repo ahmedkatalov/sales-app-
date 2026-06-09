@@ -9,6 +9,7 @@ export default function DesktopNavigation({
   isWorker,
   workerName,
   pendingCount = 0,
+  debtCount = 0,
   isProfileRoute,
   onToggleMode,
   onLogout,
@@ -57,8 +58,13 @@ export default function DesktopNavigation({
                 <Icon size={18} strokeWidth={2.4} />
 
                 {badge === "pending" && pendingCount > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
+                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
                     {pendingCount > 99 ? "99+" : pendingCount}
+                  </span>
+                )}
+                {badge === "debt" && debtCount > 0 && (
+                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
+                    {debtCount > 99 ? "99+" : debtCount}
                   </span>
                 )}
               </span>

@@ -42,9 +42,17 @@ export default function AnalyticsPage() {
   const [periodMode, setPeriodMode] = useState("month");
   const [from, setFrom] = useState(defaultMonth);
   const [to, setTo] = useState(defaultMonth);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const monthStartStr = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 7); })();
+  const monthEndStr = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 7); })();
   const [selectedProduct, setSelectedProduct] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Safe array guards
+  const safe_workspaces = Array.isArray(workspaces) ? workspaces : [];
+  const safe_folders = Array.isArray(folders) ? folders : [];
+  const safe_analytics = Array.isArray(analytics) ? analytics : [];
 
   const isMonthAllowed = (month) => {
     if (periodMode === "all") return true;
@@ -65,7 +73,7 @@ export default function AnalyticsPage() {
       return currentWorkspace?.dataAccountId ? [currentWorkspace] : [];
     }
 
-    const found = workspaces.find((w) => String(w.id) === String(workspaceFilter));
+    const found = safe_workspaces.find((w) => String(w.id) === String(workspaceFilter));
     return found ? [found] : [];
   }, [isOwner, workspaceFilter, workspaces, currentWorkspace]);
 
@@ -81,13 +89,13 @@ export default function AnalyticsPage() {
     setError("");
 
     try {
-      if (isOwner && !workspaces.length) {
+      if (isOwner && !safe_workspaces.length) {
         const ws = await get("/workspaces");
         setWorkspaces(ws || []);
       }
 
       const targets =
-        isOwner && !workspaces.length
+        isOwner && !safe_workspaces.length
           ? workspaceFilter === "all"
             ? await get("/workspaces")
             : workspaceTargets
@@ -103,7 +111,7 @@ export default function AnalyticsPage() {
         if (!dataAccountId) continue;
 
         const folderList = await get(withDataAccount("/folders", dataAccountId));
-        const safeFolders = (folderList || []).map((f) => ({
+        const safeFolders = (Array.isArray(folderList) ? folderList : []).map((f) => ({
           ...f,
           workspaceId: ws.id,
           workspaceName: ws.name,
@@ -212,11 +220,11 @@ export default function AnalyticsPage() {
   useEffect(() => {
     loadAnalytics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceFilter, folderFilter, periodMode, from, to, workspaces.length]);
+  }, [workspaceFilter, folderFilter, periodMode, from, to, safe_workspaces.length]);
 
   const totals = useMemo(
     () =>
-      analytics.reduce(
+      safe_analytics.reduce(
         (a, m) => ({
           qty: a.qty + money(m.qty),
           revenue: a.revenue + money(m.revenue),
@@ -258,7 +266,7 @@ export default function AnalyticsPage() {
     if (!isOwner) return currentWorkspace?.name || "Текущая точка";
     if (workspaceFilter === "all") return "Все точки";
     if (workspaceFilter === "current") return currentWorkspace?.name || "Текущая точка";
-    return workspaces.find((w) => String(w.id) === String(workspaceFilter))?.name || "Точка";
+    return safe_workspaces.find((w) => String(w.id) === String(workspaceFilter))?.name || "Точка";
   }, [isOwner, workspaceFilter, workspaces, currentWorkspace]);
 
   const productNames = useMemo(
@@ -270,7 +278,7 @@ export default function AnalyticsPage() {
   const productAnalytics = useMemo(() => {
     if (!selectedProduct) return [];
 
-    return analytics.map((m) => {
+    return safe_analytics.map((m) => {
       const list = (m.items || []).filter((i) => i.name === selectedProduct);
       const last = list[list.length - 1];
 
@@ -287,7 +295,7 @@ export default function AnalyticsPage() {
   const topProducts = useMemo(() => {
     const map = {};
 
-    analytics.forEach((m) => {
+    safe_analytics.forEach((m) => {
       (m.items || []).forEach((item) => {
         const name = item.name || "Без названия";
         if (!map[name]) {
@@ -347,12 +355,12 @@ export default function AnalyticsPage() {
   const chartAxisColor = "#94a3b8";
 
   return (
-    <div className="relative -m-4 min-h-screen overflow-hidden bg-[#050b1f] px-4 py-5 text-white sm:-m-6 sm:px-6 lg:px-8">
+    <div className="relative -m-4 bg-[#050b1f] px-4 py-5 text-white sm:-m-6 sm:px-6 lg:px-8">
       <div className="pointer-events-none absolute left-1/4 top-0 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
       <div className="pointer-events-none absolute right-0 top-20 h-96 w-96 rounded-full bg-violet-700/20 blur-3xl" />
       <div className="pointer-events-none absolute bottom-0 left-1/2 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl" />
 
-      <div className="relative mx-auto max-w-[1500px] pb-nav sm:pb-10">
+      <div className="relative mx-auto max-w-[1500px] pb-nav sm:pb-16">
         <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-300">
@@ -380,87 +388,102 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        <div className="mb-5 rounded-[1.8rem] border border-white/10 bg-white/[0.06] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.25)] backdrop-blur sm:p-5">
-          <div className="grid gap-3 xl:grid-cols-[1fr_1fr_1fr_1fr_auto] xl:items-end">
-            {isOwner && (
-              <label className="block">
-                <span className="mb-2 block text-sm font-black text-slate-300">Точка / филиал</span>
-                <select
-                  value={workspaceFilter}
-                  onChange={(e) => {
-                    setWorkspaceFilter(e.target.value);
-                    setFolderFilter("all");
-                  }}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400"
-                >
-                  <option value="current">Текущая точка</option>
-                  <option value="all">Все точки</option>
-                  {workspaces.map((w) => (
-                    <option key={w.id} value={w.id}>{w.name}</option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-            <label className="block">
-              <span className="mb-2 block text-sm font-black text-slate-300">Папка</span>
-              <select value={folderFilter} onChange={(e) => setFolderFilter(e.target.value)} className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400">
-                <option value="all">Все папки</option>
-                {folders.map((f) => (
-                  <option key={f.filterKey} value={f.filterKey}>
-                    {isOwner && workspaceFilter === "all" ? `${f.workspaceName} / ${f.name}` : f.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-sm font-black text-slate-300">Период</span>
-              <select value={periodMode} onChange={(e) => setPeriodMode(e.target.value)} className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400">
-                <option value="month">Текущий / выбранный месяц</option>
-                <option value="range">От месяца до месяца</option>
-                <option value="all">За всё время</option>
-              </select>
-            </label>
-
-            {periodMode !== "all" && (
-              <label className="block">
-                <span className="mb-2 block text-sm font-black text-slate-300">
-                  {periodMode === "month" ? "Месяц" : "От месяца"}
-                </span>
-                <input type="month" value={from} onChange={(e) => setFrom(e.target.value)} className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400" />
-              </label>
-            )}
-
-            {periodMode === "range" && (
-              <label className="block">
-                <span className="mb-2 block text-sm font-black text-slate-300">До месяца</span>
-                <input type="month" value={to} onChange={(e) => setTo(e.target.value)} className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400" />
-              </label>
-            )}
-
-            <button
-              onClick={() => {
-                const m = currentMonth();
-                setFolderFilter("all");
-                setPeriodMode("month");
-                setFrom(m);
-                setTo(m);
-                setSelectedProduct("");
-              }}
-              className="w-full rounded-2xl bg-white px-5 py-3 font-black text-slate-950 shadow-[0_14px_30px_rgba(255,255,255,0.08)] transition hover:bg-blue-50"
-            >
-              Текущий месяц
+        <div className="mb-5 rounded-[1.8rem] border border-white/10 bg-white/[0.06] shadow-[0_18px_60px_rgba(0,0,0,0.25)] backdrop-blur overflow-hidden">
+          {/* Компактная шапка — всегда видна */}
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+            <div className="flex flex-1 flex-wrap items-center gap-2">
+              {[
+                ["month", "Этот месяц", () => { const m = currentMonth(); setPeriodMode("month"); setFrom(m); setTo(m); }],
+                ["all",   "Всё время",  () => { setPeriodMode("all"); }],
+              ].map(([key, label, action]) => {
+                const active = key === "month" ? periodMode === "month" && from === defaultMonth : periodMode === "all";
+                return (
+                  <button key={key} type="button" onClick={action}
+                    className={active
+                      ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
+                      : "rounded-xl border border-white/10 bg-white/8 px-4 py-2 text-sm font-black text-slate-300 transition hover:bg-white/15"}>
+                    {label}
+                  </button>
+                );
+              })}
+              <span className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2 text-sm font-black text-blue-200">
+                {workspaceLabel} · {periodLabel}
+              </span>
+            </div>
+            <button type="button" onClick={() => setFilterOpen((v) => !v)}
+              className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-black transition ${
+                filterOpen ? "border-blue-400/40 bg-blue-500/15 text-blue-200" : "border-white/10 bg-white/8 text-slate-300 hover:bg-white/15"
+              }`}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+              Фильтр
+              {(folderFilter !== "all" || workspaceFilter !== "current" || periodMode !== "month") && (
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[9px] font-black text-white">!</span>
+              )}
             </button>
           </div>
 
-          <div className="mt-4 rounded-[1.4rem] border border-blue-400/20 bg-gradient-to-r from-blue-600/20 to-violet-600/15 p-4 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-bold text-blue-200">Активный отчёт</p>
-              <p className="mt-1 text-xl font-black text-white">{workspaceLabel} · {periodLabel}</p>
+          {/* Расширенный фильтр */}
+          {filterOpen && (
+            <div className="border-t border-white/10 px-4 py-4 sm:px-5">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {isOwner && (
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">Точка / филиал</span>
+                    <select value={workspaceFilter} onChange={(e) => { setWorkspaceFilter(e.target.value); setFolderFilter("all"); }}
+                      className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400">
+                      <option value="current">Текущая точка</option>
+                      <option value="all">Все точки</option>
+                      {safe_workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                  </label>
+                )}
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">Папка</span>
+                  <select value={folderFilter} onChange={(e) => setFolderFilter(e.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400">
+                    <option value="all">Все папки</option>
+                    {safe_folders.map((f) => (
+                      <option key={f.filterKey} value={f.filterKey}>
+                        {isOwner && workspaceFilter === "all" ? `${f.workspaceName} / ${f.name}` : f.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">Период</span>
+                  <select value={periodMode} onChange={(e) => setPeriodMode(e.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400">
+                    <option value="month">Месяц</option>
+                    <option value="range">Диапазон</option>
+                    <option value="all">Всё время</option>
+                  </select>
+                </label>
+                {periodMode !== "all" && (
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">
+                      {periodMode === "month" ? "Месяц" : "От месяца"}
+                    </span>
+                    <input type="month" value={from} onChange={(e) => setFrom(e.target.value)}
+                      className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400"/>
+                  </label>
+                )}
+                {periodMode === "range" && (
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">До месяца</span>
+                    <input type="month" value={to} onChange={(e) => setTo(e.target.value)}
+                      className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400"/>
+                  </label>
+                )}
+              </div>
+              <div className="mt-3 flex justify-end">
+                <button type="button"
+                  onClick={() => { const m = currentMonth(); setFolderFilter("all"); setPeriodMode("month"); setFrom(m); setTo(m); setSelectedProduct(""); setFilterOpen(false); }}
+                  className="rounded-xl bg-white px-5 py-2.5 text-sm font-black text-slate-950 transition hover:bg-blue-50">
+                  Сбросить
+                </button>
+              </div>
             </div>
-            <p className="mt-3 rounded-full bg-white/10 px-3 py-2 text-sm font-black text-slate-200 sm:mt-0">Месяцев: {analytics.length}</p>
-          </div>
+          )}
         </div>
 
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -555,13 +578,13 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        <div className="overflow-hidden rounded-[1.8rem] border border-white/10 bg-white/[0.06] shadow-[0_18px_60px_rgba(0,0,0,0.25)] backdrop-blur">
+        <div className="mb-2 overflow-hidden rounded-[1.8rem] border border-white/10 bg-white/[0.06] shadow-[0_18px_60px_rgba(0,0,0,0.25)] backdrop-blur">
           <div className="border-b border-white/10 px-5 py-4 sm:px-6">
             <h3 className="text-2xl font-black text-white">Детализация по месяцам</h3>
             <p className="mt-1 text-sm font-bold text-slate-400">Подробная таблица отчёта</p>
           </div>
 
-          <div className="hidden max-h-[460px] overflow-auto md:block">
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1150px] text-sm">
               <thead className="sticky top-0 bg-slate-950/95 text-slate-300 backdrop-blur">
                 <tr>
@@ -581,7 +604,7 @@ export default function AnalyticsPage() {
                 </tr>
               </thead>
               <tbody>
-                {analytics.map((m) => (
+                {safe_analytics.map((m) => (
                   <tr key={m.month} className="border-t border-white/10 transition hover:bg-white/[0.04]">
                     <td className="p-4 font-black text-white">{m.month}</td>
                     <td className="p-4 text-center font-bold text-slate-200">{m.qty}</td>
@@ -591,7 +614,7 @@ export default function AnalyticsPage() {
                   </tr>
                 ))}
 
-                {analytics.length === 0 && (
+                {safe_analytics.length === 0 && (
                   <tr>
                     <td colSpan="9" className="p-10 text-center font-bold text-slate-400">Данных пока нет.</td>
                   </tr>
@@ -601,7 +624,7 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="divide-y divide-white/10 md:hidden">
-            {analytics.map((m) => (
+            {safe_analytics.map((m) => (
               <div key={m.month} className="p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
@@ -619,7 +642,7 @@ export default function AnalyticsPage() {
               </div>
             ))}
 
-            {analytics.length === 0 && <div className="p-10 text-center font-bold text-slate-400">Данных пока нет.</div>}
+            {safe_analytics.length === 0 && <div className="p-10 text-center font-bold text-slate-400">Данных пока нет.</div>}
           </div>
         </div>
       </div>

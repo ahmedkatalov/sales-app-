@@ -252,6 +252,13 @@ export default function WarehousePage() {
     note: "",
   });
 
+  // Safe array guards
+  const safe_items = Array.isArray(items) ? items : [];
+  const safe_movements = Array.isArray(movements) ? movements : [];
+  const safe_historyBatches = Array.isArray(historyBatches) ? historyBatches : [];
+  const safe_deletedItems = Array.isArray(deletedItems) ? deletedItems : [];
+  const safe_duplicateSuggestions = Array.isArray(duplicateSuggestions) ? duplicateSuggestions : [];
+
   const load = async () => {
     const [warehouseList, movementList] = await Promise.all([
       get("/warehouse/items").catch(() => []),
@@ -295,7 +302,7 @@ export default function WarehousePage() {
   const visibleItems = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return items.filter((item) => {
+    return safe_items.filter((item) => {
       const hidden = isHidden(item);
       const byHidden = showHidden ? true : !hidden;
       const bySearch = !q || String(item.name || "").toLowerCase().includes(q);
@@ -305,7 +312,7 @@ export default function WarehousePage() {
   }, [items, search, showHidden]);
 
   const activeItems = useMemo(
-    () => items.filter((item) => !isHidden(item)),
+    () => safe_items.filter((item) => !isHidden(item)),
     [items]
   );
 
@@ -323,7 +330,7 @@ export default function WarehousePage() {
       count: activeItems.length,
       value: totalValue,
       low: lowItems.length,
-      hidden: items.length - activeItems.length,
+      hidden: safe_items.length - activeItems.length,
     };
   }, [items, activeItems]);
 
@@ -450,7 +457,7 @@ export default function WarehousePage() {
     setForm((p) => ({ ...p, ...aiForm }));
 
     if (result.matchedItemId) {
-      const matched = items.find((item) => Number(item.id) === Number(result.matchedItemId));
+      const matched = safe_items.find((item) => Number(item.id) === Number(result.matchedItemId));
       if (matched) {
         setPurchaseTargetItem(matched);
         setDuplicateSuggestions([]);
@@ -476,7 +483,7 @@ export default function WarehousePage() {
     try {
       const result = await post("/ai/warehouse/parse", {
         text,
-        items: items.map((item) => ({
+        items: safe_items.map((item) => ({
           id: item.id,
           name: item.name,
           unit: item.unit,
@@ -501,7 +508,7 @@ export default function WarehousePage() {
       }
 
       const matched = result.matchedItemId
-        ? items.find((item) => Number(item.id) === Number(result.matchedItemId))
+        ? safe_items.find((item) => Number(item.id) === Number(result.matchedItemId))
         : null;
 
       if (matched) {
@@ -688,7 +695,7 @@ export default function WarehousePage() {
   };
 
   return (
-    <div className="relative -m-4 min-h-screen overflow-hidden bg-[#050b1d] px-3 pb-nav pt-3 text-white sm:-m-6 sm:px-4 sm:pb-8 lg:px-5">
+    <div className="relative -m-4 bg-[#050b1d] px-3 pb-nav pt-3 text-white sm:-m-6 sm:px-4 sm:pb-10 lg:px-5">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-28 -top-28 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
         <div className="absolute right-0 top-20 h-96 w-96 rounded-full bg-violet-600/20 blur-3xl" />
@@ -1120,14 +1127,14 @@ export default function WarehousePage() {
 
         <div className="flex flex-col gap-2 border-t border-white/10 px-4 py-3 text-xs font-semibold text-slate-400 sm:flex-row sm:items-center sm:justify-between">
           <span>
-            Показано {visibleItems.length} из {items.length}
+            Показано {visibleItems.length} из {safe_items.length}
           </span>
 
-          <span>Движений склада: {movements.length}</span>
+          <span>Движений склада: {safe_movements.length}</span>
         </div>
       </div>
 
-      {movements.length > 0 && (
+      {safe_movements.length > 0 && (
         <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] shadow-[0_16px_55px_rgba(0,0,0,.30)] backdrop-blur-xl">
           <div className="p-4">
             <h3 className="text-xl font-black text-white">
@@ -1139,7 +1146,7 @@ export default function WarehousePage() {
           </div>
 
           <div className="divide-y divide-white/10">
-            {movements.slice(0, 8).map((m) => {
+            {safe_movements.slice(0, 8).map((m) => {
               const type = String(m.movementType || m.movement_type || "");
               const unit = unitLabel(m.unit);
 
@@ -1234,7 +1241,7 @@ export default function WarehousePage() {
                 </tr>
               </thead>
               <tbody>
-                {deletedItems.map((item) => (
+                {safe_deletedItems.map((item) => (
                   <tr key={item.id} className="border-t border-slate-100">
                     <td className="p-3 font-bold text-slate-700">{String(item.deletedAt || "").slice(0, 16).replace("T", " ") || "—"}</td>
                     <td className="p-3 font-black text-slate-950">{item.name}</td>
@@ -1244,7 +1251,7 @@ export default function WarehousePage() {
                     <td className="p-3 text-slate-600">{item.deleteNote || item.note || "—"}</td>
                   </tr>
                 ))}
-                {!deletedItems.length && (
+                {!safe_deletedItems.length && (
                   <tr>
                     <td colSpan="6" className="p-8 text-center text-slate-500">Удалённых товаров пока нет</td>
                   </tr>
@@ -1284,7 +1291,7 @@ export default function WarehousePage() {
               </thead>
 
               <tbody>
-                {historyBatches.map((b) => (
+                {safe_historyBatches.map((b) => (
                   <tr key={b.id} className="border-t border-slate-100">
                     <td className="p-3 font-bold text-slate-700">
                       {String(b.createdAt || "").slice(0, 10) || "—"}
@@ -1309,7 +1316,7 @@ export default function WarehousePage() {
                   </tr>
                 ))}
 
-                {!historyBatches.length && (
+                {!safe_historyBatches.length && (
                   <tr>
                     <td colSpan="7" className="p-8 text-center text-slate-500">
                       Истории закупок пока нет
@@ -1344,7 +1351,7 @@ export default function WarehousePage() {
           </div>
 
           <div className="mt-4 space-y-3">
-            {duplicateSuggestions.map((item) => (
+            {safe_duplicateSuggestions.map((item) => (
               <div
                 key={item.id}
                 className="flex flex-col gap-3 rounded-3xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"

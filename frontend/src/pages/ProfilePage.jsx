@@ -67,6 +67,13 @@ export default function ProfilePage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Safe array guards
+  const safe_workspaces = Array.isArray(workspaces) ? workspaces : [];
+  const safe_workspaceUsers = Array.isArray(workspaceUsers) ? workspaceUsers : [];
+  const safe_employees = Array.isArray(employees) ? employees : [];
+  const safe_cards = Array.isArray(cards) ? cards : [];
+  const safe_managedEmployees = Array.isArray(managedEmployees) ? managedEmployees : [];
+
   const accountTypeLabel = isOwner
     ? "Главный аккаунт"
     : isBranchAdmin
@@ -145,7 +152,7 @@ export default function ProfilePage({
   }, [isOwner, workspace?.id]);
 
   const usersByWorkspace = useMemo(() => {
-    return workspaceUsers.reduce((acc, u) => {
+    return safe_workspaceUsers.reduce((acc, u) => {
       const key = String(u.workspaceId || "");
       if (!acc[key]) acc[key] = [];
       acc[key].push(u);
@@ -155,7 +162,7 @@ export default function ProfilePage({
 
   const visibleWorkspaceUsers = useMemo(() => {
     if (isOwner) return workspaceUsers;
-    return workspaceUsers.filter((u) => String(u.workspaceId) === String(workspace?.id));
+    return safe_workspaceUsers.filter((u) => String(u.workspaceId) === String(workspace?.id));
   }, [isOwner, workspaceUsers, workspace?.id]);
 
   const loadManagedEmployees = async (account) => {
@@ -435,7 +442,7 @@ export default function ProfilePage({
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {workspaces.map((w) => (
+            {safe_workspaces.map((w) => (
               <button
                 key={w.id}
                 type="button"
@@ -536,7 +543,7 @@ export default function ProfilePage({
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {employees.map((e) => (
+            {safe_employees.map((e) => (
               <article
                 key={e.id}
                 className={`rounded-3xl border p-4 ${
@@ -575,7 +582,7 @@ export default function ProfilePage({
               </article>
             ))}
 
-            {!employees.length && (
+            {!safe_employees.length && (
               <div className="rounded-3xl bg-[#111827]/[0.03] p-8 text-center md:col-span-2 xl:col-span-3">
                 <p className="text-xl font-black text-white">Профилей пока нет</p>
                 <p className="mt-1 text-slate-400">
@@ -621,7 +628,7 @@ export default function ProfilePage({
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {cards.map((card) => (
+            {safe_cards.map((card) => (
               <article key={card.id} className="rounded-3xl border border-white/10 bg-[#111827] p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -642,7 +649,7 @@ export default function ProfilePage({
               </article>
             ))}
 
-            {!cards.length && (
+            {!safe_cards.length && (
               <div className="rounded-3xl bg-[#111827]/[0.03] p-8 text-center md:col-span-2 xl:col-span-3">
                 <p className="text-xl font-black text-white">Карт пока нет</p>
                 <p className="mt-1 text-slate-400">Добавь карту для учёта переводов и расходов.</p>
@@ -682,7 +689,7 @@ export default function ProfilePage({
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            {managedEmployees.map((e) => (
+            {safe_managedEmployees.map((e) => (
               <div key={e.id} className="rounded-2xl bg-[#111827]/[0.03] p-4">
                 <div className="flex items-center justify-between gap-3">
                   <p className="font-black">{e.name}</p>
@@ -699,7 +706,7 @@ export default function ProfilePage({
               </div>
             ))}
 
-            {!managedEmployees.length && (
+            {!safe_managedEmployees.length && (
               <div className="rounded-2xl bg-[#111827]/[0.03] p-5 text-center text-slate-400 sm:col-span-2">
                 Внутри этого аккаунта профилей пока нет.
               </div>
@@ -780,7 +787,7 @@ export default function ProfilePage({
                   className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
                 >
                   <option value="">Выбери точку</option>
-                  {workspaces.map((w) => (
+                  {safe_workspaces.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name}
                     </option>
