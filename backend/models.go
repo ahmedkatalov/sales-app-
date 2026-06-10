@@ -139,17 +139,19 @@ type WarehouseMovement struct {
 }
 
 type MenuProduct struct {
-	ID         int             `json:"id"`
-	AccountID  int             `json:"accountId"`
-	CategoryID int             `json:"categoryId"`
-	TypeID     int             `json:"typeId"`
-	Name       string          `json:"name"`
-	Category   string          `json:"category"`
-	Type       string          `json:"type"`
-	TypeName   string          `json:"typeName"`
-	Price      float64         `json:"price"`
-	Cost       float64         `json:"cost"`
-	Recipe     []ProductRecipe `json:"recipe"`
+	ID              int             `json:"id"`
+	AccountID       int             `json:"accountId"`
+	CategoryID      int             `json:"categoryId"`
+	CategoryIDSnake int             `json:"category_id"`
+	TypeID          int             `json:"typeId"`
+	Name            string          `json:"name"`
+	Category        string          `json:"category"`
+	Type            string          `json:"type"`
+	TypeName        string          `json:"typeName"`
+	Price           float64         `json:"price"`
+	Cost            float64         `json:"cost"`
+	CostMode        string          `json:"costMode"`
+	Recipe          []ProductRecipe `json:"recipe"`
 
 	Calories float64 `json:"calories"`
 	Protein  float64 `json:"protein"`
