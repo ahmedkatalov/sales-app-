@@ -367,23 +367,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
     if (!name || name.trim().length < 3) { setAiSuggestion(null); return; }
     setAiSuggestionLoading(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 800,
-          tools: [{ type: "web_search_20250305", name: "web_search" }],
-          messages: [{ role: "user", content: 'Меню кофейни/кафе. Позиция: "' + name + '". Найди стандартный рецепт и типичную себестоимость в кофейне России. Верни ТОЛЬКО JSON без markdown: {"displayName":"правильное название","description":"что это (1 предложение)","typicalPrice":250,"estimatedCost":80,"ingredients":[{"name":"зерно кофе","quantity":18,"unit":"г","hint":"двойной эспрессо"}],"tip":"короткий совет"}' }]
-        })
+      const data = await post("/ai/menu/suggest", {
+        name,
+        warehouseItems: safe_warehouseItems.map(w => ({ id: w.id, name: w.name, unit: w.unit }))
       });
-      const data = await res.json();
-      const raw = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) setAiSuggestion(JSON.parse(match[0]));
+      if (data && data.displayName) setAiSuggestion(data);
     } catch { setAiSuggestion(null); }
     finally { setAiSuggestionLoading(false); }
-  }, []);
+  }, [safe_warehouseItems]);
 
   const applyAiSuggestion = () => {
     if (!aiSuggestion) return;

@@ -1663,3 +1663,121 @@ INTENT варианты:
 
 	c.JSON(http.StatusOK, result)
 }
+
+// suggestMenuProduct — анализирует название позиции меню и возвращает типичный состав
+func suggestMenuProduct(c *gin.Context) {
+	var req struct {
+		Name           string   `json:"name"`
+		WarehouseItems []struct {
+			ID   int    `json:"id"`
+			Name string `json:"name"`
+			Unit string `json:"unit"`
+		} `json:"warehouseItems"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		return
+	}
+
+	warehouseList := ""
+	for _, item := range req.WarehouseItems {
+		warehouseList += fmt.Sprintf("%s(id:%d) ", item.Name, item.ID)
+	}
+
+	prompt := fmt.Sprintf(`Ты эксперт по меню кофеен и кафе России. Позиция меню: "%s".
+
+На складе есть: %s
+
+Верни ТОЛЬКО валидный JSON без markdown и пояснений:
+{
+  "displayName": "правильное русское название",
+  "description": "что это такое (1 предложение)",
+  "typicalPrice": 280,
+  "estimatedCost": 85,
+  "ingredients": [
+    {"name": "зерно кофе", "quantity": 18, "unit": "г", "hint": "двойной эспрессо", "warehouseId": null},
+    {"name": "молоко", "quantity": 150, "unit": "мл", "hint": "подогретое до 65°C", "warehouseId": null}
+  ],
+  "tip": "краткий совет по приготовлению"
+}
+
+Правила:
+- Исправь опечатки в названии
+- Укажи типичные ингредиенты для этого напитка/блюда в российской кофейне
+- Если ингредиент есть на складе — укажи его warehouseId из списка выше
+- Количество в граммах (г) или миллилитрах (мл)`, req.Name, warehouseList)
+
+	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	model := strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
+	if model == "" { model = "openai/gpt-4.1-mini" }
+	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("OPENROUTER_BASE_URL")), "/")
+	if baseURL == "" { baseURL = "https://api.openai.com/v1" }
+
+	type Message struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
+	}
+	type RequestBody struct {
+		Model     string    `json:"model"`
+		MaxTokens int       `json:"max_tokens"`
+		Messages  []Message `json:"messages"`
+	}
+
+	body, _ := json.Marshal(RequestBody{
+		Model:     model,
+		MaxTokens: 1000,
+		Messages:  []Message{{Role: "user", Content: prompt}},
+	})
+
+	httpReq, err := http.NewRequest("POST", baseURL+"/chat/completions", bytes.NewBuffer(body))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer resp.Body.Close()
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Extract text from response
+	text := ""
+	if choices, ok := result["choices"].([]interface{}); ok && len(choices) > 0 {
+		if choice, ok := choices[0].(map[string]interface{}); ok {
+			if msg, ok := choice["message"].(map[string]interface{}); ok {
+				text = fmt.Sprintf("%v", msg["content"])
+			}
+		}
+	}
+
+	// Parse JSON from text
+	start := strings.Index(text, "{")
+	end := strings.LastIndex(text, "}")
+	if start == -1 || end == -1 || end <= start {
+		c.JSON(http.StatusOK, gin.H{"error": "could not parse AI response", "raw": text})
+		return
+	}
+
+	var suggestion map[string]interface{}
+	if err := json.Unmarshal([]byte(text[start:end+1]), &suggestion); err != nil {
+		c.JSON(http.StatusOK, gin.H{"error": "invalid JSON", "raw": text})
+		return
+	}
+
+	c.JSON(http.StatusOK, suggestion)
+}
