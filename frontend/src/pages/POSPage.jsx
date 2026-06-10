@@ -226,6 +226,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
   const [sectionModal, setSectionModal] = useState(false);
   const [categoryModal, setCategoryModal] = useState(false);
   const [productModal, setProductModal] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState(null);
+  const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
+  const aiDebounceRef = useRef(null);
 
   const [newSectionName, setNewSectionName] = useState("");
   const [newCategory, setNewCategory] = useState({ name: "", sectionId: "" });
@@ -358,6 +361,53 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
       ...rows,
       { warehouseItemId: "", ingredientName: "", quantity: "", quantityUnit: "pcs", mode },
     ]);
+  };
+
+  const analyzeProductName = useCallback(async (name) => {
+    if (!name || name.trim().length < 3) { setAiSuggestion(null); return; }
+    setAiSuggestionLoading(true);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 800,
+          tools: [{ type: "web_search_20250305", name: "web_search" }],
+          messages: [{ role: "user", content: 'Меню кофейни/кафе. Позиция: "' + name + '". Найди стандартный рецепт и типичную себестоимость в кофейне России. Верни ТОЛЬКО JSON без markdown: {"displayName":"правильное название","description":"что это (1 предложение)","typicalPrice":250,"estimatedCost":80,"ingredients":[{"name":"зерно кофе","quantity":18,"unit":"г","hint":"двойной эспрессо"}],"tip":"короткий совет"}' }]
+        })
+      });
+      const data = await res.json();
+      const raw = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (match) setAiSuggestion(JSON.parse(match[0]));
+    } catch { setAiSuggestion(null); }
+    finally { setAiSuggestionLoading(false); }
+  }, []);
+
+  const applyAiSuggestion = () => {
+    if (!aiSuggestion) return;
+    setNewProduct(p => ({
+      ...p,
+      name: aiSuggestion.displayName || p.name,
+      price: p.price || String(aiSuggestion.typicalPrice || ""),
+      cost: p.cost || String(aiSuggestion.estimatedCost || ""),
+    }));
+    const rows = (aiSuggestion.ingredients || []).map(ing => {
+      const found = safe_warehouseItems.find(w =>
+        w.name.toLowerCase().includes(ing.name.toLowerCase()) ||
+        ing.name.toLowerCase().includes(w.name.toLowerCase())
+      );
+      return {
+        warehouseItemId: found ? String(found.id) : "",
+        ingredientName: ing.name,
+        quantity: String(ing.quantity),
+        quantityUnit: ing.unit === "мл" ? "ml" : ing.unit === "г" ? "g" : "pcs",
+        mode: found ? "warehouse" : "manual",
+      };
+    });
+    if (rows.length) setRecipe(rows);
+    setAiSuggestion(null);
   };
 
   const updateRecipeRow = (index, key, value) => {
@@ -1086,14 +1136,80 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               ))}
             </select>
 
-            <input
-              value={newProduct.name}
-              onChange={(e) =>
-                setNewProduct((p) => ({ ...p, name: e.target.value }))
-              }
-              placeholder="Название позиции"
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 sm:col-span-2"
-            />
+            <div className="relative sm:col-span-2">
+              <input
+                value={newProduct.name}
+                onChange={(e) => {
+                  setNewProduct((p) => ({ ...p, name: e.target.value }));
+                  clearTimeout(aiDebounceRef.current);
+                  aiDebounceRef.current = setTimeout(() => analyzeProductName(e.target.value), 800);
+                }}
+                placeholder="Название позиции (AI подскажет состав...)"
+                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
+              />
+              {aiSuggestionLoading && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-xs font-bold text-violet-300">
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" />
+                  AI анализирует...
+                </div>
+              )}
+            </div>
+
+            {/* AI предложение */}
+            {aiSuggestion && (
+              <div className="sm:col-span-2 rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-500/10 to-blue-500/5 p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-violet-300">✨ AI предлагает</p>
+                    <p className="mt-1 text-base font-black text-white">{aiSuggestion.displayName}</p>
+                    <p className="text-sm text-slate-400">{aiSuggestion.description}</p>
+                  </div>
+                  <button type="button" onClick={() => setAiSuggestion(null)}
+                    className="text-slate-500 hover:text-white text-lg">×</button>
+                </div>
+
+                <div className="flex gap-3 mb-3 text-sm">
+                  <div className="rounded-xl bg-emerald-500/10 border border-emerald-400/20 px-3 py-2">
+                    <p className="text-xs text-slate-400">Типичная цена</p>
+                    <p className="font-black text-emerald-300">{aiSuggestion.typicalPrice} ₽</p>
+                  </div>
+                  <div className="rounded-xl bg-orange-500/10 border border-orange-400/20 px-3 py-2">
+                    <p className="text-xs text-slate-400">Себестоимость</p>
+                    <p className="font-black text-orange-300">{aiSuggestion.estimatedCost} ₽</p>
+                  </div>
+                </div>
+
+                <div className="mb-3 space-y-1.5">
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-wide">Состав:</p>
+                  {(aiSuggestion.ingredients || []).map((ing, i) => {
+                    const found = safe_warehouseItems.find(w =>
+                      w.name.toLowerCase().includes(ing.name.toLowerCase()) ||
+                      ing.name.toLowerCase().includes(w.name.toLowerCase())
+                    );
+                    return (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <span className={`h-2 w-2 rounded-full shrink-0 ${found ? "bg-emerald-400" : "bg-yellow-400"}`} />
+                        <span className="font-bold text-white">{ing.name}</span>
+                        <span className="text-slate-400">{ing.quantity} {ing.unit}</span>
+                        {ing.hint && <span className="text-slate-500 text-xs">— {ing.hint}</span>}
+                        {found
+                          ? <span className="ml-auto text-xs text-emerald-400">есть на складе</span>
+                          : <span className="ml-auto text-xs text-yellow-500">нет на складе</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {aiSuggestion.tip && (
+                  <p className="text-xs text-slate-400 italic mb-3">💡 {aiSuggestion.tip}</p>
+                )}
+
+                <button type="button" onClick={applyAiSuggestion}
+                  className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 py-2.5 font-black text-white text-sm hover:opacity-90 transition">
+                  ✨ Применить всё — заполнить состав и цены
+                </button>
+              </div>
+            )}
 
             <input
               value={newProduct.cost}
