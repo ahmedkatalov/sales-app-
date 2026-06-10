@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { get, getSession, post } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, money, num } from "../utils/format";
@@ -90,6 +90,114 @@ const convertRecipePreview = (item, quantity, unit) => {
 
   return { storageQty, note };
 };
+
+
+// ─── AI-компонент ввода ингредиента вручную ──────────────────────────────────
+function SmartIngredientInputPOS({ value, onChange, warehouseItems = [], onSelectItem }) {
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const debounceRef = useRef(null);
+
+  const searchSuggestions = useCallback(async (text) => {
+    if (!text || text.length < 2) { setSuggestions([]); setOpen(false); return; }
+    setLoading(true);
+    const lower = text.toLowerCase();
+
+    const localMatches = warehouseItems
+      .filter(i => i.name.toLowerCase().includes(lower))
+      .slice(0, 4)
+      .map(i => ({ id: i.id, name: i.name, source: "warehouse", unit: i.unit, qty: i.quantity, hint: `остаток: ${i.quantity} ${i.unit}` }));
+
+    if (localMatches.length >= 3) {
+      setSuggestions(localMatches); setOpen(true); setLoading(false); return;
+    }
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 600,
+          tools: [{ type: "web_search_20250305", name: "web_search" }],
+          messages: [{ role: "user", content: `Пользователь кофейни вводит ингредиент: "${text}"
+
+Используй web_search чтобы найти правильное русское название этого ингредиента и популярные аналоги в кофейнях России.
+
+На складе уже есть: ${warehouseItems.slice(0, 40).map(i => `${i.name}(id:${i.id})`).join(", ")}
+
+После поиска верни ТОЛЬКО JSON массив (без markdown):
+[{"name": "правильное название", "source": "warehouse|ai", "warehouseId": null, "hint": "пояснение"}]
+
+- Исправь опечатки, найди правильное написание
+- Если есть на складе — source=warehouse, укажи warehouseId
+- Максимум 5 вариантов` }]
+        })
+      });
+      const data = await res.json();
+      const raw = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("") || "[]";
+      const clean = raw.replace(/```json|```/g, "").trim();
+      const match = clean.match(/\[[\s\S]*\]/);
+      const aiItems = match ? JSON.parse(match[0]) : [];
+      const merged = [...localMatches];
+      for (const s of aiItems) {
+        if (merged.find(m => m.name.toLowerCase() === s.name.toLowerCase())) continue;
+        const wItem = warehouseItems.find(i => i.id === s.warehouseId);
+        merged.push({ id: wItem?.id || null, name: s.name, source: wItem ? "warehouse" : "ai", unit: wItem?.unit || "", qty: wItem?.quantity ?? null, hint: s.hint || "" });
+      }
+      setSuggestions(merged.slice(0, 6)); setOpen(true);
+    } catch {
+      setSuggestions(localMatches); setOpen(localMatches.length > 0);
+    } finally { setLoading(false); }
+  }, [warehouseItems]);
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    onChange(val);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => searchSuggestions(val), 400);
+  };
+
+  const handleSelect = (s) => {
+    onChange(s.name);
+    if (s.id) onSelectItem(s.id);
+    setSuggestions([]); setOpen(false);
+  };
+
+  return (
+    <div className="relative sm:col-span-4">
+      <div className="relative flex items-center">
+        <span className="absolute left-3 text-sm">✨</span>
+        <input type="text" value={value} onChange={handleChange}
+          onFocus={() => value.length >= 2 && suggestions.length > 0 && setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder="Введи название — AI найдёт правильное..."
+          className="w-full rounded-2xl border border-violet-400/30 bg-violet-500/8 py-2.5 pl-8 pr-8 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60 focus:ring-2 focus:ring-violet-500/20"
+        />
+        {loading && <span className="absolute right-3"><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" /></span>}
+      </div>
+      {open && suggestions.length > 0 && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
+          {suggestions.map((s, i) => (
+            <button key={i} type="button" onMouseDown={() => handleSelect(s)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/8">
+              <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black ${s.source === "warehouse" ? "bg-emerald-500/20 text-emerald-300" : "bg-violet-500/20 text-violet-300"}`}>
+                {s.source === "warehouse" ? "склад" : "AI"}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-black text-white">{s.name}</p>
+                {s.hint && <p className="text-xs text-slate-400">{s.hint}</p>}
+              </div>
+              {s.source === "warehouse" && <span className="text-xs text-emerald-400">{s.qty} {s.unit}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function POSPage({ currentProfile, ownerName, openProfile }) {
   const session = getSession();
@@ -245,14 +353,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
     }
   }, [recipeCost, safe_recipe.length]);
 
-  const addRecipeRow = () => {
+  const addRecipeRow = (mode = "warehouse") => {
     setRecipe((rows) => [
       ...rows,
-      {
-        warehouseItemId: "",
-        quantity: "",
-        quantityUnit: "pcs",
-      },
+      { warehouseItemId: "", ingredientName: "", quantity: "", quantityUnit: "pcs", mode },
     ]);
   };
 
@@ -1035,60 +1139,84 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
                 const selected = safe_warehouseItems.find(
                   (item) => String(item.id) === String(row.warehouseItemId)
                 );
+                const isManual = row.mode === "manual";
 
                 return (
-                  <div
-                    key={index}
-                    className="grid gap-2 sm:grid-cols-[1fr_130px_120px_44px]"
-                  >
-                    <select
-                      value={row.warehouseItemId}
-                      onChange={(e) => {
-                        const item = safe_warehouseItems.find((w) => String(w.id) === String(e.target.value));
-                        updateRecipeRow(index, "warehouseItemId", e.target.value);
-                        if (item) updateRecipeRow(index, "quantityUnit", item.unit);
-                      }}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
-                    >
-                      <option value="">Выбери сырьё со склада</option>
-                      {safe_warehouseItems.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name} — остаток {item.quantity} {UNIT_LABELS[item.unit] || item.unit}
-                        </option>
-                      ))}
-                    </select>
+                  <div key={index} className="flex flex-col gap-2 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                    {/* Переключатель режима */}
+                    <div className="flex items-center gap-2">
+                      <button type="button"
+                        onClick={() => updateRecipeRow(index, "mode", "warehouse")}
+                        className={`rounded-xl px-3 py-1 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        📦 Со склада
+                      </button>
+                      <button type="button"
+                        onClick={() => { updateRecipeRow(index, "mode", "manual"); updateRecipeRow(index, "warehouseItemId", ""); }}
+                        className={`rounded-xl px-3 py-1 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        ✨ Вручную (AI)
+                      </button>
+                      <button type="button" onClick={() => removeRecipeRow(index)}
+                        className="ml-auto rounded-xl bg-red-500/10 px-3 py-1 text-xs font-black text-red-400 hover:bg-red-500/20">
+                        удалить
+                      </button>
+                    </div>
 
-                    <input
-                      type="number"
-                      value={row.quantity}
-                      onChange={(e) =>
-                        updateRecipeRow(index, "quantity", e.target.value)
-                      }
-                      placeholder="Кол-во"
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
-                    />
+                    <div className="grid gap-2 sm:grid-cols-[1fr_130px_120px]">
+                      {isManual ? (
+                        <SmartIngredientInputPOS
+                          value={row.ingredientName || ""}
+                          onChange={(val) => updateRecipeRow(index, "ingredientName", val)}
+                          warehouseItems={safe_warehouseItems}
+                          onSelectItem={(id) => {
+                            const item = safe_warehouseItems.find(w => String(w.id) === String(id));
+                            updateRecipeRow(index, "warehouseItemId", id);
+                            updateRecipeRow(index, "mode", "warehouse");
+                            if (item) updateRecipeRow(index, "quantityUnit", item.unit);
+                          }}
+                        />
+                      ) : (
+                        <select
+                          value={row.warehouseItemId}
+                          onChange={(e) => {
+                            const item = safe_warehouseItems.find((w) => String(w.id) === String(e.target.value));
+                            updateRecipeRow(index, "warehouseItemId", e.target.value);
+                            if (item) updateRecipeRow(index, "quantityUnit", item.unit);
+                          }}
+                          className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none"
+                        >
+                          <option value="">Выбери сырьё со склада</option>
+                          {safe_warehouseItems.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.name} — остаток {item.quantity} {UNIT_LABELS[item.unit] || item.unit}
+                            </option>
+                          ))}
+                        </select>
+                      )}
 
-                    <select
-                      value={row.quantityUnit || selected?.unit || "pcs"}
-                      onChange={(e) => updateRecipeRow(index, "quantityUnit", e.target.value)}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
-                    >
-                      {RECIPE_UNITS.map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
+                      <input type="number" value={row.quantity}
+                        onChange={(e) => updateRecipeRow(index, "quantity", e.target.value)}
+                        placeholder="Кол-во"
+                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
+                      />
 
-                    <button
-                      type="button"
-                      onClick={() => removeRecipeRow(index)}
-                      className="rounded-2xl bg-red-500/10 font-black text-red-300"
-                    >
-                      ×
-                    </button>
+                      <select value={row.quantityUnit || selected?.unit || "pcs"}
+                        onChange={(e) => updateRecipeRow(index, "quantityUnit", e.target.value)}
+                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none">
+                        {RECIPE_UNITS.map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
 
+                    {isManual && row.ingredientName && !row.warehouseItemId && (
+                      <p className="text-xs font-bold text-yellow-500">⚠ Добавь на склад — привяжется автоматически</p>
+                    )}
+                    {isManual && row.warehouseItemId && (
+                      <p className="text-xs font-bold text-emerald-400">✓ Найден и привязан к складу</p>
+                    )}
                     {selected && num(row.quantity) > 0 && (
-                      <p className="rounded-2xl border border-blue-400/20 bg-blue-400/10 px-4 py-2 text-xs font-bold text-blue-300 sm:col-span-4">
-                        AI-конвертация: {row.quantity} {UNIT_LABELS[row.quantityUnit || selected.unit] || row.quantityUnit} → {convertRecipePreview(selected, row.quantity, row.quantityUnit || selected.unit).storageQty.toFixed(2)} {UNIT_LABELS[selected.unit] || selected.unit}. {convertRecipePreview(selected, row.quantity, row.quantityUnit || selected.unit).note}
+                      <p className="rounded-2xl border border-blue-400/20 bg-blue-400/10 px-4 py-2 text-xs font-bold text-blue-300">
+                        {row.quantity} {UNIT_LABELS[row.quantityUnit || selected.unit] || row.quantityUnit} → {convertRecipePreview(selected, row.quantity, row.quantityUnit || selected.unit).storageQty.toFixed(2)} {UNIT_LABELS[selected.unit] || selected.unit}
                       </p>
                     )}
                   </div>
@@ -1108,13 +1236,18 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={addRecipeRow}
-              className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-slate-200 transition hover:bg-white/10"
-            >
-              + Добавить ингредиент
-            </button>
+            <div className="mt-3 flex gap-2">
+              <button type="button"
+                onClick={() => addRecipeRow("warehouse")}
+                className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 transition hover:bg-white/10">
+                + Со склада
+              </button>
+              <button type="button"
+                onClick={() => addRecipeRow("manual")}
+                className="flex-1 rounded-2xl border border-violet-400/20 bg-violet-500/8 px-4 py-3 font-black text-violet-200 transition hover:bg-violet-500/15">
+                ✨ Вручную (AI)
+              </button>
+            </div>
           </div>
 
           <div className="mt-6 flex gap-3">
