@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { del, get, post } from "../api";
+import { del, get, post, put } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, money, num } from "../utils/format";
 
@@ -138,6 +138,10 @@ export default function WorkPage() {
   const [folderModal, setFolderModal] = useState(false);
   const [productModal, setProductModal] = useState(false);
   const [importModal, setImportModal] = useState(false);
+  const [editModal, setEditModal] = useState(false);
+  const [editProduct, setEditProduct] = useState(null);
+  const [editRecipe, setEditRecipe] = useState([]);
+  const [editCostMode, setEditCostMode] = useState("auto"); // auto | manual
 
   const [newTypeName, setNewTypeName] = useState("");
   const [newFolderName, setNewFolderName] = useState("");
@@ -453,6 +457,60 @@ export default function WorkPage() {
     await load();
   };
 
+  const openEditProduct = (p) => {
+    setEditProduct({ ...p, cost: String(p.cost || ""), price: String(p.price || "") });
+    const recipeRows = (p.recipe || []).map(r => ({
+      warehouseItemId: r.warehouseItemId || r.warehouse_item_id || "",
+      ingredientName: r.ingredientName || r.itemName || r.item_name || "",
+      quantity: String(r.quantity || ""),
+      quantityUnit: r.quantityUnit || r.quantity_unit || r.unit || "g",
+      mode: (r.warehouseItemId || r.warehouse_item_id) ? "warehouse" : "manual",
+    }));
+    setEditRecipe(recipeRows);
+    setEditCostMode(recipeRows.length > 0 ? "auto" : "manual");
+    setEditModal(true);
+  };
+
+  const saveEditProduct = async () => {
+    if (!editProduct) return;
+    const cleanRecipe = editRecipe
+      .filter(r => (r.warehouseItemId || r.ingredientName) && num(r.quantity) > 0)
+      .map(r => ({
+        warehouseItemId: Number(r.warehouseItemId) || 0,
+        warehouse_item_id: Number(r.warehouseItemId) || 0,
+        ingredientName: r.ingredientName || "",
+        itemName: r.ingredientName || "",
+        quantity: num(r.quantity),
+        quantityUnit: r.quantityUnit || "g",
+        quantity_unit: r.quantityUnit || "g",
+      }));
+    const autoCost = editCostMode === "auto" && cleanRecipe.length > 0
+      ? cleanRecipe.reduce((sum, r) => {
+          const item = safeWarehouseItems.find(w => String(w.id) === String(r.warehouseItemId));
+          return sum + (item ? num(r.quantity) * num(item.unitCost ?? item.unit_cost ?? 0) : 0);
+        }, 0)
+      : null;
+    await put(`/menu-products/${editProduct.id}`, {
+      ...editProduct,
+      cost: autoCost !== null && autoCost > 0 ? autoCost : num(editProduct.cost),
+      price: num(editProduct.price),
+      costMode: editCostMode,
+      recipe: cleanRecipe,
+    });
+    setEditModal(false);
+    await load();
+  };
+
+  const updateEditRecipeRow = (index, key, value) => {
+    setEditRecipe(rows => rows.map((r, i) => i === index ? { ...r, [key]: value } : r));
+  };
+  const removeEditRecipeRow = (index) => {
+    setEditRecipe(rows => rows.filter((_, i) => i !== index));
+  };
+  const addEditRecipeRow = (mode = "warehouse") => {
+    setEditRecipe(rows => [...rows, { warehouseItemId: "", ingredientName: "", quantity: "", quantityUnit: "g", mode }]);
+  };
+
   const csvCell = (value) => {
     const text = String(value ?? "");
     return `"${text.replaceAll('"', '""')}"`;
@@ -731,12 +789,20 @@ export default function WorkPage() {
                     {formatMoney(p.cleanProfit)}
                   </td>
                   <td className="p-4 text-right">
-                    <button
-                      onClick={() => deleteProduct(p.id)}
-                      className="rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-400"
-                    >
-                      ×
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => openEditProduct(p)}
+                        className="rounded-xl bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-400 hover:bg-blue-500/20"
+                      >
+                        ✏ Изменить
+                      </button>
+                      <button
+                        onClick={() => deleteProduct(p.id)}
+                        className="rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-400"
+                      >
+                        ×
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -777,12 +843,20 @@ export default function WorkPage() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => deleteProduct(p.id)}
-                  className="rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-400"
-                >
-                  ×
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openEditProduct(p)}
+                    className="rounded-xl bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-400"
+                  >
+                    ✏
+                  </button>
+                  <button
+                    onClick={() => deleteProduct(p.id)}
+                    className="rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-400"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-sm">
@@ -1303,6 +1377,116 @@ export default function WorkPage() {
             <button onClick={createProduct} className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] flex-1">
               Создать
             </button>
+          </div>
+        </Modal>
+      )}
+
+      {editModal && editProduct && (
+        <Modal title={`Редактировать: ${editProduct.name}`} wide>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input value={editProduct.name}
+              onChange={e => setEditProduct(p => ({...p, name: e.target.value}))}
+              placeholder="Название" className="input sm:col-span-2"/>
+
+            <input value={editProduct.price}
+              onChange={e => setEditProduct(p => ({...p, price: e.target.value}))}
+              placeholder="Цена продажи" type="number" className="input"/>
+
+            {/* Переключатель себестоимости */}
+            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+              <span className="text-sm font-black text-slate-300">Себестоимость:</span>
+              <button type="button" onClick={() => setEditCostMode("auto")}
+                className={`rounded-xl px-3 py-1 text-xs font-black transition ${editCostMode === "auto" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                ⚡ Авто
+              </button>
+              <button type="button" onClick={() => setEditCostMode("manual")}
+                className={`rounded-xl px-3 py-1 text-xs font-black transition ${editCostMode === "manual" ? "bg-orange-500/20 text-orange-300 border border-orange-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                ✏ Вручную
+              </button>
+            </div>
+
+            {editCostMode === "manual" && (
+              <input value={editProduct.cost}
+                onChange={e => setEditProduct(p => ({...p, cost: e.target.value}))}
+                placeholder="Себестоимость (вручную)" type="number" className="input sm:col-span-2"/>
+            )}
+            {editCostMode === "auto" && (
+              <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-bold text-blue-300 sm:col-span-2">
+                ⚡ Авто-себестоимость считается из состава ниже
+              </div>
+            )}
+          </div>
+
+          {/* Состав / рецепт */}
+          <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+            <h3 className="mb-3 text-lg font-black text-white">Состав / рецепт</h3>
+            <div className="space-y-3">
+              {editRecipe.map((row, index) => {
+                const selected = safeWarehouseItems.find(i => String(i.id) === String(row.warehouseItemId));
+                const isManual = row.mode === "manual";
+                return (
+                  <div key={index} className="flex flex-col gap-2 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => updateEditRecipeRow(index, "mode", "warehouse")}
+                        className={`rounded-xl px-3 py-1 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                        📦 Со склада
+                      </button>
+                      <button type="button" onClick={() => { updateEditRecipeRow(index, "mode", "manual"); updateEditRecipeRow(index, "warehouseItemId", ""); }}
+                        className={`rounded-xl px-3 py-1 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                        ✨ Вручную (AI)
+                      </button>
+                      <button type="button" onClick={() => removeEditRecipeRow(index)}
+                        className="ml-auto rounded-xl bg-red-500/10 px-3 py-1 text-xs font-black text-red-400">удалить</button>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-[1fr_120px]">
+                      {isManual ? (
+                        <SmartIngredientInput
+                          value={row.ingredientName || ""}
+                          onChange={val => updateEditRecipeRow(index, "ingredientName", val)}
+                          warehouseItems={safeWarehouseItems}
+                          onSelectItem={id => { updateEditRecipeRow(index, "warehouseItemId", id); updateEditRecipeRow(index, "mode", "warehouse"); }}
+                        />
+                      ) : (
+                        <select value={row.warehouseItemId || ""} onChange={e => {
+                          const item = safeWarehouseItems.find(w => String(w.id) === String(e.target.value));
+                          updateEditRecipeRow(index, "warehouseItemId", e.target.value);
+                          if (item) updateEditRecipeRow(index, "quantityUnit", item.unit);
+                        }} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none">
+                          <option value="">Выбери со склада</option>
+                          {safeWarehouseItems.map(item => (
+                            <option key={item.id} value={item.id}>{item.name} — {item.quantity} {item.unit}</option>
+                          ))}
+                        </select>
+                      )}
+                      <input type="number" value={row.quantity} onChange={e => updateEditRecipeRow(index, "quantity", e.target.value)}
+                        placeholder={selected?.unit || "Кол-во"}
+                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none"/>
+                    </div>
+                    {isManual && row.ingredientName && !row.warehouseItemId && (
+                      <p className="text-xs font-bold text-yellow-500">⚠ Добавь на склад — привяжется автоматически</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 flex gap-2">
+              <button type="button" onClick={() => addEditRecipeRow("warehouse")}
+                className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-200 hover:bg-white/10">
+                + Со склада
+              </button>
+              <button type="button" onClick={() => addEditRecipeRow("manual")}
+                className="flex-1 rounded-2xl border border-violet-400/20 bg-violet-500/8 px-4 py-2.5 text-sm font-black text-violet-200 hover:bg-violet-500/15">
+                ✨ Вручную (AI)
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 flex gap-3">
+            <button type="button" onClick={() => setEditModal(false)}
+              className="btn-white flex-1">Отмена</button>
+            <button type="button" onClick={saveEditProduct}
+              className="btn-blue flex-1">Сохранить</button>
           </div>
         </Modal>
       )}

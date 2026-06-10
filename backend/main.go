@@ -114,6 +114,7 @@ func main() {
 
 	auth.GET("/menu-products", getMenuProducts)
 	auth.POST("/menu-products", createMenuProduct)
+	auth.PUT("/menu-products/:id", updateMenuProduct)
 	auth.DELETE("/menu-products/:id", deleteMenuProduct)
 
 	auth.POST("/sales", createSale)

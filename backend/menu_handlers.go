@@ -293,3 +293,138 @@ func deleteMenuProduct(c *gin.Context) {
 
 	c.Status(http.StatusOK)
 }
+
+func updateMenuProduct(c *gin.Context) {
+	accID := accountID(c)
+	productID := c.Param("id")
+
+	var p MenuProduct
+	if err := c.ShouldBindJSON(&p); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	p.AccountID = accID
+
+	// Resolve category
+	catID := p.CategoryID
+	if catID == 0 {
+		catID = p.CategoryIDSnake
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer tx.Rollback()
+
+	// Update main product fields
+	if _, err := tx.Exec(`
+		UPDATE menu_products SET
+			name = ?, price = ?, cost = ?, category_id = ?,
+			category = COALESCE((SELECT name FROM product_categories WHERE id = ? AND account_id = ?), ?),
+			type = COALESCE((SELECT pt.name FROM product_types pt JOIN product_categories pc ON pc.type_id = pt.id WHERE pc.id = ? AND pc.account_id = ?), ?)
+		WHERE id = ? AND account_id = ?
+	`, p.Name, p.Price, p.Cost, catID,
+		catID, accID, p.Category,
+		catID, accID, p.Type,
+		productID, accID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Delete old recipe and recreate
+	if _, err := tx.Exec(`DELETE FROM product_recipes WHERE product_id = ? AND account_id = ?`, productID, accID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	for _, recipeItem := range p.Recipe {
+		warehouseItemID := recipeItem.WarehouseItemID
+		if warehouseItemID == 0 {
+			warehouseItemID = recipeItem.WarehouseItemIDSnake
+		}
+		ingredientName := strings.TrimSpace(recipeItem.IngredientName)
+		if ingredientName == "" {
+			ingredientName = strings.TrimSpace(recipeItem.ItemName)
+		}
+		if (warehouseItemID <= 0 && ingredientName == "") || recipeItem.Quantity <= 0 {
+			continue
+		}
+		inputUnit := strings.TrimSpace(recipeItem.QuantityUnit)
+		if inputUnit == "" {
+			inputUnit = strings.TrimSpace(recipeItem.QuantityUnitSnake)
+		}
+		if inputUnit == "" {
+			inputUnit = "g"
+		}
+
+		var storageQty float64
+		var conversionNote string
+
+		if warehouseItemID > 0 {
+			var convErr error
+			storageQty, conversionNote, convErr = convertRecipeToStorage(accID, warehouseItemID, recipeItem.Quantity, inputUnit)
+			if convErr != nil {
+				storageQty = recipeItem.Quantity
+				conversionNote = "conversion_error"
+			}
+		} else {
+			storageQty = recipeItem.Quantity
+			conversionNote = "pending_link"
+			var foundID int
+			_ = db.QueryRow(`
+				SELECT id FROM warehouse_items
+				WHERE account_id = ? AND LOWER(TRIM(name)) LIKE LOWER(TRIM(?)) AND (hidden IS NULL OR hidden = 0)
+				LIMIT 1
+			`, accID, "%"+strings.ToLower(strings.TrimSpace(ingredientName))+"%").Scan(&foundID)
+			if foundID > 0 {
+				warehouseItemID = foundID
+				var convErr error
+				storageQty, conversionNote, convErr = convertRecipeToStorage(accID, warehouseItemID, recipeItem.Quantity, inputUnit)
+				if convErr != nil {
+					storageQty = recipeItem.Quantity
+					conversionNote = "auto_linked"
+				}
+			}
+		}
+
+		pid := 0
+		_ = db.QueryRow(`SELECT id FROM menu_products WHERE id = ? AND account_id = ?`, productID, accID).Scan(&pid)
+		if _, err := tx.Exec(`
+			INSERT INTO product_recipes(account_id, product_id, warehouse_item_id, ingredient_name, quantity, input_quantity, input_unit, conversion_note)
+			VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+		`, accID, productID, warehouseItemID, ingredientName, storageQty, recipeItem.Quantity, inputUnit, conversionNote); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	// Recalc auto cost from recipe
+	if len(p.Recipe) > 0 && p.CostMode != "manual" {
+		var autoCost float64
+		_ = tx.QueryRow(`
+			SELECT IFNULL(SUM(r.quantity * w.unit_cost), 0)
+			FROM product_recipes r
+			JOIN warehouse_items w ON w.id = r.warehouse_item_id AND w.account_id = r.account_id
+			WHERE r.product_id = ? AND r.account_id = ?
+		`, productID, accID).Scan(&autoCost)
+		if autoCost > 0 {
+			_, _ = tx.Exec(`UPDATE menu_products SET cost = ? WHERE id = ? AND account_id = ?`, autoCost, productID, accID)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var result MenuProduct
+	var hiddenInt int
+	_ = db.QueryRow(`SELECT id, account_id, name, IFNULL(category,''), IFNULL(type,''), price, cost, IFNULL(category_id,0) FROM menu_products WHERE id = ? AND account_id = ?`, productID, accID).
+		Scan(&result.ID, &result.AccountID, &result.Name, &result.Category, &result.Type, &result.Price, &result.Cost, &result.CategoryID)
+	_ = hiddenInt
+	result.Recipe = loadProductRecipe(result.ID, result.AccountID)
+
+	c.JSON(http.StatusOK, result)
+}
