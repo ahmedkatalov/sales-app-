@@ -272,3 +272,163 @@ func deleteWorkspaceUser(c *gin.Context) {
 
 	c.Status(http.StatusOK)
 }
+
+// ── Мультидоступ: дать/убрать доступ пользователю к точке ──────────────────
+
+// GET /workspace-access — список пользователей с доступами по всем точкам owner'а
+func getWorkspaceAccess(c *gin.Context) {
+	ownerID := ownerAccountID(c)
+	rows, err := db.Query(`
+		SELECT 
+			uw.id, uw.user_id, u.username, uw.workspace_id, w.name, uw.role, uw.data_account_id
+		FROM user_workspaces uw
+		JOIN users u ON u.id = uw.user_id
+		JOIN workspaces w ON w.id = uw.workspace_id
+		WHERE uw.owner_account_id = ?
+		ORDER BY u.username, w.name
+	`, ownerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+	list := []gin.H{}
+	for rows.Next() {
+		var id, userID, wsID, dataID int
+		var username, wsName, role string
+		rows.Scan(&id, &userID, &username, &wsID, &wsName, &role, &dataID)
+		list = append(list, gin.H{
+			"id": id, "userId": userID, "username": username,
+			"workspaceId": wsID, "workspaceName": wsName,
+			"role": role, "dataAccountId": dataID,
+		})
+	}
+	c.JSON(http.StatusOK, list)
+}
+
+// POST /workspace-access — дать пользователю доступ к точке
+func grantWorkspaceAccess(c *gin.Context) {
+	ownerID := ownerAccountID(c)
+	var req struct {
+		UserID      int    `json:"userId"`
+		WorkspaceID int    `json:"workspaceId"`
+		Role        string `json:"role"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.Role == "" {
+		req.Role = "branch_admin"
+	}
+	// Проверяем что workspace принадлежит этому owner
+	var wsName string
+	err := db.QueryRow(`SELECT name FROM workspaces WHERE id = ? AND account_id = ?`, req.WorkspaceID, ownerID).Scan(&wsName)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Точка не найдена"})
+		return
+	}
+	// Проверяем что пользователь принадлежит этому owner
+	var username string
+	err = db.QueryRow(`SELECT username FROM users WHERE id = ? AND (owner_account_id = ? OR account_id = ?)`, req.UserID, ownerID, ownerID).Scan(&username)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Пользователь не найден"})
+		return
+	}
+	dataID := workspaceDataAccountID(ownerID, req.WorkspaceID)
+	now := time.Now().Format(time.RFC3339)
+	_, err = db.Exec(`
+		INSERT OR REPLACE INTO user_workspaces(user_id, owner_account_id, workspace_id, data_account_id, role, created_at)
+		VALUES(?, ?, ?, ?, ?, ?)
+	`, req.UserID, ownerID, req.WorkspaceID, dataID, req.Role, now)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"userId": req.UserID, "username": username,
+		"workspaceId": req.WorkspaceID, "workspaceName": wsName,
+		"role": req.Role, "dataAccountId": dataID,
+	})
+}
+
+// DELETE /workspace-access/:id — убрать доступ
+func revokeWorkspaceAccess(c *gin.Context) {
+	ownerID := ownerAccountID(c)
+	id := c.Param("id")
+	_, err := db.Exec(`
+		DELETE FROM user_workspaces WHERE id = ? AND owner_account_id = ?
+	`, id, ownerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
+// GET /my-workspaces — список точек к которым у пользователя есть доступ (для экрана выбора)
+func getMyWorkspaces(c *gin.Context) {
+	u, ok := currentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	// owner видит все точки компании
+	if u.Role == "owner" {
+		rows, err := db.Query(`
+			SELECT id, account_id, name, IFNULL(is_main,0), created_at
+			FROM workspaces WHERE account_id = ? ORDER BY is_main DESC, id
+		`, u.OwnerAccountID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer rows.Close()
+		list := []gin.H{}
+		for rows.Next() {
+			var id, accID, isMain int
+			var name, createdAt string
+			rows.Scan(&id, &accID, &name, &isMain, &createdAt)
+			dataID := workspaceDataAccountID(accID, id)
+			list = append(list, gin.H{
+				"id": id, "name": name, "isMain": isMain == 1,
+				"dataAccountId": dataID, "role": "owner",
+			})
+		}
+		c.JSON(http.StatusOK, list)
+		return
+	}
+	// branch_admin/worker — смотрим user_workspaces
+	rows, err := db.Query(`
+		SELECT uw.workspace_id, w.name, IFNULL(w.is_main,0), uw.data_account_id, uw.role
+		FROM user_workspaces uw
+		JOIN workspaces w ON w.id = uw.workspace_id
+		WHERE uw.user_id = ?
+		ORDER BY w.is_main DESC, w.name
+	`, u.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+	list := []gin.H{}
+	for rows.Next() {
+		var wsID, isMain, dataID int
+		var name, role string
+		rows.Scan(&wsID, &name, &isMain, &dataID, &role)
+		list = append(list, gin.H{
+			"id": wsID, "name": name, "isMain": isMain == 1,
+			"dataAccountId": dataID, "role": role,
+		})
+	}
+	// Фолбэк — старый workspace_id если нет записей в user_workspaces
+	if len(list) == 0 && u.WorkspaceID > 0 {
+		var wsName string
+		_ = db.QueryRow(`SELECT name FROM workspaces WHERE id = ?`, u.WorkspaceID).Scan(&wsName)
+		list = append(list, gin.H{
+			"id": u.WorkspaceID, "name": wsName, "isMain": false,
+			"dataAccountId": u.DataAccountID, "role": u.Role,
+		})
+	}
+	c.JSON(http.StatusOK, list)
+}

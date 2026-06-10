@@ -329,6 +329,7 @@ function LoginPage({ onAuth }) {
 export default function App() {
   const [session, setSessionState] = useState(getSession());
   const [workspace, setWorkspaceState] = useState(getCurrentWorkspace());
+  const [workspaceSelected, setWorkspaceSelected] = useState(!!getCurrentWorkspace());
   const [profile, setProfile] = useState(getCurrentProfile());
   const [employees, setEmployees] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
@@ -472,7 +473,29 @@ export default function App() {
   }, []);
 
   if (!session) {
-    return <LoginPage onAuth={(u) => setSessionState(u)} />;
+    return <LoginPage onAuth={(u) => {
+      setSessionState(u);
+      setWorkspaceSelected(false);
+    }} />;
+  }
+
+  // branch_admin и worker должны выбрать точку если её ещё нет
+  const needsWorkspaceSelect = !workspaceSelected && (
+    session.role === "branch_admin" || session.role === "worker" || session.role === "workspace"
+  );
+
+  if (needsWorkspaceSelect) {
+    return (
+      <WorkspaceSelectPage
+        session={session}
+        onSelect={(ws) => {
+          setWorkspaceState(ws);
+          setWorkspaceSelected(true);
+          // Обновляем dataAccountId в сессии для этой точки
+          setSessionState(prev => ({ ...prev, dataAccountId: ws.dataAccountId, workspaceId: ws.id, workspaceName: ws.name }));
+        }}
+      />
+    );
   }
 
   const links = isWorker ? workerLinks : isAdmin ? adminLinks : ownerLinks;

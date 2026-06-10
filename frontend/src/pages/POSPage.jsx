@@ -228,6 +228,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
   const [productModal, setProductModal] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState(null);
   const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
+  const [aiAdvisorEnabled, setAiAdvisorEnabled] = useState(true);
   const aiDebounceRef = useRef(null);
 
   const [newSectionName, setNewSectionName] = useState("");
@@ -365,6 +366,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
 
   const analyzeProductName = useCallback(async (name) => {
     if (!name || name.trim().length < 3) { setAiSuggestion(null); return; }
+    if (!aiAdvisorEnabled) { setAiSuggestion(null); return; }
     setAiSuggestionLoading(true);
     try {
       const data = await post("/ai/menu/suggest", {
@@ -1127,23 +1129,41 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               ))}
             </select>
 
-            <div className="relative sm:col-span-2">
-              <input
-                value={newProduct.name}
-                onChange={(e) => {
-                  setNewProduct((p) => ({ ...p, name: e.target.value }));
-                  clearTimeout(aiDebounceRef.current);
-                  aiDebounceRef.current = setTimeout(() => analyzeProductName(e.target.value), 800);
-                }}
-                placeholder="Название позиции (AI подскажет состав...)"
-                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
-              />
-              {aiSuggestionLoading && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-xs font-bold text-violet-300">
-                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" />
-                  AI анализирует...
-                </div>
-              )}
+            <div className="sm:col-span-2 flex flex-col gap-2">
+              <div className="relative">
+                <input
+                  value={newProduct.name}
+                  onChange={(e) => {
+                    setNewProduct((p) => ({ ...p, name: e.target.value }));
+                    if (aiAdvisorEnabled) {
+                      clearTimeout(aiDebounceRef.current);
+                      aiDebounceRef.current = setTimeout(() => analyzeProductName(e.target.value), 800);
+                    }
+                  }}
+                  placeholder="Название позиции..."
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 pr-36 font-bold text-white outline-none placeholder:text-slate-500"
+                />
+                {/* AI советник — переключатель */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !aiAdvisorEnabled;
+                    setAiAdvisorEnabled(next);
+                    if (!next) setAiSuggestion(null);
+                    else if (newProduct.name?.trim().length >= 3) analyzeProductName(newProduct.name);
+                  }}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition ${
+                    aiAdvisorEnabled
+                      ? "bg-violet-500/20 text-violet-300 border border-violet-400/30"
+                      : "bg-white/5 text-slate-500 border border-white/10"
+                  }`}
+                >
+                  {aiSuggestionLoading
+                    ? <><span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" /> Думаю...</>
+                    : <>{aiAdvisorEnabled ? "✨ AI вкл" : "✨ AI выкл"}</>
+                  }
+                </button>
+              </div>
             </div>
 
             {/* AI предложение */}

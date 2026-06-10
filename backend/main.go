@@ -73,6 +73,10 @@ func main() {
 	auth.GET("/workspaces", getWorkspaces)
 	auth.POST("/workspaces", createWorkspace)
 	auth.DELETE("/workspaces/:id", deleteWorkspace)
+	auth.GET("/workspace-access", getWorkspaceAccess)
+	auth.POST("/workspace-access", grantWorkspaceAccess)
+	auth.DELETE("/workspace-access/:id", revokeWorkspaceAccess)
+	auth.GET("/my-workspaces", getMyWorkspaces)
 
 	auth.GET("/workspace-users", getWorkspaceUsers)
 	auth.POST("/workspace-users", createWorkspaceUser)

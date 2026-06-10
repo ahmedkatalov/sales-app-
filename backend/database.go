@@ -30,6 +30,17 @@ func createTables() {
 		created_at TEXT
 	);
 
+	CREATE TABLE IF NOT EXISTS user_workspaces (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		owner_account_id INTEGER NOT NULL,
+		workspace_id INTEGER NOT NULL,
+		data_account_id INTEGER NOT NULL,
+		role TEXT DEFAULT 'branch_admin',
+		created_at TEXT,
+		UNIQUE(user_id, workspace_id)
+	);
+
 	CREATE TABLE IF NOT EXISTS employees (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		account_id INTEGER DEFAULT 1,
