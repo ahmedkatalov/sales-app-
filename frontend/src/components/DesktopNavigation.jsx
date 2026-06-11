@@ -10,6 +10,7 @@ export default function DesktopNavigation({
   workerName,
   pendingCount = 0,
   debtCount = 0,
+  workspaceName = "",
   isProfileRoute,
   onToggleMode,
   onLogout,
@@ -31,10 +32,19 @@ export default function DesktopNavigation({
           </div>
 
           <div className="min-w-0">
-            <p className="truncate text-xs font-black text-white">Sales App</p>
-            <p className="truncate text-xs font-bold text-slate-400">
-              {accountLabel} · {accountName}
-            </p>
+            <p className="truncate text-xs font-black text-white">{accountName}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <p className="truncate text-xs font-bold text-slate-400">{accountLabel}</p>
+              {workspaceName && (
+                <>
+                  <span className="text-slate-600">·</span>
+                  <span className="flex items-center gap-1 truncate text-xs font-black text-blue-400">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
+                    {workspaceName}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
