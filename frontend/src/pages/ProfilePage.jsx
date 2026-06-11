@@ -584,14 +584,14 @@ export default function ProfilePage({
               </p>
             </div>
 
-            {safe_workspaceUsers.filter(u => u.role === "worker").length === 0 ? (
+            {safe_workspaceUsers.filter(u => u.role === "worker" || u.role === "branch_admin").length === 0 ? (
               <div className="rounded-3xl border border-dashed border-white/10 p-10 text-center">
                 <p className="text-lg font-black text-white">Рабочих аккаунтов нет</p>
                 <p className="mt-1 text-sm text-slate-400">Создай рабочий аккаунт в разделе «Аккаунты точек».</p>
               </div>
             ) : (
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {safe_workspaceUsers.filter(u => u.role === "worker" || u.role === "workspace").map((u) => {
+                {safe_workspaceUsers.filter(u => u.role === "worker" || u.role === "workspace" || u.role === "branch_admin").map((u) => {
                   const perms = safe_permissions.find(p => p.userId === u.id);
                   const pages = perms?.pages
                     ? (typeof perms.pages === "string" ? JSON.parse(perms.pages) : perms.pages)

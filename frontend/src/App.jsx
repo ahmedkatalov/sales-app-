@@ -325,11 +325,17 @@ export default function App() {
 
   useEffect(() => {
     if (!session) return;
-    if (isOwner || isAdmin) { setUserPages(["*"]); return; }
-    // Для worker грузим права
+    if (isOwner) { setUserPages(["*"]); return; }
+    // Для admin и worker грузим права с сервера
     get("/user-permissions/my")
-      .then((res) => setUserPages(Array.isArray(res?.pages) ? res.pages : (typeof res?.pages === "string" ? JSON.parse(res.pages) : ["/pos", "/pending-payments"])))
-      .catch(() => setUserPages(["/pos", "/pending-payments"]));
+      .then((res) => {
+        if (res?.full) { setUserPages(["*"]); return; }
+        const pages = Array.isArray(res?.pages) ? res.pages
+          : (typeof res?.pages === "string" ? JSON.parse(res.pages) : null);
+        if (pages) { setUserPages(pages); }
+        else { setUserPages(isAdmin ? ["*"] : ["/pos", "/pending-payments"]); }
+      })
+      .catch(() => setUserPages(isAdmin ? ["*"] : ["/pos", "/pending-payments"]));
   }, [session, workspace, isOwner, isAdmin]);
 
   useEffect(() => {
@@ -382,7 +388,7 @@ export default function App() {
     );
   }
 
-  const allWorkerLinks = [
+  const allRestrictedLinks = [
     ["/pos", "Магазин", ShoppingCart],
     ["/pending-payments", "Ожидание оплаты", Clock3, "pending"],
     ["/debts", "Долги", FileText, "debt"],
@@ -394,11 +400,14 @@ export default function App() {
     ["/analytics", "Аналитика", BarChart3],
   ];
 
-  const filteredWorkerLinks = isWorker && userPages && !userPages.includes("*")
-    ? allWorkerLinks.filter(([to]) => userPages.includes(to))
-    : workerLinks;
+  const filteredLinks = (isWorker || isAdmin) && userPages && !userPages.includes("*")
+    ? allRestrictedLinks.filter(([to]) => userPages.includes(to))
+    : null;
 
-  const links = isWorker ? filteredWorkerLinks : isAdmin ? adminLinks : ownerLinks;
+  const links = isOwner ? ownerLinks
+    : filteredLinks ? filteredLinks
+    : isAdmin ? adminLinks
+    : workerLinks;
   const mobileMainPaths = isWorker ? ["/pos", "/pending-payments", "/expenses"] : ["/work", "/pos", "/pending-payments"];
   const mobileMainLinks = links.filter(([to]) => mobileMainPaths.includes(to));
   const mobileMoreLinks = links.filter(([to]) => !mobileMainPaths.includes(to));
@@ -423,9 +432,9 @@ export default function App() {
   const workerName = profile?.name || (isOwner ? session.ownerName || session.username : "выберите сотрудника");
   const forbidden = <Navigate to={isWorker ? "/pos" : "/work"} replace />;
 
-  // Проверка доступа к странице для worker
+  // Проверка доступа к странице (для worker и admin если ограничен)
   const canAccess = (path) => {
-    if (!isWorker) return true; // owner/admin — полный доступ
+    if (isOwner) return true; // owner — всегда полный доступ
     if (!userPages) return false; // ещё не загрузили
     if (userPages.includes("*")) return true;
     return userPages.includes(path);

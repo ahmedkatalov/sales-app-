@@ -474,8 +474,8 @@ func getMyPermissions(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	// owner и branch_admin имеют полный доступ
-	if u.Role == "owner" || u.Role == "branch_admin" {
+	// owner — всегда полный доступ без ограничений
+	if u.Role == "owner" {
 		c.JSON(http.StatusOK, gin.H{"pages": []string{"*"}, "full": true})
 		return
 	}
