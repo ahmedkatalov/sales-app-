@@ -263,6 +263,7 @@ export default function App() {
   const [employees, setEmployees] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [debtCount, setDebtCount] = useState(0);
+  const [userPages, setUserPages] = useState(null); // null = not loaded yet
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [toasts, setToasts] = useState([]);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
@@ -324,6 +325,15 @@ export default function App() {
 
   useEffect(() => {
     if (!session) return;
+    if (isOwner || isAdmin) { setUserPages(["*"]); return; }
+    // Для worker грузим права
+    get("/user-permissions/my")
+      .then((res) => setUserPages(Array.isArray(res?.pages) ? res.pages : (typeof res?.pages === "string" ? JSON.parse(res.pages) : ["/pos", "/pending-payments"])))
+      .catch(() => setUserPages(["/pos", "/pending-payments"]));
+  }, [session, workspace, isOwner, isAdmin]);
+
+  useEffect(() => {
+    if (!session) return;
     const loadPendingCount = () => get("/pending-sales").then((list) => setPendingCount(Array.isArray(list) ? list.length : 0)).catch(() => setPendingCount(0));
     const loadDebtCount = () => get("/debts").then((list) => { const active = Array.isArray(list) ? list.filter((d) => !d.paid && !d.isPaid && !d.is_paid) : []; setDebtCount(active.length); }).catch(() => setDebtCount(0));
     loadPendingCount(); loadDebtCount();
@@ -372,7 +382,23 @@ export default function App() {
     );
   }
 
-  const links = isWorker ? workerLinks : isAdmin ? adminLinks : ownerLinks;
+  const allWorkerLinks = [
+    ["/pos", "Магазин", ShoppingCart],
+    ["/pending-payments", "Ожидание оплаты", Clock3, "pending"],
+    ["/debts", "Долги", FileText, "debt"],
+    ["/expenses", "Расходы", Wallet],
+    ["/work", "Работа", Briefcase],
+    ["/ai-warehouse", "AI-бизнес", Bot],
+    ["/warehouse", "Склад", Package],
+    ["/sales-analytics", "Продажи", ReceiptText],
+    ["/analytics", "Аналитика", BarChart3],
+  ];
+
+  const filteredWorkerLinks = isWorker && userPages && !userPages.includes("*")
+    ? allWorkerLinks.filter(([to]) => userPages.includes(to))
+    : workerLinks;
+
+  const links = isWorker ? filteredWorkerLinks : isAdmin ? adminLinks : ownerLinks;
   const mobileMainPaths = isWorker ? ["/pos", "/pending-payments", "/expenses"] : ["/work", "/pos", "/pending-payments"];
   const mobileMainLinks = links.filter(([to]) => mobileMainPaths.includes(to));
   const mobileMoreLinks = links.filter(([to]) => !mobileMainPaths.includes(to));
@@ -396,6 +422,14 @@ export default function App() {
 
   const workerName = profile?.name || (isOwner ? session.ownerName || session.username : "выберите сотрудника");
   const forbidden = <Navigate to={isWorker ? "/pos" : "/work"} replace />;
+
+  // Проверка доступа к странице для worker
+  const canAccess = (path) => {
+    if (!isWorker) return true; // owner/admin — полный доступ
+    if (!userPages) return false; // ещё не загрузили
+    if (userPages.includes("*")) return true;
+    return userPages.includes(path);
+  };
   const handleProfileChange = (value) => { const selected = employees.find((x) => String(x.id) === String(value)); setCurrentProfile(selected || null); setProfile(selected || null); };
 
   return (
@@ -528,12 +562,12 @@ export default function App() {
           <Route path="/expenses" element={<ExpensesPage currentProfile={profile} workerMode={isWorker} />} />
           <Route path="/pending-payments" element={<PendingPaymentsPage />} />
           <Route path="/debts" element={<DebtsPage />} />
-          <Route path="/work" element={isWorker ? forbidden : <WorkPage />} />
-          <Route path="/ai-warehouse" element={isWorker ? forbidden : <AIWarehousePage key={currentWorkspace?.dataAccountId || session?.dataAccountId || "default"} />} />
-          <Route path="/warehouse" element={isWorker ? forbidden : <WarehousePage />} />
+          <Route path="/work" element={!canAccess("/work") ? forbidden : <WorkPage />} />
+          <Route path="/ai-warehouse" element={!canAccess("/ai-warehouse") ? forbidden : <AIWarehousePage key={currentWorkspace?.dataAccountId || session?.dataAccountId || "default"} />} />
+          <Route path="/warehouse" element={!canAccess("/warehouse") ? forbidden : <WarehousePage />} />
           <Route path="/profile" element={isWorker ? <Navigate to="/pos" replace /> : <ProfilePage session={session} workspace={currentWorkspace} profile={profile} setProfile={setProfile} setWorkspaceState={setWorkspaceState} logout={logout} />} />
-          <Route path="/sales-analytics" element={isWorker ? forbidden : <SalesAnalyticsPage />} />
-          <Route path="/analytics" element={isWorker ? forbidden : <AnalyticsPage />} />
+          <Route path="/sales-analytics" element={!canAccess("/sales-analytics") ? forbidden : <SalesAnalyticsPage />} />
+          <Route path="/analytics" element={!canAccess("/analytics") ? forbidden : <AnalyticsPage />} />
           <Route path="/employees" element={<Navigate to="/profile" replace />} />
           <Route path="/cards" element={<Navigate to="/profile" replace />} />
           <Route path="*" element={<Navigate to={isWorker ? "/pos" : "/work"} replace />} />

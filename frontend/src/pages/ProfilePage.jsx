@@ -9,13 +9,27 @@ import {
 } from "../api";
 import Modal from "../components/Modal";
 
+// Все доступные страницы для назначения прав
+const ALL_PAGES = [
+  { path: "/pos",            label: "Магазин (касса)",   icon: "🛒" },
+  { path: "/pending-payments", label: "Ожидание оплаты", icon: "⏳" },
+  { path: "/debts",          label: "Долги",              icon: "📄" },
+  { path: "/expenses",       label: "Расходы",            icon: "💰" },
+  { path: "/work",           label: "Работа (меню)",      icon: "💼" },
+  { path: "/warehouse",      label: "Склад",              icon: "📦" },
+  { path: "/ai-warehouse",   label: "AI-бизнес",          icon: "🤖" },
+  { path: "/sales-analytics", label: "Продажи",           icon: "📊" },
+  { path: "/analytics",      label: "Аналитика",          icon: "📈" },
+];
+
 const ownerTabs = [
-  { id: "overview",   label: "Обзор" },
-  { id: "branches",   label: "Точки" },
-  { id: "access",     label: "Доступы" },
-  { id: "accounts",   label: "Аккаунты точек" },
-  { id: "employees",  label: "Работники" },
-  { id: "cards",      label: "Карты" },
+  { id: "overview",     label: "Обзор" },
+  { id: "branches",     label: "Точки" },
+  { id: "access",       label: "Доступы" },
+  { id: "permissions",  label: "Права" },
+  { id: "accounts",     label: "Аккаунты точек" },
+  { id: "employees",    label: "Работники" },
+  { id: "cards",        label: "Карты" },
 ];
 
 const adminTabs = [
@@ -59,6 +73,10 @@ export default function ProfilePage({
   const [accountForm,   setAccountForm]   = useState({
     workspaceId: "", username: "", password: "", role: "worker",
   });
+  const [permissions, setPermissions] = useState([]);
+  const [editingPerms, setEditingPerms] = useState(null); // { userId, username, workspaceId, pages }
+  const safe_permissions = Array.isArray(permissions) ? permissions : [];
+
   const [grantForm, setGrantForm] = useState({
     userId: "", workspaceId: "", role: "branch_admin",
   });
@@ -104,6 +122,7 @@ export default function ProfilePage({
       if (isOwner || isBranchAdmin) requests.push(get("/cards"));
       if (isOwner) requests.push(get("/workspaces"));
       if (isOwner) requests.push(get("/workspace-access"));
+      if (isOwner) requests.push(get("/user-permissions"));
 
       const result = await Promise.all(requests);
       let i = 0;
@@ -119,6 +138,7 @@ export default function ProfilePage({
         }
       }
       if (isOwner) setWorkspaceAccess(result[i++] || []);
+      if (isOwner) setPermissions(result[i++] || []);
     } catch (e) {
       setError(e.message || "Ошибка загрузки");
     } finally {
@@ -221,6 +241,38 @@ export default function ProfilePage({
     if (!confirm("Удалить аккаунт?")) return;
     await del(`/workspace-users/${id}`);
     await load();
+  };
+
+  // ── Права на страницы ─────────────────────────────────────────────────────
+  const openEditPerms = (user) => {
+    const existing = safe_permissions.find(p => p.userId === user.id || p.userId === user.userId);
+    const pages = existing?.pages
+      ? (typeof existing.pages === "string" ? JSON.parse(existing.pages) : existing.pages)
+      : ["/pos", "/pending-payments"];
+    setEditingPerms({
+      userId: user.id || user.userId,
+      username: user.username,
+      workspaceId: user.workspaceId || 0,
+      pages,
+    });
+    setModal("editPerms");
+  };
+
+  const savePerms = async () => {
+    if (!editingPerms) return;
+    await put(`/user-permissions/${editingPerms.userId}`, {
+      workspaceId: editingPerms.workspaceId,
+      pages: editingPerms.pages,
+    });
+    setModal(null);
+    await load();
+  };
+
+  const togglePage = (path) => {
+    setEditingPerms(p => ({
+      ...p,
+      pages: p.pages.includes(path) ? p.pages.filter(x => x !== path) : [...p.pages, path],
+    }));
   };
 
   // ── Мультидоступ ──────────────────────────────────────────────────────────
@@ -522,6 +574,61 @@ export default function ProfilePage({
           </section>
         )}
 
+        {/* ── Права на страницы ── */}
+        {activeTab === "permissions" && isOwner && (
+          <section className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
+            <div className="mb-5">
+              <h3 className="text-2xl font-black">Права на страницы</h3>
+              <p className="mt-1 text-sm text-slate-400">
+                Выбери пользователя и настрой какие страницы он видит. Owner и Admin всегда имеют полный доступ.
+              </p>
+            </div>
+
+            {safe_workspaceUsers.filter(u => u.role === "worker").length === 0 ? (
+              <div className="rounded-3xl border border-dashed border-white/10 p-10 text-center">
+                <p className="text-lg font-black text-white">Рабочих аккаунтов нет</p>
+                <p className="mt-1 text-sm text-slate-400">Создай рабочий аккаунт в разделе «Аккаунты точек».</p>
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {safe_workspaceUsers.filter(u => u.role === "worker" || u.role === "workspace").map((u) => {
+                  const perms = safe_permissions.find(p => p.userId === u.id);
+                  const pages = perms?.pages
+                    ? (typeof perms.pages === "string" ? JSON.parse(perms.pages) : perms.pages)
+                    : ["/pos", "/pending-payments"];
+                  const hasFullAccess = pages.includes("*");
+                  return (
+                    <article key={u.id} className="rounded-3xl border border-white/10 bg-[#111827] p-5">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-black text-white">{u.username}</p>
+                          <p className="text-xs text-slate-400">{u.workspaceName}</p>
+                        </div>
+                        <button type="button" onClick={() => openEditPerms(u)}
+                          className="rounded-xl bg-blue-500/20 px-3 py-1.5 text-xs font-black text-blue-300 hover:bg-blue-500/30">
+                          ✏ Права
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {hasFullAccess ? (
+                          <span className="rounded-xl bg-emerald-500/20 px-2 py-1 text-[10px] font-black text-emerald-300">Полный доступ</span>
+                        ) : pages.map(path => {
+                          const page = ALL_PAGES.find(p => p.path === path);
+                          return page ? (
+                            <span key={path} className="rounded-xl bg-white/5 px-2 py-1 text-[10px] font-bold text-slate-300">
+                              {page.icon} {page.label}
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* ── Карты ── */}
         {activeTab === "cards" && (isOwner || isBranchAdmin) && (
           <section className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
@@ -565,6 +672,44 @@ export default function ProfilePage({
         )}
 
         {/* ════ Модалки ════ */}
+
+        {modal === "editPerms" && editingPerms && (
+          <Modal title={`Права: ${editingPerms.username}`} wide>
+            <p className="mb-4 text-sm text-slate-400">
+              Выбери страницы к которым у этого пользователя будет доступ.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {ALL_PAGES.map((page) => {
+                const checked = editingPerms.pages.includes(page.path);
+                return (
+                  <button key={page.path} type="button" onClick={() => togglePage(page.path)}
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                      checked
+                        ? "border-blue-400/40 bg-blue-500/15 text-blue-200"
+                        : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                    }`}>
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border-2 text-xs font-black ${checked ? "border-blue-400 bg-blue-500 text-white" : "border-white/20"}`}>
+                      {checked && "✓"}
+                    </span>
+                    <span className="text-lg">{page.icon}</span>
+                    <span className="text-sm font-bold">{page.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+              <span className="text-sm font-bold text-slate-400">Выбрано страниц: {editingPerms.pages.length} из {ALL_PAGES.length}</span>
+              <button type="button" onClick={() => setEditingPerms(p => ({...p, pages: ALL_PAGES.map(x => x.path)}))}
+                className="ml-auto rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white hover:bg-white/15">Выбрать все</button>
+              <button type="button" onClick={() => setEditingPerms(p => ({...p, pages: ["/pos"]}))}
+                className="rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white hover:bg-white/15">Сбросить</button>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button type="button" onClick={() => setModal(null)} className="btn-white flex-1">Отмена</button>
+              <button type="button" onClick={savePerms} className="btn-blue flex-1">Сохранить</button>
+            </div>
+          </Modal>
+        )}
 
         {modal === "grantAccess" && (
           <Modal title="Добавить доступ к точке" wide>

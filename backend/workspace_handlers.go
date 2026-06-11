@@ -1,11 +1,13 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 func getWorkspaces(c *gin.Context) {
@@ -431,4 +433,104 @@ func getMyWorkspaces(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, list)
+}
+
+// ── Права доступа к страницам ────────────────────────────────────────────────
+
+// GET /user-permissions — список прав всех пользователей
+func getUserPermissions(c *gin.Context) {
+	ownerID := ownerAccountID(c)
+	rows, err := db.Query(`
+		SELECT up.id, up.user_id, u.username, up.workspace_id,
+		       IFNULL(w.name,''), up.pages
+		FROM user_permissions up
+		JOIN users u ON u.id = up.user_id
+		LEFT JOIN workspaces w ON w.id = up.workspace_id
+		WHERE up.owner_account_id = ?
+		ORDER BY u.username
+	`, ownerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+	list := []gin.H{}
+	for rows.Next() {
+		var id, userID, wsID int
+		var username, wsName, pages string
+		rows.Scan(&id, &userID, &username, &wsID, &wsName, &pages)
+		list = append(list, gin.H{
+			"id": id, "userId": userID, "username": username,
+			"workspaceId": wsID, "workspaceName": wsName, "pages": pages,
+		})
+	}
+	c.JSON(http.StatusOK, list)
+}
+
+// GET /user-permissions/my — права текущего пользователя
+func getMyPermissions(c *gin.Context) {
+	u, ok := currentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	// owner и branch_admin имеют полный доступ
+	if u.Role == "owner" || u.Role == "branch_admin" {
+		c.JSON(http.StatusOK, gin.H{"pages": []string{"*"}, "full": true})
+		return
+	}
+	var pages string
+	wsID := u.WorkspaceID
+	err := db.QueryRow(`
+		SELECT IFNULL(pages, '[]') FROM user_permissions
+		WHERE user_id = ? AND workspace_id = ?
+	`, u.ID, wsID).Scan(&pages)
+	if err != nil {
+		// Нет записи — только базовый доступ (касса)
+		c.JSON(http.StatusOK, gin.H{"pages": []string{"/pos", "/pending-payments"}, "full": false})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"pages": pages, "full": false})
+}
+
+// PUT /user-permissions/:userId — установить права пользователю
+func setUserPermissions(c *gin.Context) {
+	ownerID := ownerAccountID(c)
+	userID := c.Param("userId")
+
+	var req struct {
+		WorkspaceID int      `json:"workspaceId"`
+		Pages       []string `json:"pages"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Проверяем что пользователь принадлежит этому owner
+	var username string
+	err := db.QueryRow(`SELECT username FROM users WHERE id = ? AND (owner_account_id = ? OR account_id = ?)`,
+		userID, ownerID, ownerID).Scan(&username)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Пользователь не найден"})
+		return
+	}
+
+	pagesJSON, _ := json.Marshal(req.Pages)
+	now := time.Now().Format(time.RFC3339)
+
+	_, err = db.Exec(`
+		INSERT INTO user_permissions(user_id, owner_account_id, workspace_id, pages, updated_at)
+		VALUES(?, ?, ?, ?, ?)
+		ON CONFLICT(user_id, workspace_id) DO UPDATE SET pages=excluded.pages, updated_at=excluded.updated_at
+	`, userID, ownerID, req.WorkspaceID, string(pagesJSON), now)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"userId": userID, "username": username,
+		"workspaceId": req.WorkspaceID, "pages": req.Pages,
+	})
 }

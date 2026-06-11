@@ -77,6 +77,9 @@ func main() {
 	auth.POST("/workspace-access", grantWorkspaceAccess)
 	auth.DELETE("/workspace-access/:id", revokeWorkspaceAccess)
 	auth.GET("/my-workspaces", getMyWorkspaces)
+	auth.GET("/user-permissions", getUserPermissions)
+	auth.GET("/user-permissions/my", getMyPermissions)
+	auth.PUT("/user-permissions/:userId", setUserPermissions)
 
 	auth.GET("/workspace-users", getWorkspaceUsers)
 	auth.POST("/workspace-users", createWorkspaceUser)
