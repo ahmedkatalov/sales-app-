@@ -264,6 +264,13 @@ func createTables() {
 		qty REAL DEFAULT 0
 	);
 
+	CREATE TABLE IF NOT EXISTS user_sessions (
+		token TEXT PRIMARY KEY,
+		user_id INTEGER NOT NULL,
+		created_at TEXT NOT NULL,
+		expires_at TEXT NOT NULL
+	);
+
 	CREATE TABLE IF NOT EXISTS login_otp_codes (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_id INTEGER NOT NULL,
@@ -297,6 +304,7 @@ func createTables() {
 
 	migrations := []string{
 		`ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''`,
+		`CREATE TABLE IF NOT EXISTS user_sessions (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, created_at TEXT NOT NULL, expires_at TEXT NOT NULL)`,
 		`ALTER TABLE users ADD COLUMN account_id INTEGER DEFAULT 1`,
 		`ALTER TABLE users ADD COLUMN owner_account_id INTEGER DEFAULT 0`,
 		`ALTER TABLE users ADD COLUMN workspace_id INTEGER DEFAULT 0`,

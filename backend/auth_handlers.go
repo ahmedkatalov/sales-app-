@@ -7,20 +7,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 )
 
 // ---------------------------------------------------------------------------
-// Простое in-memory хранилище сессий (токен → userID).
-// Для production замените на Redis или запись в БД.
-// ---------------------------------------------------------------------------
-
-var (
-	sessionStore = map[string]int{}
-	sessionMu    sync.RWMutex
-)
-
 func generateToken() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
@@ -29,23 +19,37 @@ func generateToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
+// Сессии хранятся в SQLite — не сбрасываются при рестарте сервера.
 func storeSession(token string, userID int) {
-	sessionMu.Lock()
-	defer sessionMu.Unlock()
-	sessionStore[token] = userID
+	now := time.Now()
+	expiresAt := now.Add(30 * 24 * time.Hour) // 30 дней
+	_, _ = db.Exec(
+		`INSERT OR REPLACE INTO user_sessions(token, user_id, created_at, expires_at) VALUES(?, ?, ?, ?)`,
+		token, userID, now.Format(time.RFC3339), expiresAt.Format(time.RFC3339),
+	)
 }
 
 func lookupSession(token string) (int, bool) {
-	sessionMu.RLock()
-	defer sessionMu.RUnlock()
-	id, ok := sessionStore[token]
-	return id, ok
+	var userID int
+	var expiresAt string
+	err := db.QueryRow(
+		`SELECT user_id, expires_at FROM user_sessions WHERE token = ?`, token,
+	).Scan(&userID, &expiresAt)
+	if err != nil {
+		return 0, false
+	}
+	// Проверяем срок действия
+	if exp, err := time.Parse(time.RFC3339, expiresAt); err == nil {
+		if time.Now().After(exp) {
+			deleteSession(token)
+			return 0, false
+		}
+	}
+	return userID, true
 }
 
 func deleteSession(token string) {
-	sessionMu.Lock()
-	defer sessionMu.Unlock()
-	delete(sessionStore, token)
+	_, _ = db.Exec(`DELETE FROM user_sessions WHERE token = ?`, token)
 }
 
 // ---------------------------------------------------------------------------

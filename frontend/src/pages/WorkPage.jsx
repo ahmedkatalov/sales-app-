@@ -137,6 +137,10 @@ export default function WorkPage() {
   const [typeModal, setTypeModal] = useState(false);
   const [folderModal, setFolderModal] = useState(false);
   const [productModal, setProductModal] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState(null);
+  const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
+  const [aiAdvisorEnabled, setAiAdvisorEnabled] = useState(true);
+  const aiDebounceRef = useRef(null);
   const [importModal, setImportModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
@@ -397,7 +401,48 @@ export default function WorkPage() {
     }
   }, [recipeCost, safe_recipe.length]);
 
+  const analyzeProductNameWork = useCallback(async (name) => {
+    if (!name || name.trim().length < 3) { setAiSuggestion(null); return; }
+    if (!aiAdvisorEnabled) return;
+    setAiSuggestionLoading(true);
+    try {
+      const data = await post("/ai/menu/suggest", {
+        name,
+        warehouseItems: safeWarehouseItems.map(w => ({ id: w.id, name: w.name, unit: w.unit }))
+      });
+      if (data && data.displayName) setAiSuggestion(data);
+    } catch { setAiSuggestion(null); }
+    finally { setAiSuggestionLoading(false); }
+  }, [safeWarehouseItems, aiAdvisorEnabled]);
+
+  const applyAiSuggestionWork = () => {
+    if (!aiSuggestion) return;
+    setProductForm(p => ({
+      ...p,
+      name: aiSuggestion.displayName || p.name,
+      price: p.price || String(aiSuggestion.typicalPrice || ""),
+      cost: p.cost || String(aiSuggestion.estimatedCost || ""),
+    }));
+    const rows = (aiSuggestion.ingredients || []).map(ing => {
+      const found = safeWarehouseItems.find(w =>
+        w.name.toLowerCase().includes(ing.name.toLowerCase()) ||
+        ing.name.toLowerCase().includes(w.name.toLowerCase())
+      );
+      return {
+        warehouseItemId: found ? String(found.id) : "",
+        ingredientName: ing.name,
+        quantity: String(ing.quantity),
+        quantityUnit: ing.unit === "мл" ? "ml" : "g",
+        mode: found ? "warehouse" : "manual",
+      };
+    });
+    if (rows.length) setRecipe(rows);
+    setAiSuggestion(null);
+  };
+
   const openProductModal = () => {
+    setAiSuggestion(null);
+    setAiSuggestionLoading(false);
     setError("");
     setProductForm({ name: "", cost: "", price: "" });
     setRecipe([]);
@@ -1212,14 +1257,75 @@ export default function WorkPage() {
               ))}
             </select>
 
-            <input
-              value={productForm.name}
-              onChange={(e) =>
-                setProductForm((p) => ({ ...p, name: e.target.value }))
-              }
-              placeholder="Эспрессо, Капучино, Боул с курицей..."
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 sm:col-span-2"
-            />
+            <div className="relative sm:col-span-2">
+              <input
+                value={productForm.name}
+                onChange={(e) => {
+                  setProductForm((p) => ({ ...p, name: e.target.value }));
+                  if (aiAdvisorEnabled) {
+                    clearTimeout(aiDebounceRef.current);
+                    aiDebounceRef.current = setTimeout(() => analyzeProductNameWork(e.target.value), 800);
+                  }
+                }}
+                placeholder="Эспрессо, Капучино, Боул с курицей..."
+                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 pr-32 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60"
+              />
+              <button type="button"
+                onClick={() => {
+                  const next = !aiAdvisorEnabled;
+                  setAiAdvisorEnabled(next);
+                  if (!next) setAiSuggestion(null);
+                  else if (productForm.name?.trim().length >= 3) analyzeProductNameWork(productForm.name);
+                }}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-black transition ${
+                  aiAdvisorEnabled ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-500 border border-white/10"
+                }`}>
+                {aiSuggestionLoading
+                  ? <><span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400"/>Думаю...</>
+                  : <>{aiAdvisorEnabled ? "✨ AI вкл" : "✨ AI выкл"}</>}
+              </button>
+            </div>
+
+            {aiSuggestion && (
+              <div className="sm:col-span-2 rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-500/10 to-blue-500/5 p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-violet-300">✨ AI предлагает</p>
+                    <p className="mt-1 font-black text-white">{aiSuggestion.displayName}</p>
+                    <p className="text-xs text-slate-400">{aiSuggestion.description}</p>
+                  </div>
+                  <button type="button" onClick={() => setAiSuggestion(null)} className="text-slate-500 hover:text-white">×</button>
+                </div>
+                <div className="flex gap-3 mb-3 text-sm">
+                  <div className="rounded-xl bg-emerald-500/10 border border-emerald-400/20 px-3 py-2">
+                    <p className="text-[10px] text-slate-400">Цена</p>
+                    <p className="font-black text-emerald-300">{aiSuggestion.typicalPrice} ₽</p>
+                  </div>
+                  <div className="rounded-xl bg-orange-500/10 border border-orange-400/20 px-3 py-2">
+                    <p className="text-[10px] text-slate-400">Себест.</p>
+                    <p className="font-black text-orange-300">{aiSuggestion.estimatedCost} ₽</p>
+                  </div>
+                </div>
+                <div className="mb-3 space-y-1">
+                  {(aiSuggestion.ingredients || []).map((ing, i) => {
+                    const found = safeWarehouseItems.find(w => w.name.toLowerCase().includes(ing.name.toLowerCase()));
+                    return (
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${found ? "bg-emerald-400" : "bg-yellow-400"}`}/>
+                        <span className="font-bold text-white">{ing.name}</span>
+                        <span className="text-slate-400">{ing.quantity} {ing.unit}</span>
+                        <span className="ml-auto text-[10px]">{found ? <span className="text-emerald-400">есть на складе</span> : <span className="text-yellow-500">нет на складе</span>}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {aiSuggestion.tip && <p className="text-xs text-slate-400 italic mb-3">💡 {aiSuggestion.tip}</p>}
+                <button type="button" onClick={applyAiSuggestionWork}
+                  className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 py-2 font-black text-white text-xs hover:opacity-90">
+                  ✨ Применить — заполнить состав и цены
+                </button>
+              </div>
+            )}
 
             <input
               type="number"
