@@ -239,10 +239,16 @@ func createWorkspaceUser(c *gin.Context) {
 		hashedPassword = req.Password // fallback если bcrypt недоступен
 	}
 
+	// Email берём из username если похоже на email
+	emailVal := ""
+	if strings.Contains(req.Username, "@") {
+		emailVal = req.Username
+	}
+
 	res, err := db.Exec(`
-		INSERT INTO users(account_id, owner_account_id, workspace_id, data_account_id, username, password, role, created_at)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-	`, req.OwnerAccountID, req.OwnerAccountID, req.WorkspaceID, dataID, req.Username, hashedPassword, req.Role, time.Now().Format(time.RFC3339))
+		INSERT INTO users(account_id, owner_account_id, workspace_id, data_account_id, username, email, password, role, created_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, req.OwnerAccountID, req.OwnerAccountID, req.WorkspaceID, dataID, req.Username, emailVal, hashedPassword, req.Role, time.Now().Format(time.RFC3339))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Такой логин уже существует"})
