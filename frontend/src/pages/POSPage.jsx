@@ -226,6 +226,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
   const [sectionModal, setSectionModal] = useState(false);
   const [categoryModal, setCategoryModal] = useState(false);
   const [productModal, setProductModal] = useState(false);
+  const [inlineSection, setInlineSection] = useState(false);
+  const [inlineCategory, setInlineCategory] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState(null);
   const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
   const [aiAdvisorEnabled, setAiAdvisorEnabled] = useState(true);
@@ -725,38 +727,71 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           </div>
 
           {!isWorkspaceUser && (
-            <div className="grid grid-cols-3 gap-2 sm:flex">
-              <button
-                onClick={() => setSectionModal(true)}
-                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-slate-200 transition hover:bg-white/10"
-              >
-                + Раздел
-              </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* ── Создать раздел inline ── */}
+              {inlineSection ? (
+                <div className="flex flex-1 items-center gap-2 rounded-2xl border border-blue-400/30 bg-blue-500/10 px-3 py-2">
+                  <span className="text-sm font-black text-blue-300 shrink-0">Раздел:</span>
+                  <input
+                    value={newSectionName}
+                    onChange={(e) => setNewSectionName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { createSection(); setInlineSection(false); } if (e.key === "Escape") setInlineSection(false); }}
+                    placeholder="Напитки, Еда, Десерты..."
+                    autoFocus
+                    className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-blue-400/50"
+                  />
+                  <button onClick={() => { createSection(); setInlineSection(false); }} className="shrink-0 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-black text-white hover:bg-blue-500">Добавить</button>
+                  <button onClick={() => setInlineSection(false)} className="shrink-0 text-slate-500 hover:text-white text-lg leading-none">×</button>
+                </div>
+              ) : (
+                <button onClick={() => setInlineSection(true)}
+                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:border-blue-400/40 hover:bg-blue-500/10 hover:text-blue-300">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-xs">＋</span>
+                  Раздел
+                </button>
+              )}
 
-              <button
-                onClick={() => {
-                  setNewCategory((p) => ({
-                    ...p,
-                    sectionId:
-                      selectedSectionId !== "all" ? selectedSectionId : "",
-                  }));
-                  setCategoryModal(true);
-                }}
-                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-slate-200 transition hover:bg-white/10"
-              >
-                + Категория
-              </button>
+              {/* ── Создать категорию inline ── */}
+              {inlineCategory ? (
+                <div className="flex flex-1 items-center gap-2 rounded-2xl border border-violet-400/30 bg-violet-500/10 px-3 py-2">
+                  <span className="text-sm font-black text-violet-300 shrink-0">Категория:</span>
+                  {safe_sections.length > 0 && (
+                    <select
+                      value={newCategory.sectionId}
+                      onChange={(e) => setNewCategory(p => ({ ...p, sectionId: e.target.value }))}
+                      className="rounded-xl border border-white/10 bg-slate-900 px-2 py-1 text-xs font-bold text-white outline-none shrink-0">
+                      <option value="">Раздел...</option>
+                      {safe_sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  )}
+                  <input
+                    value={newCategory.name}
+                    onChange={(e) => setNewCategory(p => ({ ...p, name: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === "Enter") { createCategory(); setInlineCategory(false); } if (e.key === "Escape") setInlineCategory(false); }}
+                    placeholder="Холодные напитки..."
+                    autoFocus
+                    className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-violet-400/50"
+                  />
+                  <button onClick={() => { createCategory(); setInlineCategory(false); }} className="shrink-0 rounded-xl bg-violet-600 px-3 py-1.5 text-xs font-black text-white hover:bg-violet-500">Добавить</button>
+                  <button onClick={() => setInlineCategory(false)} className="shrink-0 text-slate-500 hover:text-white text-lg leading-none">×</button>
+                </div>
+              ) : (
+                <button onClick={() => { setNewCategory(p => ({ ...p, sectionId: selectedSectionId !== "all" ? selectedSectionId : "" })); setInlineCategory(true); }}
+                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:border-violet-400/40 hover:bg-violet-500/10 hover:text-violet-300">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-xs">＋</span>
+                  Категория
+                </button>
+              )}
 
-              <button
-                onClick={openProductModal}
-                disabled={!openedCategory}
-                className={`rounded-2xl px-5 py-3 font-black shadow-sm ${
+              {/* ── Добавить позицию ── */}
+              <button onClick={openProductModal} disabled={!openedCategory}
+                className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black transition ${
                   openedCategory
-                    ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-blue-900/30"
-                    : "bg-white/5 text-slate-500"
-                }`}
-              >
-                + Позиция
+                    ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/30 hover:opacity-90"
+                    : "border border-white/10 bg-white/5 text-slate-500 cursor-not-allowed"
+                }`}>
+                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/20 text-xs">＋</span>
+                {openedCategory ? `Позиция в «${openedCategory.name}»` : "Сначала выбери категорию"}
               </button>
             </div>
           )}
