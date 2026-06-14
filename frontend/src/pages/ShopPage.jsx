@@ -169,6 +169,7 @@ export default function ShopPage() {
     setCartOpen(false);
   };
 
+  // eslint-disable-next-line react-hooks/static-components
   const CartPanel = ({ mobile = false }) => (
     <aside
       className={`flex h-full flex-col overflow-hidden border border-white/10 bg-slate-950/90 shadow-2xl shadow-black/30 backdrop-blur-2xl ${

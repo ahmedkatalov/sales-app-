@@ -43,8 +43,6 @@ export default function AnalyticsPage() {
   const [from, setFrom] = useState(defaultMonth);
   const [to, setTo] = useState(defaultMonth);
   const [filterOpen, setFilterOpen] = useState(false);
-  const monthStartStr = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 7); })();
-  const monthEndStr = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 7); })();
   const [selectedProduct, setSelectedProduct] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -213,7 +211,7 @@ export default function AnalyticsPage() {
   };
 
   useEffect(() => {
-    loadWorkspaces().catch((e) => setError(e.message));
+    loadWorkspaces().catch((e) => setError(e.message)); // eslint-disable-line react-hooks/set-state-in-effect
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

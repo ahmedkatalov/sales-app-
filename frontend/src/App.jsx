@@ -325,7 +325,7 @@ export default function App() {
 
   useEffect(() => {
     if (!session) return;
-    if (isOwner) { setUserPages(["*"]); return; }
+    if (isOwner) { setUserPages(["*"]); return; } // eslint-disable-line react-hooks/set-state-in-effect
     // Для admin и worker грузим права с сервера
     get("/user-permissions/my")
       .then((res) => {
@@ -425,7 +425,7 @@ export default function App() {
       const ws = getCurrentWorkspace(); const sess = getSession();
       const accId = ws?.dataAccountId || sess?.dataAccountId || ws?.id || sess?.accountId || sess?.ownerAccountId;
       if (accId && accId !== 0) localStorage.removeItem(`sales_app_ai_operator_chat_${accId}`);
-    } catch { }
+    } catch { /* ignore */ }
     clearSession(); setSessionState(null); setWorkspaceState(null); setProfile(null);
   };
 

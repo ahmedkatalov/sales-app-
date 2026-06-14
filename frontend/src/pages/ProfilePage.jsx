@@ -54,7 +54,6 @@ export default function ProfilePage({
 }) {
   const isOwner       = session?.role === "owner";
   const isBranchAdmin = session?.role === "branch_admin";
-  const isWorker      = session?.role === "worker" || session?.role === "workspace";
 
   const tabs = isOwner ? ownerTabs : isBranchAdmin ? adminTabs : workerTabs;
 

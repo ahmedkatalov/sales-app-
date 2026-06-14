@@ -7,18 +7,10 @@ const UNIT_LABELS = { g: "г", kg: "кг", ml: "мл", l: "л", pcs: "шт", bot
 const CONTAINER_UNITS = ["box", "pack", "bottle"];
 const unitLabel = (unit) => UNIT_LABELS[unit] || unit || "";
 
-const PURCHASE_VERB_RE = /^(я\s+|мы\s+)?(купил[аи]?|купили|докупил[аи]?|докупили|закупил[аи]?|закупили|взял[аи]?|взяли|добавил[аи]?|добавили)\s+/i;
-const FILLER_RE = /^(такс|так|короче|ну|значит|ладно|я|мы|еще|ещё)\s+/i;
 
 const normalizeText = (text) => String(text || "").replace(/ё/g, "е").replace(/,/g, ".").replace(/\s+/g, " ").trim();
 const lower = (text) => normalizeText(text).toLowerCase();
 
-const AI_MODE = {
-  HUMAN_OPERATOR: "human_operator",
-  STRICT_FLOW: "strict_flow",
-};
-
-const CURRENT_AI_MODE = AI_MODE.HUMAN_OPERATOR;
 
 const isCancelContextText = (text) => {
   const t = lower(text);
@@ -30,17 +22,6 @@ const sanitizeAssistantAnswer = (answer) => {
   const text = String(answer || "").trim();
   return text || "Готово.";
 };
-const isExpenseText = (text) => /(расход|потратил|потратила|оплатил|оплатила|заплатил|заплатила|аренда|такси|зарплата|аванс|сайт|реклама|коммунал|доставка)/i.test(String(text || ""));
-
-const isMenuCreateText = (text) => {
-  const t = lower(text);
-  if (isMenuTypeCreateText(text) || isMenuCategoryCreateText(text)) return false;
-  if (/(создай|создать|добавь|добавить|внеси|внести|сделай)\s+.*(тип|папк|категор|меню|напит|блюд|товар меню|продукт меню)/i.test(t)) return true;
-  if (/(эспрессо|espresso|латте|капучино|флэт\s*уайт|раф|американо|макиато|чай|бургер|десерт)/i.test(t) && /(цена|руб|₽|состав|рецепт|используем|грам|мл|тип|папк|категор)/i.test(t)) return true;
-  if (/(тип|папк|категор).*?(цена|состав|рецепт|эспрессо|латте|капучино|товар|напит|блюд)/i.test(t)) return true;
-  return false;
-};
-
 
 const MENU_TYPE_ALIASES = [
   { name: "Еда", re: /\b(еда|еду|блюда|кухня)\b/i },
@@ -48,40 +29,6 @@ const MENU_TYPE_ALIASES = [
   { name: "Десерты", re: /\b(десерты|десерт|сладкое)\b/i },
 ];
 
-const isMenuTypeCreateText = (text) => {
-  const t = lower(text);
-  const wantsCreate = /(создай|создать|добавь|добавить|внеси|внести|сделай|нужно|надо|хочу)/i.test(t);
-  const mentionsType = /(тип|типы|раздел|разделы)/i.test(t);
-  const mentionsKnownType = MENU_TYPE_ALIASES.some(({ re }) => re.test(t));
-  const asksQuestion = /(какие|сколько|покажи|список|есть|что есть)/i.test(t);
-  const isProductCommand = /(товар|продукт|позици|блюдо|цена|состав|рецепт|руб|₽)/i.test(t);
-
-  return !asksQuestion && !isProductCommand && mentionsType && (wantsCreate || mentionsKnownType);
-};
-
-const isMenuTypeQuestionText = (text) => {
-  const t = lower(text);
-  return /(какие|сколько|покажи|список|есть|что есть)/i.test(t)
-    && /(тип|типы|раздел|разделы)/i.test(t)
-    && !/склад/i.test(t);
-};
-
-const isMenuCategoryCreateText = (text) => {
-  const t = lower(text);
-  const wantsCreate = /(создай|создать|добавь|добавить|внеси|внести|сделай|нужно|надо|хочу)/i.test(t);
-  const mentionsCategory = /(папк|категор)/i.test(t);
-  const asksQuestion = /(какие|сколько|покажи|список|есть|что есть)/i.test(t);
-  const isProductCommand = /(товар|продукт|позици|цена|состав|рецепт|руб|₽)/i.test(t);
-
-  return wantsCreate && mentionsCategory && !asksQuestion && !isProductCommand;
-};
-
-const isMenuCategoryQuestionText = (text) => {
-  const t = lower(text);
-  return /(какие|сколько|покажи|список|есть|что есть)/i.test(t)
-    && /(папк|категор)/i.test(t)
-    && !/склад/i.test(t);
-};
 
 const extractMenuTypeNames = (text) => {
   const t = lower(text);
@@ -115,75 +62,6 @@ const extractMenuTypeNames = (text) => {
   return found;
 };
 
-const extractCategoryRequest = (text) => {
-  const t = lower(text);
-  const category =
-    t.match(/(?:папк\w*|категор\w*)\s+([а-яa-z0-9\s-]{2,40}?)(?:\s+в\s+|\s+для\s+|$)/i)?.[1]?.trim() || "";
-  const typeName =
-    t.match(/(?:в|для)\s+(?:тип\w*\s+)?([а-яa-z0-9\s-]{2,30})/i)?.[1]?.trim() || "";
-  return { category, typeName };
-};
-
-const isPurchaseText = (text) => {
-  if (isMenuCreateText(text)) return false;
-  const t = lower(text);
-  const isQuestion = /(\?|за\s+сколько|почем|по\s+чем|цена|стоимость|сколько\s+стоил|сколько\s+обош|покажи|список|какие|что есть|остатк)/i.test(t);
-  if (isQuestion) return false;
-  return /(купил|купила|купили|купи|купить|докупил|докупила|закупил|закупила|взял|взяла|приход|поступил|добавил|добавила)/i.test(t)
-    && /\d/i.test(t);
-};
-
-const isAffirmativeText = (text) => /^(да|ага|угу|ок|окей|подтверждаю|запиши|сохрани|добавь|верно|правильно)$/i.test(lower(text));
-const isNegativeText = (text) => /^(нет|не|отмена|отмени|не надо|не записывай|не сохраняй)$/i.test(lower(text));
-
-const isPurchaseOrderText = (text) => {
-  if (isMenuCreateText(text)) return false;
-  const t = lower(text);
-  if (isPurchaseHistoryQuestionText(text) || isWarehouseListQuestionText(text)) return false;
-
-  const hasQty = /\d+(?:[,.]\d+)?\s*(кг|килограмм\w*|гр|грамм\w*|мл|миллилитр\w*|л\b|литр\w*|шт|штук\w*|шту\w*|бутыл\w*|упак\w*|пач\w*|короб\w*)/i.test(t);
-  const hasMoney = /(?:за|цена|стоимость|сумма|обошл\w*)\s*\d+(?:[,.]\d+)?(?:\s*(?:к|тыс|тысяч))?\s*(?:₽|руб\w*|р\b)?/i.test(t)
-    || /\d+(?:[,.]\d+)?(?:\s*(?:к|тыс|тысяч))?\s*(?:₽|руб\w*|р\b)/i.test(t);
-  const hasPurchaseWord = /(купил|купила|купили|купи|купить|докупил|докупила|закуп|взял|взяла|приход|поступил|добавил|добавила|мой\s+закуп)/i.test(t);
-
-  // Важно: пользователь часто пишет закупку без слова «купил»: «граната 3кг за 500рублей».
-  // Это всё равно закупка, а не вопрос к AI-чату. Иначе бот начинает отвечать глупо:
-  // «скажи купил гранату...».
-  const name = extractPurchaseName(t);
-  const hasProductName = Boolean(name && name.length >= 2 && !/^(товар|сырье|сырьё|руб|лей|за)$/i.test(name));
-
-  return hasQty && hasMoney && (hasPurchaseWord || hasProductName);
-};
-
-const extractPurchaseOrderParts = (text) => {
-  const qtyRe = /\d+(?:[,.]\d+)?\s*(?:кг|килограмм\w*|гр|грамм\w*|мл|миллилитр\w*|л\b|литр\w*|шт|штук\w*|шту\w*|бутыл\w*|упак\w*|пач\w*|короб\w*)/i;
-  const moneyRe = /\d+(?:[,.]\d+)?\s*(?:₽|руб\w*|р\b)/i;
-  const rawLines = String(text || "")
-    .replace(/^(мой\s+закуп|закуп|закупка|приход)\s*[:：-]?/i, "")
-    .split(/\n+/)
-    .map((line) => normalizeText(line))
-    .filter(Boolean);
-
-  const chunks = [];
-  for (const line of rawLines) {
-    const prepared = line
-      .replace(/^(?:и\s+)?так\s*же\s+/i, "")
-      .replace(/^также\s+/i, "")
-      .replace(/^(?:ещё|еще)\s+/i, "")
-      .replace(/\s+(?:и\s+)?так\s*же\s+/gi, " | ")
-      .replace(/\s+также\s+/gi, " | ")
-      .replace(/\s+(?:ещё|еще)\s+/gi, " | ")
-      .replace(/\s*;\s*/g, " | ");
-    prepared.split("|").map((x) => x.trim()).filter(Boolean).forEach((x) => chunks.push(x));
-  }
-
-  const parts = chunks
-    .filter((part) => qtyRe.test(part) && (moneyRe.test(part) || /(?:за|ща)\s*\d/i.test(part)))
-    .map((part) => part.replace(/\bща\b/gi, "за"))
-    .map((part) => /\b(купил|купила|купили|купи|купить|докупил|закупил|взял|взяла|взяли|добавил|добавила|добавили)\b/i.test(part) ? part : `купил ${part}`);
-
-  return parts.length ? parts : splitPurchaseText(text);
-};
 
 const normalizeName = (value) => lower(value).replace(/[^а-яa-z0-9 ]/gi, " ").replace(/\s+/g, " ").trim();
 
@@ -202,13 +80,6 @@ const stripCommandWords = (text) => normalizeName(text)
   .filter((word) => word && !COMMAND_WORDS.has(word))
   .join(" ")
   .trim();
-
-const isWarehouseVisibilityCommand = (text) => {
-  const t = lower(text);
-  const wantsHide = /(удали|удалить|убери|убрать|скрой|скрыть|спрячь|спрятать|не\s*актив|неактив|деактив|отключ)/i.test(t);
-  const wantsShow = /\b(верни|включи|активируй|сделай\s+актив|сделай\s+активн|покажи\s+снова)\b/i.test(t) && !/(не\s*актив|неактив)/i.test(t);
-  return wantsHide || wantsShow;
-};
 
 const getVisibilityCommandMode = (text) => {
   const t = lower(text);
@@ -254,49 +125,6 @@ const findBestWarehouseItem = (text, list = []) => {
 const isPronounOnlyVisibilityCommand = (text) => {
   const cleaned = stripCommandWords(text);
   return cleaned.length === 0 || /^(это|этот|эту|эти|его|ее|её|их|товар)$/i.test(cleaned);
-};
-
-const cleanPurchaseText = (text) => {
-  let value = normalizeText(text);
-  for (let i = 0; i < 4; i += 1) value = value.replace(FILLER_RE, "").trim();
-  return value;
-};
-
-const stripPurchasePrefix = (text) => cleanPurchaseText(text)
-  .replace(PURCHASE_VERB_RE, "")
-  .replace(/\b(купил[аи]?|купили|докупил[аи]?|докупили|закупил[аи]?|закупили|взял[аи]?|взяли|добавил[аи]?|добавили|приход|поступил[аи]?)\b/gi, " ")
-  .replace(/\s+/g, " ")
-  .trim();
-
-const splitPurchaseText = (text) => {
-  const cleaned = cleanPurchaseText(text);
-  const verb = cleaned.match(PURCHASE_VERB_RE)?.[2] || "купил";
-  let body = cleaned
-    .replace(/^(?:и\s+)?так\s*же\s+/i, "")
-    .replace(/^также\s+/i, "")
-    .replace(/^(?:ещё|еще)\s+/i, "")
-    .replace(/\s*,\s*/g, " и ")
-    .replace(/\s*;\s*/g, " и ")
-    .replace(/\s*\+\s*/g, " и ")
-    .replace(/\s+(?:и\s+)?так\s*же\s+/gi, " | ")
-    .replace(/\s+также\s+/gi, " | ")
-    .replace(/\s+(?:ещё|еще)\s+/gi, " | ");
-
-  // Делим только там, где после союза начинается новая покупка/новый товар с количеством.
-  body = body.replace(/\s+и\s+(?=(?:я\s+|мы\s+)?(?:купил[аи]?|купили|купи|купить|докупил[аи]?|закупил[аи]?|взял[аи]?|взяли|добавил[аи]?|добавили)\b)/gi, " | ");
-  body = body.replace(/\s+и\s+(?=[а-яёa-z][а-яёa-z\s-]{1,40}\s+\d+(?:[,.]\d+)?\s*(?:короб\w*|упак\w*|пач\w*|бутыл\w*|кг|килограмм\w*|гр|грамм\w*|мл|миллилитр\w*|л\b|литр\w*|шт|штук\w*|шту\w*))/gi, " | ");
-
-  const parts = body.split("|")
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((part) => part
-      // Убираем хвосты вида: "а апельсину купил за 350" из части про другой товар.
-      .replace(/\s+а\s+[а-яёa-z]{3,}[а-яёa-z\s-]{0,24}?\s+(?:купил[аи]?|купили|купить|купи|взял[аи]?|взяли)?\s*за\s*\d+(?:[,.]\d+)?\s*(?:к|тыс|тысяч)?\s*(?:₽|руб\w*|р\b)?\s*$/i, "")
-      .trim())
-    .filter(Boolean);
-
-  if (parts.length <= 1) return [cleaned];
-  return parts.map((part) => /\b(купил|купила|купили|купи|купить|докупил|закупил|взял|взяла|взяли|добавил|добавила|добавили)\b/i.test(part) ? part : `${verb} ${part}`);
 };
 
 const normalizeQuestionText = (questions) => Array.isArray(questions) ? questions.filter(Boolean).join("\n") : "";
@@ -399,38 +227,12 @@ const DEFAULT_SIDE_PANELS = {
   suggestions: true,
 };
 
-const SIDE_PANEL_NAMES = {
-  recent: "Последние добавления",
-  stocks: "Остатки",
-  suggestions: "Можно спросить",
-};
 
 const normalizeSidePanels = (value) => ({
   ...DEFAULT_SIDE_PANELS,
   ...(value && typeof value === "object" ? value : {}),
 });
 
-const resolveSidePanelCommand = (text, lastUIPanel = "") => {
-  const t = lower(text);
-  const negativeShow = /(не\s+покажи|не\s+показывай|не\s+выводи|не\s+открывай|не\s+ставь)/i.test(t);
-  const wantsShow = !negativeShow && /(покажи|показать|выведи|вывести|открой|открыть|добавь|добавить|верни|вернуть|поставь|поставить)/i.test(t);
-  const wantsHide = negativeShow || /(убери|убрать|скрой|скрыть|спрячь|спрятать|закрой|закрыть|удали|удалить)/i.test(t);
-  const mentionsStocks = /(остатк|остатки|складской\s+остаток|остаток\s+склада)/i.test(t);
-  const mentionsRecent = /(последн|добавлен|приход|приходы|поступлен)/i.test(t);
-  const mentionsSuggestions = /(можно\s+спросить|подсказк|пример|быстр\w*\s+команд)/i.test(t);
-  const pronounOnly = /^(убери|убрать|скрой|скрыть|спрячь|спрятать|закрой|закрыть)\s+(это|его|ее|её|их|блок|панель|карточку)?$/i.test(t);
-
-  let panel = "";
-  if (mentionsStocks) panel = "stocks";
-  else if (mentionsRecent) panel = "recent";
-  else if (mentionsSuggestions) panel = "suggestions";
-  else if (pronounOnly && lastUIPanel) panel = lastUIPanel;
-
-  if (!panel) return null;
-  if (wantsHide) return { panel, visible: false };
-  if (wantsShow || mentionsStocks || mentionsRecent || mentionsSuggestions) return { panel, visible: true };
-  return null;
-};
 
 const safeJsonParse = (value, fallback = null) => {
   try {
@@ -487,6 +289,13 @@ const loadAIChatState = (storageKey) => {
     sidePanels: normalizeSidePanels(saved.sidePanels),
     lastUIPanel: saved.lastUIPanel || "",
   };
+};
+
+const clearPendingAssistantState = ({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation }) => {
+  setPendingItems([]);
+  setPendingVisibility(null);
+  setPendingMenuTypeCreation(false);
+  setPendingPurchaseConfirmation(null);
 };
 
 const makeAIHistory = (messages, nextUserText = "") => {
@@ -585,11 +394,6 @@ const productNamePattern = (name = "") => {
   return root ? `${root}[а-яa-z]*` : "";
 };
 
-const extractNumber = (value) => {
-  const match = String(value || "").replace(",", ".").match(/\d+(?:\.\d+)?/);
-  return match ? Number(match[0]) : 0;
-};
-
 const parseMoneyNumber = (value) => {
   const raw = String(value || "").replace(",", ".").trim().toLowerCase();
   const match = raw.match(/\d+(?:\.\d+)?/);
@@ -656,8 +460,8 @@ const extractSize = (text, fallbackUnit = "pcs") => {
 
 const extractNameNearQuantity = (text) => {
   const t = lower(text);
-  const unitRe = "короб\w*|упак\w*|пач\w*|бутыл\w*|кг|килограмм\w*|гр|грамм\w*|мл|миллилитр\w*|л\b|литр\w*|шт|штук\w*|шту\w*";
-  const matches = [...t.matchAll(new RegExp(`\d+(?:[,.]\d+)?\s*(?:${unitRe})`, "gi"))];
+  const unitRe = "короб\\w*|упак\\w*|пач\\w*|бутыл\\w*|кг|килограмм\\w*|гр|грамм\\w*|мл|миллилитр\\w*|л\\b|литр\\w*|шт|штук\\w*|шту\\w*";
+  const matches = [...t.matchAll(new RegExp(`\\d+(?:[,.]\\d+)?\\s*(?:${unitRe})`, "gi"))];
   if (!matches.length) return "";
 
   const m = matches[0];
@@ -703,122 +507,6 @@ const localPurchaseOverrides = (text) => {
 };
 
 
-const PURCHASE_STOP_WORD_RE = /\b(мой|закуп|закупка|приход|купил|купила|купили|купи|купить|докупил|докупила|докупили|закупил|закупила|закупили|взял|взяла|взяли|добавил|добавила|добавили|товар|сырье|сырьё|за|ща|по|цене|цена|стоимость|сумма|руб|рублей|рубля|рубль|р|лей|и|а|так|же|также|еще|ещё|ну|короче|мне|нам|я|мы)\b/gi;
-
-const normalizePurchaseUnitText = (unitText = "") => {
-  const u = lower(unitText);
-  if (/кг|килограмм/.test(u)) return { purchaseUnit: "kg", unit: "g" };
-  if (/гр|грамм|\bг\b/.test(u)) return { purchaseUnit: "g", unit: "g" };
-  if (/мл|миллилитр/.test(u)) return { purchaseUnit: "ml", unit: "ml" };
-  if (/л\b|литр/.test(u)) return { purchaseUnit: "l", unit: "ml" };
-  if (/бутыл/.test(u)) return { purchaseUnit: "bottle", unit: "pcs" };
-  if (/упак|пач/.test(u)) return { purchaseUnit: "pack", unit: "pcs" };
-  if (/короб/.test(u)) return { purchaseUnit: "box", unit: "pcs" };
-  return { purchaseUnit: "pcs", unit: "pcs" };
-};
-
-const cleanPurchaseItemName = (value = "") => {
-  const hasCoffee = /кофе/i.test(value);
-  let text = lower(value)
-    .replace(/\bща\b/gi, "за")
-    .replace(/\b\d{4}[-./]\d{2}[-./]\d{2}t?\d{0,2}:?\d{0,2}:?\d{0,2}\b/gi, " ")
-    .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/gi, " ")
-    .replace(/\d+(?:[,.]\d+)?\s*(?:₽|руб\w*|р\b)/gi, " ")
-    .replace(/\d+(?:[,.]\d+)?\s*(?:кг|килограмм\w*|гр|грамм\w*|мл|миллилитр\w*|л\b|литр\w*|шт|штук\w*|шту\w*|бутыл\w*|упак\w*|пач\w*|короб\w*)/gi, " ")
-    .replace(PURCHASE_STOP_WORD_RE, " ")
-    .replace(/\b(в|во|на|из|для|котором|который|которая|которые|одной|один|примерно|примерный|граммовк\w*)\b/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  text = normalizeProductEntityName(text)
-    .replace(/\b(купил|купила|купили|купи|купить|руб|рублей|лей|за|ща)\b/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (/стаканчик/i.test(text) && hasCoffee) return "стаканчики для кофе";
-  return text;
-};
-
-const parsePurchaseLineLocally = (textPart, fullText = textPart) => {
-  const original = normalizeText(textPart)
-    .replace(/\bща\b/gi, "за")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const qtyMatch = original.match(/(\d+(?:[,.]\d+)?)\s*(кг|килограмм\w*|гр|грамм\w*|мл|миллилитр\w*|л\b|литр\w*|шт|штук\w*|шту\w*|бутыл\w*|упак\w*|пач\w*|короб\w*)/i);
-  const price = extractPrice(original) || extractPrice(String(fullText || "").replace(/\bща\b/gi, "за"));
-
-  if (!qtyMatch) return null;
-
-  const purchaseQuantity = Number(String(qtyMatch[1]).replace(",", "."));
-  const unitText = qtyMatch[2];
-  const units = normalizePurchaseUnitText(unitText);
-  const beforeQty = original.slice(0, qtyMatch.index).trim();
-  const afterQty = original.slice(qtyMatch.index + qtyMatch[0].length).trim();
-
-  let name = cleanPurchaseItemName(beforeQty.replace(/.*\b(купил[аи]?|купили|купи|купить|взял[аи]?|взяли|добавил[аи]?|добавили|закупил[аи]?|закупили)\s+/i, ""));
-  if (!name) name = cleanPurchaseItemName(afterQty.replace(/\b(?:за|цена|стоимость|сумма)\b.*$/i, ""));
-  if (!name) name = cleanPurchaseItemName(original);
-
-  name = normalizeProductEntityName(name);
-  if (!name || /\b(купил|купила|купили|купи|купить|руб|рублей|лей|за|ща)\b/i.test(name)) {
-    name = cleanPurchaseItemName(original);
-  }
-
-  const size = extractSize(original, units.unit);
-  const form = {
-    name,
-    purchaseQuantity: String(purchaseQuantity || ""),
-    quantity: String(purchaseQuantity || ""),
-    purchaseUnit: units.purchaseUnit,
-    unit: units.unit,
-    price: price ? String(price) : "",
-    minQuantity: "",
-    supplier: "",
-    expiryDate: "",
-    note: "",
-    unitsPerPackage: "1",
-    basePerUnit: String(size?.basePerUnit || 1),
-    packagingQuantity: String(size?.packagingQuantity || 1),
-    controlMode: units.unit === "pcs" ? "piece" : "approximate",
-    lossPercent: units.unit === "ml" ? 5 : units.unit === "g" ? 3 : 0,
-    inventoryMethod: units.unit === "pcs" ? "fifo" : "average",
-  };
-
-  const shouldAskWeight = units.purchaseUnit === "pcs"
-    && !size?.basePerUnit
-    && !/(стаканчик|стакан|тарелк|ложк|вилк|салфет|пакет|крышк|трубоч|бутыл|упаков|короб|пачк)/i.test(name);
-
-  if (shouldAskWeight) {
-    form.unit = "g";
-    form.basePerUnit = "";
-    form.packagingQuantity = "";
-  }
-
-  const payload = payloadFromForm(form);
-  const computed = computeWarehouseAmount(form);
-  const questions = [];
-  if (!form.name) questions.push("Как называется товар?");
-  if (!form.price || num(form.price) <= 0) questions.push(`За сколько купили «${form.name || "товар"}»?`);
-  if (shouldAskWeight) questions.push(`Сколько примерно грамм в 1 шт товара «${form.name}»? Например: “1 шт примерно 900г”.`);
-
-  return {
-    originalText: original,
-    result: { name: form.name, questions },
-    form,
-    payload,
-    questions,
-    computed,
-    matched: null,
-    needsUnitWeight: shouldAskWeight,
-  };
-};
-
-const parsePurchaseLinesLocally = (parts = [], fullText = "") => parts
-  .map((part) => parsePurchaseLineLocally(part, fullText || part))
-  .filter(Boolean);
-
-
 const extractPriceForProduct = (fullText, productName) => {
   const t = lower(fullText);
   const pattern = productNamePattern(productName);
@@ -841,17 +529,6 @@ const extractPriceForProduct = (fullText, productName) => {
   return 0;
 };
 
-const isWarehouseListQuestionText = (text) => {
-  const t = lower(text);
-  if (/(не\s+покажи|не\s+показывай|убери|скрой|скрыть|закрой|спрячь)/i.test(t)) return false;
-  return /(покажи|показать|список|какие|что есть|все|остатк)/i.test(t) && /(склад|товар|сырье|сырьё|остатк)/i.test(t);
-};
-
-const isPurchaseHistoryQuestionText = (text) => {
-  const t = lower(text);
-  return /(за\s+сколько|почем|по\s+чем|цена|стоимость|сколько\s+стоил|сколько\s+обош)/i.test(t)
-    && /(купил|купила|купили|закуп|брал|взял|приход|товар|склад|сырье|сырьё)/i.test(t);
-};
 
 const needsPieceWeightForRecipe = (form) => {
   const name = normalizeProductEntityName(form?.name || "");
@@ -1044,7 +721,6 @@ function Message({ msg }) {
 export default function AIWarehousePage() {
   const [items, setItems] = useState([]);
   const [movements, setMovements] = useState([]);
-  const [menuProducts, setMenuProducts] = useState([]);
   const [productTypes, setProductTypes] = useState([]);
   const [productCategories, setProductCategories] = useState([]);
   const [input, setInput] = useState("");
@@ -1059,7 +735,7 @@ export default function AIWarehousePage() {
   const [sidePanels, setSidePanels] = useState(normalizeSidePanels(restoredChat.sidePanels));
   const [lastUIPanel, setLastUIPanel] = useState(restoredChat.lastUIPanel || "");
   const [messages, setMessages] = useState(restoredChat.messages);
-  const [aiBrain, setAIBrain] = useState({
+  const [aiBrain] = useState({
     currentTopic: "",
     lastIntent: "",
     lastEntities: [],
@@ -1072,7 +748,6 @@ export default function AIWarehousePage() {
   // Safe array guards
   const safe_items = Array.isArray(items) ? items : [];
   const safe_movements = Array.isArray(movements) ? movements : [];
-  const safe_menuProducts = Array.isArray(menuProducts) ? menuProducts : [];
   const safe_productTypes = Array.isArray(productTypes) ? productTypes : [];
   const safe_productCategories = Array.isArray(productCategories) ? productCategories : [];
   const bottomRef = useRef(null);
@@ -1093,13 +768,11 @@ export default function AIWarehousePage() {
 
     const warehouseList = await safeGet("/warehouse/items");
     const movementList = await safeGet("/warehouse/movements");
-    const products = await safeGet("/menu-products");
     const types = await safeGet("/product-types");
     const categories = await safeGet("/product-categories");
 
     setItems(warehouseList);
     setMovements(movementList);
-    setMenuProducts(products);
     setProductTypes(types);
     setProductCategories(categories);
   };
@@ -1183,80 +856,6 @@ export default function AIWarehousePage() {
     return parsed;
   };
 
-  const parseLocalPurchaseParts = (parts, currentItems = items, fullText = "") => parsePurchaseLinesLocally(parts, fullText).map((parsed) => {
-    const matched = currentItems.find((item) => normalizeProductEntityName(item.name || "") === normalizeProductEntityName(parsed.payload.name || ""));
-    return { ...parsed, matched };
-  });
-
-  const saveParsedPurchasesBatch = async (parsedList = []) => {
-    const saved = [];
-    let workingItems = [...items];
-
-    for (const parsed of parsedList) {
-      const matched = parsed.matched || workingItems.find((item) => normalizeName(item.name) === normalizeName(parsed.payload.name));
-      const prepared = { ...parsed, matched };
-      const one = await saveParsedPurchase(prepared);
-      saved.push(one);
-      workingItems = await get("/warehouse/items").catch(() => workingItems) || workingItems;
-    }
-
-    const expense = await savePurchaseExpense(saved);
-    const lines = saved.map((x) => `${x.matched ? "прибавила к" : "создала"} “${normalizeProductEntityName(x.matched?.name || x.payload.name)}” — ${x.computed.quantity} ${unitLabel(x.computed.unit)} за ${formatMoney(x.payload.price)}`).join("\n");
-    setMessages((p) => [...p, {
-      role: "bot",
-      text: `Готово.\n${lines}${expense ? `\n\nВ расходы записала закупку сырья: ${formatMoney(expense.total)}.` : ""}`,
-      cards: saved.map((x) => x.card),
-    }]);
-    await load();
-  };
-
-  const handleLocalPurchaseParts = async (parts, currentItems = items, fullText = "") => {
-    const parsedList = parseLocalPurchaseParts(parts, currentItems, fullText || parts.join("\n"));
-    if (!parsedList.length) {
-      await handlePurchaseParts(parts, currentItems, [], fullText);
-      return;
-    }
-
-    const ready = [];
-    const waiting = [];
-    for (const parsed of parsedList) {
-      if (canSavePurchase(parsed)) ready.push(parsed);
-      else waiting.push(parsed);
-    }
-
-    if (waiting.length) {
-      const saved = [];
-      let workingItems = [...currentItems];
-      for (const parsed of ready) {
-        const matched = parsed.matched || workingItems.find((item) => normalizeProductEntityName(item.name || "") === normalizeProductEntityName(parsed.payload.name || ""));
-        const one = await saveParsedPurchase({ ...parsed, matched });
-        saved.push(one);
-        workingItems = await get("/warehouse/items").catch(() => workingItems) || workingItems;
-      }
-      if (saved.length) await savePurchaseExpense(saved);
-
-      setPendingItems(waiting.map((x) => ({
-        ...x,
-        form: { ...x.form, name: normalizeProductEntityName(x.form?.name || x.payload?.name || x.result?.name || "") },
-        payload: payloadFromForm({ ...x.form, name: normalizeProductEntityName(x.form?.name || x.payload?.name || x.result?.name || "") }),
-        result: { ...(x.result || {}), name: normalizeProductEntityName(x.form?.name || x.payload?.name || x.result?.name || "") },
-      })));
-
-      const savedText = saved.length
-        ? `Сохранила понятные позиции:\n${saved.map((x) => `• ${x.matched?.name || x.payload.name} — ${x.computed.quantity} ${unitLabel(x.computed.unit)} за ${formatMoney(x.payload.price)}`).join("\n")}\n\n`
-        : "";
-      const questions = waiting.map((p, i) => `${i + 1}) ${shortQuestionForPending({ ...p, result: { ...(p.result || {}), name: normalizeProductEntityName(p.form?.name || p.payload?.name || p.result?.name || "") } })}`).join("\n");
-      setMessages((p) => [...p, {
-        role: "bot",
-        text: `${savedText}Нужно уточнить только это:\n${questions}`,
-      }]);
-      await load();
-      return;
-    }
-
-    await saveParsedPurchasesBatch(ready);
-  };
-
   const canSavePurchase = (parsed) => {
     if (normalizeQuestionText(parsed.questions)) return false;
     if (!parsed.payload.name || num(parsed.payload.quantity) <= 0) return false;
@@ -1302,47 +901,6 @@ export default function AIWarehousePage() {
       comment,
     });
     return { total, comment };
-  };
-
-  const handlePurchaseParts = async (parts, currentItems = items, alreadySaved = [], fullText = "") => {
-    const saved = [...alreadySaved];
-    const waiting = [];
-    let workingItems = [...currentItems];
-
-    for (const part of parts) {
-      const parsed = await parsePurchase(part, workingItems, fullText || parts.join(" и "));
-      if (canSavePurchase(parsed)) {
-        const one = await saveParsedPurchase(parsed);
-        saved.push(one);
-        workingItems = await get("/warehouse/items").catch(() => workingItems) || workingItems;
-      } else {
-        waiting.push(parsed);
-      }
-    }
-
-    if (waiting.length) {
-      setPendingItems(waiting);
-      const savedText = saved.length
-        ? `Сохранила понятные позиции:\n${saved.map((x) => `• ${x.matched?.name || x.payload.name} — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n")}\n\n`
-        : "";
-      const questions = waiting.map((p, i) => `${i + 1}) ${shortQuestionForPending(p)}`).join("\n");
-      setMessages((p) => [...p, {
-        role: "bot",
-        text: `${savedText}Нужно уточнить только эти позиции:\n${questions}\n\nОтветь одним сообщением, можно сразу по всем: “стаканчики 250мл за 200, яблоки за 200”.`,
-      }]);
-      await load();
-      return;
-    }
-
-    setPendingItems([]);
-    const expense = await savePurchaseExpense(saved);
-    const lines = saved.map((x) => `${x.matched ? "прибавила к" : "создала"} “${normalizeProductEntityName(x.matched?.name || x.payload.name)}” — ${x.computed.quantity} ${unitLabel(x.computed.unit)} за ${formatMoney(x.payload.price)}`).join("\n");
-    setMessages((p) => [...p, {
-      role: "bot",
-      text: `Готово.\n${lines}${expense ? `\n\nВ расходы записала закупку сырья: ${formatMoney(expense.total)}.` : ""}`,
-      cards: saved.map((x) => x.card),
-    }]);
-    await load();
   };
 
   const updatePendingPurchases = async (replyText) => {
@@ -1482,43 +1040,6 @@ export default function AIWarehousePage() {
     return true;
   };
 
-  const handleSidePanelCommand = async (text) => {
-    const command = resolveSidePanelCommand(text, lastUIPanel);
-    if (!command) return false;
-
-    setSidePanels((prev) => ({ ...prev, [command.panel]: command.visible }));
-    setLastUIPanel(command.panel);
-    setPendingItems([]);
-    setPendingVisibility(null);
-    setPendingMenuTypeCreation(false);
-    setPendingPurchaseConfirmation(null);
-
-    const panelName = SIDE_PANEL_NAMES[command.panel] || "Блок";
-    const extra = command.panel === "stocks" && command.visible ? `\n\n${answerWarehouseItems()}` : "";
-    setMessages((p) => [...p, {
-      role: "bot",
-      text: command.visible
-        ? `Показал блок «${panelName}» справа.${extra}`
-        : `Убрал блок «${panelName}» справа.`,
-    }]);
-    return true;
-  };
-
-  const saveExpense = async (text) => {
-    const result = await post("/ai/expense/parse", { text });
-    const questionText = normalizeQuestionText(result.questions);
-    if (questionText) throw new Error(questionText);
-    if (!result.name || num(result.amount) <= 0) throw new Error("Не понял расход. Напиши что оплатили и сумму.");
-    await post("/global-expenses", {
-      category: result.category || "Общие",
-      type: result.type || "Расход",
-      name: result.name,
-      amount: num(result.amount),
-      comment: result.comment || result.explanation || "AI расход",
-    });
-    return result;
-  };
-
   const ensureMenuTypeAndCategory = async (typeName, categoryName) => {
     const cleanType = String(typeName || "Без типа").trim() || "Без типа";
     const cleanCategory = String(categoryName || "Без категории").trim() || "Без категории";
@@ -1561,97 +1082,6 @@ export default function AIWarehousePage() {
 
     setProductTypes(types);
     return { created, existed, all: types };
-  };
-
-  const answerMenuTypes = () => {
-    if (!safe_productTypes.length) return "В меню пока нет типов. Можешь написать: «создай типы Еда и Напитки» — я создам.";
-    return `Типы меню (${safe_productTypes.length}):\n${safe_productTypes.map((x) => `• ${x.name}`).join("\n")}`;
-  };
-
-  const answerMenuCategories = () => {
-    if (!safe_productCategories.length) return "В меню пока нет папок/категорий.";
-    return `Категории меню (${safe_productCategories.length}):\n${safe_productCategories.map((x) => `• ${x.name}${x.typeName || x.type ? ` — ${x.typeName || x.type}` : ""}`).join("\n")}`;
-  };
-
-
-  const answerWarehouseItems = () => {
-    const active = safe_items.filter((item) => !(item.hidden || item.isHidden || item.is_hidden));
-    if (!active.length) return "Сейчас на складе нет активных товаров. Можно написать: «купил молоко 5 шт за 500» — я добавлю.";
-    return `Товары склада (${active.length}):\n${active.map((item) => {
-      const price = num(item.price);
-      const unitCost = num(item.unitCost ?? item.unit_cost);
-      const priceText = price > 0 ? ` · последняя закупка ${formatMoney(price)}` : unitCost > 0 ? ` · себестоимость ${formatMoney(unitCost)} за ${unitLabel(item.unit)}` : "";
-      return `• ${item.name} — ${num(item.quantity)} ${unitLabel(item.unit)}${priceText}`;
-    }).join("\n")}`;
-  };
-
-  const answerPurchaseHistoryQuestion = (text) => {
-    let entity = normalizeProductEntityName(extractPurchaseName(text) || stripCommandWords(text));
-    if (!entity || /скольк|почем|цен|стоим/i.test(entity)) {
-      const t = lower(text).replace(/\b(за|сколько|почем|по|чем|я|мы|купил[аи]?|купили|закупил[аи]?|закупили|взял[аи]?|взяли|цена|стоимость|товар|склад|сырье|сырьё)\b/gi, " ");
-      entity = normalizeProductEntityName(t);
-    }
-    const pattern = productNamePattern(entity);
-    if (!pattern) return "По какому товару посмотреть цену закупки?";
-    const re = new RegExp(pattern, "i");
-
-    const item = safe_items.find((x) => re.test(normalizeProductEntityName(x.name || "")));
-    if (item) {
-      const price = num(item.price);
-      const unitCost = num(item.unitCost ?? item.unit_cost);
-      if (price > 0) return `Последняя закупка «${item.name}» была на ${formatMoney(price)}. Сейчас на складе ${num(item.quantity)} ${unitLabel(item.unit)}.`;
-      if (unitCost > 0) return `По «${item.name}» вижу себестоимость ${formatMoney(unitCost)} за ${unitLabel(item.unit)}. Точной суммы последней закупки в карточке нет.`;
-    }
-
-    const allMessagesText = messages.map((m) => m.text || "").join("\n");
-    const priceFromChat = extractPriceForProduct(allMessagesText, entity);
-    if (priceFromChat > 0) return `По истории чата: «${entity}» покупали за ${formatMoney(priceFromChat)}.`;
-
-    return `Не нашла цену закупки для «${entity}». Могу показать остаток или последние приходы по складу.`;
-  };
-
-  const createMenuCategoryFromText = async (text) => {
-    const req = extractCategoryRequest(text);
-    if (!req.category) throw new Error("Как назвать папку/категорию? Например: «создай папку Кофе в Напитки». ");
-
-    let typeName = req.typeName;
-    if (!typeName) {
-      if (/кофе|чай|напит/i.test(req.category)) typeName = "Напитки";
-      else typeName = productTypes[0]?.name || "Без типа";
-    }
-
-    const { type, category } = await ensureMenuTypeAndCategory(typeName, req.category);
-    return { type, category };
-  };
-
-  const saveMenuProduct = async (text) => {
-    const result = await post("/ai/menu/parse", {
-      text,
-      items: itemRefs(items),
-      menuProducts: safe_menuProducts.map((p) => ({ id: p.id, name: p.name, category: p.category, type: p.type || p.typeName, price: p.price, cost: p.cost })),
-    });
-    const questionText = normalizeQuestionText(result.questions);
-    if (questionText) throw new Error(questionText);
-    const recipe = (result.recipe || []).map((r) => ({
-      warehouseItemId: r.warehouseItemId,
-      warehouse_item_id: r.warehouseItemId,
-      quantity: num(r.quantity),
-      quantityUnit: r.unit,
-      quantity_unit: r.unit,
-    })).filter((r) => r.warehouseItemId > 0 && r.quantity > 0);
-    const { type, category } = await ensureMenuTypeAndCategory(result.type || "Без типа", result.category || "Без категории");
-    await post("/menu-products", {
-      name: result.name,
-      price: num(result.price),
-      type: type.name,
-      typeId: type.id,
-      type_id: type.id,
-      category: category.name,
-      categoryId: category.id,
-      category_id: category.id,
-      recipe,
-    });
-    return result;
   };
 
   // ─────────────────────────────────────────────────────────────────────────

@@ -107,7 +107,7 @@ function ownerAccountId() {
 function withParams(url) {
   if (url.startsWith("/auth/")) return url;
 
-  let id = null;
+  let id;
   let key = "accountId";
 
   if (url.startsWith("/workspaces") || url.startsWith("/workspace-users")) {
@@ -205,13 +205,15 @@ async function request(url, options = {}) {
   } catch (error) {
     if (error?.name === "AbortError") {
       throw new Error(
-        "Сервер не ответил за 12 секунд. Проверь backend, Docker и Nginx."
+        "Сервер не ответил за 12 секунд. Проверь backend, Docker и Nginx.",
+        { cause: error }
       );
     }
 
     if (error instanceof TypeError) {
       throw new Error(
-        "Нет соединения с backend. Проверь, что сервер работает и Nginx проксирует /api."
+        "Нет соединения с backend. Проверь, что сервер работает и Nginx проксирует /api.",
+        { cause: error }
       );
     }
 

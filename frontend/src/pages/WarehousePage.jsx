@@ -50,41 +50,8 @@ const getSmartModeLabel = (item) => {
 
 
 
-const PURCHASE_UNIT_LABELS = {
-  g: "граммами",
-  kg: "килограммами",
-  ml: "миллилитрами",
-  l: "литрами",
-  pcs: "штуками",
-  bottle: "бутылками",
-  pack: "упаковками",
-  box: "коробками",
-};
-
 const CONTAINER_UNITS = ["box", "pack", "bottle"];
 
-const toNumberText = (value) => String(value || "").replace(",", ".");
-
-const normalizePurchaseUnit = (text) => {
-  const t = String(text || "").toLowerCase();
-  if (/кг|килограмм/.test(t)) return "kg";
-  if (/гр|грамм/.test(t)) return "g";
-  if (/мл|миллилитр/.test(t)) return "ml";
-  if (/л\b|литр/.test(t)) return "l";
-  if (/короб/.test(t)) return "box";
-  if (/бутыл/.test(t)) return "bottle";
-  if (/упак|пач/.test(t)) return "pack";
-  if (/шт|штук|шту/.test(t)) return "pcs";
-  return "pcs";
-};
-
-const baseUnitForText = (text, fallback = "g") => {
-  const t = String(text || "").toLowerCase();
-  if (/мл|литр|\bл\b/.test(t)) return "ml";
-  if (/шт|штук|шту/.test(t)) return "pcs";
-  if (/гр|грамм|кг|килограмм/.test(t)) return "g";
-  return fallback;
-};
 
 const computeWarehouseAmount = (form) => {
   const purchaseQty = num(form.purchaseQuantity || form.quantity);
@@ -125,54 +92,6 @@ const computeWarehouseAmount = (form) => {
 };
 
 const unitLabelPlain = (unit) => UNIT_LABELS[unit] || unit || "";
-
-const parseSmartPurchaseText = (text, currentForm) => {
-  const raw = String(text || "").trim();
-  const t = raw.toLowerCase().replace(/,/g, ".");
-  const next = { ...currentForm };
-
-  const priceMatch = t.match(/(?:за|цена|стоимость|на сумму)\s*(\d+(?:\.\d+)?)/) || t.match(/(\d+(?:\.\d+)?)\s*(?:₽|руб)/);
-  if (priceMatch) next.price = priceMatch[1];
-
-  const purchaseMatch = t.match(/(?:купил|купила|закупил|закупила|взял|взяла)?\s*(\d+(?:\.\d+)?)\s*(короб\w*|упак\w*|пач\w*|бутыл\w*|кг|килограмм\w*|гр|грамм\w*|мл|миллилитр\w*|л\b|литр\w*|шт|штук\w*|шту\w*)/);
-  if (purchaseMatch) {
-    next.purchaseQuantity = purchaseMatch[1];
-    next.purchaseUnit = normalizePurchaseUnit(purchaseMatch[2]);
-  }
-
-  const insideMatch = t.match(/(?:внутри|в короб\w*|в упаков\w*|в пач\w*|в бутыл\w*)\D{0,20}(\d+(?:\.\d+)?)\s*(?:шт|штук|шту|пач\w*|бутыл\w*)/);
-  if (insideMatch) next.unitsPerPackage = insideMatch[1];
-
-  const pieceMatch = t.match(/(?:одна|один|1|в одной|в одном|штука|пачка|бутылка)\D{0,35}(\d+(?:\.\d+)?)\s*(г|гр|грамм\w*|мл|литр\w*|л\b|кг|килограмм\w*)/) ||
-    t.match(/по\s*(\d+(?:\.\d+)?)\s*(г|гр|грамм\w*|мл|литр\w*|л\b|кг|килограмм\w*)/);
-  if (pieceMatch) {
-    let value = num(pieceMatch[1]);
-    const u = normalizePurchaseUnit(pieceMatch[2]);
-    if (u === "kg") value *= 1000;
-    if (u === "l") value *= 1000;
-    next.basePerUnit = String(value);
-    next.unit = baseUnitForText(pieceMatch[2], next.unit);
-    next.packagingQuantity = String(value);
-  }
-
-  if ((next.purchaseUnit === "kg" || next.purchaseUnit === "g") && !pieceMatch) next.unit = "g";
-  if ((next.purchaseUnit === "l" || next.purchaseUnit === "ml") && !pieceMatch) next.unit = "ml";
-  if (next.purchaseUnit === "pcs" && !pieceMatch) {
-    next.unit = "pcs";
-    next.basePerUnit = "1";
-  }
-
-  const nameSource = raw
-    .replace(/купил[аи]?|закупил[аи]?|взял[аи]?/gi, "")
-    .replace(/\d+(?:[,.]\d+)?\s*(короб\w*|упак\w*|пач\w*|бутыл\w*|кг|килограмм\w*|гр|грамм\w*|мл|миллилитр\w*|л\b|литр\w*|шт|штук\w*|шту\w*)/gi, "")
-    .replace(/внутри.*$/i, "")
-    .replace(/за\s*\d+.*$/i, "")
-    .trim();
-  const cleanName = cleanWarehouseProductName(nameSource);
-  if (cleanName && cleanName.length <= 40) next.name = cleanName;
-
-  return next;
-};
 
 const smartPieceSuggestion = (name, unit) => {
   const n = String(name || "").toLowerCase();
@@ -215,17 +134,6 @@ export default function WarehousePage() {
   const [showHidden, setShowHidden] = useState(false);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
-  const [smartInput, setSmartInput] = useState("");
-  const [smartLoading, setSmartLoading] = useState(false);
-  const [smartResult, setSmartResult] = useState(null);
-  const [aiMessages, setAiMessages] = useState([
-    {
-      role: "bot",
-      text: "Напиши закупку как человеку: например ‘купил молоко 6 шт по 10 пачек, каждая по 1 литру, цена 7200’. Я сама найду товар, посчитаю и добавлю на склад.",
-    },
-  ]);
-  const [manualMode, setManualMode] = useState(false);
-
   const [form, setForm] = useState({
     name: "",
     quantity: "",
@@ -357,15 +265,6 @@ export default function WarehousePage() {
     });
     setDuplicateSuggestions([]);
     setPurchaseTargetItem(null);
-    setSmartInput("");
-    setSmartResult(null);
-    setManualMode(false);
-    setAiMessages([
-      {
-        role: "bot",
-        text: "Напиши закупку как человеку. После отправки я сама добавлю товар на склад или прибавлю к существующему.",
-      },
-    ]);
   };
 
   const validateForm = () => {
@@ -421,122 +320,6 @@ export default function WarehousePage() {
   };
 
   const payloadFromForm = () => payloadFromAnyForm(form);
-
-  const formFromAIResult = (result) => {
-    const nextUnit = result.unit || result.storageUnit || "g";
-    const nextPurchaseUnit = result.purchaseUnit || nextUnit;
-
-    return {
-      name: cleanWarehouseProductName(result.name || ""),
-      purchaseQuantity: String(result.purchaseQuantity || result.quantity || ""),
-      quantity: String(result.purchaseQuantity || result.quantity || ""),
-      purchaseUnit: nextPurchaseUnit,
-      unit: nextUnit,
-      price: result.price ? String(result.price) : "",
-      minQuantity: result.minQuantity ? String(result.minQuantity) : "",
-      supplier: result.supplier || "",
-      expiryDate: result.expiryDate || "",
-      note: result.note || "",
-      unitsPerPackage: String(result.unitsPerPackage || 1),
-      basePerUnit: String(result.basePerUnit || result.packagingQuantity || 1),
-      packagingQuantity: String(result.basePerUnit || result.packagingQuantity || 1),
-      controlMode: getSmartSettings(nextUnit).controlMode,
-      lossPercent: getSmartSettings(nextUnit).lossPercent,
-      inventoryMethod: getSmartSettings(nextUnit).inventoryMethod,
-    };
-  };
-
-  const validatePayload = (payload) => {
-    if (!payload.name) return "Я не поняла название товара. Напиши, что именно купили.";
-    if (num(payload.quantity) <= 0) return "Я не поняла количество. Напиши сколько купили и в какой упаковке.";
-    return "";
-  };
-
-  const applyAIResultToForm = (result) => {
-    const aiForm = formFromAIResult(result);
-    setForm((p) => ({ ...p, ...aiForm }));
-
-    if (result.matchedItemId) {
-      const matched = safe_items.find((item) => Number(item.id) === Number(result.matchedItemId));
-      if (matched) {
-        setPurchaseTargetItem(matched);
-        setDuplicateSuggestions([]);
-      }
-    }
-
-    return aiForm;
-  };
-
-  const handleSmartParse = async () => {
-    const text = smartInput.trim();
-    if (!text) {
-      setError("Напиши закупку обычным языком");
-      return;
-    }
-
-    setError("");
-    setSmartLoading(true);
-    setSmartResult(null);
-    setAiMessages((p) => [...p, { role: "user", text }]);
-    setSmartInput("");
-
-    try {
-      const result = await post("/ai/warehouse/parse", {
-        text,
-        items: safe_items.map((item) => ({
-          id: item.id,
-          name: item.name,
-          unit: item.unit,
-          packagingQuantity: item.packagingQuantity ?? item.packaging_quantity ?? 0,
-        })),
-      });
-
-      setSmartResult(result);
-      const aiForm = applyAIResultToForm(result);
-      const payload = payloadFromAnyForm(aiForm);
-      const validationError = validatePayload(payload);
-
-      if (validationError || result.questions?.length > 0) {
-        setAiMessages((p) => [
-          ...p,
-          {
-            role: "bot",
-            text: result.questions?.length > 0 ? result.questions.join(" ") : validationError,
-          },
-        ]);
-        return;
-      }
-
-      const matched = result.matchedItemId
-        ? safe_items.find((item) => Number(item.id) === Number(result.matchedItemId))
-        : null;
-
-      if (matched) {
-        await post(`/warehouse/items/${matched.id}/purchase`, payload);
-      } else {
-        await post("/warehouse/items", payload);
-      }
-
-      const computed = computeWarehouseAmount(aiForm);
-      setAiMessages((p) => [
-        ...p,
-        {
-          role: "bot",
-          text: `${matched ? `Готово, добавила закупку к товару “${matched.name}”.` : `Готово, создала товар “${payload.name}” на складе.`} ${computed.text}. Себестоимость: ${formatMoney(computed.unitCost)} за 1 ${unitLabel(computed.unit)}.`,
-        },
-      ]);
-
-      await load();
-    } catch (e) {
-      setAiMessages((p) => [
-        ...p,
-        { role: "bot", text: e.message || "AI не смог разобрать или сохранить закупку." },
-      ]);
-      setError(e.message || "AI не смог разобрать закупку");
-    } finally {
-      setSmartLoading(false);
-    }
-  };
 
   const checkDuplicatesAndCreate = async () => {
     setError("");
@@ -609,7 +392,6 @@ export default function WarehousePage() {
       unitsPerPackage: "1",
       basePerUnit: String(item.packagingQuantity ?? item.packaging_quantity ?? "1"),
     });
-    setSmartInput("");
     setAddModal(true);
   };
 

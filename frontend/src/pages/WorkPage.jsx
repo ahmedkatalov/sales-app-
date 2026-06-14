@@ -4,114 +4,34 @@ import Modal from "../components/Modal";
 import { formatMoney, money, num } from "../utils/format";
 
 
-// ─── AI-компонент ввода ингредиента вручную ──────────────────────────────────
+// ─── Поиск ингредиента по складу ─────────────────────────────────────────────
 function SmartIngredientInput({ value, onChange, warehouseItems = [], onSelectItem }) {
-  const [suggestions, setSuggestions] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const debounceRef = useRef(null);
 
-  const searchSuggestions = useCallback(async (text) => {
-    if (!text || text.length < 2) { setSuggestions([]); setOpen(false); return; }
-    setLoading(true);
-    const lower = text.toLowerCase();
-
-    // 1. Локальный поиск по складу
-    const localMatches = warehouseItems
-      .filter(i => i.name.toLowerCase().includes(lower))
-      .slice(0, 4)
-      .map(i => ({ id: i.id, name: i.name, source: "warehouse", unit: i.unit, qty: i.quantity, hint: `остаток: ${i.quantity} ${i.unit}` }));
-
-    if (localMatches.length >= 3) {
-      setSuggestions(localMatches); setOpen(true); setLoading(false); return;
-    }
-
-    // 2. AI ищет в интернете и нормализует название
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 600,
-          tools: [{ type: "web_search_20250305", name: "web_search" }],
-          messages: [{ role: "user", content: `Пользователь кофейни вводит ингредиент: "${text}"
-
-Используй web_search чтобы найти правильное русское название этого ингредиента, стандартные варианты написания, и популярные аналоги используемые в кофейнях/кафе России.
-
-На складе уже есть: ${warehouseItems.slice(0, 40).map(i => `${i.name}(id:${i.id})`).join(", ")}
-
-После поиска верни ТОЛЬКО JSON массив (без markdown, без пояснений):
-[{"name": "правильное название", "source": "warehouse|ai", "warehouseId": null, "hint": "короткое пояснение"}]
-
-- Исправь опечатки, найди правильное написание
-- Если есть на складе — source=warehouse, укажи warehouseId из списка выше
-- Максимум 5 вариантов` }]
-        })
-      });
-      const data = await res.json();
-      // Собираем текст из всех блоков (включая после web_search)
-      const raw = (data.content || [])
-        .filter(b => b.type === "text")
-        .map(b => b.text)
-        .join("") || "[]";
-      const clean = raw.replace(/```json|```/g, "").trim();
-      const jsonMatch = clean.match(/\[[\s\S]*\]/);
-      const aiItems = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
-      const merged = [...localMatches];
-      for (const s of aiItems) {
-        if (merged.find(m => m.name.toLowerCase() === s.name.toLowerCase())) continue;
-        const wItem = warehouseItems.find(i => i.id === s.warehouseId);
-        merged.push({ id: wItem?.id || null, name: s.name, source: wItem ? "warehouse" : "ai", unit: wItem?.unit || "", qty: wItem?.quantity ?? null, hint: s.hint || "" });
-      }
-      setSuggestions(merged.slice(0, 6));
-      setOpen(true);
-    } catch {
-      setSuggestions(localMatches);
-      setOpen(localMatches.length > 0);
-    } finally { setLoading(false); }
-  }, [warehouseItems]);
-
-  const handleChange = (e) => {
-    const val = e.target.value;
-    onChange(val);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => searchSuggestions(val), 400);
-  };
-
-  const handleSelect = (s) => {
-    onChange(s.name);
-    if (s.id) onSelectItem(s.id);
-    setSuggestions([]); setOpen(false);
-  };
+  const suggestions = value.length >= 2
+    ? warehouseItems.filter(i => i.name.toLowerCase().includes(value.toLowerCase())).slice(0, 6)
+    : [];
 
   return (
     <div className="relative">
-      <div className="relative flex items-center">
-        <span className="absolute left-3 text-sm">✨</span>
-        <input
-          type="text" value={value} onChange={handleChange}
-          onFocus={() => value.length >= 2 && suggestions.length > 0 && setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
-          placeholder="Введи название — AI подберёт правильное..."
-          className="w-full rounded-2xl border border-violet-400/30 bg-violet-500/8 py-2.5 pl-8 pr-8 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60 focus:ring-2 focus:ring-violet-500/20"
-        />
-        {loading && <span className="absolute right-3"><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" /></span>}
-      </div>
-
+      <input
+        type="text" value={value}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder="Введи название ингредиента..."
+        className="w-full rounded-2xl border border-violet-400/30 bg-violet-500/8 py-2.5 px-4 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60 focus:ring-2 focus:ring-violet-500/20"
+      />
       {open && suggestions.length > 0 && (
         <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
-          {suggestions.map((s, i) => (
-            <button key={i} type="button" onMouseDown={() => handleSelect(s)}
+          {suggestions.map((s) => (
+            <button key={s.id} type="button" onMouseDown={() => { onSelectItem(s.id); onChange(s.name); setOpen(false); }}
               className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/8">
-              <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black ${s.source === "warehouse" ? "bg-emerald-500/20 text-emerald-300" : "bg-violet-500/20 text-violet-300"}`}>
-                {s.source === "warehouse" ? "склад" : "AI"}
-              </span>
+              <span className="shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black bg-emerald-500/20 text-emerald-300">склад</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-black text-white">{s.name}</p>
-                {s.hint && <p className="text-xs text-slate-400">{s.hint}</p>}
+                <p className="text-xs text-slate-400">остаток: {s.quantity} {s.unit}</p>
               </div>
-              {s.source === "warehouse" && <span className="text-xs text-emerald-400">{s.qty} {s.unit}</span>}
             </button>
           ))}
         </div>
@@ -119,6 +39,23 @@ function SmartIngredientInput({ value, onChange, warehouseItems = [], onSelectIt
     </div>
   );
 }
+
+const UNIT_OPTIONS = [
+  { value: "g", label: "г" },
+  { value: "ml", label: "мл" },
+  { value: "pcs", label: "шт" },
+  { value: "kg", label: "кг" },
+  { value: "l", label: "л" },
+];
+
+const toStorageQty = (qty, inputUnit, storageUnit) => {
+  if (!inputUnit || inputUnit === storageUnit) return qty;
+  if (inputUnit === "kg" && storageUnit === "g") return qty * 1000;
+  if (inputUnit === "g" && storageUnit === "kg") return qty / 1000;
+  if (inputUnit === "l" && storageUnit === "ml") return qty * 1000;
+  if (inputUnit === "ml" && storageUnit === "l") return qty / 1000;
+  return qty;
+};
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function WorkPage() {
@@ -184,7 +121,7 @@ export default function WorkPage() {
   };
 
   useEffect(() => {
-    load().catch((e) => setError(e.message));
+    load().catch((e) => setError(e.message)); // eslint-disable-line react-hooks/set-state-in-effect
 
     const timer = setInterval(() => {
       load().catch(() => {});
@@ -213,7 +150,7 @@ export default function WorkPage() {
 
   useEffect(() => {
     if (!selectedTypeId) {
-      setSelectedFolderId("");
+      setSelectedFolderId(""); // eslint-disable-line react-hooks/set-state-in-effect
       return;
     }
 
@@ -385,15 +322,15 @@ export default function WorkPage() {
       const warehouseItem = safeWarehouseItems.find(
         (item) => String(item.id) === String(row.warehouseItemId)
       );
-
       if (!warehouseItem) return sum;
-
-      return sum + num(row.quantity) * getWarehouseUnitCost(warehouseItem);
+      const storageQty = toStorageQty(num(row.quantity), row.quantityUnit || warehouseItem.unit, warehouseItem.unit);
+      return sum + storageQty * getWarehouseUnitCost(warehouseItem);
     }, 0);
-  }, [recipe, warehouseItems]);
+  }, [recipe, warehouseItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (safe_recipe.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProductForm((p) => ({
         ...p,
         cost: recipeCost ? String(recipeCost.toFixed(2)) : "",
@@ -452,7 +389,7 @@ export default function WorkPage() {
   const addRecipeRow = (mode = "warehouse") => {
     setRecipe((rows) => [
       ...rows,
-      { warehouseItemId: "", ingredientName: "", quantity: "", mode },
+      { warehouseItemId: "", ingredientName: "", quantity: "", quantityUnit: "g", mode },
     ]);
   };
 
@@ -474,13 +411,19 @@ export default function WorkPage() {
 
     const cleanRecipe = recipe
       .filter((row) => (row.warehouseItemId || row.ingredientName) && num(row.quantity) > 0)
-      .map((row) => ({
-        warehouseItemId: Number(row.warehouseItemId) || 0,
-        warehouse_item_id: Number(row.warehouseItemId) || 0,
-        ingredientName: row.ingredientName || "",
-        itemName: row.ingredientName || "",
-        quantity: num(row.quantity),
-      }));
+      .map((row) => {
+        const wItem = safeWarehouseItems.find(w => String(w.id) === String(row.warehouseItemId));
+        const unit = row.quantityUnit || wItem?.unit || "g";
+        return {
+          warehouseItemId: Number(row.warehouseItemId) || 0,
+          warehouse_item_id: Number(row.warehouseItemId) || 0,
+          ingredientName: row.ingredientName || wItem?.name || "",
+          itemName: row.ingredientName || wItem?.name || "",
+          quantity: num(row.quantity),
+          quantityUnit: unit,
+          quantity_unit: unit,
+        };
+      });
 
     await post("/menu-products", {
       categoryId: Number(selectedFolderId),
@@ -532,7 +475,9 @@ export default function WorkPage() {
     const autoCost = editCostMode === "auto" && cleanRecipe.length > 0
       ? cleanRecipe.reduce((sum, r) => {
           const item = safeWarehouseItems.find(w => String(w.id) === String(r.warehouseItemId));
-          return sum + (item ? num(r.quantity) * num(item.unitCost ?? item.unit_cost ?? 0) : 0);
+          if (!item) return sum;
+          const storageQty = toStorageQty(num(r.quantity), r.quantityUnit || item.unit, item.unit);
+          return sum + storageQty * num(item.unitCost ?? item.unit_cost ?? 0);
         }, 0)
       : null;
     await put(`/menu-products/${editProduct.id}`, {
@@ -821,12 +766,29 @@ export default function WorkPage() {
             </thead>
 
             <tbody>
-              {productRows.map((p) => (
+              {productRows.map((p) => {
+                const hasRecipe = Array.isArray(p.recipe) && p.recipe.length > 0;
+                const hasUnlinked = hasRecipe && p.recipe.some(r => r.unlinked);
+                return (
                 <tr key={p.id} className="border-t border-white/10">
-                  <td className="p-4 font-black">{p.name}</td>
+                  <td className="p-4">
+                    <p className="font-black">{p.name}</p>
+                    {hasRecipe ? (
+                      <span className={`mt-0.5 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-black ${hasUnlinked ? "bg-yellow-500/15 text-yellow-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+                        {hasUnlinked ? `⚠ ${p.recipe.filter(r => r.unlinked).length} не на складе` : `✓ ${p.recipe.length} ингр.`}
+                      </span>
+                    ) : (
+                      <span className="mt-0.5 inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-black bg-slate-700/50 text-slate-400">
+                        без состава
+                      </span>
+                    )}
+                  </td>
                   <td className="p-4">{p.typeName || p.type}</td>
                   <td className="p-4">{p.category}</td>
-                  <td className="p-4">{formatMoney(p.cost)}</td>
+                  <td className="p-4">
+                    {formatMoney(p.cost)}
+                    {hasUnlinked && <p className="text-[10px] text-yellow-400">неполная</p>}
+                  </td>
                   <td className="p-4">{formatMoney(p.price)}</td>
                   <td className="p-4 font-black">{p.quantity}</td>
                   <td className="p-4 font-black">{formatMoney(p.revenue)}</td>
@@ -850,7 +812,8 @@ export default function WorkPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
 
               {!productRows.length && (
                 <tr>
@@ -878,7 +841,10 @@ export default function WorkPage() {
         </div>
 
         <div className="divide-y divide-white/10 md:hidden">
-          {productRows.map((p) => (
+          {productRows.map((p) => {
+            const hasRecipe = Array.isArray(p.recipe) && p.recipe.length > 0;
+            const hasUnlinked = hasRecipe && p.recipe.some(r => r.unlinked);
+            return (
             <div key={p.id} className="p-4">
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
@@ -886,6 +852,13 @@ export default function WorkPage() {
                   <p className="text-sm text-slate-400">
                     {p.typeName || p.type} • {p.category}
                   </p>
+                  {hasRecipe ? (
+                    <span className={`mt-1 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-black ${hasUnlinked ? "bg-yellow-500/15 text-yellow-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+                      {hasUnlinked ? `⚠ ${p.recipe.filter(r => r.unlinked).length} ингр. не на складе` : `✓ состав: ${p.recipe.length} ингр.`}
+                    </span>
+                  ) : (
+                    <span className="mt-1 inline-flex rounded-lg px-2 py-0.5 text-[10px] font-black bg-slate-700/50 text-slate-400">без состава</span>
+                  )}
                 </div>
 
                 <div className="flex gap-2">
@@ -928,7 +901,8 @@ export default function WorkPage() {
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
 
           {!productRows.length && (
             <div className="p-8 text-center text-slate-400">
@@ -1397,24 +1371,33 @@ export default function WorkPage() {
                       </button>
                     </div>
 
-                    <div className="grid gap-2 sm:grid-cols-[1fr_140px]">
+                    <div className="grid gap-2 sm:grid-cols-[1fr_90px_72px]">
                       {isManual ? (
                         <SmartIngredientInput
                           value={row.ingredientName || ""}
                           onChange={(val) => updateRecipeRow(index, "ingredientName", val)}
                           warehouseItems={safeWarehouseItems}
-                          onSelectItem={(id) => { updateRecipeRow(index, "warehouseItemId", id); updateRecipeRow(index, "mode", "warehouse"); }}
+                          onSelectItem={(id) => {
+                            const item = safeWarehouseItems.find(w => String(w.id) === String(id));
+                            updateRecipeRow(index, "warehouseItemId", id);
+                            updateRecipeRow(index, "mode", "warehouse");
+                            if (item) updateRecipeRow(index, "quantityUnit", item.unit);
+                          }}
                         />
                       ) : (
                         <select
                           value={row.warehouseItemId || ""}
-                          onChange={(e) => updateRecipeRow(index, "warehouseItemId", e.target.value)}
+                          onChange={(e) => {
+                            const item = safeWarehouseItems.find(w => String(w.id) === String(e.target.value));
+                            updateRecipeRow(index, "warehouseItemId", e.target.value);
+                            if (item) updateRecipeRow(index, "quantityUnit", item.unit);
+                          }}
                           className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
                         >
                           <option value="">Выбери сырьё со склада</option>
                           {safeWarehouseItems.map((item) => (
                             <option key={item.id} value={item.id}>
-                              {item.name} — остаток {item.quantity} {item.unit}
+                              {item.name} ({item.unit}) — {item.quantity}
                             </option>
                           ))}
                         </select>
@@ -1422,9 +1405,17 @@ export default function WorkPage() {
 
                       <input type="number" value={row.quantity}
                         onChange={(e) => updateRecipeRow(index, "quantity", e.target.value)}
-                        placeholder={selected ? `${selected.unit}` : "Кол-во"}
+                        placeholder="Кол-во"
                         className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60"
                       />
+
+                      <select
+                        value={row.quantityUnit || selected?.unit || "g"}
+                        onChange={(e) => updateRecipeRow(index, "quantityUnit", e.target.value)}
+                        className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 font-bold text-white outline-none focus:border-blue-400/60"
+                      >
+                        {UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
                     </div>
 
                     {isUnlinked && (
@@ -1432,9 +1423,9 @@ export default function WorkPage() {
                         ⚠ «{row.ingredientName}» — добавь на склад, тогда привяжется и себестоимость посчитается
                       </p>
                     )}
-                    {isManual && row.warehouseItemId && (
-                      <p className="text-xs font-bold text-emerald-400">
-                        ✓ Найден на складе и привязан автоматически
+                    {!isUnlinked && selected && (
+                      <p className="text-xs text-emerald-400">
+                        ✓ {selected.name} · себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit) * getWarehouseUnitCost(selected))}
                       </p>
                     )}
                   </div>
@@ -1544,13 +1535,18 @@ export default function WorkPage() {
                       <button type="button" onClick={() => removeEditRecipeRow(index)}
                         className="ml-auto rounded-xl bg-red-500/10 px-3 py-1 text-xs font-black text-red-400">удалить</button>
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-[1fr_120px]">
+                    <div className="grid gap-2 sm:grid-cols-[1fr_90px_72px]">
                       {isManual ? (
                         <SmartIngredientInput
                           value={row.ingredientName || ""}
                           onChange={val => updateEditRecipeRow(index, "ingredientName", val)}
                           warehouseItems={safeWarehouseItems}
-                          onSelectItem={id => { updateEditRecipeRow(index, "warehouseItemId", id); updateEditRecipeRow(index, "mode", "warehouse"); }}
+                          onSelectItem={id => {
+                            const item = safeWarehouseItems.find(w => String(w.id) === String(id));
+                            updateEditRecipeRow(index, "warehouseItemId", id);
+                            updateEditRecipeRow(index, "mode", "warehouse");
+                            if (item) updateEditRecipeRow(index, "quantityUnit", item.unit);
+                          }}
                         />
                       ) : (
                         <select value={row.warehouseItemId || ""} onChange={e => {
@@ -1560,16 +1556,26 @@ export default function WorkPage() {
                         }} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none">
                           <option value="">Выбери со склада</option>
                           {safeWarehouseItems.map(item => (
-                            <option key={item.id} value={item.id}>{item.name} — {item.quantity} {item.unit}</option>
+                            <option key={item.id} value={item.id}>{item.name} ({item.unit}) — {item.quantity}</option>
                           ))}
                         </select>
                       )}
                       <input type="number" value={row.quantity} onChange={e => updateEditRecipeRow(index, "quantity", e.target.value)}
-                        placeholder={selected?.unit || "Кол-во"}
+                        placeholder="Кол-во"
                         className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none"/>
+                      <select value={row.quantityUnit || selected?.unit || "g"}
+                        onChange={e => updateEditRecipeRow(index, "quantityUnit", e.target.value)}
+                        className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 font-bold text-white outline-none">
+                        {UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
                     </div>
                     {isManual && row.ingredientName && !row.warehouseItemId && (
                       <p className="text-xs font-bold text-yellow-500">⚠ Добавь на склад — привяжется автоматически</p>
+                    )}
+                    {selected && !isManual && (
+                      <p className="text-xs text-emerald-400">
+                        ✓ себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit) * getWarehouseUnitCost(selected))}
+                      </p>
                     )}
                   </div>
                 );

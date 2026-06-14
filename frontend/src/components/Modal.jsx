@@ -55,7 +55,7 @@ export default function Modal({ title, children, wide }) {
         .smart-modal-panel .text-blue-600 {
           color: #60a5fa !important;
         }
-        .smart-modal-panel .text-blue-900\/70 {
+        .smart-modal-panel .text-blue-900\\/70 {
           color: rgba(191, 219, 254, 0.78) !important;
         }
         .smart-modal-panel .text-red-800,

@@ -21,7 +21,7 @@ function useSuperApi(token) {
       body: body ? JSON.stringify(body) : undefined,
     });
     const text = await res.text();
-    let data = {};
+    let data;
     try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text }; }
     if (!res.ok) throw new Error(data?.error || `Ошибка ${res.status}`);
     return data;
@@ -47,8 +47,6 @@ export default function SuperAdminPage() {
   const [form, setForm] = useState({ companyName: "", username: "", password: "" });
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [showPasswords, setShowPasswords] = useState({});
-
   // Safe array guards
   const safe_accounts = Array.isArray(accounts) ? accounts : [];
 
@@ -73,7 +71,7 @@ export default function SuperAdminPage() {
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (token) load();
+    if (token) load(); // eslint-disable-line react-hooks/set-state-in-effect
   }, [token, load]);
 
   const handleAuth = async (e) => {
@@ -123,8 +121,6 @@ export default function SuperAdminPage() {
       setError(e.message);
     }
   };
-
-  const togglePassword = (id) => setShowPasswords((p) => ({ ...p, [id]: !p[id] }));
 
   const inputClass = "w-full rounded-2xl border-2 border-white/10 bg-slate-950/60 px-4 py-3 text-sm font-bold text-white placeholder:text-slate-500 outline-none focus:border-blue-500/70 focus:ring-2 focus:ring-blue-500/20 transition";
 
