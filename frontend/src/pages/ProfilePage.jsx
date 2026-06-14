@@ -145,6 +145,7 @@ export default function ProfilePage({
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, []);
   useEffect(() => {
     if (!isOwner && workspace?.id)
@@ -152,7 +153,7 @@ export default function ProfilePage({
   }, [isOwner, workspace?.id]);
 
   const usersByWorkspace = useMemo(() =>
-    safe_workspaceUsers.reduce((acc, u) => {
+    (Array.isArray(workspaceUsers) ? workspaceUsers : []).reduce((acc, u) => {
       const key = String(u.workspaceId || "");
       if (!acc[key]) acc[key] = [];
       acc[key].push(u);
@@ -162,7 +163,7 @@ export default function ProfilePage({
 
   const visibleWorkspaceUsers = useMemo(() =>
     isOwner ? workspaceUsers
-            : safe_workspaceUsers.filter((u) => String(u.workspaceId) === String(workspace?.id)),
+            : (Array.isArray(workspaceUsers) ? workspaceUsers : []).filter((u) => String(u.workspaceId) === String(workspace?.id)),
   [isOwner, workspaceUsers, workspace?.id]);
 
   // ── CRUD helpers ────────────────────────────────────────────────────────────

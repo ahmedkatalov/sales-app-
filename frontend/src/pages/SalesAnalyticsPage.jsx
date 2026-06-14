@@ -57,9 +57,6 @@ export default function SalesAnalyticsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Safe array guards
-  const safe_sales = Array.isArray(sales) ? sales : [];
-
   const load = async () => {
     setError("");
     setLoading(true);
@@ -79,12 +76,11 @@ export default function SalesAnalyticsPage() {
     }
   };
 
-  useEffect(() => {
-    load();
-  }, [from, to]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [from, to]);
 
   const normalizedSales = useMemo(() => {
-    return safe_sales.map((sale) => ({ ...sale, ...saleDateParts(sale.createdAt) }));
+    return (Array.isArray(sales) ? sales : []).map((sale) => ({ ...sale, ...saleDateParts(sale.createdAt) }));
   }, [sales]);
 
   const avgCheck = Number(stats.salesCount || 0) > 0 ? Number(stats.totalRevenue || 0) / Number(stats.salesCount || 1) : 0;

@@ -15,6 +15,7 @@ export default function WorkspaceSelectPage({ session, onSelect }) {
       })
       .catch(() => setWorkspaces([]))
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSelect = (ws) => {

@@ -39,10 +39,8 @@ export default function EmployeesPage() {
   const visibleEmployees = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return safe_employees.filter((e) =>
-      String(e.name || "")
-        .toLowerCase()
-        .includes(q)
+    return (Array.isArray(employees) ? employees : []).filter((e) =>
+      String(e.name || "").toLowerCase().includes(q)
     );
   }, [employees, search]);
 

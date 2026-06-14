@@ -71,7 +71,8 @@ export default function AnalyticsPage() {
       return currentWorkspace?.dataAccountId ? [currentWorkspace] : [];
     }
 
-    const found = safe_workspaces.find((w) => String(w.id) === String(workspaceFilter));
+    const ws = Array.isArray(workspaces) ? workspaces : [];
+    const found = ws.find((w) => String(w.id) === String(workspaceFilter));
     return found ? [found] : [];
   }, [isOwner, workspaceFilter, workspaces, currentWorkspace]);
 
@@ -211,7 +212,7 @@ export default function AnalyticsPage() {
   };
 
   useEffect(() => {
-    loadWorkspaces().catch((e) => setError(e.message)); // eslint-disable-line react-hooks/set-state-in-effect
+    loadWorkspaces().catch((e) => setError(e.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -222,7 +223,7 @@ export default function AnalyticsPage() {
 
   const totals = useMemo(
     () =>
-      safe_analytics.reduce(
+      (Array.isArray(analytics) ? analytics : []).reduce(
         (a, m) => ({
           qty: a.qty + money(m.qty),
           revenue: a.revenue + money(m.revenue),
@@ -264,7 +265,7 @@ export default function AnalyticsPage() {
     if (!isOwner) return currentWorkspace?.name || "Текущая точка";
     if (workspaceFilter === "all") return "Все точки";
     if (workspaceFilter === "current") return currentWorkspace?.name || "Текущая точка";
-    return safe_workspaces.find((w) => String(w.id) === String(workspaceFilter))?.name || "Точка";
+    return (Array.isArray(workspaces) ? workspaces : []).find((w) => String(w.id) === String(workspaceFilter))?.name || "Точка";
   }, [isOwner, workspaceFilter, workspaces, currentWorkspace]);
 
   const productNames = useMemo(
@@ -276,7 +277,7 @@ export default function AnalyticsPage() {
   const productAnalytics = useMemo(() => {
     if (!selectedProduct) return [];
 
-    return safe_analytics.map((m) => {
+    return (Array.isArray(analytics) ? analytics : []).map((m) => {
       const list = (m.items || []).filter((i) => i.name === selectedProduct);
       const last = list[list.length - 1];
 
@@ -293,7 +294,7 @@ export default function AnalyticsPage() {
   const topProducts = useMemo(() => {
     const map = {};
 
-    safe_analytics.forEach((m) => {
+    (Array.isArray(analytics) ? analytics : []).forEach((m) => {
       (m.items || []).forEach((item) => {
         const name = item.name || "Без названия";
         if (!map[name]) {

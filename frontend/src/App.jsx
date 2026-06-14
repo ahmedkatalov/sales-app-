@@ -325,7 +325,7 @@ export default function App() {
 
   useEffect(() => {
     if (!session) return;
-    if (isOwner) { setUserPages(["*"]); return; } // eslint-disable-line react-hooks/set-state-in-effect
+    if (isOwner) { setUserPages(["*"]); return; }
     // Для admin и worker грузим права с сервера
     get("/user-permissions/my")
       .then((res) => {
@@ -540,9 +540,9 @@ export default function App() {
         )}
 
         {/* Мобильная шапка */}
-        <div className={`mb-3 flex items-center justify-between gap-2 rounded-2xl bg-slate-950/80 px-3 py-2 text-white lg:hidden${isAIWarehouseRoute ? " hidden" : ""}`}>
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-xs font-black">
+        <div className={`mb-3 flex items-center justify-between gap-2.5 rounded-[18px] border border-white/8 bg-slate-950/85 px-3 py-2.5 text-white backdrop-blur-md lg:hidden${isAIWarehouseRoute ? " hidden" : ""}`}>
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-linear-to-br from-blue-500 to-blue-700 text-sm font-black text-white shadow-lg shadow-blue-600/25">
               {(isWorker ? workerName : session.username)?.[0]?.toUpperCase() || "U"}
             </div>
             {isWorker ? (
@@ -553,16 +553,36 @@ export default function App() {
               </select>
             ) : (
               <div className="min-w-0">
-                <span className="block truncate text-sm font-black text-white">{session.username}</span>
+                <span className="block truncate text-sm font-black leading-tight text-white">{session.username}</span>
                 {currentWorkspace?.name && (
-                  <span className="block truncate text-[11px] font-bold text-blue-400">{currentWorkspace.name}</span>
+                  <span className="flex items-center gap-1 truncate text-[11px] font-bold text-blue-400">
+                    <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
+                    {currentWorkspace.name}
+                  </span>
                 )}
               </div>
             )}
           </div>
-          {!isWorker && (
-            <NavLink to="/profile" className="shrink-0 rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white">Профиль</NavLink>
-          )}
+          <div className="flex shrink-0 items-center gap-1.5">
+            {pendingCount > 0 && (
+              <NavLink to="/pending-payments" className="flex items-center gap-1 rounded-xl border border-blue-500/20 bg-blue-500/12 px-2.5 py-1.5 transition active:scale-95">
+                <Clock3 size={12} className="text-blue-400" strokeWidth={2.8} />
+                <span className="text-[11px] font-black text-blue-300">{pendingCount > 9 ? "9+" : pendingCount}</span>
+              </NavLink>
+            )}
+            {debtCount > 0 && (
+              <NavLink to="/debts" className="flex items-center gap-1 rounded-xl border border-red-500/20 bg-red-500/12 px-2.5 py-1.5 transition active:scale-95">
+                <FileText size={12} className="text-red-400" strokeWidth={2.8} />
+                <span className="text-[11px] font-black text-red-300">{debtCount > 9 ? "9+" : debtCount}</span>
+              </NavLink>
+            )}
+            {!isWorker && (
+              <NavLink to="/profile"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/8 text-slate-400 transition active:scale-95 active:bg-white/15 hover:text-white">
+                <Settings size={17} strokeWidth={2.5} />
+              </NavLink>
+            )}
+          </div>
         </div>
 
         <Routes>
@@ -585,59 +605,94 @@ export default function App() {
 
       {mobileMoreOpen && mobileMoreLinks.length > 0 && (
         <button type="button" aria-label="Закрыть меню" onClick={() => setMobileMoreOpen(false)}
-          className="fixed inset-0 z-30 bg-slate-950/20 backdrop-blur-[1px] lg:hidden" />
+          className="animate-overlay fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden" />
       )}
 
       {mobileMoreOpen && mobileMoreLinks.length > 0 && (
-        <div className="fixed inset-x-3 bottom-20 z-40 rounded-[1.7rem] border border-white/20 bg-slate-950/95 p-3 text-white shadow-2xl shadow-slate-950/30 backdrop-blur lg:hidden">
-          <div className="mb-2 flex items-center justify-between px-2">
-            <p className="text-sm font-black text-slate-300">Еще разделы</p>
-            <button type="button" onClick={() => setMobileMoreOpen(false)} className="rounded-xl bg-white/10 px-3 py-1 text-xs font-black text-white">Закрыть</button>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {mobileMoreLinks.map(([to, label, Icon, badge]) => (
-              <NavLink key={to} to={to} onClick={() => setMobileMoreOpen(false)}
-                className={({ isActive }) => `relative flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-black transition ${isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25" : "bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
-                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
-                  <Icon size={20} strokeWidth={2.5} />
-                  {badge === "pending" && pendingCount > 0 && <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">{pendingCount > 99 ? "99+" : pendingCount}</span>}
-                  {badge === "debt" && debtCount > 0 && <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">{debtCount > 99 ? "99+" : debtCount}</span>}
-                </span>
-                <span className="min-w-0 truncate">{label}</span>
-              </NavLink>
-            ))}
+        <div className="animate-sheet fixed inset-x-0 bottom-0 z-50 lg:hidden"
+          style={{ paddingBottom: "calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px)" }}>
+          <div className="mx-3 overflow-hidden rounded-[1.7rem] border border-white/12 bg-slate-900/98 text-white shadow-2xl backdrop-blur-xl">
+            <div className="flex justify-center pb-1 pt-3">
+              <div className="h-1 w-10 rounded-full bg-white/20" />
+            </div>
+            <div className="flex items-center justify-between px-4 pb-2 pt-1.5">
+              <p className="text-sm font-black text-white">Разделы</p>
+              <button type="button" onClick={() => setMobileMoreOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/8 text-slate-400 transition active:scale-95 active:bg-white/15">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 p-3">
+              {mobileMoreLinks.map(([to, label, Icon, badge]) => (
+                <NavLink key={to} to={to} onClick={() => setMobileMoreOpen(false)}
+                  className={({ isActive }) => `relative flex items-center gap-3 rounded-2xl px-3.5 py-3.5 transition active:scale-[0.97] ${isActive ? "bg-blue-500/18 text-blue-300" : "bg-white/6 text-slate-300 hover:bg-white/10 hover:text-white"}`}>
+                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/8">
+                    <Icon size={19} strokeWidth={2.4} />
+                    {badge === "pending" && pendingCount > 0 && <span className="absolute -right-1.5 -top-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-blue-500 px-0.5 text-[9px] font-black leading-none text-white ring-2 ring-slate-900">{pendingCount > 9 ? "9+" : pendingCount}</span>}
+                    {badge === "debt" && debtCount > 0 && <span className="absolute -right-1.5 -top-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-black leading-none text-white ring-2 ring-slate-900">{debtCount > 9 ? "9+" : debtCount}</span>}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-black">{label}</span>
+                </NavLink>
+              ))}
+            </div>
+            <div className="px-3 pb-3">
+              <button type="button" onClick={() => { setMobileMoreOpen(false); logout(); }}
+                className="flex w-full items-center gap-3 rounded-2xl border border-red-500/12 bg-red-500/8 px-4 py-3.5 text-sm font-black text-red-400 transition active:bg-red-500/18 hover:text-red-300">
+                <LogOut size={17} strokeWidth={2.4} />
+                <span>Выйти из системы</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      <nav className={`fixed inset-x-3 z-40 grid grid-flow-col auto-cols-fr gap-2 rounded-[1.7rem] border border-white/20 bg-slate-950/95 p-2 text-white shadow-2xl shadow-slate-950/30 backdrop-blur lg:hidden transition-all duration-200 ${keyboardVisible || isAIWarehouseRoute ? "bottom-[-100px] pointer-events-none opacity-0" : "bottom-3 opacity-100"}`}
-        style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }} aria-label="Нижняя навигация">
+      <nav className={`fixed inset-x-3 z-40 grid grid-flow-col auto-cols-fr rounded-[1.7rem] border border-white/12 bg-slate-950/96 p-1.5 text-white shadow-2xl shadow-slate-950/40 backdrop-blur-xl lg:hidden transition-all duration-300 ease-out ${keyboardVisible || isAIWarehouseRoute ? "translate-y-[calc(100%+20px)] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
+        style={{ bottom: "max(12px, env(safe-area-inset-bottom, 12px))", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+        aria-label="Нижняя навигация">
         {mobileMainLinks.map(([to, label, Icon, badge]) => (
           <NavLink key={to} to={to} onClick={() => setMobileMoreOpen(false)}
-            className={({ isActive }) => `relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2.5 text-[10px] font-black transition ${isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25" : "text-slate-400 hover:text-white"}`}>
-            <span className="relative flex h-6 w-6 items-center justify-center">
-              <Icon size={22} strokeWidth={2.2} />
-              {badge === "pending" && pendingCount > 0 && <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">{pendingCount > 99 ? "99+" : pendingCount}</span>}
-              {badge === "debt" && debtCount > 0 && <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">{debtCount > 99 ? "99+" : debtCount}</span>}
-            </span>
-            <span className="w-full truncate text-center leading-none text-[9px]">{label}</span>
+            className="relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-[1.2rem] px-1 py-2">
+            {({ isActive }) => (
+              <>
+                <span className={`relative flex h-10 w-full items-center justify-center rounded-2xl transition-all duration-200 ${isActive ? "bg-blue-500/16 text-blue-400" : "text-slate-500"}`}>
+                  <Icon size={22} strokeWidth={isActive ? 2.6 : 2} />
+                  {badge === "pending" && pendingCount > 0 && <span className="absolute right-1 top-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-blue-500 px-0.5 text-[9px] font-black leading-none text-white ring-2 ring-slate-950">{pendingCount > 9 ? "9+" : pendingCount}</span>}
+                  {badge === "debt" && debtCount > 0 && <span className="absolute right-1 top-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-black leading-none text-white ring-2 ring-slate-950">{debtCount > 9 ? "9+" : debtCount}</span>}
+                </span>
+                <span className={`w-full truncate text-center text-[10px] font-black leading-none tracking-tight transition-colors ${isActive ? "text-blue-400" : "text-slate-500"}`}>{label}</span>
+              </>
+            )}
           </NavLink>
         ))}
         {mobileMoreLinks.length > 0 && (
           <button type="button" onClick={() => setMobileMoreOpen((open) => !open)}
-            className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2.5 text-[10px] font-black transition ${mobileMoreOpen ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25" : "text-slate-400 hover:text-white"}`}>
-            <span className="flex h-6 w-6 items-center justify-center"><Menu size={22} strokeWidth={2.2} /></span>
-            <span className="w-full truncate text-center leading-none text-[9px]">Ещё</span>
+            className="relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-[1.2rem] px-1 py-2">
+            <span className={`flex h-10 w-full items-center justify-center rounded-2xl transition-all duration-200 ${mobileMoreOpen ? "bg-blue-500/16 text-blue-400" : "text-slate-500"}`}>
+              <Menu size={22} strokeWidth={mobileMoreOpen ? 2.6 : 2} />
+            </span>
+            <span className={`w-full truncate text-center text-[10px] font-black leading-none tracking-tight transition-colors ${mobileMoreOpen ? "text-blue-400" : "text-slate-500"}`}>Ещё</span>
           </button>
         )}
       </nav>
 
-      <div className="fixed right-4 top-4 z-50 flex w-[calc(100%-2rem)] max-w-sm flex-col gap-3 sm:right-6 sm:top-6 sm:w-full">
+      {/* Тосты на мобиле — над навигацией */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-60 flex flex-col-reverse gap-2 px-4 lg:hidden"
+        style={{ paddingBottom: "calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px)" }}>
+        {toasts.slice(-2).map((toast) => (
+          <div key={toast.id} className="animate-toast pointer-events-auto flex items-center gap-3 rounded-2xl border border-white/12 bg-slate-800/97 px-4 py-3.5 shadow-2xl backdrop-blur-xl">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 text-base font-black">✓</span>
+            <p className="text-sm font-black text-white leading-snug">{toast.text}</p>
+          </div>
+        ))}
+      </div>
+      {/* Тосты на десктопе — правый верхний угол */}
+      <div className="pointer-events-none fixed right-5 top-5 z-60 hidden w-full max-w-sm flex-col gap-2.5 lg:flex">
         {toasts.map((toast) => (
-          <div key={toast.id} className="rounded-3xl border border-white/60 bg-white/95 px-5 py-4 font-black text-slate-900 shadow-2xl shadow-slate-950/15 backdrop-blur">
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white">✓</span>
-              <div><p className="text-sm text-slate-500">Уведомление</p><p>{toast.text}</p></div>
+          <div key={toast.id} className="animate-toast pointer-events-auto flex items-start gap-3.5 rounded-2xl border border-white/12 bg-slate-800/97 px-5 py-4 shadow-2xl backdrop-blur-xl">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 text-sm font-black">✓</span>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Уведомление</p>
+              <p className="mt-0.5 text-sm font-black text-white">{toast.text}</p>
             </div>
           </div>
         ))}

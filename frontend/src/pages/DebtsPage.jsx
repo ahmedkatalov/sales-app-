@@ -10,9 +10,6 @@ export default function DebtsPage() {
   const [error, setError] = useState("");
   const [openedCustomer, setOpenedCustomer] = useState(null);
 
-  // Safe array guards
-  const safe_debts = Array.isArray(debts) ? debts : [];
-  const safe_customers = Array.isArray(customers) ? customers : [];
 
   const load = async () => {
     const [debtList, customerList] = await Promise.all([
@@ -31,7 +28,7 @@ export default function DebtsPage() {
   const customerGroups = useMemo(() => {
     const byId = new Map();
 
-    safe_customers.forEach((customer) => {
+    (Array.isArray(customers) ? customers : []).forEach((customer) => {
       byId.set(customer.id, {
         ...customer,
         records: [],
@@ -42,7 +39,7 @@ export default function DebtsPage() {
       });
     });
 
-    safe_debts.forEach((debt) => {
+    (Array.isArray(debts) ? debts : []).forEach((debt) => {
       const customerId = debt.customerId || 0;
       const existing = byId.get(customerId) || {
         id: customerId,

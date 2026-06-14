@@ -248,7 +248,6 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
   // Safe array guards
   const safe_sections = Array.isArray(sections) ? sections : [];
   const safe_categories = Array.isArray(categories) ? categories : [];
-  const safe_products = Array.isArray(products) ? products : [];
   const safe_cards = Array.isArray(cards) ? cards : [];
   const safe_warehouseItems = Array.isArray(warehouseItems) ? warehouseItems : [];
   const safe_cart = Array.isArray(cart) ? cart : [];
@@ -285,19 +284,16 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
   }, []);
 
   const visibleCategories = useMemo(() => {
-    if (selectedSectionId === "all") return safe_categories;
-
-    return safe_categories.filter(
-      (c) => String(c.typeId) === String(selectedSectionId)
-    );
+    const cats = Array.isArray(categories) ? categories : [];
+    if (selectedSectionId === "all") return cats;
+    return cats.filter((c) => String(c.typeId) === String(selectedSectionId));
   }, [categories, selectedSectionId]);
 
   const productsInsideCategory = useMemo(() => {
     if (!openedCategory) return [];
-
+    const prods = Array.isArray(products) ? products : [];
     const q = search.trim().toLowerCase();
-
-    return safe_products.filter((p) => {
+    return prods.filter((p) => {
       const okCategory = String(p.categoryId) === String(openedCategory.id);
       const okSearch = !q || String(p.name || "").toLowerCase().includes(q);
       return okCategory && okSearch;
@@ -311,11 +307,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
     paymentType === "cash" && paidAmount !== "" ? num(paidAmount) - total : 0;
 
   const debtSuggestions = useMemo(() => {
+    const custs = Array.isArray(debtCustomers) ? debtCustomers : [];
     const q = debtName.trim().toLowerCase();
-    if (!q) return safe_debtCustomers.slice(0, 5);
-    return safe_debtCustomers
-      .filter((c) => String(c.name || "").toLowerCase().includes(q))
-      .slice(0, 5);
+    if (!q) return custs.slice(0, 5);
+    return custs.filter((c) => String(c.name || "").toLowerCase().includes(q)).slice(0, 5);
   }, [debtCustomers, debtName]);
 
   const getWarehouseUnitCost = (item) => {
@@ -338,13 +333,11 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
   };
 
   const recipeCost = useMemo(() => {
-    return safe_recipe.reduce((sum, row) => {
-      const warehouseItem = safe_warehouseItems.find(
-        (item) => String(item.id) === String(row.warehouseItemId)
-      );
-
+    const rcp = Array.isArray(recipe) ? recipe : [];
+    const wItems = Array.isArray(warehouseItems) ? warehouseItems : [];
+    return rcp.reduce((sum, row) => {
+      const warehouseItem = wItems.find((item) => String(item.id) === String(row.warehouseItemId));
       if (!warehouseItem) return sum;
-
       const converted = convertRecipePreview(warehouseItem, row.quantity, row.quantityUnit || warehouseItem.unit);
       return sum + converted.storageQty * getWarehouseUnitCost(warehouseItem);
     }, 0);
@@ -370,15 +363,16 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
     if (!name || name.trim().length < 3) { setAiSuggestion(null); return; }
     if (!aiAdvisorEnabled) { setAiSuggestion(null); return; }
     setAiSuggestionLoading(true);
+    const wItems = Array.isArray(warehouseItems) ? warehouseItems : [];
     try {
       const data = await post("/ai/menu/suggest", {
         name,
-        warehouseItems: safe_warehouseItems.map(w => ({ id: w.id, name: w.name, unit: w.unit }))
+        warehouseItems: wItems.map(w => ({ id: w.id, name: w.name, unit: w.unit }))
       });
       if (data && data.displayName) setAiSuggestion(data);
     } catch { setAiSuggestion(null); }
     finally { setAiSuggestionLoading(false); }
-  }, [safe_warehouseItems]);
+  }, [warehouseItems, aiAdvisorEnabled]);
 
   const applyAiSuggestion = () => {
     if (!aiSuggestion) return;
@@ -621,9 +615,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           </h2>
         </div>
 
-        <div className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 px-4 py-3 shadow-2xl backdrop-blur">
+        <div className="hidden rounded-4xl border border-white/10 bg-[#0f172a]/80 px-4 py-3 shadow-2xl backdrop-blur lg:block">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-lg font-black text-white">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br from-blue-600 to-violet-600 text-lg font-black text-white">
               {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
             </div>
             <div>
@@ -646,7 +640,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
 
       <div className="grid gap-5 xl:grid-cols-[1fr_420px] xl:items-start">
         <div className="space-y-5">
-          <div className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-4 shadow-2xl backdrop-blur sm:p-5">
+          <div className="rounded-4xl border border-white/10 bg-[#0f172a]/80 p-4 shadow-2xl backdrop-blur sm:p-5">
             <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-sm font-bold text-slate-400">Меню</p>
@@ -787,7 +781,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               <button onClick={openProductModal} disabled={!openedCategory}
                 className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black transition ${
                   openedCategory
-                    ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/30 hover:opacity-90"
+                    ? "bg-linear-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/30 hover:opacity-90"
                     : "border border-white/10 bg-white/5 text-slate-500 cursor-not-allowed"
                 }`}>
                 <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/20 text-xs">＋</span>
@@ -805,7 +799,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
                     setOpenedCategory(cat);
                     setSearch("");
                   }}
-                  className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#111827] p-5 text-left shadow-xl transition hover:-translate-y-1 hover:border-blue-500/40 hover:shadow-blue-900/20 focus:outline-none focus:ring-4 focus:ring-blue-500/30"
+                  className="group relative overflow-hidden rounded-4xl border border-white/10 bg-[#111827] p-5 text-left shadow-xl transition hover:-translate-y-1 hover:border-blue-500/40 hover:shadow-blue-900/20 focus:outline-none focus:ring-4 focus:ring-blue-500/30"
                 >
                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/100/10 text-2xl">
                     📁
@@ -824,7 +818,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               ))}
 
               {!visibleCategories.length && (
-                <div className="col-span-full rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-10 text-center shadow-2xl backdrop-blur">
+                <div className="col-span-full rounded-4xl border border-white/10 bg-[#0f172a]/80 p-10 text-center shadow-2xl backdrop-blur">
                   <p className="text-xl font-black text-white">
                     Категорий пока нет
                   </p>
@@ -840,7 +834,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
                 <button
                   key={p.id}
                   onClick={() => addToCart(p)}
-                  className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#111827] p-4 text-left shadow-xl transition hover:-translate-y-1 hover:border-blue-500/40 hover:shadow-blue-900/20 focus:outline-none focus:ring-4 focus:ring-blue-500/30"
+                  className="group relative overflow-hidden rounded-4xl border border-white/10 bg-[#111827] p-4 text-left shadow-xl transition hover:-translate-y-1 hover:border-blue-500/40 hover:shadow-blue-900/20 focus:outline-none focus:ring-4 focus:ring-blue-500/30"
                 >
                   <div className="text-xs font-bold text-blue-400">
                     {p.category}
@@ -857,7 +851,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               ))}
 
               {!productsInsideCategory.length && (
-                <div className="col-span-full rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-10 text-center shadow-2xl backdrop-blur">
+                <div className="col-span-full rounded-4xl border border-white/10 bg-[#0f172a]/80 p-10 text-center shadow-2xl backdrop-blur">
                   <p className="text-xl font-black text-white">
                     В этой категории пока нет товаров
                   </p>
@@ -870,7 +864,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           )}
         </div>
 
-        <div className="rounded-[32px] border border-white/10 bg-[#0f172a]/90 p-4 shadow-2xl backdrop-blur xl:sticky xl:top-6 xl:self-start sm:p-5">
+        <div className="rounded-4xl border border-white/10 bg-[#0f172a]/90 p-4 shadow-2xl backdrop-blur xl:sticky xl:top-6 xl:self-start sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-2xl font-black">Корзина</h3>
 
@@ -897,17 +891,16 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   <button
                     onClick={() => decreaseCartItem(i.productId)}
-                    className="rounded-2xl border border-white/10 bg-white/10 px-3 py-2 font-black text-white transition hover:bg-white/20"
+                    className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-lg font-black text-white transition active:scale-95 hover:bg-white/15"
                   >
                     −
                   </button>
-
                   <button
                     onClick={() => increaseCartItem(i.productId)}
-                    className="rounded-2xl border border-white/10 bg-white/10 px-3 py-2 font-black text-white transition hover:bg-white/20"
+                    className="flex h-10 w-10 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/12 text-lg font-black text-blue-300 transition active:scale-95 hover:bg-blue-500/20"
                   >
                     +
                   </button>
@@ -931,7 +924,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
             />
           </div>
 
-          <div className="mt-4 rounded-[32px] border border-white/10 bg-gradient-to-br from-blue-600/10 to-violet-600/10 p-5">
+          <div className="mt-4 rounded-4xl border border-white/10 bg-linear-to-br from-blue-600/10 to-violet-600/10 p-5">
             <div className="flex justify-between">
               <span>Сумма</span>
               <b>{formatMoney(subtotal)}</b>
@@ -950,7 +943,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
 
           </div>
 
-          <button onClick={confirmSale} className="mt-5 w-full rounded-3xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-5 text-xl font-black text-white shadow-2xl shadow-blue-900/30 transition hover:scale-[1.01]">
+          <button onClick={confirmSale} className="mt-5 w-full rounded-3xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-5 text-xl font-black text-white shadow-2xl shadow-blue-900/30 transition hover:scale-[1.01]">
             Подтвердить покупку
           </button>
         </div>
@@ -958,14 +951,15 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
 
       <button
         onClick={confirmSale}
-        className="fixed bottom-4 left-4 right-4 z-50 rounded-3xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-5 text-lg font-black text-white shadow-2xl shadow-blue-900/40 xl:hidden"
+        className="fixed left-4 right-4 z-50 rounded-3xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 text-lg font-black text-white shadow-2xl shadow-blue-900/40 transition active:scale-[0.98] xl:hidden"
+        style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px)" }}
       >
         Подтвердить · {formatMoney(total)}
       </button>
 
       {paymentModal && (
         <Modal title="Способ оплаты" wide>
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+          <div className="rounded-3xl border border-white/10 bg-white/4 p-4">
             <div className="flex justify-between text-lg">
               <span>К оплате</span>
               <b>{formatMoney(total)}</b>
@@ -1071,7 +1065,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
             <button onClick={() => setPaymentModal(false)} className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-slate-200 transition hover:bg-white/10">
               Назад
             </button>
-            <button onClick={() => submitSale(paymentType)} className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30">
+            <button onClick={() => submitSale(paymentType)} className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30">
               {paymentType === "pending" ? "В ожидание" : "Подтвердить"}
             </button>
           </div>
@@ -1095,7 +1089,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               Отмена
             </button>
 
-            <button onClick={createSection} className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30">
+            <button onClick={createSection} className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30">
               Создать
             </button>
           </div>
@@ -1136,7 +1130,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               Отмена
             </button>
 
-            <button onClick={createCategory} className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30">
+            <button onClick={createCategory} className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30">
               Создать
             </button>
           </div>
@@ -1203,7 +1197,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
 
             {/* AI предложение */}
             {aiSuggestion && (
-              <div className="sm:col-span-2 rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-500/10 to-blue-500/5 p-4">
+              <div className="sm:col-span-2 rounded-2xl border border-violet-400/20 bg-linear-to-br from-violet-500/10 to-blue-500/5 p-4">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
                     <p className="text-xs font-black uppercase tracking-wide text-violet-300">✨ AI предлагает</p>
@@ -1251,7 +1245,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
                 )}
 
                 <button type="button" onClick={applyAiSuggestion}
-                  className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 py-2.5 font-black text-white text-sm hover:opacity-90 transition">
+                  className="w-full rounded-xl bg-linear-to-r from-violet-600 to-blue-600 py-2.5 font-black text-white text-sm hover:opacity-90 transition">
                   ✨ Применить всё — заполнить состав и цены
                 </button>
               </div>
@@ -1277,7 +1271,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
             />
           </div>
 
-          <div className="mt-6 rounded-[32px] border border-white/10 bg-white/[0.04] p-4">
+          <div className="mt-6 rounded-4xl border border-white/10 bg-white/4 p-4">
             <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="text-xl font-black">Состав / рецепт</h3>
@@ -1286,7 +1280,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-right shadow-sm">
+              <div className="rounded-2xl border border-white/10 bg-white/4 px-4 py-3 text-right shadow-sm">
                 <p className="text-xs font-bold text-slate-400">
                   Авто себестоимость
                 </p>
@@ -1423,7 +1417,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               Отмена
             </button>
 
-            <button onClick={createProduct} className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30">
+            <button onClick={createProduct} className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30">
               Создать
             </button>
           </div>

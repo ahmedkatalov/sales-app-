@@ -12,8 +12,6 @@ export default function GlobalExpensesPage() {
   const [search, setSearch] = useState("");
   const [expenseToDelete, setExpenseToDelete] = useState(null);
 
-  // Safe array guards
-  const safe_expenses = Array.isArray(expenses) ? expenses : [];
   const safe_employees = Array.isArray(employees) ? employees : [];
 
   const load = async () => {
@@ -55,7 +53,7 @@ export default function GlobalExpensesPage() {
   const visibleExpenses = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return safe_expenses.filter((e) => {
+    return (Array.isArray(expenses) ? expenses : []).filter((e) => {
       const text = `${e.name || ""} ${e.employeeName || ""}`.toLowerCase();
       return !q || text.includes(q);
     });

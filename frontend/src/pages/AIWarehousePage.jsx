@@ -747,7 +747,6 @@ export default function AIWarehousePage() {
 
   // Safe array guards
   const safe_items = Array.isArray(items) ? items : [];
-  const safe_movements = Array.isArray(movements) ? movements : [];
   const safe_productTypes = Array.isArray(productTypes) ? productTypes : [];
   const safe_productCategories = Array.isArray(productCategories) ? productCategories : [];
   const bottomRef = useRef(null);
@@ -796,7 +795,7 @@ export default function AIWarehousePage() {
     } catch {
       // localStorage может быть недоступен в приватном режиме — чат всё равно работает в памяти страницы.
     }
-  }, [storageKey, messages, pendingItems, lastEntity, pendingVisibility, pendingMenuTypeCreation, pendingPurchaseConfirmation, sidePanels, lastUIPanel]);
+  }, [storageKey, messages, pendingItems, lastEntity, pendingVisibility, pendingMenuTypeCreation, pendingPurchaseConfirmation, sidePanels, lastUIPanel, aiBrain]);
 
   useEffect(() => {
     const box = messagesRef.current;
@@ -804,7 +803,7 @@ export default function AIWarehousePage() {
     box.scrollTo({ top: box.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
-  const recentAdded = useMemo(() => safe_movements.filter((m) => String(m.movementType || m.movement_type) === "in").slice(0, 5), [movements]);
+  const recentAdded = useMemo(() => (Array.isArray(movements) ? movements : []).filter((m) => String(m.movementType || m.movement_type) === "in").slice(0, 5), [movements]);
   const topItems = useMemo(() => [...items].filter((x) => !(x.hidden || x.isHidden || x.is_hidden)).sort((a, b) => num(b.quantity) - num(a.quantity)).slice(0, 7), [items]);
   const activeRightPanels = useMemo(() => Object.values(sidePanels).filter(Boolean).length, [sidePanels]);
   const rightPanelRows = useMemo(() => [

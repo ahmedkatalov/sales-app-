@@ -50,8 +50,6 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   });
 
   // Safe array guards
-  const safe_types = Array.isArray(types) ? types : [];
-  const safe_expenses = Array.isArray(expenses) ? expenses : [];
 
   const load = async () => {
     const [typeList, expenseList] = await Promise.all([
@@ -68,10 +66,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   }, []);
 
   const productTypes = useMemo(() => {
-    const menuTypes = safe_types
-      .map((t) => String(t.name || "").trim())
-      .filter(Boolean);
-
+    const tps = Array.isArray(types) ? types : [];
+    const menuTypes = tps.map((t) => String(t.name || "").trim()).filter(Boolean);
     return [...new Set([...BASE_PRODUCT_TYPES, ...menuTypes])];
   }, [types]);
 
@@ -85,15 +81,14 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   };
 
   const visibleExpenses = useMemo(() => {
-    return safe_expenses.filter((e) => {
+    const exps = Array.isArray(expenses) ? expenses : [];
+    return exps.filter((e) => {
       const category = e.category || "household";
       const okCategory = filterCategory === "all" || category === filterCategory;
       const okType = filterType === "all" || String(e.type) === String(filterType);
-
       const date = String(e.createdAt || "").slice(0, 10);
       const okFrom = !fromDate || date >= fromDate;
       const okTo = !toDate || date <= toDate;
-
       return okCategory && okType && okFrom && okTo;
     });
   }, [expenses, filterCategory, filterType, fromDate, toDate]);
@@ -209,7 +204,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                   key={key}
                   onClick={action}
                   className={active
-                    ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
+                    ? "rounded-xl bg-linear-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
                     : "rounded-xl border border-white/10 bg-white/8 px-4 py-2 text-sm font-black text-slate-300 transition hover:bg-white/15"}
                 >
                   {label}
@@ -283,7 +278,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                     onClick={() => setCategory(key)}
                     className={
                       filterCategory === key
-                        ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
+                        ? "rounded-xl bg-linear-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
                         : "rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/15"
                     }
                   >
@@ -329,7 +324,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
       </div>
 
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-[2rem] border border-red-400/20 bg-gradient-to-br from-red-500/15 to-white/[0.04] p-5 shadow-2xl backdrop-blur-xl">
+        <div className="rounded-[2rem] border border-red-400/20 bg-linear-to-br from-red-500/15 to-white/4 p-5 shadow-2xl backdrop-blur-xl">
           <p className="text-xs font-black uppercase tracking-wide text-red-200">Итого расходов</p>
           <p className="mt-3 text-3xl font-black text-white">{formatMoney(total)}</p>
           <p className="mt-1 text-xs font-bold text-slate-400">по выбранному периоду</p>
@@ -368,7 +363,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               onClick={() => setExpenseModal(true)}
-              className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] sm:w-auto"
+              className="w-full rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] sm:w-auto"
             >
               + Добавить расход
             </button>
@@ -480,7 +475,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
       <button
         onClick={() => setExpenseModal(true)}
-        className="fixed bottom-4 left-4 right-4 z-30 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_55px_rgba(37,99,235,.45)] sm:hidden"
+        className="fixed left-4 right-4 z-30 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_55px_rgba(37,99,235,.45)] transition active:scale-[0.98] sm:hidden"
+        style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px)" }}
       >
         + Добавить расход
       </button>
@@ -555,7 +551,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             </button>
             <button
               onClick={createExpense}
-              className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)]"
+              className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)]"
             >
               Создать
             </button>
@@ -590,7 +586,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
               <button
                 onClick={deleteExpense}
-                className="flex-1 rounded-2xl bg-gradient-to-r from-red-600 to-red-500 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(239,68,68,.25)] transition hover:scale-[1.01]"
+                className="flex-1 rounded-2xl bg-linear-to-r from-red-600 to-red-500 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(239,68,68,.25)] transition hover:scale-[1.01]"
               >
                 Удалить
               </button>

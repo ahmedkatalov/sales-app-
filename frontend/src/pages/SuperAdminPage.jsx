@@ -71,7 +71,7 @@ export default function SuperAdminPage() {
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (token) load(); // eslint-disable-line react-hooks/set-state-in-effect
+    if (token) load();
   }, [token, load]);
 
   const handleAuth = async (e) => {

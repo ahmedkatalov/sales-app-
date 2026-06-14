@@ -8,43 +8,111 @@
   .btn-white { @apply bg-white hover:bg-slate-50 text-slate-950 px-5 py-3 rounded-2xl font-bold shadow border border-slate-200; }
 }
 
-/* ── Мобильная высота с учётом адресной строки браузера ── */
+/* ─── Глобальные мобильные улучшения ──────────────────────────── */
+
 :root {
-  --nav-h: 72px; /* высота нижнего нава */
+  --nav-h: 76px;
 }
 
-/* dvh — динамическая высота вьюпорта (iOS Safari/Chrome корректно) */
-.h-screen-mobile {
-  height: 100dvh;
+/* Шрифты — антиалиасинг */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
+
+/* Убираем задержку 300ms на тач */
+button, a, select, input, textarea, label, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* dvh — динамическая высота вьюпорта */
+.h-screen-mobile { height: 100dvh; }
 
 /* Паддинг снизу = высота нава + safe area */
 .pb-nav {
-  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 8px);
 }
 
-/* Для страниц с фиксированной высотой (AI-чат) */
+/* AI-чат */
 .h-content-mobile {
   height: calc(100dvh - env(safe-area-inset-top, 0px));
 }
 
-/* Нижний нав — правильное позиционирование с safe area */
 .mobile-nav {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Плавное скрытие нава при появлении клавиатуры */
+/* Скрываем нав при клавиатуре */
 @media (max-height: 500px) {
-  .hide-on-keyboard {
-    display: none !important;
-  }
+  .hide-on-keyboard { display: none !important; }
 }
 
-/* Скрываем scrollbar везде где нужно */
+/* Скрываем scrollbar */
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* ─── Анимации ────────────────────────────────────────────────── */
+
+@keyframes slide-up-sheet {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes fade-in-overlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scale-in-menu {
+  from { transform: scale(0.96) translateY(8px); opacity: 0; }
+  to   { transform: scale(1)    translateY(0);   opacity: 1; }
+}
+
+@keyframes toast-slide-in {
+  from { transform: translateY(12px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+
+.animate-sheet    { animation: slide-up-sheet  0.28s cubic-bezier(0.32, 0.72, 0, 1); }
+.animate-overlay  { animation: fade-in-overlay 0.18s ease-out; }
+.animate-menu     { animation: scale-in-menu   0.22s cubic-bezier(0.32, 0.72, 0, 1); }
+.animate-toast    { animation: toast-slide-in  0.26s cubic-bezier(0.32, 0.72, 0, 1); }
+
+/* ─── Тач-таргеты (минимум 44px) ────────────────────────────── */
+@media (max-width: 1023px) {
+  .mobile-tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ─── Моментум-скролл на iOS ────────────────────────────────── */
+.scroll-momentum {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ─── Активное состояние кнопок на мобиле ────────────────────── */
+@media (hover: none) {
+  .mobile-active:active {
+    transform: scale(0.97);
+    transition: transform 0.1s;
+  }
+}
+
+/* ─── Навигационный индикатор активной вкладки ───────────────── */
+.nav-dot::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 3px;
+  border-radius: 99px;
+  background: #3b82f6;
 }

@@ -121,19 +121,18 @@ export default function WorkPage() {
   };
 
   useEffect(() => {
-    load().catch((e) => setError(e.message)); // eslint-disable-line react-hooks/set-state-in-effect
+    load().catch((e) => setError(e.message));
 
     const timer = setInterval(() => {
       load().catch(() => {});
     }, 5000);
 
     return () => clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const safeTypes = Array.isArray(types) ? types : [];
   const safeFolders = Array.isArray(folders) ? folders : [];
-  const safeSales = Array.isArray(sales) ? sales : [];
-  const safeProducts = Array.isArray(products) ? products : [];
   const safeWarehouseItems = Array.isArray(warehouseItems) ? warehouseItems : [];
 
   const selectedType = safeTypes.find(
@@ -150,7 +149,7 @@ export default function WorkPage() {
 
   useEffect(() => {
     if (!selectedTypeId) {
-      setSelectedFolderId(""); // eslint-disable-line react-hooks/set-state-in-effect
+      setSelectedFolderId("");
       return;
     }
 
@@ -164,6 +163,7 @@ export default function WorkPage() {
     ) {
       setSelectedFolderId("");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTypeId, folders, selectedFolderId]);
 
   const getWarehouseUnitCost = (item) => {
@@ -210,7 +210,7 @@ export default function WorkPage() {
       map[key].quantity += qty;
     };
 
-    safeSales.forEach((sale) => {
+    (Array.isArray(sales) ? sales : []).forEach((sale) => {
       if (Array.isArray(sale.items)) {
         sale.items.forEach(addItem);
       }
@@ -226,7 +226,7 @@ export default function WorkPage() {
   const visibleProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return safeProducts.filter((p) => {
+    return (Array.isArray(products) ? products : []).filter((p) => {
       const sameType =
         !selectedTypeId || String(p.typeId || "") === String(selectedTypeId);
 
@@ -330,7 +330,7 @@ export default function WorkPage() {
 
   useEffect(() => {
     if (safe_recipe.length) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+
       setProductForm((p) => ({
         ...p,
         cost: recipeCost ? String(recipeCost.toFixed(2)) : "",
@@ -345,12 +345,12 @@ export default function WorkPage() {
     try {
       const data = await post("/ai/menu/suggest", {
         name,
-        warehouseItems: safeWarehouseItems.map(w => ({ id: w.id, name: w.name, unit: w.unit }))
+        warehouseItems: (Array.isArray(warehouseItems) ? warehouseItems : []).map(w => ({ id: w.id, name: w.name, unit: w.unit }))
       });
       if (data && data.displayName) setAiSuggestion(data);
     } catch { setAiSuggestion(null); }
     finally { setAiSuggestionLoading(false); }
-  }, [safeWarehouseItems, aiAdvisorEnabled]);
+  }, [warehouseItems, aiAdvisorEnabled]);
 
   const applyAiSuggestionWork = () => {
     if (!aiSuggestion) return;

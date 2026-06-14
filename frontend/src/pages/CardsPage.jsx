@@ -42,7 +42,7 @@ export default function CardsPage() {
   const visibleCards = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return safe_cards.filter((card) => {
+    return (Array.isArray(cards) ? cards : []).filter((card) => {
       const text = `${card.name || ""} ${card.owner || ""}`.toLowerCase();
       return !q || text.includes(q);
     });

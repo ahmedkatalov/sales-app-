@@ -210,7 +210,7 @@ export default function WarehousePage() {
   const visibleItems = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return safe_items.filter((item) => {
+    return (Array.isArray(items) ? items : []).filter((item) => {
       const hidden = isHidden(item);
       const byHidden = showHidden ? true : !hidden;
       const bySearch = !q || String(item.name || "").toLowerCase().includes(q);
@@ -220,7 +220,7 @@ export default function WarehousePage() {
   }, [items, search, showHidden]);
 
   const activeItems = useMemo(
-    () => safe_items.filter((item) => !isHidden(item)),
+    () => (Array.isArray(items) ? items : []).filter((item) => !isHidden(item)),
     [items]
   );
 
@@ -238,7 +238,7 @@ export default function WarehousePage() {
       count: activeItems.length,
       value: totalValue,
       low: lowItems.length,
-      hidden: safe_items.length - activeItems.length,
+      hidden: (Array.isArray(items) ? items : []).length - activeItems.length,
     };
   }, [items, activeItems]);
 

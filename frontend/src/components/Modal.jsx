@@ -1,6 +1,6 @@
-export default function Modal({ title, children, wide }) {
+export default function Modal({ title, section, children, wide }) {
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#030816]/80 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-8">
+    <div className="animate-overlay fixed inset-0 z-50 overflow-y-auto bg-[#030816]/80 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-8">
       <style>{`
         .smart-modal-panel {
           background:
@@ -112,14 +112,16 @@ export default function Modal({ title, children, wide }) {
 
       <div className="flex min-h-full items-end justify-center sm:items-center">
         <div
-          className={`smart-modal-panel max-h-[calc(100vh-1.5rem)] w-full overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] ${
+          className={`animate-sheet smart-modal-panel max-h-[calc(100vh-1.5rem)] w-full overflow-hidden rounded-[1.75rem] sm:rounded-4xl ${
             wide ? "max-w-[920px]" : "max-w-[520px]"
           }`}
         >
           <div className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/60 px-5 py-4 backdrop-blur-xl sm:px-6 sm:py-5">
-            <div className="mb-3 h-1 w-12 rounded-full bg-gradient-to-r from-blue-500 to-violet-500 sm:hidden" />
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-300/80">Склад</p>
-            <h2 className="mt-1 text-2xl font-black leading-tight text-white sm:text-3xl">{title}</h2>
+            <div className="mb-3.5 flex justify-center sm:hidden">
+              <div className="h-1 w-10 rounded-full bg-white/25" />
+            </div>
+            {section && <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-300/80">{section}</p>}
+            <h2 className={`text-2xl font-black leading-tight text-white sm:text-3xl ${section ? "mt-0.5" : ""}`}>{title}</h2>
           </div>
 
           <div className="max-h-[calc(100vh-8rem)] overflow-y-auto px-5 py-5 text-slate-200 sm:max-h-[calc(100vh-10rem)] sm:px-6 sm:py-6">

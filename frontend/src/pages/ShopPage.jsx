@@ -19,7 +19,6 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(false);
 
   // Safe array guards
-  const safe_products = Array.isArray(products) ? products : [];
   const safe_employees = Array.isArray(employees) ? employees : [];
   const safe_cards = Array.isArray(cards) ? cards : [];
   const safe_cart = Array.isArray(cart) ? cart : [];
@@ -90,7 +89,7 @@ export default function ShopPage() {
   };
 
   const subtotal = useMemo(
-    () => safe_cart.reduce((s, i) => s + Number(i.qty || 0) * Number(i.price || 0), 0),
+    () => (Array.isArray(cart) ? cart : []).reduce((s, i) => s + Number(i.qty || 0) * Number(i.price || 0), 0),
     [cart]
   );
 
@@ -112,7 +111,7 @@ export default function ShopPage() {
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return safe_products.filter((p) => {
+    return (Array.isArray(products) ? products : []).filter((p) => {
       const category = String(p.category || p.type || "Без категории").trim();
       const okCategory = activeCategory === "all" || category === activeCategory;
       const okSearch =
@@ -169,7 +168,7 @@ export default function ShopPage() {
     setCartOpen(false);
   };
 
-  // eslint-disable-next-line react-hooks/static-components
+
   const CartPanel = ({ mobile = false }) => (
     <aside
       className={`flex h-full flex-col overflow-hidden border border-white/10 bg-slate-950/90 shadow-2xl shadow-black/30 backdrop-blur-2xl ${
