@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "!../Dockerfile";
+@source "!../ngix.conf";
 
 @layer components {
   .card { @apply bg-white/95 rounded-3xl shadow border border-slate-200; }
