@@ -172,18 +172,23 @@ export default function ShopPage() {
   const CartPanel = ({ mobile = false }) => (
     <aside
       className={`flex h-full flex-col overflow-hidden border border-white/10 bg-slate-950/90 shadow-2xl shadow-black/30 backdrop-blur-2xl ${
-        mobile ? "rounded-t-[2rem]" : "rounded-[2rem]"
+        mobile ? "rounded-t-3xl" : "rounded-[2rem]"
       }`}
     >
-      <div className="border-b border-white/10 p-5">
-        <div className="flex items-start justify-between gap-3">
+      {mobile && (
+        <div className="flex justify-center pb-1 pt-3">
+          <div className="h-1 w-10 rounded-full bg-white/20" />
+        </div>
+      )}
+      <div className="border-b border-white/10 px-5 py-4">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">
               POS корзина
             </p>
-            <h2 className="mt-1 text-2xl font-black text-white">Заказ</h2>
-            <p className="mt-1 text-sm font-semibold text-slate-400">
-              {currentEmployee ? `Сотрудник: ${currentEmployee.name}` : "Сотрудник не выбран"}
+            <h2 className="mt-0.5 text-xl font-black text-white">Заказ</h2>
+            <p className="mt-0.5 text-xs font-semibold text-slate-400">
+              {currentEmployee ? currentEmployee.name : "Сотрудник не выбран"}
             </p>
           </div>
 
@@ -191,7 +196,7 @@ export default function ShopPage() {
             <button
               type="button"
               onClick={() => setCartOpen(false)}
-              className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 font-black text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-lg font-black text-white"
             >
               ×
             </button>
@@ -353,27 +358,27 @@ export default function ShopPage() {
         <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-violet-500/10 blur-3xl" />
       </div>
 
-      <div className="relative grid min-h-screen gap-5 p-3 sm:p-5 xl:grid-cols-[1fr_430px]">
-        <main className="min-w-0 overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] shadow-2xl shadow-black/20 backdrop-blur-2xl">
-          <div className="border-b border-white/10 p-4 sm:p-6">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <div className="relative flex min-h-screen flex-col gap-4 p-3 pb-nav sm:p-5 xl:grid xl:grid-cols-[1fr_430px]">
+        <main
+          className="flex min-w-0 flex-col overflow-hidden rounded-4xl border border-white/10 bg-white/4 shadow-2xl shadow-black/20 backdrop-blur-2xl"
+          style={{ height: "calc(100vh - var(--nav-h) - env(safe-area-inset-bottom,0px) - 24px)" }}
+        >
+          <div className="shrink-0 border-b border-white/10 p-4 sm:p-6">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-300">
                   Быстрая продажа
                 </p>
-                <h1 className="mt-2 text-4xl font-black leading-none sm:text-6xl">
+                <h1 className="mt-1 text-3xl font-black leading-none sm:text-5xl">
                   Магазин
                 </h1>
-                <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-400">
-                  Выбирай товары, собирай корзину, принимай оплату наличными или переводом.
-                </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto] xl:w-[520px]">
+              <div className="flex items-center gap-2">
                 <select
                   value={employeeId}
                   onChange={(e) => setEmployeeId(e.target.value)}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-cyan-400"
+                  className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-cyan-400"
                 >
                   <option value="">Сотрудник</option>
                   {safe_employees.map((e) => (
@@ -386,27 +391,27 @@ export default function ShopPage() {
                 <button
                   type="button"
                   onClick={load}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-white transition hover:bg-white/10"
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 font-black text-white transition hover:bg-white/10"
                 >
-                  {loading ? "..." : "Обновить"}
+                  {loading ? "…" : "⟳"}
                 </button>
-
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Поиск товара..."
-                  className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 font-bold text-white placeholder:text-slate-500 outline-none focus:border-cyan-400 sm:col-span-2"
-                />
               </div>
             </div>
 
-            <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Поиск товара..."
+              className="mt-3 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm font-bold text-white placeholder:text-slate-500 outline-none focus:border-cyan-400"
+            />
+
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
               {categories.map((category) => (
                 <button
                   key={category}
                   type="button"
                   onClick={() => setActiveCategory(category)}
-                  className={`shrink-0 rounded-2xl px-4 py-3 text-sm font-black transition ${
+                  className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-black transition ${
                     activeCategory === category
                       ? "bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-500/20"
                       : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
@@ -418,42 +423,35 @@ export default function ShopPage() {
             </div>
           </div>
 
-          <div className="h-[calc(100vh-255px)] overflow-y-auto p-4 sm:p-6">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-5">
             {Object.entries(grouped).map(([category, items]) => (
-              <section key={category} className="mb-8 last:mb-0">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-2xl font-black text-white">{category}</h2>
-                    <p className="text-sm font-bold text-slate-500">
-                      Товаров: {items.length}
-                    </p>
-                  </div>
+              <section key={category} className="mb-6 last:mb-0">
+                <div className="mb-3 flex items-center gap-2">
+                  <h2 className="text-base font-black text-white">{category}</h2>
+                  <span className="rounded-lg bg-white/5 px-2 py-0.5 text-[10px] font-black text-slate-500">
+                    {items.length}
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
                   {items.map((p) => (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => addToCart(p)}
-                      className="group min-h-[142px] rounded-[1.6rem] border border-white/10 bg-white/[0.05] p-4 text-left shadow-xl shadow-black/10 transition hover:-translate-y-1 hover:border-cyan-400/60 hover:bg-cyan-400/10 sm:min-h-[170px] sm:p-5"
+                      className="group flex flex-col rounded-3xl border border-white/10 bg-white/5 p-3 text-left shadow-xl shadow-black/10 transition active:scale-95 hover:border-cyan-400/60 hover:bg-cyan-400/10 sm:p-4"
                     >
-                      <div className="mb-4 grid h-11 w-11 place-items-center rounded-2xl bg-cyan-400/10 text-xl text-cyan-200 group-hover:bg-cyan-400 group-hover:text-slate-950">
+                      <div className="mb-3 grid h-9 w-9 place-items-center rounded-xl bg-cyan-400/10 text-base text-cyan-200 group-hover:bg-cyan-400 group-hover:text-slate-950">
                         +
                       </div>
 
-                      <p className="line-clamp-2 text-base font-black leading-tight text-white sm:text-lg">
+                      <p className="line-clamp-2 flex-1 text-sm font-black leading-tight text-white">
                         {p.name}
                       </p>
 
-                      <div className="mt-4 flex items-end justify-between gap-2">
-                        <p className="text-lg font-black text-cyan-200">
-                          {formatMoney(p.price)}
-                        </p>
-                        <span className="rounded-xl bg-white/5 px-2 py-1 text-[11px] font-black text-slate-400">
-                          добавить
-                        </span>
-                      </div>
+                      <p className="mt-2 text-base font-black text-cyan-200">
+                        {formatMoney(p.price)}
+                      </p>
                     </button>
                   ))}
                 </div>
@@ -461,14 +459,14 @@ export default function ShopPage() {
             ))}
 
             {!filteredProducts.length && (
-              <div className="grid min-h-[360px] place-items-center rounded-[2rem] border border-dashed border-white/10 bg-white/[0.03] p-8 text-center">
+              <div className="grid min-h-65 place-items-center rounded-4xl border border-dashed border-white/10 bg-white/3 p-8 text-center">
                 <div>
-                  <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-white/5 text-3xl">
+                  <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-3xl bg-white/5 text-2xl">
                     🔎
                   </div>
-                  <p className="text-xl font-black text-white">Товары не найдены</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-500">
-                    Попробуй изменить поиск или категорию.
+                  <p className="text-lg font-black text-white">Товары не найдены</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    Попробуй изменить поиск или категорию
                   </p>
                 </div>
               </div>
@@ -484,15 +482,26 @@ export default function ShopPage() {
       <button
         type="button"
         onClick={() => setCartOpen(true)}
-        className="fixed bottom-4 left-4 right-4 z-40 flex items-center justify-between rounded-3xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-4 font-black text-slate-950 shadow-2xl shadow-cyan-500/30 xl:hidden"
+        className="fixed left-4 right-4 z-40 flex items-center justify-between rounded-3xl bg-linear-to-r from-cyan-400 to-blue-500 px-5 py-3.5 font-black text-slate-950 shadow-2xl shadow-cyan-500/30 xl:hidden"
+        style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 10px)" }}
       >
-        <span>Корзина · {safe_cart.reduce((s, i) => s + i.qty, 0)} шт</span>
-        <span>{formatMoney(total)}</span>
+        <span className="text-sm">🛒 Корзина · {safe_cart.reduce((s, i) => s + i.qty, 0)} шт</span>
+        <span className="text-base">{formatMoney(total)}</span>
       </button>
 
       {cartOpen && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/70 p-2 backdrop-blur-sm xl:hidden">
-          <div className="h-[88vh] w-full">
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm xl:hidden"
+          onClick={() => setCartOpen(false)}
+        >
+          <div
+            className="absolute inset-x-2 overflow-hidden rounded-t-3xl"
+            style={{
+              bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom,0px))",
+              height: "86vh",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <CartPanel mobile />
           </div>
         </div>
