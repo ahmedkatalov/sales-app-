@@ -221,7 +221,7 @@ func createMenuProduct(c *gin.Context) {
 		if warehouseItemID > 0 {
 			// Есть связь со складом — конвертируем нормально
 			var convErr error
-			storageQty, conversionNote, convErr = convertRecipeToStorage(p.AccountID, warehouseItemID, recipeItem.Quantity, inputUnit)
+			storageQty, conversionNote, convErr = convertRecipeToStorage(tx, p.AccountID, warehouseItemID, recipeItem.Quantity, inputUnit)
 			if convErr != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": conversionNote})
 				return
@@ -232,7 +232,7 @@ func createMenuProduct(c *gin.Context) {
 			conversionNote = "pending_link"
 			// Пробуем найти на складе по имени
 			var foundID int
-			_ = db.QueryRow(`
+			_ = tx.QueryRow(`
 				SELECT id FROM warehouse_items
 				WHERE account_id = ? AND LOWER(TRIM(name)) LIKE LOWER(TRIM(?)) AND (hidden IS NULL OR hidden = 0)
 				LIMIT 1
@@ -240,7 +240,7 @@ func createMenuProduct(c *gin.Context) {
 			if foundID > 0 {
 				warehouseItemID = foundID
 				var convErr error
-				storageQty, conversionNote, convErr = convertRecipeToStorage(p.AccountID, warehouseItemID, recipeItem.Quantity, inputUnit)
+				storageQty, conversionNote, convErr = convertRecipeToStorage(tx, p.AccountID, warehouseItemID, recipeItem.Quantity, inputUnit)
 				if convErr != nil {
 					storageQty = recipeItem.Quantity
 					conversionNote = "auto_linked"
@@ -364,7 +364,7 @@ func updateMenuProduct(c *gin.Context) {
 
 		if warehouseItemID > 0 {
 			var convErr error
-			storageQty, conversionNote, convErr = convertRecipeToStorage(accID, warehouseItemID, recipeItem.Quantity, inputUnit)
+			storageQty, conversionNote, convErr = convertRecipeToStorage(tx, accID, warehouseItemID, recipeItem.Quantity, inputUnit)
 			if convErr != nil {
 				storageQty = recipeItem.Quantity
 				conversionNote = "conversion_error"
@@ -373,7 +373,7 @@ func updateMenuProduct(c *gin.Context) {
 			storageQty = recipeItem.Quantity
 			conversionNote = "pending_link"
 			var foundID int
-			_ = db.QueryRow(`
+			_ = tx.QueryRow(`
 				SELECT id FROM warehouse_items
 				WHERE account_id = ? AND LOWER(TRIM(name)) LIKE LOWER(TRIM(?)) AND (hidden IS NULL OR hidden = 0)
 				LIMIT 1
@@ -381,7 +381,7 @@ func updateMenuProduct(c *gin.Context) {
 			if foundID > 0 {
 				warehouseItemID = foundID
 				var convErr error
-				storageQty, conversionNote, convErr = convertRecipeToStorage(accID, warehouseItemID, recipeItem.Quantity, inputUnit)
+				storageQty, conversionNote, convErr = convertRecipeToStorage(tx, accID, warehouseItemID, recipeItem.Quantity, inputUnit)
 				if convErr != nil {
 					storageQty = recipeItem.Quantity
 					conversionNote = "auto_linked"
@@ -390,7 +390,7 @@ func updateMenuProduct(c *gin.Context) {
 		}
 
 		pid := 0
-		_ = db.QueryRow(`SELECT id FROM menu_products WHERE id = ? AND account_id = ?`, productID, accID).Scan(&pid)
+		_ = tx.QueryRow(`SELECT id FROM menu_products WHERE id = ? AND account_id = ?`, productID, accID).Scan(&pid)
 		if _, err := tx.Exec(`
 			INSERT INTO product_recipes(account_id, product_id, warehouse_item_id, ingredient_name, quantity, input_quantity, input_unit, conversion_note)
 			VALUES(?, ?, ?, ?, ?, ?, ?, ?)

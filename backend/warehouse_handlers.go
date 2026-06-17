@@ -134,7 +134,15 @@ func guessOnePieceToBase(name string, storageUnit string) float64 {
 	return 1
 }
 
-func convertRecipeToStorage(accID int, warehouseItemID int, inputQty float64, inputUnit string) (float64, string, error) {
+// rowQuerier абстрагирует QueryRow, чтобы один и тот же код мог работать
+// как напрямую через *sql.DB, так и внутри транзакции через *sql.Tx.
+// Это важно при SetMaxOpenConns(1): вызов db.* внутри открытой транзакции
+// пытается занять второе соединение и приводит к вечной блокировке.
+type rowQuerier interface {
+	QueryRow(query string, args ...any) *sql.Row
+}
+
+func convertRecipeToStorage(q rowQuerier, accID int, warehouseItemID int, inputQty float64, inputUnit string) (float64, string, error) {
 	if inputQty <= 0 {
 		return 0, "", nil
 	}
@@ -143,7 +151,7 @@ func convertRecipeToStorage(accID int, warehouseItemID int, inputQty float64, in
 	var storageUnit string
 	var lossPercent float64
 	var packagingQuantity float64
-	if err := db.QueryRow(`
+	if err := q.QueryRow(`
 		SELECT name, unit, IFNULL(loss_percent, 0), IFNULL(packaging_quantity, 0)
 		FROM warehouse_items
 		WHERE id = ? AND account_id = ?
