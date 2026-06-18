@@ -28,21 +28,21 @@ const ownerTabs = [
   { id: "branches",     label: "Точки" },
   { id: "access",       label: "Доступы" },
   { id: "permissions",  label: "Права" },
-  { id: "accounts",     label: "Аккаунты точек" },
-  { id: "employees",    label: "Работники" },
+  { id: "accounts",     label: "Логины" },
+  { id: "employees",    label: "Продавцы" },
   { id: "cards",        label: "Карты" },
 ];
 
 const adminTabs = [
   { id: "overview",   label: "Обзор" },
-  { id: "employees",  label: "Работники" },
-  { id: "accounts",   label: "Аккаунты точки" },
+  { id: "employees",  label: "Продавцы" },
+  { id: "accounts",   label: "Логины" },
   { id: "cards",      label: "Карты" },
 ];
 
 const workerTabs = [
   { id: "overview",   label: "Обзор" },
-  { id: "employees",  label: "Профили сотрудников" },
+  { id: "employees",  label: "Продавцы" },
 ];
 
 export default function ProfilePage({
@@ -98,7 +98,7 @@ export default function ProfilePage({
 
   const accountTypeLabel = isOwner
     ? "Главный аккаунт"
-    : isBranchAdmin ? "Админ точки" : "Рабочий аккаунт";
+    : isBranchAdmin ? "Администратор точки" : "Кассир";
 
   const currentWorker =
     profile?.name ||
@@ -107,9 +107,9 @@ export default function ProfilePage({
       : isBranchAdmin ? session?.username : "профиль не выбран");
 
   const roleName = (role) => {
-    if (role === "branch_admin") return "Админ точки";
-    if (role === "worker" || role === "workspace") return "Рабочий аккаунт";
-    return role || "Аккаунт";
+    if (role === "branch_admin") return "Администратор";
+    if (role === "worker" || role === "workspace") return "Кассир";
+    return role || "Логин";
   };
 
   const load = async () => {
@@ -343,12 +343,12 @@ export default function ProfilePage({
       <div className="relative z-10">
         <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-bold text-blue-400">Профиль</p>
-            <h2 className="text-4xl font-black leading-none text-white sm:text-5xl">Аккаунт</h2>
+            <p className="text-sm font-bold text-blue-400">Настройки</p>
+            <h2 className="text-4xl font-black leading-none text-white sm:text-5xl">Настройки</h2>
             <p className="mt-2 text-slate-400">
               {isOwner
-                ? "Управление точками, аккаунтами и профилями сотрудников."
-                : "Выбор профиля сотрудника и управление текущей точкой."}
+                ? "Точки, логины для входа и продавцы."
+                : "Выбор продавца и управление текущей точкой."}
             </p>
           </div>
           <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
@@ -408,25 +408,31 @@ export default function ProfilePage({
           <section className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h3 className="text-2xl font-black">Точки / филиалы</h3>
-                <p className="mt-1 text-sm text-slate-400">Выбери точку, чтобы работать с её данными.</p>
+                <h3 className="text-2xl font-black">Точки и филиалы</h3>
+                <p className="mt-1 max-w-xl text-sm text-slate-400">Каждая точка — отдельный магазин со своими товарами, складом и продажами. Нажми на точку, чтобы переключиться на неё.</p>
               </div>
-              <button type="button" onClick={() => setModal("workspace")} className="btn-blue">+ Добавить точку</button>
+              <button type="button" onClick={() => setModal("workspace")} className="btn-blue shrink-0">+ Новая точка</button>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {safe_workspaces.map((w) => (
+              {safe_workspaces.map((w) => {
+                const active = workspace?.id === w.id;
+                return (
                 <button key={w.id} type="button" onClick={() => switchWorkspace(w)}
-                  className={`rounded-3xl border p-5 text-left transition hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
-                    workspace?.id === w.id
-                      ? "border-slate-950 bg-gradient-to-r from-blue-600 to-violet-600 text-white"
-                      : "border-white/10 bg-[#111827] text-white"
+                  className={`relative rounded-3xl border p-5 text-left transition hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
+                    active
+                      ? "border-transparent bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-xl shadow-blue-900/30"
+                      : "border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.06]"
                   }`}>
-                  <p className="text-sm font-bold text-blue-400">{w.isMain ? "Основная точка" : "Филиал"}</p>
-                  <h4 className="mt-1 text-2xl font-black">{w.name}</h4>
-                  <p className="mt-3 text-sm opacity-70">Аккаунтов: {(usersByWorkspace[String(w.id)] || []).length}</p>
+                  <div className="flex items-center justify-between">
+                    <p className={`text-xs font-black uppercase tracking-wide ${active ? "text-blue-100" : "text-blue-400"}`}>{w.isMain ? "Основная точка" : "Филиал"}</p>
+                    {active && <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-black">Активна</span>}
+                  </div>
+                  <h4 className="mt-1.5 text-2xl font-black">{w.name}</h4>
+                  <p className={`mt-3 text-sm ${active ? "text-blue-100/80" : "text-slate-400"}`}>Логинов: {(usersByWorkspace[String(w.id)] || []).length}</p>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
@@ -496,37 +502,37 @@ export default function ProfilePage({
           <section className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h3 className="text-2xl font-black">Аккаунты точек</h3>
-                <p className="mt-1 text-sm text-slate-400">Рабочий аккаунт — вход для сотрудников.</p>
+                <h3 className="text-2xl font-black">Логины для входа</h3>
+                <p className="mt-1 max-w-xl text-sm text-slate-400">Логин и пароль, под которым сотрудники заходят в приложение. У каждого логина своя точка и роль — кассир или администратор.</p>
               </div>
-              <button type="button" onClick={() => setModal("workerAccount")} className="btn-blue">+ Создать аккаунт</button>
+              <button type="button" onClick={() => setModal("workerAccount")} className="btn-blue shrink-0">+ Создать логин</button>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {visibleWorkspaceUsers.map((u) => (
-                <article key={u.id} className="rounded-3xl border border-white/10 bg-[#111827] p-5 shadow-sm">
+                <article key={u.id} className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] p-5">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="break-words text-xl font-black">{u.username}</p>
+                    <div className="min-w-0">
+                      <p className="break-words text-lg font-black">{u.username}</p>
                       <p className="mt-1 text-sm text-slate-400">{u.workspaceName}</p>
                     </div>
-                    <span className="rounded-2xl bg-white/5 px-3 py-2 text-xs font-black text-slate-400">{roleName(u.role)}</span>
+                    <span className="shrink-0 rounded-xl bg-blue-500/15 px-3 py-1.5 text-xs font-black text-blue-300">{roleName(u.role)}</span>
                   </div>
-                  <div className="mt-5 grid gap-2">
+                  <div className="mt-auto grid gap-2 pt-5">
                     <button type="button" onClick={() => openManageProfiles(u)}
-                      className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white">
-                      Профили сотрудников
+                      className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white transition hover:brightness-110">
+                      Продавцы под этим логином
                     </button>
                     <button type="button" onClick={() => removeWorkspaceUser(u.id)}
-                      className="rounded-2xl bg-red-50 px-4 py-3 font-black text-red-600 hover:bg-red-100">
-                      Удалить аккаунт
+                      className="rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm font-black text-red-300 transition hover:bg-red-500/20">
+                      Удалить логин
                     </button>
                   </div>
                 </article>
               ))}
               {!visibleWorkspaceUsers.length && (
-                <div className="rounded-3xl bg-white/[0.03] p-8 text-center md:col-span-2 xl:col-span-3">
-                  <p className="text-xl font-black text-white">Аккаунтов пока нет</p>
-                  <p className="mt-1 text-slate-400">Создай рабочий аккаунт, потом нажми «Профили сотрудников».</p>
+                <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center md:col-span-2 xl:col-span-3">
+                  <p className="text-lg font-black text-white">Логинов пока нет</p>
+                  <p className="mt-1 text-sm text-slate-400">Создай логин — это вход в кассу для сотрудника. Потом добавь под ним продавцов.</p>
                 </div>
               )}
             </div>
@@ -538,40 +544,48 @@ export default function ProfilePage({
           <section className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h3 className="text-2xl font-black">Профили сотрудников</h3>
-                <p className="mt-1 text-sm text-slate-400">Создавай и выбирай кто сейчас работает.</p>
+                <h3 className="text-2xl font-black">Продавцы</h3>
+                <p className="mt-1 max-w-xl text-sm text-slate-400">Имена продавцов — на кого записывается продажа. Пароль не нужен. Отметь, кто сейчас за кассой.</p>
               </div>
-              <button type="button" onClick={() => setModal("employee")} className="btn-blue">+ Добавить профиль</button>
+              <button type="button" onClick={() => setModal("employee")} className="btn-blue shrink-0">+ Добавить продавца</button>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {safe_employees.map((e) => (
-                <article key={e.id} className={`rounded-3xl border p-4 ${
-                  profile?.id === e.id
-                    ? "border-slate-950 bg-gradient-to-r from-blue-600 to-violet-600 text-white"
-                    : "border-white/10 bg-[#111827]"
+              {safe_employees.map((e) => {
+                const active = profile?.id === e.id;
+                return (
+                <article key={e.id} className={`rounded-3xl border p-4 transition ${
+                  active
+                    ? "border-transparent bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-xl shadow-blue-900/30"
+                    : "border-white/10 bg-white/[0.03]"
                 }`}>
-                  <p className="text-xl font-black">{e.name}</p>
-                  <p className={`mt-1 text-sm ${profile?.id === e.id ? "text-slate-300" : "text-slate-400"}`}>
-                    {profile?.id === e.id ? "Сейчас работает" : "Профиль сотрудника"}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="min-w-0 truncate text-xl font-black">{e.name}</p>
+                    {active && <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-black">За кассой</span>}
+                  </div>
+                  <p className={`mt-1 text-sm ${active ? "text-blue-100/80" : "text-slate-400"}`}>
+                    {active ? "Сейчас оформляет продажи" : "Продавец"}
                   </p>
                   <div className="mt-4 flex gap-2">
-                    <button type="button" onClick={() => pickEmployee(e)}
-                      className={`flex-1 rounded-2xl px-4 py-3 font-black focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
-                        profile?.id === e.id ? "bg-[#111827] text-white" : "bg-gradient-to-r from-blue-600 to-violet-600 text-white"
+                    <button type="button" onClick={() => pickEmployee(e)} disabled={active}
+                      className={`flex-1 rounded-2xl px-4 py-3 font-black transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
+                        active ? "bg-white/15 text-white" : "bg-gradient-to-r from-blue-600 to-violet-600 text-white hover:brightness-110"
                       }`}>
-                      Выбрать
+                      {active ? "Выбран" : "Поставить за кассу"}
                     </button>
                     <button type="button" onClick={() => removeEmployee(e.id)}
-                      className="rounded-2xl bg-red-50 px-4 py-3 font-black text-red-600 focus:outline-none focus:ring-4 focus:ring-red-100">
+                      className={`rounded-2xl px-4 py-3 font-black transition focus:outline-none ${
+                        active ? "bg-white/15 text-white hover:bg-white/25" : "bg-red-500/10 text-red-300 hover:bg-red-500/20"
+                      }`}>
                       ×
                     </button>
                   </div>
                 </article>
-              ))}
+                );
+              })}
               {!safe_employees.length && (
-                <div className="rounded-3xl bg-white/[0.03] p-8 text-center md:col-span-2 xl:col-span-3">
-                  <p className="text-xl font-black text-white">Профилей пока нет</p>
-                  <p className="mt-1 text-slate-400">Создай первый профиль сотрудника.</p>
+                <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center md:col-span-2 xl:col-span-3">
+                  <p className="text-lg font-black text-white">Продавцов пока нет</p>
+                  <p className="mt-1 text-sm text-slate-400">Добавь продавца — его имя будет в чеках и отчётах по продажам.</p>
                 </div>
               )}
             </div>
@@ -590,8 +604,8 @@ export default function ProfilePage({
 
             {safe_workspaceUsers.filter(u => u.role === "worker" || u.role === "branch_admin").length === 0 ? (
               <div className="rounded-3xl border border-dashed border-white/10 p-10 text-center">
-                <p className="text-lg font-black text-white">Рабочих аккаунтов нет</p>
-                <p className="mt-1 text-sm text-slate-400">Создай рабочий аккаунт в разделе «Аккаунты точек».</p>
+                <p className="text-lg font-black text-white">Логинов пока нет</p>
+                <p className="mt-1 text-sm text-slate-400">Создай логин в разделе «Логины».</p>
               </div>
             ) : (
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -758,21 +772,22 @@ export default function ProfilePage({
         )}
 
         {modal === "manageProfiles" && (
-          <Modal title="Профили рабочего аккаунта" wide>
+          <Modal title="Продавцы под логином" wide>
             <div className="mb-4 rounded-3xl bg-gradient-to-r from-blue-600 to-violet-600 p-4 text-white">
-              <p className="text-sm text-slate-300">Рабочий аккаунт</p>
+              <p className="text-sm text-blue-100">Логин для входа</p>
               <p className="break-words text-2xl font-black">{managedAccount?.username}</p>
-              <p className="mt-1 text-sm text-slate-300">{managedAccount?.workspaceName}</p>
+              <p className="mt-1 text-sm text-blue-100">{managedAccount?.workspaceName}</p>
             </div>
+            <p className="mb-3 text-sm text-slate-400">Добавь продавцов — их имена будут в чеках и отчётах. Отдельный пароль им не нужен, они работают под этим логином.</p>
             <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
               <label className="block">
-                <span className="mb-2 block text-sm font-black text-slate-400">Имя профиля</span>
+                <span className="mb-2 block text-sm font-black text-slate-400">Имя продавца</span>
                 <input value={managedEmployeeName} onChange={(e) => setManagedEmployeeName(e.target.value)}
                   placeholder="Например: Ахмед" autoFocus
                   className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
               </label>
               <div className="flex items-end">
-                <button type="button" onClick={createManagedEmployee} className="btn-blue w-full">+ Создать</button>
+                <button type="button" onClick={createManagedEmployee} className="btn-blue w-full">+ Добавить</button>
               </div>
             </div>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -780,11 +795,11 @@ export default function ProfilePage({
                 <div key={e.id} className="flex items-center justify-between rounded-2xl bg-white/5 p-4">
                   <p className="font-black">{e.name}</p>
                   <button type="button" onClick={() => removeManagedEmployee(e.id)}
-                    className="rounded-xl bg-red-50 px-3 py-2 font-black text-red-600">×</button>
+                    className="rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-300 transition hover:bg-red-500/20">×</button>
                 </div>
               ))}
               {!safe_managedEmployees.length && (
-                <div className="rounded-2xl bg-white/5 p-5 text-center text-slate-400 sm:col-span-2">Профилей пока нет.</div>
+                <div className="rounded-2xl bg-white/5 p-5 text-center text-slate-400 sm:col-span-2">Продавцов пока нет.</div>
               )}
             </div>
             <button type="button" onClick={() => setModal(null)} className="btn-white mt-6 w-full">Готово</button>
@@ -792,9 +807,9 @@ export default function ProfilePage({
         )}
 
         {modal === "employee" && (
-          <Modal title="Новый профиль сотрудника">
+          <Modal title="Новый продавец">
             <label className="block">
-              <span className="mb-2 block text-sm font-black text-slate-400">Имя профиля</span>
+              <span className="mb-2 block text-sm font-black text-slate-400">Имя продавца</span>
               <input value={employeeName} onChange={(e) => setEmployeeName(e.target.value)}
                 placeholder="Например: Ахмед" autoFocus
                 className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
@@ -822,7 +837,7 @@ export default function ProfilePage({
         )}
 
         {modal === "workerAccount" && (
-          <Modal title="Аккаунт точки" wide>
+          <Modal title="Новый логин для входа" wide>
             <div className="space-y-3">
               {isOwner && (
                 <label className="block">
@@ -836,12 +851,12 @@ export default function ProfilePage({
                 </label>
               )}
               <label className="block">
-                <span className="mb-2 block text-sm font-black text-slate-400">Тип аккаунта</span>
+                <span className="mb-2 block text-sm font-black text-slate-400">Роль</span>
                 <select value={accountForm.role}
                   onChange={(e) => setAccountForm((p) => ({ ...p, role: e.target.value }))}
                   className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
-                  <option value="worker">Рабочий аккаунт</option>
-                  <option value="branch_admin">Админ точки</option>
+                  <option value="worker">Кассир — только продажи и касса</option>
+                  <option value="branch_admin">Администратор — полный доступ к точке</option>
                 </select>
               </label>
               <label className="block">

@@ -43,23 +43,23 @@ import {
 } from "./api";
 
 const ownerLinks = [
-  ["/work", "Работа", Briefcase],
-  ["/pos", "Магазин", ShoppingCart],
-  ["/pending-payments", "Ожидание оплаты", Clock3, "pending"],
+  ["/work", "Товары", Briefcase],
+  ["/pos", "Касса", ShoppingCart],
+  ["/pending-payments", "К оплате", Clock3, "pending"],
   ["/debts", "Долги", FileText, "debt"],
   ["/expenses", "Расходы", Wallet],
-  ["/ai-warehouse", "AI-бизнес", Bot],
+  ["/ai-warehouse", "Помощник", Bot],
   ["/warehouse", "Склад", Package],
   ["/sales-analytics", "Продажи", ReceiptText],
   ["/analytics", "Аналитика", BarChart3],
-  ["/profile", "Профиль", Settings],
+  ["/profile", "Настройки", Settings],
 ];
 
 const adminLinks = ownerLinks;
 
 const workerLinks = [
-  ["/pos", "Магазин", ShoppingCart],
-  ["/pending-payments", "Ожидание оплаты", Clock3, "pending"],
+  ["/pos", "Касса", ShoppingCart],
+  ["/pending-payments", "К оплате", Clock3, "pending"],
   ["/debts", "Долги", FileText, "debt"],
   ["/expenses", "Расходы", Wallet],
 ];
@@ -547,7 +547,7 @@ export default function App() {
         <div className={`mb-3 flex items-center justify-between gap-2.5 rounded-[18px] border border-white/8 bg-slate-950/85 px-3 py-2.5 text-white backdrop-blur-md lg:hidden${isAIWarehouseRoute ? " hidden" : ""}`}>
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-linear-to-br from-blue-500 to-blue-700 text-sm font-black text-white shadow-lg shadow-blue-600/25">
-              {(isWorker ? workerName : session.username)?.[0]?.toUpperCase() || "U"}
+              {(isWorker ? workerName : (currentWorkspace?.name || "Б"))?.[0]?.toUpperCase() || "Б"}
             </div>
             {isWorker ? (
               <select value={profile?.id || ""} onChange={(e) => handleProfileChange(e.target.value)}
@@ -557,13 +557,11 @@ export default function App() {
               </select>
             ) : (
               <div className="min-w-0">
-                <span className="block truncate text-sm font-black leading-tight text-white">{session.username}</span>
-                {currentWorkspace?.name && (
-                  <span className="flex items-center gap-1 truncate text-[11px] font-bold text-blue-400">
-                    <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
-                    {currentWorkspace.name}
-                  </span>
-                )}
+                <span className="block truncate text-sm font-black leading-tight text-white">{currentWorkspace?.name || "Мой бизнес"}</span>
+                <span className="flex items-center gap-1 truncate text-[11px] font-bold text-slate-400">
+                  <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
+                  {isOwner ? "Главный аккаунт" : isAdmin ? "Админ точки" : "Аккаунт"}
+                </span>
               </div>
             )}
           </div>

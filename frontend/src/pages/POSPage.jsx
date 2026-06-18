@@ -915,47 +915,47 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
             )}
           </div>
 
-          <div className="mt-4">
-            <input
-              value={discount}
-              onChange={(e) => setDiscount(e.target.value)}
-              placeholder="Скидка %"
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
-            />
-          </div>
+          {safe_cart.length > 0 && (
+            <>
+              <div className="mt-4">
+                <input
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  placeholder="Скидка %"
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
+                />
+              </div>
 
-          <div className="mt-4 rounded-4xl border border-white/10 bg-linear-to-br from-blue-600/10 to-violet-600/10 p-5">
-            <div className="flex justify-between">
-              <span>Сумма</span>
-              <b>{formatMoney(subtotal)}</b>
-            </div>
+              <div className="mt-4 rounded-4xl border border-white/10 bg-linear-to-br from-blue-600/10 to-violet-600/10 p-5">
+                <div className="flex justify-between text-slate-300">
+                  <span>Сумма</span>
+                  <b className="text-white">{formatMoney(subtotal)}</b>
+                </div>
 
-            <div className="mt-2 flex justify-between text-red-300">
-              <span>Скидка</span>
-              <b>{formatMoney(discountAmount)}</b>
-            </div>
+                {discountAmount > 0 && (
+                  <div className="mt-2 flex justify-between text-red-300">
+                    <span>Скидка</span>
+                    <b>−{formatMoney(discountAmount)}</b>
+                  </div>
+                )}
 
-            <div className="mt-3 flex justify-between text-2xl">
-              <span>Итого</span>
-              <b>{formatMoney(total)}</b>
-            </div>
+                <div className="mt-3 flex items-baseline justify-between border-t border-white/10 pt-3 text-2xl">
+                  <span className="font-black">Итого</span>
+                  <b className="text-2xl font-black">{formatMoney(total)}</b>
+                </div>
+              </div>
+            </>
+          )}
 
-
-          </div>
-
-          <button onClick={confirmSale} className="mt-5 w-full rounded-3xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-5 text-xl font-black text-white shadow-2xl shadow-blue-900/30 transition hover:scale-[1.01]">
-            Подтвердить покупку
+          <button
+            onClick={confirmSale}
+            disabled={!safe_cart.length}
+            className="mt-4 w-full rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3.5 text-base font-black text-white shadow-xl shadow-blue-900/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:scale-100 sm:py-4 sm:text-lg"
+          >
+            {safe_cart.length ? `Подтвердить покупку · ${formatMoney(total)}` : "Подтвердить покупку"}
           </button>
         </div>
       </div>
-
-      <button
-        onClick={confirmSale}
-        className="fixed left-4 right-4 z-50 rounded-3xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 text-lg font-black text-white shadow-2xl shadow-blue-900/40 transition active:scale-[0.98] xl:hidden"
-        style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px)" }}
-      >
-        Подтвердить · {formatMoney(total)}
-      </button>
 
       {paymentModal && (
         <Modal title="Способ оплаты" wide>

@@ -22,7 +22,10 @@ export default function DesktopNavigation({
       ? "Админ точки"
       : "Рабочий аккаунт";
 
-  const accountName = isWorker ? workerName : session?.username;
+  // В шапке показываем имя бизнеса/точки, а не email
+  const businessName = workspaceName || "Мой бизнес";
+  const accountName = isWorker ? workerName || "Сотрудник" : businessName;
+  const showWorkspaceChip = workspaceName && accountName !== workspaceName;
 
   return (
     <header className="sticky top-0 z-30 mb-5 hidden rounded-[1.4rem] border border-white/10 bg-slate-950/80 p-2 text-white shadow-xl shadow-slate-950/25 backdrop-blur-xl lg:block">
@@ -33,16 +36,14 @@ export default function DesktopNavigation({
           </div>
 
           <div className="min-w-0">
-            <p className="truncate text-xs font-black text-white">{accountName}</p>
+            <p className="truncate text-sm font-black text-white">{accountName}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
               <p className="truncate text-xs font-bold text-slate-400">{accountLabel}</p>
-              {workspaceName && (
+              {showWorkspaceChip && (
                 <>
                   <span className="text-slate-600">·</span>
-                  <span className="flex items-center gap-1 truncate text-xs font-black text-blue-400">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
-                    {workspaceName}
-                  </span>
+                  <span className="truncate text-xs font-black text-blue-400">{workspaceName}</span>
                 </>
               )}
             </div>

@@ -657,7 +657,7 @@ export default function WorkPage() {
   };
 
   return (
-    <div className="relative -m-4 bg-[radial-gradient(circle_at_top_right,rgba(124,58,237,0.25),transparent_35%),linear-gradient(135deg,#020617,#0f172a_45%,#111827)] p-4 pb-nav text-slate-100 sm:-m-6 sm:p-6 sm:pb-10">
+    <div className="relative -m-4 bg-[radial-gradient(circle_at_top_right,rgba(124,58,237,0.25),transparent_35%),linear-gradient(135deg,#020617,#0f172a_45%,#111827)] px-3 pb-nav pt-4 text-slate-100 sm:-m-6 sm:p-6 sm:pb-10">
       <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
       <div className="pointer-events-none absolute left-1/3 top-20 h-64 w-64 rounded-full bg-violet-600/10 blur-3xl" />
       <div className="relative">
@@ -672,28 +672,34 @@ export default function WorkPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
-          <button
-            onClick={() => setStructureModal(true)}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 w-full sm:w-auto"
-          >
-            ⚙️ Типы и папки
-          </button>
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:justify-end">
+          {/* Второстепенные действия — компактный горизонтальный ряд на телефоне */}
+          <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 sm:mx-0 sm:px-0 sm:flex-wrap sm:justify-end">
+            <button
+              onClick={() => setStructureModal(true)}
+              className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 backdrop-blur transition hover:bg-white/10 sm:rounded-2xl sm:px-4 sm:py-3 sm:font-black sm:text-base sm:text-slate-100"
+            >
+              ⚙️ Типы и папки
+            </button>
 
-          <button
-            onClick={() => setImportModal(true)}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 w-full sm:w-auto"
-          >
-            Импорт Excel
-          </button>
+            <button
+              onClick={() => setImportModal(true)}
+              className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 backdrop-blur transition hover:bg-white/10 sm:rounded-2xl sm:px-4 sm:py-3 sm:font-black sm:text-base sm:text-slate-100"
+            >
+              Импорт Excel
+            </button>
 
-          <button onClick={exportExcel} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 w-full sm:w-auto">
-            Экспорт Excel
-          </button>
+            <button
+              onClick={exportExcel}
+              className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 backdrop-blur transition hover:bg-white/10 sm:rounded-2xl sm:px-4 sm:py-3 sm:font-black sm:text-base sm:text-slate-100"
+            >
+              Экспорт Excel
+            </button>
+          </div>
 
           <button
             onClick={openProductModal}
-            className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] col-span-2 w-full sm:w-auto"
+            className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] w-full sm:w-auto"
           >
             + Добавить товар
           </button>
@@ -701,35 +707,35 @@ export default function WorkPage() {
       </div>
 
       {/* Сводные метрики — как на макете */}
-      <div className="mb-5 grid grid-cols-3 gap-2.5 sm:gap-4">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur sm:p-5">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
-              <Boxes size={18} strokeWidth={2.4} />
+      <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur sm:p-5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-400 sm:h-10 sm:w-10 sm:rounded-xl">
+              <Boxes size={16} strokeWidth={2.4} />
             </span>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400 sm:text-xs">Продано / мес</p>
+            <p className="min-w-0 text-[10px] font-bold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-xs">Продано / мес</p>
           </div>
-          <p className="mt-3 text-xl font-black text-white sm:text-3xl">{num(totals.quantity)}</p>
+          <p className="mt-2.5 text-base font-black tabular-nums text-white sm:mt-3 sm:text-3xl">{num(totals.quantity)}</p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur sm:p-5">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
-              <Wallet size={18} strokeWidth={2.4} />
+        <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur sm:p-5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-400 sm:h-10 sm:w-10 sm:rounded-xl">
+              <Wallet size={16} strokeWidth={2.4} />
             </span>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400 sm:text-xs">Выручка</p>
+            <p className="min-w-0 text-[10px] font-bold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-xs">Выручка</p>
           </div>
-          <p className="mt-3 text-xl font-black text-white sm:text-3xl">{formatMoney(totals.revenue)}</p>
+          <p className="mt-2.5 text-base font-black tabular-nums text-white sm:mt-3 sm:text-3xl">{formatMoney(totals.revenue)}</p>
         </div>
 
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.07] p-3.5 backdrop-blur sm:p-5">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
-              <TrendingUp size={18} strokeWidth={2.4} />
+        <div className="min-w-0 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.07] p-3 backdrop-blur sm:p-5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400 sm:h-10 sm:w-10 sm:rounded-xl">
+              <TrendingUp size={16} strokeWidth={2.4} />
             </span>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400 sm:text-xs">Чистая прибыль</p>
+            <p className="min-w-0 text-[10px] font-bold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-xs">Чистая прибыль</p>
           </div>
-          <p className="mt-3 text-xl font-black text-emerald-400 sm:text-3xl">{formatMoney(totals.cleanProfit)}</p>
+          <p className="mt-2.5 text-base font-black tabular-nums text-emerald-400 sm:mt-3 sm:text-3xl">{formatMoney(totals.cleanProfit)}</p>
         </div>
       </div>
 
