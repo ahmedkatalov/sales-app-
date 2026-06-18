@@ -8,6 +8,7 @@ import {
   setCurrentWorkspace,
 } from "../api";
 import Modal from "../components/Modal";
+import ThemeToggle from "../components/ThemeToggle";
 
 // Все доступные страницы для назначения прав
 const ALL_PAGES = [
@@ -350,7 +351,10 @@ export default function ProfilePage({
                 : "Выбор профиля сотрудника и управление текущей точкой."}
             </p>
           </div>
-          <button type="button" onClick={logout} className="btn-white w-full lg:w-auto">Выйти</button>
+          <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+            <ThemeToggle variant="full" className="w-full sm:w-auto" />
+            <button type="button" onClick={logout} className="btn-white w-full lg:w-auto">Выйти</button>
+          </div>
         </header>
 
         {error && (

@@ -2,12 +2,238 @@
 @source "!../Dockerfile";
 @source "!../ngix.conf";
 
+/* ═══════════════════════════════════════════════════════════════
+   ТЕМЫ ОФОРМЛЕНИЯ
+   Приложение построено на «оверлейном» паттерне: тёмная база
+   (slate-950) + полупрозрачные white/X поверхности + text-white.
+   Tailwind v4 компилирует цвета в CSS-переменные (var(--color-*)),
+   поэтому светлую тему делаем переопределением палитры под
+   html[data-theme="light"] — без переписывания JSX.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Семантические токены — тёмная тема (по умолчанию) */
+  --brand: oklch(0.58 0.224 262);
+  --brand-2: oklch(0.51 0.236 264);
+  --brand-soft: color-mix(in oklab, var(--brand) 18%, transparent);
+
+  --page-bg: radial-gradient(120% 120% at 0% 0%, #0a1530 0%, #060c1c 45%, #04060f 100%);
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --border: rgba(255, 255, 255, 0.10);
+  --surface: rgba(255, 255, 255, 0.05);
+  --surface-2: rgba(255, 255, 255, 0.05);
+  --surface-hover: rgba(255, 255, 255, 0.10);
+  --shadow-card: 0 24px 60px -28px rgba(0, 0, 0, 0.55);
+
+  /* Поля ввода — светлые в обеих темах (высокий контраст) */
+  --field: #ffffff;
+  --field-border: #cbd5e1;
+  --field-text: #0f172a;
+
+  /* Нейтральная кнопка (.btn-white) */
+  --btn-neutral: #ffffff;
+  --btn-neutral-hover: #f1f5f9;
+  --btn-neutral-text: #0f172a;
+  --btn-neutral-border: #e2e8f0;
+}
+
+html[data-theme="light"] {
+  /* ── Семантические токены — светлая тема ── */
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: rgba(15, 23, 42, 0.10);
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-hover: #e2e8f0;
+  --shadow-card: 0 18px 44px -26px rgba(30, 41, 59, 0.30);
+
+  --page-bg: radial-gradient(120% 120% at 0% 0%, #f4f8ff 0%, #eef2fb 45%, #e9edf7 100%);
+
+  --field: #ffffff;
+  --field-border: #cbd5e1;
+
+  --btn-neutral: #ffffff;
+  --btn-neutral-hover: #f8fafc;
+  --btn-neutral-text: #0f172a;
+  --btn-neutral-border: #e2e8f0;
+
+  /* ── Инверсия шкалы slate (тёмное ↔ светлое) ──
+     В тёмной теме малые номера = светлый текст, большие = тёмный фон.
+     В светлой теме переворачиваем светлоту, сохраняя прохладный тон. */
+  --color-white: oklch(0.23 0.013 262);            /* «чернила» для text-white и white/X оверлеев */
+  --color-slate-50: oklch(0.22 0.026 262);
+  --color-slate-100: oklch(0.26 0.026 261);
+  --color-slate-200: oklch(0.32 0.025 260);
+  --color-slate-300: oklch(0.41 0.023 258);
+  --color-slate-400: oklch(0.48 0.027 256);        /* основной приглушённый текст */
+  --color-slate-500: oklch(0.57 0.025 254);        /* третичный текст */
+  --color-slate-600: oklch(0.71 0.018 253);
+  --color-slate-700: oklch(0.85 0.012 251);
+  --color-slate-800: oklch(0.925 0.008 249);
+  --color-slate-900: oklch(0.965 0.006 248);       /* поверхности */
+  --color-slate-950: oklch(0.986 0.004 247);       /* база страницы */
+
+  /* Прохладно-серый ряд (gray) — на случай использования */
+  --color-gray-50: oklch(0.22 0.012 270);
+  --color-gray-100: oklch(0.26 0.012 268);
+  --color-gray-800: oklch(0.925 0.005 260);
+  --color-gray-900: oklch(0.965 0.004 258);
+  --color-gray-950: oklch(0.986 0.003 256);
+
+  /* ── Углубляем светлые оттенки акцентов, чтобы цветной ТЕКСТ
+        оставался читаемым на светлом фоне ── */
+  --color-blue-200: oklch(0.62 0.16 256);
+  --color-blue-300: oklch(0.58 0.19 257);
+  --color-blue-400: oklch(0.55 0.21 258);
+  --color-indigo-200: oklch(0.60 0.17 274);
+  --color-indigo-300: oklch(0.56 0.20 273);
+  --color-indigo-400: oklch(0.53 0.22 272);
+  --color-violet-200: oklch(0.61 0.18 295);
+  --color-violet-300: oklch(0.57 0.21 294);
+  --color-violet-400: oklch(0.55 0.23 293);
+  --color-emerald-200: oklch(0.62 0.13 162);
+  --color-emerald-300: oklch(0.57 0.15 162);
+  --color-emerald-400: oklch(0.55 0.16 162);
+  --color-green-300: oklch(0.57 0.15 150);
+  --color-green-400: oklch(0.55 0.17 150);
+  --color-red-200: oklch(0.62 0.18 22);
+  --color-red-300: oklch(0.58 0.20 23);
+  --color-red-400: oklch(0.56 0.22 25);
+  --color-rose-300: oklch(0.58 0.20 12);
+  --color-rose-400: oklch(0.56 0.22 13);
+  --color-amber-200: oklch(0.70 0.15 76);
+  --color-amber-300: oklch(0.66 0.16 70);
+  --color-amber-400: oklch(0.63 0.16 66);
+  --color-orange-300: oklch(0.64 0.18 48);
+  --color-orange-400: oklch(0.62 0.19 45);
+  --color-cyan-200: oklch(0.62 0.12 220);
+  --color-cyan-300: oklch(0.58 0.13 222);
+  --color-cyan-400: oklch(0.56 0.14 224);
+
+  /* ── Тёмные «уголки» градиентов → светлые тона ── */
+  --color-blue-900: oklch(0.93 0.04 256);
+  --color-blue-950: oklch(0.95 0.028 255);
+  --color-indigo-900: oklch(0.93 0.04 272);
+  --color-indigo-950: oklch(0.95 0.026 271);
+  --color-violet-950: oklch(0.95 0.028 292);
+  --color-slate: initial;
+}
+
+/* В светлой теме на сплошных цветных кнопках текст остаётся белым.
+   Используем ~= (совпадение по целому токену), чтобы НЕ задеть
+   полупрозрачные тинты вида bg-blue-500/10 (другой токен). */
+html[data-theme="light"] :is(
+  [class~="bg-blue-400"], [class~="bg-blue-500"], [class~="bg-blue-600"], [class~="bg-blue-700"],
+  [class~="bg-indigo-500"], [class~="bg-indigo-600"], [class~="bg-indigo-700"],
+  [class~="bg-violet-500"], [class~="bg-violet-600"], [class~="bg-violet-700"],
+  [class~="bg-emerald-400"], [class~="bg-emerald-500"], [class~="bg-emerald-600"],
+  [class~="bg-green-500"], [class~="bg-green-600"],
+  [class~="bg-red-400"], [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-700"],
+  [class~="bg-rose-500"], [class~="bg-rose-600"],
+  [class~="bg-cyan-400"], [class~="bg-cyan-500"],
+  [class~="bg-orange-500"], [class~="bg-amber-500"], [class~="bg-amber-600"],
+  [class~="from-blue-500"], [class~="from-blue-600"], [class~="from-blue-700"],
+  [class~="from-indigo-500"], [class~="from-indigo-600"],
+  [class~="from-violet-500"], [class~="from-violet-600"],
+  [class~="from-emerald-500"], [class~="from-emerald-600"],
+  [class~="from-red-500"], [class~="from-red-600"],
+  [class~="from-cyan-400"], [class~="from-cyan-500"],
+  [class~="from-orange-500"], [class~="from-amber-600"]
+) {
+  color: #ffffff;
+}
+html[data-theme="light"] :is(
+  [class~="bg-blue-500"], [class~="bg-blue-600"], [class~="bg-blue-700"],
+  [class~="bg-indigo-600"], [class~="bg-violet-500"], [class~="bg-violet-600"],
+  [class~="bg-emerald-500"], [class~="bg-emerald-600"], [class~="bg-green-500"],
+  [class~="bg-red-500"], [class~="bg-red-600"], [class~="bg-red-700"], [class~="bg-rose-600"],
+  [class~="bg-cyan-500"], [class~="bg-orange-500"], [class~="bg-amber-500"],
+  [class~="from-blue-500"], [class~="from-blue-600"], [class~="from-blue-700"],
+  [class~="from-indigo-500"], [class~="from-indigo-600"],
+  [class~="from-violet-500"], [class~="from-violet-600"],
+  [class~="from-emerald-500"], [class~="from-emerald-600"],
+  [class~="from-red-500"], [class~="from-red-600"]
+) :is([class~="text-white"], [class~="text-slate-100"], [class~="text-slate-200"], [class~="text-slate-300"]) {
+  color: #ffffff;
+}
+
+/* Жёстко заданные тёмные hex-фоны (bg-[#0f172a] и т.п.) не темизируются
+   через переменные — переопределяем их вручную для светлой темы.
+   Используем *= чтобы поймать и варианты с прозрачностью (bg-[#0f172a]/90). */
+html[data-theme="light"] :is([class*="bg-[#0f172a]"], [class*="bg-[#111827]"]) {
+  background-color: var(--surface);
+}
+html[data-theme="light"] :is(
+  [class*="bg-[#070b1a]"], [class*="bg-[#0b1120]"], [class*="bg-[#050b1f]"],
+  [class*="bg-[#050b1d]"], [class*="bg-[#030816]"]
+) {
+  background-color: #eef2fb;
+}
+
+/* Произвольные hero-градиенты страниц (bg-[radial-gradient(...)]) с
+   зашитыми тёмными цветами — заменяем на светлый градиент с лёгким акцентом. */
+html[data-theme="light"] [class*="bg-[radial-gradient"] {
+  background-image:
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.10), transparent 38%),
+    radial-gradient(circle at 18% 0%, rgba(37, 99, 235, 0.08), transparent 32%),
+    linear-gradient(135deg, #f5f8ff 0%, #eef2fb 45%, #e9edf7 100%);
+}
+
+/* ─── Общие компоненты (тематические) ──────────────────────────── */
 @layer components {
-  .card { @apply bg-white/95 rounded-3xl shadow border border-slate-200; }
-  .input { @apply px-4 py-3 rounded-2xl border border-slate-300 bg-white text-slate-950 outline-none focus:ring-2 focus:ring-blue-500; }
-  .btn-blue { @apply bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-2xl font-bold shadow-lg shadow-blue-200; }
-  .btn-dark { @apply bg-slate-950 hover:bg-slate-800 text-white px-5 py-3 rounded-2xl font-bold shadow; }
-  .btn-white { @apply bg-white hover:bg-slate-50 text-slate-950 px-5 py-3 rounded-2xl font-bold shadow border border-slate-200; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1.5rem;
+    box-shadow: var(--shadow-card);
+  }
+  .input {
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    border: 1px solid var(--field-border);
+    background: var(--field);
+    color: var(--field-text);
+    outline: none;
+    transition: box-shadow 0.18s, border-color 0.18s;
+  }
+  .input:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-soft);
+  }
+  .btn-blue {
+    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    color: #fff;
+    padding: 0.75rem 1.25rem;
+    border-radius: 1rem;
+    font-weight: 700;
+    box-shadow: 0 12px 26px -12px color-mix(in oklab, var(--brand) 85%, transparent);
+    transition: transform 0.12s, box-shadow 0.18s, filter 0.18s;
+  }
+  .btn-blue:hover {
+    filter: brightness(1.05);
+    box-shadow: 0 16px 32px -12px color-mix(in oklab, var(--brand) 90%, transparent);
+  }
+  .btn-blue:active { transform: translateY(1px); }
+  .btn-dark {
+    background: #0f172a;
+    color: #fff;
+    padding: 0.75rem 1.25rem;
+    border-radius: 1rem;
+    font-weight: 700;
+    box-shadow: 0 8px 20px -12px rgba(0, 0, 0, 0.5);
+  }
+  .btn-white {
+    background: var(--btn-neutral);
+    color: var(--btn-neutral-text);
+    padding: 0.75rem 1.25rem;
+    border-radius: 1rem;
+    font-weight: 700;
+    border: 1px solid var(--btn-neutral-border);
+    box-shadow: 0 6px 16px -12px rgba(15, 23, 42, 0.4);
+    transition: background 0.16s;
+  }
+  .btn-white:hover { background: var(--btn-neutral-hover); }
 }
 
 /* ─── Глобальные мобильные улучшения ──────────────────────────── */
@@ -16,8 +242,14 @@
   --nav-h: 76px;
 }
 
+html {
+  background: var(--page-bg);
+}
+
 /* Шрифты — антиалиасинг */
 body {
+  background: var(--page-bg);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -84,6 +316,42 @@ button, a, select, input, textarea, label, [role="button"] {
 .animate-menu     { animation: scale-in-menu   0.22s cubic-bezier(0.32, 0.72, 0, 1); }
 .animate-toast    { animation: toast-slide-in  0.26s cubic-bezier(0.32, 0.72, 0, 1); }
 
+/* ─── Скругления на телефоне ──────────────────────────────────
+   Крупные радиусы рассчитаны на десктоп и на узком экране выглядят
+   тяжело. Уменьшаем шкалу радиусов через токены — это разом
+   аккуратнее по всему приложению (≈450 мест), без правки разметки.
+   rounded-full не трогаем — пилюли/аватары/точки остаются круглыми. */
+@media (max-width: 640px) {
+  :root {
+    --radius-lg: 0.45rem;
+    --radius-xl: 0.6rem;
+    --radius-2xl: 0.75rem;
+    --radius-3xl: 0.9rem;
+    --radius-4xl: 1rem;
+  }
+
+  /* Произвольные крупные радиусы (литералы) — приводим к мобильной шкале */
+  :is(
+    [class*="rounded-[2rem]"], [class*="rounded-[1.8rem]"], [class*="rounded-[1.75rem]"],
+    [class*="rounded-[1.7rem]"], [class*="rounded-[1.6rem]"], [class*="rounded-[1.5rem]"],
+    [class*="rounded-[1.4rem]"], [class*="rounded-[32px]"], [class*="rounded-[28px]"],
+    [class*="rounded-[24px]"]
+  ) {
+    border-radius: 0.9rem;
+  }
+  :is(
+    [class*="rounded-[1.25rem]"], [class*="rounded-[1.2rem]"], [class*="rounded-[20px]"]
+  ) {
+    border-radius: 0.75rem;
+  }
+
+  /* Нижний док-навбар прижат к краю — низ остаётся прямым */
+  nav[aria-label="Нижняя навигация"] {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+}
+
 /* ─── Тач-таргеты (минимум 44px) ────────────────────────────── */
 @media (max-width: 1023px) {
   .mobile-tap-target {
@@ -116,5 +384,5 @@ button, a, select, input, textarea, label, [role="button"] {
   width: 18px;
   height: 3px;
   border-radius: 99px;
-  background: #3b82f6;
+  background: var(--brand);
 }

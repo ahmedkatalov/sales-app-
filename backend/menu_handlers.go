@@ -130,11 +130,18 @@ func getMenuProducts(c *gin.Context) {
 		if p.Type == "" {
 			p.Type = p.TypeName
 		}
-		p.Recipe = loadProductRecipe(p.ID, p.AccountID)
-		if len(p.Recipe) > 0 {
-			p.Cost = calculateRecipeCost(p.ID, p.AccountID)
-		}
 		list = append(list, p)
+	}
+	// ВАЖНО: закрываем rows до вложенных запросов. При SetMaxOpenConns(1)
+	// открытый rows держит единственное соединение, а loadProductRecipe /
+	// calculateRecipeCost тоже идут в db — это вызвало бы вечную блокировку.
+	rows.Close()
+
+	for i := range list {
+		list[i].Recipe = loadProductRecipe(list[i].ID, list[i].AccountID)
+		if len(list[i].Recipe) > 0 {
+			list[i].Cost = calculateRecipeCost(list[i].ID, list[i].AccountID)
+		}
 	}
 
 	c.JSON(http.StatusOK, list)

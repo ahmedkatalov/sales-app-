@@ -555,22 +555,29 @@ func copyItems(folderID int, fromMonthID int, toMonthID int) error {
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
 
+	type itemRow struct {
+		name        string
+		cost, price float64
+	}
+	src := []itemRow{}
 	for rows.Next() {
-		var name string
-		var cost float64
-		var price float64
-
-		if err := rows.Scan(&name, &cost, &price); err != nil {
+		var r itemRow
+		if err := rows.Scan(&r.name, &r.cost, &r.price); err != nil {
+			rows.Close()
 			return err
 		}
+		src = append(src, r)
+	}
+	// Закрываем rows до INSERT — иначе db.Exec внутри открытого rows
+	// заблокировал бы единственное соединение (SetMaxOpenConns(1)).
+	rows.Close()
 
+	for _, r := range src {
 		_, err = db.Exec(`
 			INSERT INTO items(folder_id, month_id, name, cost, price, qty)
 			VALUES(?, ?, ?, ?, ?, 0)
-		`, folderID, toMonthID, name, cost, price)
-
+		`, folderID, toMonthID, r.name, r.cost, r.price)
 		if err != nil {
 			return err
 		}

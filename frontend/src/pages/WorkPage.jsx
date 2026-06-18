@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Boxes, TrendingUp, Wallet } from "lucide-react";
 import { del, get, post, put } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, money, num } from "../utils/format";
@@ -114,10 +115,7 @@ export default function WorkPage() {
     setProducts(productList || []);
     setSales(salesList || []);
     setWarehouseItems(warehouseList || []);
-
-    if (!selectedTypeId && typeList?.length) {
-      setSelectedTypeId(String(typeList[0].id));
-    }
+    // По умолчанию показываем «Все товары» (selectedTypeId = "") — как на макете.
   };
 
   useEffect(() => {
@@ -702,6 +700,66 @@ export default function WorkPage() {
         </div>
       </div>
 
+      {/* Сводные метрики — как на макете */}
+      <div className="mb-5 grid grid-cols-3 gap-2.5 sm:gap-4">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur sm:p-5">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+              <Boxes size={18} strokeWidth={2.4} />
+            </span>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400 sm:text-xs">Продано / мес</p>
+          </div>
+          <p className="mt-3 text-xl font-black text-white sm:text-3xl">{num(totals.quantity)}</p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur sm:p-5">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+              <Wallet size={18} strokeWidth={2.4} />
+            </span>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400 sm:text-xs">Выручка</p>
+          </div>
+          <p className="mt-3 text-xl font-black text-white sm:text-3xl">{formatMoney(totals.revenue)}</p>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.07] p-3.5 backdrop-blur sm:p-5">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+              <TrendingUp size={18} strokeWidth={2.4} />
+            </span>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400 sm:text-xs">Чистая прибыль</p>
+          </div>
+          <p className="mt-3 text-xl font-black text-emerald-400 sm:text-3xl">{formatMoney(totals.cleanProfit)}</p>
+        </div>
+      </div>
+
+      {/* Фильтр по типам — горизонтальные пилюли, как на макете */}
+      <div className="no-scrollbar mb-4 flex gap-2 overflow-x-auto pb-1">
+        <button
+          onClick={() => setSelectedTypeId("")}
+          className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${
+            selectedTypeId === ""
+              ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-950/40"
+              : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+          }`}
+        >
+          Все
+        </button>
+        {safeTypes.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setSelectedTypeId(String(t.id))}
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${
+              String(selectedTypeId) === String(t.id)
+                ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-950/40"
+                : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+            }`}
+          >
+            {t.name}
+          </button>
+        ))}
+      </div>
+
       {error && (
         <div className="mb-4 rounded-2xl bg-red-500/10 px-4 py-3 font-bold text-red-400">
           {error}
@@ -751,7 +809,7 @@ export default function WorkPage() {
 
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[1050px] text-left">
-            <thead className="bg-[#0f172a]/90/5 text-slate-300">
+            <thead className="bg-white/5 text-slate-300">
               <tr>
                 <th className="p-4">Название</th>
                 <th className="p-4">Тип</th>

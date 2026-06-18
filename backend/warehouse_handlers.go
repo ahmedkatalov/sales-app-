@@ -217,6 +217,11 @@ func getWarehouseItems(c *gin.Context) {
 	defer rows.Close()
 
 	items := []WarehouseItem{}
+	type rename struct {
+		id, accID int
+		name      string
+	}
+	renames := []rename{}
 
 	for rows.Next() {
 		var item WarehouseItem
@@ -248,10 +253,16 @@ func getWarehouseItems(c *gin.Context) {
 		item.Hidden = hiddenInt == 1
 		cleanName := cleanAIProductName(item.Name)
 		if cleanName != "" && cleanName != item.Name {
-			_, _ = db.Exec(`UPDATE warehouse_items SET name = ? WHERE id = ? AND account_id = ?`, cleanName, item.ID, item.AccountID)
 			item.Name = cleanName
+			renames = append(renames, rename{id: item.ID, accID: item.AccountID, name: cleanName})
 		}
 		items = append(items, item)
+	}
+	// Закрываем rows до UPDATE — иначе db.Exec внутри открытого rows
+	// заблокировал бы единственное соединение (SetMaxOpenConns(1)).
+	rows.Close()
+	for _, r := range renames {
+		_, _ = db.Exec(`UPDATE warehouse_items SET name = ? WHERE id = ? AND account_id = ?`, r.name, r.id, r.accID)
 	}
 
 	c.JSON(http.StatusOK, items)
@@ -1383,8 +1394,12 @@ func cleanupWarehouseItemNames(accID int) {
 	if err != nil {
 		return
 	}
-	defer rows.Close()
 
+	type rename struct {
+		id   int
+		name string
+	}
+	updates := []rename{}
 	for rows.Next() {
 		var id int
 		var name string
@@ -1393,7 +1408,14 @@ func cleanupWarehouseItemNames(accID int) {
 		}
 		cleanName := cleanAIProductName(name)
 		if cleanName != "" && cleanName != name {
-			_, _ = db.Exec(`UPDATE warehouse_items SET name = ? WHERE id = ? AND account_id = ?`, cleanName, id, accID)
+			updates = append(updates, rename{id: id, name: cleanName})
 		}
+	}
+	// Закрываем rows до UPDATE: иначе db.Exec внутри открытого rows
+	// заблокировал бы единственное соединение (SetMaxOpenConns(1)).
+	rows.Close()
+
+	for _, u := range updates {
+		_, _ = db.Exec(`UPDATE warehouse_items SET name = ? WHERE id = ? AND account_id = ?`, u.name, u.id, accID)
 	}
 }

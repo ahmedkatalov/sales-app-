@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { LogOut, Menu, ShoppingCart } from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
 
 export default function DesktopNavigation({
   links = [],
@@ -85,6 +86,7 @@ export default function DesktopNavigation({
         </nav>
 
         <div className="flex shrink-0 items-center gap-1.5">
+          <ThemeToggle />
           {isProfileRoute && (
             <button
               type="button"

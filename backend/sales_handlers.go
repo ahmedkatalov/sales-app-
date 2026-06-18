@@ -586,8 +586,14 @@ func getSales(c *gin.Context) {
 			return
 		}
 
-		s.Items = getSaleItems(s.ID)
 		list = append(list, s)
+	}
+	// Закрываем rows до вложенных запросов getSaleItems: при SetMaxOpenConns(1)
+	// открытый rows держит единственное соединение и вызвал бы дедлок.
+	rows.Close()
+
+	for i := range list {
+		list[i].Items = getSaleItems(list[i].ID)
 	}
 
 	c.JSON(http.StatusOK, list)

@@ -71,8 +71,12 @@ func getDebts(c *gin.Context) {
 	for rows.Next() {
 		var x DebtRecord
 		rows.Scan(&x.ID, &x.AccountID, &x.CustomerID, &x.CustomerName, &x.SaleID, &x.Amount, &x.Status, &x.CreatedAt, &x.PaidAt)
-		x.Items = getSaleItems(x.SaleID)
 		list = append(list, x)
+	}
+	// Закрываем rows до getSaleItems (вложенные запросы) — иначе дедлок при SetMaxOpenConns(1).
+	rows.Close()
+	for i := range list {
+		list[i].Items = getSaleItems(list[i].SaleID)
 	}
 	c.JSON(http.StatusOK, list)
 }

@@ -23,6 +23,7 @@ import POSPage from "./pages/POSPage";
 import SalesAnalyticsPage from "./pages/SalesAnalyticsPage";
 import ProfilePage from "./pages/ProfilePage";
 import DesktopNavigation from "./components/DesktopNavigation";
+import ThemeToggle from "./components/ThemeToggle";
 import WarehousePage from "./pages/WarehousePage";
 import AIWarehousePage from "./pages/AIWarehousePage";
 import PendingPaymentsPage from "./pages/PendingPaymentsPage";
@@ -178,6 +179,9 @@ function LoginPage({ onAuth }) {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 p-4">
+      <div className="absolute right-4 top-4 z-20">
+        <ThemeToggle />
+      </div>
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-blue-600/10 blur-[120px]" />
         <div className="absolute -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-violet-600/10 blur-[120px]" />
@@ -564,6 +568,7 @@ export default function App() {
             )}
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
+            <ThemeToggle className="h-9 w-9" />
             {pendingCount > 0 && (
               <NavLink to="/pending-payments" className="flex items-center gap-1 rounded-xl border border-blue-500/20 bg-blue-500/12 px-2.5 py-1.5 transition active:scale-95">
                 <Clock3 size={12} className="text-blue-400" strokeWidth={2.8} />
@@ -646,8 +651,8 @@ export default function App() {
         </div>
       )}
 
-      <nav className={`fixed inset-x-3 z-40 grid grid-flow-col auto-cols-fr rounded-[1.7rem] border border-white/12 bg-slate-950/96 p-1.5 text-white shadow-2xl shadow-slate-950/40 backdrop-blur-xl lg:hidden transition-all duration-300 ease-out ${keyboardVisible || isAIWarehouseRoute ? "translate-y-[calc(100%+20px)] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"}`}
-        style={{ bottom: "max(12px, env(safe-area-inset-bottom, 12px))", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      <nav className={`fixed inset-x-0 bottom-0 z-40 grid grid-flow-col auto-cols-fr rounded-t-2xl border-t border-white/10 bg-slate-950/96 px-1.5 pt-1.5 text-white shadow-[0_-10px_30px_-14px_rgba(2,6,23,0.6)] backdrop-blur-xl lg:hidden transition-transform duration-300 ease-out ${keyboardVisible || isAIWarehouseRoute ? "translate-y-full pointer-events-none" : "translate-y-0"}`}
+        style={{ paddingBottom: "max(6px, env(safe-area-inset-bottom, 0px))" }}
         aria-label="Нижняя навигация">
         {mobileMainLinks.map(([to, label, Icon, badge]) => (
           <NavLink key={to} to={to} onClick={() => setMobileMoreOpen(false)}
