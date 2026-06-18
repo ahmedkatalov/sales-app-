@@ -32,9 +32,11 @@ type User struct {
 }
 
 type Employee struct {
-	ID        int    `json:"id"`
-	AccountID int    `json:"accountId"`
-	Name      string `json:"name"`
+	ID          int    `json:"id"`
+	AccountID   int    `json:"accountId"`
+	Name        string `json:"name"`
+	Password    string `json:"password,omitempty"` // только на вход (создание/смена)
+	HasPassword bool   `json:"hasPassword"`        // только на выход — задан ли пароль
 }
 
 type Card struct {

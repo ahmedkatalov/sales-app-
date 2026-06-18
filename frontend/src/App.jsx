@@ -24,6 +24,7 @@ import SalesAnalyticsPage from "./pages/SalesAnalyticsPage";
 import ProfilePage from "./pages/ProfilePage";
 import DesktopNavigation from "./components/DesktopNavigation";
 import ThemeToggle from "./components/ThemeToggle";
+import Modal from "./components/Modal";
 import WarehousePage from "./pages/WarehousePage";
 import AIWarehousePage from "./pages/AIWarehousePage";
 import PendingPaymentsPage from "./pages/PendingPaymentsPage";
@@ -265,6 +266,10 @@ export default function App() {
   const [workspaceSelected, setWorkspaceSelected] = useState(!!getCurrentWorkspace());
   const [profile, setProfile] = useState(getCurrentProfile());
   const [employees, setEmployees] = useState([]);
+  // Запрос пароля при выборе продавца за кассой (на общем устройстве)
+  const [pwPrompt, setPwPrompt] = useState(null); // выбранный employee
+  const [pwInput, setPwInput] = useState("");
+  const [pwError, setPwError] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
   const [debtCount, setDebtCount] = useState(0);
   const [userPages, setUserPages] = useState(null); // null = not loaded yet
@@ -443,7 +448,34 @@ export default function App() {
     if (userPages.includes("*")) return true;
     return userPages.includes(path);
   };
-  const handleProfileChange = (value) => { const selected = employees.find((x) => String(x.id) === String(value)); setCurrentProfile(selected || null); setProfile(selected || null); };
+  const handleProfileChange = (value) => {
+    const selected = employees.find((x) => String(x.id) === String(value));
+    if (selected?.hasPassword) {
+      // У продавца задан пароль — спрашиваем его перед тем как встать за кассу
+      setPwInput("");
+      setPwError("");
+      setPwPrompt(selected);
+      return;
+    }
+    setCurrentProfile(selected || null);
+    setProfile(selected || null);
+  };
+
+  const confirmProfilePw = async () => {
+    if (!pwPrompt) return;
+    let res;
+    try {
+      res = await post(`/employees/${pwPrompt.id}/verify`, { password: pwInput.trim() });
+    } catch {
+      return setPwError("Не удалось проверить пароль");
+    }
+    if (!res?.ok) return setPwError("Неверный пароль");
+    setCurrentProfile(pwPrompt);
+    setProfile(pwPrompt);
+    setPwPrompt(null);
+    setPwInput("");
+    setPwError("");
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-slate-950">
@@ -677,6 +709,24 @@ export default function App() {
           </button>
         )}
       </nav>
+
+      {pwPrompt && (
+        <Modal title="Пароль продавца">
+          <p className="mb-4 text-sm text-slate-400">
+            Введите пароль продавца <b className="text-white">{pwPrompt.name}</b>, чтобы встать за кассу.
+          </p>
+          <input value={pwInput} type="password" autoFocus
+            onChange={(e) => { setPwInput(e.target.value); setPwError(""); }}
+            onKeyDown={(e) => e.key === "Enter" && confirmProfilePw()}
+            placeholder="Пароль"
+            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
+          {pwError && <p className="mt-2 text-sm font-bold text-red-400">{pwError}</p>}
+          <div className="mt-6 flex gap-3">
+            <button type="button" onClick={() => { setPwPrompt(null); setPwInput(""); setPwError(""); }} className="btn-white flex-1">Отмена</button>
+            <button type="button" onClick={confirmProfilePw} className="btn-blue flex-1">Войти</button>
+          </div>
+        </Modal>
+      )}
 
       {/* Тосты на мобиле — над навигацией */}
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-60 flex flex-col-reverse gap-2 px-4 lg:hidden"

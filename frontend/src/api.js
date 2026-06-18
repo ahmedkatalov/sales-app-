@@ -68,9 +68,28 @@ export function clearWorkspace() {
   window.dispatchEvent(new Event("sales-profile-change"));
 }
 
+// Граница «начала смены» — последние 6:00 утра.
+// Профиль продавца, выбранный до неё, считается просроченным и сбрасывается:
+// утром каждый сотрудник заново выбирает свой профиль.
+const SHIFT_RESET_HOUR = 6;
+function lastShiftReset() {
+  const now = new Date();
+  const boundary = new Date(now);
+  boundary.setHours(SHIFT_RESET_HOUR, 0, 0, 0);
+  if (now < boundary) boundary.setDate(boundary.getDate() - 1);
+  return boundary.getTime();
+}
+
 export function getCurrentProfile() {
   try {
-    return JSON.parse(localStorage.getItem("sales_app_profile") || "null");
+    const p = JSON.parse(localStorage.getItem("sales_app_profile") || "null");
+    if (!p) return null;
+    // Сброс профиля в начале новой смены (после 6:00 утра)
+    if (!p.selectedAt || p.selectedAt < lastShiftReset()) {
+      localStorage.removeItem("sales_app_profile");
+      return null;
+    }
+    return p;
   } catch {
     return null;
   }
@@ -80,7 +99,10 @@ export function setCurrentProfile(profile) {
   if (!profile) {
     localStorage.removeItem("sales_app_profile");
   } else {
-    localStorage.setItem("sales_app_profile", JSON.stringify(profile));
+    localStorage.setItem(
+      "sales_app_profile",
+      JSON.stringify({ ...profile, selectedAt: Date.now() })
+    );
   }
 
   window.dispatchEvent(new Event("sales-profile-change"));

@@ -87,6 +87,8 @@ func main() {
 
 	auth.GET("/employees", getEmployees)
 	auth.POST("/employees", createEmployee)
+	auth.PUT("/employees/:id/password", setEmployeePassword)
+	auth.POST("/employees/:id/verify", verifyEmployeePassword)
 	auth.DELETE("/employees/:id", deleteEmployee)
 
 	auth.GET("/cards", getCards)

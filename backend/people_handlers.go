@@ -9,7 +9,7 @@ import (
 
 func getEmployees(c *gin.Context) {
 	rows, err := db.Query(`
-		SELECT id, account_id, name
+		SELECT id, account_id, name, IFNULL(password, '')
 		FROM employees
 		WHERE account_id = ?
 		ORDER BY name
@@ -24,10 +24,13 @@ func getEmployees(c *gin.Context) {
 
 	for rows.Next() {
 		var e Employee
-		if err := rows.Scan(&e.ID, &e.AccountID, &e.Name); err != nil {
+		var pass string
+		if err := rows.Scan(&e.ID, &e.AccountID, &e.Name, &pass); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		e.HasPassword = pass != ""
+		e.Password = "" // никогда не отдаём наружу
 		list = append(list, e)
 	}
 
@@ -52,10 +55,21 @@ func createEmployee(c *gin.Context) {
 		e.AccountID = accountID(c)
 	}
 
+	// Пароль продавца опционален. Если задан — храним хэш.
+	hashed := ""
+	if pass := strings.TrimSpace(e.Password); pass != "" {
+		h, err := hashPassword(pass)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "не удалось сохранить пароль"})
+			return
+		}
+		hashed = h
+	}
+
 	res, err := db.Exec(`
-		INSERT INTO employees(account_id, name, created_at)
-		VALUES(?, ?, ?)
-	`, e.AccountID, e.Name, time.Now().Format(time.RFC3339))
+		INSERT INTO employees(account_id, name, password, created_at)
+		VALUES(?, ?, ?, ?)
+	`, e.AccountID, e.Name, hashed, time.Now().Format(time.RFC3339))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "employee already exists"})
@@ -64,8 +78,71 @@ func createEmployee(c *gin.Context) {
 
 	id, _ := res.LastInsertId()
 	e.ID = int(id)
+	e.HasPassword = hashed != ""
+	e.Password = ""
 
 	c.JSON(http.StatusOK, e)
+}
+
+// PUT /employees/:id/password — задать/сменить/убрать пароль продавца (пустой = убрать)
+func setEmployeePassword(c *gin.Context) {
+	var req struct {
+		Password string `json:"password"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	hashed := ""
+	if pass := strings.TrimSpace(req.Password); pass != "" {
+		h, err := hashPassword(pass)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "не удалось сохранить пароль"})
+			return
+		}
+		hashed = h
+	}
+
+	if _, err := db.Exec(`UPDATE employees SET password = ? WHERE id = ? AND account_id = ?`,
+		hashed, c.Param("id"), accountID(c)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "hasPassword": hashed != ""})
+}
+
+// POST /employees/:id/verify — проверить пароль при выборе профиля продавца
+func verifyEmployeePassword(c *gin.Context) {
+	var req struct {
+		Password string `json:"password"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var stored string
+	err := db.QueryRow(`SELECT IFNULL(password, '') FROM employees WHERE id = ? AND account_id = ?`,
+		c.Param("id"), accountID(c)).Scan(&stored)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Продавец не найден"})
+		return
+	}
+
+	// Нет пароля — вход свободный
+	if stored == "" {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+		return
+	}
+
+	// Важно: при неверном пароле НЕ возвращаем 401 — иначе фронтенд
+	// сбросит сессию и разлогинит всё устройство. Отдаём 200 {ok:false}.
+	if !checkPassword(stored, strings.TrimSpace(req.Password)) {
+		c.JSON(http.StatusOK, gin.H{"ok": false, "error": "Неверный пароль"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
 func deleteEmployee(c *gin.Context) {

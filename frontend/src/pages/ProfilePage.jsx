@@ -84,6 +84,11 @@ export default function ProfilePage({
   const [managedAccount,      setManagedAccount]      = useState(null);
   const [managedEmployees,    setManagedEmployees]    = useState([]);
   const [managedEmployeeName, setManagedEmployeeName] = useState("");
+  const [employeePass, setEmployeePass] = useState("");
+  const [managedEmployeePass, setManagedEmployeePass] = useState("");
+  // Запрос пароля при выборе профиля продавца
+  const [pwPrompt, setPwPrompt] = useState(null); // { employee }
+  const [pwInput, setPwInput] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
@@ -189,8 +194,9 @@ export default function ProfilePage({
     setError("");
     if (!managedAccount?.dataAccountId) return setError("Аккаунт не выбран");
     if (!managedEmployeeName.trim())     return setError("Введите имя профиля");
-    await post("/employees", { accountId: managedAccount.dataAccountId, name: managedEmployeeName.trim() });
+    await post("/employees", { accountId: managedAccount.dataAccountId, name: managedEmployeeName.trim(), password: managedEmployeePass.trim() });
     setManagedEmployeeName("");
+    setManagedEmployeePass("");
     await loadManagedEmployees(managedAccount);
   };
 
@@ -300,16 +306,43 @@ export default function ProfilePage({
   // ── Сотрудники / карты ────────────────────────────────────────────────────
   const createEmployee = async () => {
     setError("");
-    if (!employeeName.trim()) return setError("Введите имя сотрудника");
-    const created = await post("/employees", { name: employeeName.trim() });
+    if (!employeeName.trim()) return setError("Введите имя продавца");
+    const created = await post("/employees", { name: employeeName.trim(), password: employeePass.trim() });
     setEmployeeName("");
+    setEmployeePass("");
     setModal(null);
     await load();
     setCurrentProfile(created);
     setProfile(created);
   };
 
-  const pickEmployee   = (e) => { setCurrentProfile(e); setProfile(e); };
+  // Выбор продавца «за кассу». Если у продавца задан пароль — сначала спрашиваем его.
+  const pickEmployee = (e) => {
+    if (e?.hasPassword) {
+      setPwInput("");
+      setError("");
+      setPwPrompt({ employee: e });
+      return;
+    }
+    setCurrentProfile(e);
+    setProfile(e);
+  };
+
+  const confirmPwPrompt = async () => {
+    if (!pwPrompt?.employee) return;
+    let res;
+    try {
+      res = await post(`/employees/${pwPrompt.employee.id}/verify`, { password: pwInput.trim() });
+    } catch {
+      return setError("Не удалось проверить пароль");
+    }
+    if (!res?.ok) return setError("Неверный пароль");
+    setCurrentProfile(pwPrompt.employee);
+    setProfile(pwPrompt.employee);
+    setPwPrompt(null);
+    setPwInput("");
+    setError("");
+  };
   const removeEmployee = async (id) => {
     if (!confirm("Удалить профиль сотрудника?")) return;
     await del(`/employees/${id}`);
@@ -778,12 +811,18 @@ export default function ProfilePage({
               <p className="break-words text-2xl font-black">{managedAccount?.username}</p>
               <p className="mt-1 text-sm text-blue-100">{managedAccount?.workspaceName}</p>
             </div>
-            <p className="mb-3 text-sm text-slate-400">Добавь продавцов — их имена будут в чеках и отчётах. Отдельный пароль им не нужен, они работают под этим логином.</p>
-            <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <p className="mb-3 text-sm text-slate-400">Добавь продавцов — их имена попадут в чеки и отчёты. Пароль необязателен: если задать, продавец будет вводить его, когда встаёт за кассу.</p>
+            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
               <label className="block">
                 <span className="mb-2 block text-sm font-black text-slate-400">Имя продавца</span>
                 <input value={managedEmployeeName} onChange={(e) => setManagedEmployeeName(e.target.value)}
                   placeholder="Например: Ахмед" autoFocus
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-black text-slate-400">Пароль <span className="font-bold text-slate-500">(необязательно)</span></span>
+                <input value={managedEmployeePass} onChange={(e) => setManagedEmployeePass(e.target.value)}
+                  placeholder="без пароля" type="text"
                   className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
               </label>
               <div className="flex items-end">
@@ -814,9 +853,33 @@ export default function ProfilePage({
                 placeholder="Например: Ахмед" autoFocus
                 className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
             </label>
+            <label className="mt-3 block">
+              <span className="mb-2 block text-sm font-black text-slate-400">Пароль <span className="font-bold text-slate-500">(необязательно)</span></span>
+              <input value={employeePass} onChange={(e) => setEmployeePass(e.target.value)}
+                placeholder="Продавец введёт его, когда встаёт за кассу" type="text"
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+            </label>
             <div className="mt-6 flex gap-3">
               <button type="button" onClick={() => setModal(null)} className="btn-white flex-1">Отмена</button>
               <button type="button" onClick={createEmployee} className="btn-blue flex-1">Создать</button>
+            </div>
+          </Modal>
+        )}
+
+        {pwPrompt && (
+          <Modal title="Пароль продавца">
+            <p className="mb-4 text-sm text-slate-400">
+              Введите пароль продавца <b className="text-white">{pwPrompt.employee?.name}</b>, чтобы встать за кассу.
+            </p>
+            <input value={pwInput} type="password" autoFocus
+              onChange={(e) => { setPwInput(e.target.value); setError(""); }}
+              onKeyDown={(e) => e.key === "Enter" && confirmPwPrompt()}
+              placeholder="Пароль"
+              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+            {error && <p className="mt-2 text-sm font-bold text-red-400">{error}</p>}
+            <div className="mt-6 flex gap-3">
+              <button type="button" onClick={() => { setPwPrompt(null); setPwInput(""); setError(""); }} className="btn-white flex-1">Отмена</button>
+              <button type="button" onClick={confirmPwPrompt} className="btn-blue flex-1">Войти</button>
             </div>
           </Modal>
         )}
