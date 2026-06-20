@@ -491,6 +491,12 @@ func getMyPermissions(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"pages": []string{"*"}, "full": true})
 		return
 	}
+	// Администратор точки — полный доступ в рамках своей точки
+	// (управление самим аккаунтом/точками всё равно скрыто на фронте).
+	if u.Role == "branch_admin" || u.Role == "admin" {
+		c.JSON(http.StatusOK, gin.H{"pages": []string{"*"}, "full": true})
+		return
+	}
 	var pages string
 	wsID := u.WorkspaceID
 	err := db.QueryRow(`
@@ -498,8 +504,9 @@ func getMyPermissions(c *gin.Context) {
 		WHERE user_id = ? AND workspace_id = ?
 	`, u.ID, wsID).Scan(&pages)
 	if err != nil {
-		// Нет записи — только базовый доступ (касса)
-		c.JSON(http.StatusOK, gin.H{"pages": []string{"/pos", "/pending-payments"}, "full": false})
+		// Нет записи — стандартный набор кассира: касса, к оплате, долги, расходы.
+		// Владелец может ограничить через вкладку «Права».
+		c.JSON(http.StatusOK, gin.H{"pages": []string{"/pos", "/pending-payments", "/debts", "/expenses"}, "full": false})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"pages": pages, "full": false})

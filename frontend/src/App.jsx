@@ -398,12 +398,12 @@ export default function App() {
   }
 
   const allRestrictedLinks = [
-    ["/pos", "Магазин", ShoppingCart],
-    ["/pending-payments", "Ожидание оплаты", Clock3, "pending"],
+    ["/pos", "Касса", ShoppingCart],
+    ["/pending-payments", "К оплате", Clock3, "pending"],
     ["/debts", "Долги", FileText, "debt"],
     ["/expenses", "Расходы", Wallet],
-    ["/work", "Работа", Briefcase],
-    ["/ai-warehouse", "AI-бизнес", Bot],
+    ["/work", "Товары", Briefcase],
+    ["/ai-warehouse", "Помощник", Bot],
     ["/warehouse", "Склад", Package],
     ["/sales-analytics", "Продажи", ReceiptText],
     ["/analytics", "Аналитика", BarChart3],

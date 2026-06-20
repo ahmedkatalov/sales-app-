@@ -12,13 +12,13 @@ import ThemeToggle from "../components/ThemeToggle";
 
 // Все доступные страницы для назначения прав
 const ALL_PAGES = [
-  { path: "/pos",            label: "Магазин (касса)",   icon: "🛒" },
-  { path: "/pending-payments", label: "Ожидание оплаты", icon: "⏳" },
+  { path: "/pos",            label: "Касса",              icon: "🛒" },
+  { path: "/pending-payments", label: "К оплате",         icon: "⏳" },
   { path: "/debts",          label: "Долги",              icon: "📄" },
   { path: "/expenses",       label: "Расходы",            icon: "💰" },
-  { path: "/work",           label: "Работа (меню)",      icon: "💼" },
+  { path: "/work",           label: "Товары",             icon: "💼" },
   { path: "/warehouse",      label: "Склад",              icon: "📦" },
-  { path: "/ai-warehouse",   label: "AI-бизнес",          icon: "🤖" },
+  { path: "/ai-warehouse",   label: "Помощник",           icon: "🤖" },
   { path: "/sales-analytics", label: "Продажи",           icon: "📊" },
   { path: "/analytics",      label: "Аналитика",          icon: "📈" },
 ];
