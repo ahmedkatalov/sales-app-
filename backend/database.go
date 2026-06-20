@@ -346,6 +346,7 @@ func createTables() {
 		`ALTER TABLE product_recipes ADD COLUMN input_quantity REAL DEFAULT 0`,
 		`ALTER TABLE product_recipes ADD COLUMN input_unit TEXT DEFAULT ''`,
 		`ALTER TABLE product_recipes ADD COLUMN conversion_note TEXT DEFAULT ''`,
+		`ALTER TABLE product_recipes ADD COLUMN ingredient_name TEXT DEFAULT ''`,
 		`ALTER TABLE warehouse_movements ADD COLUMN account_id INTEGER DEFAULT 1`,
 		`ALTER TABLE warehouse_movements ADD COLUMN warehouse_item_id INTEGER DEFAULT 0`,
 		`ALTER TABLE warehouse_movements ADD COLUMN movement_type TEXT DEFAULT ''`,

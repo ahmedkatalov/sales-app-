@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
@@ -51,7 +52,6 @@ func loadProductRecipe(productID int, accID int) []ProductRecipe {
 
 // linkUnlinkedRecipes — при добавлении товара на склад автоматически линкует рецепты по имени
 func linkUnlinkedRecipes(accID int, warehouseItemID int, itemName string) {
-	normName := strings.ToLower(strings.TrimSpace(itemName))
 	rows, err := db.Query(`
 		SELECT id, ingredient_name FROM product_recipes
 		WHERE account_id = ? AND warehouse_item_id = 0 AND ingredient_name != ''
@@ -73,14 +73,48 @@ func linkUnlinkedRecipes(accID int, warehouseItemID int, itemName string) {
 	}
 
 	for _, c := range candidates {
-		cName := strings.ToLower(strings.TrimSpace(c.name))
-		// Простое совпадение: точное или одно содержит другое
-		if cName == normName || strings.Contains(normName, cName) || strings.Contains(cName, normName) {
+		// Нечёткое совпадение: нормализация (ё/е, окончания, пунктуация) +
+		// расстояние Левенштейна. Ловит опечатки и варианты (огурец/угурец,
+		// «Мороженое Синнабон»/«мороженое синобан»), а не только точное/«содержит».
+		// Порог 0.82 — консервативный, чтобы авто-связывание не путало разные продукты.
+		if similarityScore(itemName, c.name) >= 0.82 {
 			_, _ = db.Exec(`
 				UPDATE product_recipes SET warehouse_item_id = ? WHERE id = ? AND account_id = ?
 			`, warehouseItemID, c.id, accID)
 		}
 	}
+}
+
+// fuzzyFindWarehouseItemTx — нечёткий поиск складской позиции по имени.
+// Ловит опечатки/варианты (угурец/огурец), когда позиция УЖЕ есть на складе,
+// чтобы не плодить дубли. Возвращает 0, если уверенного совпадения нет.
+func fuzzyFindWarehouseItemTx(tx *sql.Tx, accID int, name string) int {
+	rows, err := tx.Query(`
+		SELECT id, name FROM warehouse_items
+		WHERE account_id = ? AND IFNULL(hidden, 0) = 0 AND IFNULL(deleted, 0) = 0
+	`, accID)
+	if err != nil {
+		return 0
+	}
+	defer rows.Close()
+
+	bestID := 0
+	bestScore := 0.0
+	for rows.Next() {
+		var id int
+		var n string
+		if rows.Scan(&id, &n) != nil {
+			continue
+		}
+		if s := similarityScore(name, n); s > bestScore {
+			bestScore = s
+			bestID = id
+		}
+	}
+	if bestScore >= 0.82 {
+		return bestID
+	}
+	return 0
 }
 
 func calculateRecipeCost(productID int, accID int) float64 {
@@ -244,6 +278,10 @@ func createMenuProduct(c *gin.Context) {
 				WHERE account_id = ? AND LOWER(TRIM(name)) LIKE LOWER(TRIM(?)) AND (hidden IS NULL OR hidden = 0)
 				LIMIT 1
 			`, p.AccountID, "%"+strings.ToLower(strings.TrimSpace(ingredientName))+"%").Scan(&foundID)
+			if foundID == 0 {
+				// LIKE не нашёл — пробуем нечёткое совпадение (опечатки/варианты)
+				foundID = fuzzyFindWarehouseItemTx(tx, p.AccountID, ingredientName)
+			}
 			if foundID > 0 {
 				warehouseItemID = foundID
 				var convErr error
@@ -385,6 +423,9 @@ func updateMenuProduct(c *gin.Context) {
 				WHERE account_id = ? AND LOWER(TRIM(name)) LIKE LOWER(TRIM(?)) AND (hidden IS NULL OR hidden = 0)
 				LIMIT 1
 			`, accID, "%"+strings.ToLower(strings.TrimSpace(ingredientName))+"%").Scan(&foundID)
+			if foundID == 0 {
+				foundID = fuzzyFindWarehouseItemTx(tx, accID, ingredientName)
+			}
 			if foundID > 0 {
 				warehouseItemID = foundID
 				var convErr error

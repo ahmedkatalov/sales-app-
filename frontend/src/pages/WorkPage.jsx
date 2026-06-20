@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Boxes, TrendingUp, Wallet } from "lucide-react";
 import { del, get, post, put } from "../api";
 import Modal from "../components/Modal";
@@ -6,27 +7,65 @@ import { formatMoney, money, num } from "../utils/format";
 
 
 // ─── Поиск ингредиента по складу ─────────────────────────────────────────────
+// Выпадающий список рендерится в портал с fixed-позиционированием, чтобы его
+// не обрезал overflow-y-auto тела модалки и он не пропадал. Закрытие — по клику
+// вне поля (а не по onBlur, который закрывал список слишком резко).
 function SmartIngredientInput({ value, onChange, warehouseItems = [], onSelectItem }) {
   const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState(null);
+  const wrapRef = useRef(null);
+  const inputRef = useRef(null);
 
-  const suggestions = value.length >= 2
-    ? warehouseItems.filter(i => i.name.toLowerCase().includes(value.toLowerCase())).slice(0, 6)
+  const q = (value || "").trim().toLowerCase();
+  const suggestions = q.length >= 1
+    ? warehouseItems.filter((i) => (i.name || "").toLowerCase().includes(q)).slice(0, 6)
     : [];
 
+  const updateRect = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setRect({ left: r.left, top: r.bottom + 6, width: r.width });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    updateRect();
+    const reposition = () => updateRect();
+    const onDown = (e) => {
+      if (wrapRef.current?.contains(e.target)) return;
+      if (e.target.closest?.("[data-ingredient-dropdown]")) return;
+      setOpen(false);
+    };
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [open, updateRect]);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={wrapRef}>
       <input
+        ref={inputRef}
         type="text" value={value}
         onChange={(e) => { onChange(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder="Введи название ингредиента..."
         className="w-full rounded-2xl border border-violet-400/30 bg-violet-500/8 py-2.5 px-4 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60 focus:ring-2 focus:ring-violet-500/20"
       />
-      {open && suggestions.length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
+      {open && suggestions.length > 0 && rect && createPortal(
+        <div
+          data-ingredient-dropdown
+          style={{ position: "fixed", left: rect.left, top: rect.top, width: rect.width, zIndex: 80 }}
+          className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/50"
+        >
           {suggestions.map((s) => (
-            <button key={s.id} type="button" onMouseDown={() => { onSelectItem(s.id); onChange(s.name); setOpen(false); }}
+            <button key={s.id} type="button"
+              onMouseDown={(e) => { e.preventDefault(); onSelectItem(s.id); onChange(s.name); setOpen(false); }}
               className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/8">
               <span className="shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black bg-emerald-500/20 text-emerald-300">склад</span>
               <div className="min-w-0 flex-1">
@@ -35,7 +74,8 @@ function SmartIngredientInput({ value, onChange, warehouseItems = [], onSelectIt
               </div>
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

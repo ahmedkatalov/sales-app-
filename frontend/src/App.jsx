@@ -554,7 +554,7 @@ export default function App() {
         </aside>
       )}
 
-      <main className={`flex-1 overflow-x-hidden ${isAIWarehouseRoute ? "overflow-hidden p-0" : "p-4 pb-nav sm:p-5 lg:pb-5 min-h-screen overflow-y-auto"}`}
+      <main className={`flex-1 overflow-x-hidden ${isAIWarehouseRoute ? "flex flex-col overflow-hidden p-0" : "p-4 pb-nav sm:p-5 lg:pb-5 min-h-screen overflow-y-auto"}`}
         style={isAIWarehouseRoute ? { height: "100dvh" } : {}}>
 
         {useHeaderNav && (

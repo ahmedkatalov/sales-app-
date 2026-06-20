@@ -1253,8 +1253,8 @@ ${lines}${expense ? `
   };
 
     return (
-    <div className="flex h-full w-full flex-col overflow-hidden text-white" style={{height:"100%"}}>
-      <div className="mx-auto flex h-full w-full max-w-[1500px] flex-col overflow-hidden">
+    <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden text-white">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1500px] flex-col overflow-hidden">
         <div
           className={`grid min-h-0 flex-1 w-full min-w-0 ${
             activeRightPanels ? "xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-4 xl:px-4 xl:py-4" : "xl:grid-cols-1"
