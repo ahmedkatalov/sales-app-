@@ -153,6 +153,7 @@ type MenuProduct struct {
 	Price           float64         `json:"price"`
 	Cost            float64         `json:"cost"`
 	CostMode        string          `json:"costMode"`
+	IsExtra         bool            `json:"isExtra"` // доп. товар (стаканчик, лёд и т.п.) — отдельно в доходах
 	Recipe          []ProductRecipe `json:"recipe"`
 
 	Calories float64 `json:"calories"`
@@ -172,6 +173,7 @@ type SaleItem struct {
 	Price          float64 `json:"price"`
 	Cost           float64 `json:"cost"`
 	Total          float64 `json:"total"`
+	IsExtra        bool    `json:"isExtra"` // доп. товар — учитывается отдельно
 }
 
 type Sale struct {

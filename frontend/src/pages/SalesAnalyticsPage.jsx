@@ -247,6 +247,36 @@ export default function SalesAnalyticsPage() {
             </div>
           </section>
 
+          {(stats.extraItems || []).length > 0 && (
+            <section className="overflow-hidden rounded-[2rem] border border-amber-400/25 bg-amber-500/[0.05] shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl">
+              <div className="flex items-center justify-between gap-3 border-b border-amber-400/20 p-5 sm:p-6">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300/80">Отдельно от меню</p>
+                  <h3 className="mt-0.5 text-xl font-black text-white sm:text-2xl">Доп. товары</h3>
+                  <p className="mt-0.5 text-sm text-slate-400">Стаканчики, лёд и т.п. — не входят в продажи блюд выше</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Доход</p>
+                  <p className="text-xl font-black text-amber-300 sm:text-2xl">{moneyValue(stats.extraRevenue)}</p>
+                </div>
+              </div>
+              <div className="divide-y divide-amber-400/10">
+                {(stats.extraItems || []).map((p, index) => (
+                  <div key={`extra-${p.name}-${index}`} className="flex items-center justify-between gap-3 p-4 sm:px-6">
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-500/15 text-amber-200 text-sm">＋</span>
+                      <div>
+                        <p className="font-black text-white">{p.name}</p>
+                        <p className="text-sm font-bold text-slate-400">Кол-во: {p.qty}</p>
+                      </div>
+                    </div>
+                    <p className="font-black text-amber-300">{moneyValue(p.revenue)}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 p-5 sm:p-6">
               <div>

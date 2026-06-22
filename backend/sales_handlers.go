@@ -28,13 +28,15 @@ func resolveSaleItemProduct(item SaleItem, accID int) SaleItem {
 	if item.ProductID > 0 {
 		var cost float64
 		var productType string
+		var isExtra int
 		err := db.QueryRow(`
-			SELECT IFNULL(cost, 0), IFNULL(type, '')
+			SELECT IFNULL(cost, 0), IFNULL(type, ''), IFNULL(is_extra, 0)
 			FROM menu_products
 			WHERE id = ? AND account_id = ?
-		`, item.ProductID, accID).Scan(&cost, &productType)
+		`, item.ProductID, accID).Scan(&cost, &productType, &isExtra)
 		if err == nil {
 			item.Cost = cost
+			item.IsExtra = isExtra == 1
 			if strings.TrimSpace(item.Type) == "" {
 				item.Type = productType
 			}
@@ -172,7 +174,7 @@ func saveSaleInTx(tx *sql.Tx, req *Sale, now string, reservedProductCosts map[in
 		item.Cost = actualUnitCost
 		req.Items[i] = item
 
-		_, err := tx.Exec(`INSERT INTO sale_items(sale_id, product_id, name, type, qty, price, cost, total) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`, saleID, item.ProductID, item.Name, item.Type, item.Qty, item.Price, item.Cost, item.Total)
+		_, err := tx.Exec(`INSERT INTO sale_items(sale_id, product_id, name, type, qty, price, cost, total, is_extra) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)`, saleID, item.ProductID, item.Name, item.Type, item.Qty, item.Price, item.Cost, item.Total, boolToInt(item.IsExtra))
 		if err != nil {
 			return err
 		}
@@ -687,11 +689,12 @@ func getSalesStats(c *gin.Context) {
 		itemArgs = append(itemArgs, to)
 	}
 
+	// Обычные товары — БЕЗ доп. товаров (они учитываются отдельно)
 	rows, err := db.Query(`
 		SELECT si.name, IFNULL(SUM(si.qty), 0), IFNULL(SUM(si.total), 0)
 		FROM sale_items si
 		JOIN sales s ON s.id = si.sale_id
-		WHERE `+strings.Join(itemWhere, " AND ")+`
+		WHERE `+strings.Join(itemWhere, " AND ")+` AND IFNULL(si.is_extra, 0) = 0
 		GROUP BY si.name
 		ORDER BY SUM(si.qty) DESC, SUM(si.total) DESC
 		LIMIT 10
@@ -713,6 +716,35 @@ func getSalesStats(c *gin.Context) {
 		}
 		topProducts = append(topProducts, gin.H{"name": name, "qty": qty, "revenue": revenue})
 	}
+	rows.Close()
+
+	// ── Доп. товары — отдельный список и отдельная сумма дохода ──
+	extraRows, err := db.Query(`
+		SELECT si.name, IFNULL(SUM(si.qty), 0), IFNULL(SUM(si.total), 0)
+		FROM sale_items si
+		JOIN sales s ON s.id = si.sale_id
+		WHERE `+strings.Join(itemWhere, " AND ")+` AND IFNULL(si.is_extra, 0) = 1
+		GROUP BY si.name
+		ORDER BY SUM(si.total) DESC, SUM(si.qty) DESC
+		LIMIT 20
+	`, itemArgs...)
+	extraItems := []gin.H{}
+	var extraRevenue, extraQty float64
+	if err == nil {
+		defer extraRows.Close()
+		for extraRows.Next() {
+			var name string
+			var qty, revenue float64
+			if extraRows.Scan(&name, &qty, &revenue) == nil {
+				extraItems = append(extraItems, gin.H{"name": name, "qty": qty, "revenue": revenue})
+				extraRevenue += revenue
+				extraQty += qty
+			}
+		}
+	}
+	stats["extraItems"] = extraItems
+	stats["extraRevenue"] = extraRevenue
+	stats["extraQty"] = extraQty
 
 	stats["topProducts"] = topProducts
 	c.JSON(http.StatusOK, stats)

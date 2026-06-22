@@ -294,11 +294,18 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
     const prods = Array.isArray(products) ? products : [];
     const q = search.trim().toLowerCase();
     return prods.filter((p) => {
+      if (p.isExtra) return false; // доп. товары — в отдельной секции
       const okCategory = String(p.categoryId) === String(openedCategory.id);
       const okSearch = !q || String(p.name || "").toLowerCase().includes(q);
       return okCategory && okSearch;
     });
   }, [products, openedCategory, search]);
+
+  // Доп. товары (стаканчик, лёд и т.п.) — быстрая отдельная секция
+  const extraProducts = useMemo(
+    () => (Array.isArray(products) ? products : []).filter((p) => p.isExtra),
+    [products]
+  );
 
   const subtotal = safe_cart.reduce((s, i) => s + money(i.price) * money(i.qty), 0);
   const discountAmount = (subtotal * num(discount)) / 100;
@@ -864,7 +871,29 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           )}
         </div>
 
-        <div className="rounded-4xl border border-white/10 bg-[#0f172a]/90 p-4 shadow-2xl backdrop-blur xl:sticky xl:top-6 xl:self-start sm:p-5">
+        <div className="xl:sticky xl:top-6 xl:self-start">
+        {extraProducts.length > 0 && (
+          <div className="mb-3 rounded-4xl border border-amber-400/25 bg-amber-500/[0.06] p-4 sm:p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300 text-sm">＋</span>
+              <div>
+                <p className="text-sm font-black text-white leading-tight">Доп. товары</p>
+                <p className="text-[11px] text-slate-400 leading-tight">Стаканчик, лёд и т.п. — в доходах отдельно</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {extraProducts.map((p) => (
+                <button key={p.id} type="button" onClick={() => addToCart(p)}
+                  className="flex items-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm font-black text-white transition hover:bg-amber-500/20 active:scale-95">
+                  <span className="truncate">{p.name}</span>
+                  <span className="shrink-0 text-amber-300">{formatMoney(p.price)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="rounded-4xl border border-white/10 bg-[#0f172a]/90 p-4 shadow-2xl backdrop-blur sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-2xl font-black">Корзина</h3>
 
@@ -954,6 +983,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           >
             {safe_cart.length ? `Подтвердить покупку · ${formatMoney(total)}` : "Подтвердить покупку"}
           </button>
+        </div>
         </div>
       </div>
 

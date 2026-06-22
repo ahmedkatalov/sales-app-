@@ -8,6 +8,13 @@ import (
 	"time"
 )
 
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 func loadProductRecipe(productID int, accID int) []ProductRecipe {
 	rows, err := db.Query(`
 		SELECT r.id, r.product_id, r.warehouse_item_id, IFNULL(r.ingredient_name, ''),
@@ -140,7 +147,8 @@ func getMenuProducts(c *gin.Context) {
 			IFNULL(t.name, p.type),
 			p.type,
 			p.price,
-			IFNULL(p.cost, 0)
+			IFNULL(p.cost, 0),
+			IFNULL(p.is_extra, 0)
 		FROM menu_products p
 		LEFT JOIN product_categories c ON c.id = p.category_id AND c.account_id = p.account_id
 		LEFT JOIN product_types t ON t.id = c.type_id AND t.account_id = p.account_id
@@ -157,10 +165,12 @@ func getMenuProducts(c *gin.Context) {
 
 	for rows.Next() {
 		var p MenuProduct
-		if err := rows.Scan(&p.ID, &p.AccountID, &p.CategoryID, &p.TypeID, &p.Name, &p.Category, &p.TypeName, &p.Type, &p.Price, &p.Cost); err != nil {
+		var isExtra int
+		if err := rows.Scan(&p.ID, &p.AccountID, &p.CategoryID, &p.TypeID, &p.Name, &p.Category, &p.TypeName, &p.Type, &p.Price, &p.Cost, &isExtra); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		p.IsExtra = isExtra == 1
 		if p.Type == "" {
 			p.Type = p.TypeName
 		}
@@ -219,9 +229,9 @@ func createMenuProduct(c *gin.Context) {
 	defer tx.Rollback()
 
 	res, err := tx.Exec(`
-		INSERT INTO menu_products(account_id, category_id, name, category, type, price, cost, created_at)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-	`, p.AccountID, p.CategoryID, p.Name, p.Category, p.Type, p.Price, p.Cost, time.Now().Format(time.RFC3339))
+		INSERT INTO menu_products(account_id, category_id, name, category, type, price, cost, is_extra, created_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, p.AccountID, p.CategoryID, p.Name, p.Category, p.Type, p.Price, p.Cost, boolToInt(p.IsExtra), time.Now().Format(time.RFC3339))
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -366,11 +376,11 @@ func updateMenuProduct(c *gin.Context) {
 	// Update main product fields
 	if _, err := tx.Exec(`
 		UPDATE menu_products SET
-			name = ?, price = ?, cost = ?, category_id = ?,
+			name = ?, price = ?, cost = ?, category_id = ?, is_extra = ?,
 			category = COALESCE((SELECT name FROM product_categories WHERE id = ? AND account_id = ?), ?),
 			type = COALESCE((SELECT pt.name FROM product_types pt JOIN product_categories pc ON pc.type_id = pt.id WHERE pc.id = ? AND pc.account_id = ?), ?)
 		WHERE id = ? AND account_id = ?
-	`, p.Name, p.Price, p.Cost, catID,
+	`, p.Name, p.Price, p.Cost, catID, boolToInt(p.IsExtra),
 		catID, accID, p.Category,
 		catID, accID, p.Type,
 		productID, accID); err != nil {

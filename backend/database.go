@@ -380,6 +380,8 @@ func createTables() {
 		`ALTER TABLE pending_sale_reservations ADD COLUMN total_cost REAL DEFAULT 0`,
 		`ALTER TABLE pending_sale_reservations ADD COLUMN created_at TEXT DEFAULT ''`,
 		`ALTER TABLE employees ADD COLUMN password TEXT DEFAULT ''`,
+		`ALTER TABLE menu_products ADD COLUMN is_extra INTEGER DEFAULT 0`,
+		`ALTER TABLE sale_items ADD COLUMN is_extra INTEGER DEFAULT 0`,
 	}
 
 	for _, q := range migrations {

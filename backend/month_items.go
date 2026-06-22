@@ -10,7 +10,7 @@ import (
 
 func getSaleItems(saleID int) []SaleItem {
 	rows, err := db.Query(`
-		SELECT product_id, name, type, qty, price, IFNULL(cost, 0), total
+		SELECT product_id, name, type, qty, price, IFNULL(cost, 0), total, IFNULL(is_extra, 0)
 		FROM sale_items
 		WHERE sale_id = ?
 		ORDER BY id
@@ -25,7 +25,9 @@ func getSaleItems(saleID int) []SaleItem {
 
 	for rows.Next() {
 		var item SaleItem
-		if err := rows.Scan(&item.ProductID, &item.Name, &item.Type, &item.Qty, &item.Price, &item.Cost, &item.Total); err == nil {
+		var isExtra int
+		if err := rows.Scan(&item.ProductID, &item.Name, &item.Type, &item.Qty, &item.Price, &item.Cost, &item.Total, &isExtra); err == nil {
+			item.IsExtra = isExtra == 1
 			items = append(items, item)
 		}
 	}

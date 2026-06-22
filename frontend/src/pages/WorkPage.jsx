@@ -131,6 +131,7 @@ export default function WorkPage() {
     name: "",
     cost: "",
     price: "",
+    isExtra: false,
   });
   const [recipe, setRecipe] = useState([]);
   const [error, setError] = useState("");
@@ -419,7 +420,7 @@ export default function WorkPage() {
     setAiSuggestion(null);
     setAiSuggestionLoading(false);
     setError("");
-    setProductForm({ name: "", cost: "", price: "" });
+    setProductForm({ name: "", cost: "", price: "", isExtra: false });
     setRecipe([]);
     setProductModal(true);
   };
@@ -444,7 +445,7 @@ export default function WorkPage() {
   const createProduct = async () => {
     setError("");
 
-    if (!selectedFolderId) return setError("Сначала выбери папку/раздел");
+    if (!selectedFolderId && !productForm.isExtra) return setError("Сначала выбери папку/раздел");
     if (!productForm.name.trim()) return setError("Введите название товара");
 
     const cleanRecipe = recipe
@@ -464,15 +465,16 @@ export default function WorkPage() {
       });
 
     await post("/menu-products", {
-      categoryId: Number(selectedFolderId),
+      categoryId: Number(selectedFolderId) || 0,
       name: productForm.name.trim(),
       cost: cleanRecipe.length ? recipeCost : num(productForm.cost),
       price: num(productForm.price),
+      isExtra: !!productForm.isExtra,
       recipe: cleanRecipe,
     });
 
     setProductModal(false);
-    setProductForm({ name: "", cost: "", price: "" });
+    setProductForm({ name: "", cost: "", price: "", isExtra: false });
     setRecipe([]);
     await load();
   };
@@ -1425,6 +1427,24 @@ export default function WorkPage() {
               placeholder="Цена продажи"
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
             />
+
+            <button
+              type="button"
+              onClick={() => setProductForm((p) => ({ ...p, isExtra: !p.isExtra }))}
+              className={`col-span-2 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                productForm.isExtra
+                  ? "border-amber-400/40 bg-amber-500/10"
+                  : "border-white/10 bg-white/5 hover:bg-white/10"
+              }`}
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-black text-white">Доп. товар</span>
+                <span className="block text-xs text-slate-400">Стаканчик, лёд и т.п. — в доходах считается отдельно</span>
+              </span>
+              <span className={`relative h-6 w-11 shrink-0 rounded-full transition ${productForm.isExtra ? "bg-amber-500" : "bg-white/15"}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${productForm.isExtra ? "left-[22px]" : "left-0.5"}`} />
+              </span>
+            </button>
           </div>
 
           <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-[#0f172a]/90/5 p-4">
@@ -1568,7 +1588,7 @@ export default function WorkPage() {
               onClick={() => {
                 setProductModal(false);
                 setRecipe([]);
-                setProductForm({ name: "", cost: "", price: "" });
+                setProductForm({ name: "", cost: "", price: "", isExtra: false });
               }}
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 flex-1"
             >
