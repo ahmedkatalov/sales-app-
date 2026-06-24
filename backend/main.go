@@ -120,6 +120,7 @@ func main() {
 	auth.GET("/warehouse/movements", getWarehouseMovements)
 	auth.GET("/warehouse/items/:id/batches", getWarehouseBatches)
 	auth.POST("/warehouse/items/:id/writeoff", writeOffWarehouseItem)
+	auth.POST("/warehouse/items/:id/inventory", inventoryWarehouseItem)
 	auth.POST("/warehouse/items/:id/hide", hideWarehouseItem)
 
 	auth.GET("/menu-products", getMenuProducts)
@@ -130,6 +131,13 @@ func main() {
 	auth.POST("/sales", createSale)
 	auth.GET("/sales", getSales)
 	auth.GET("/sales/stats", getSalesStats)
+
+	// Денежная касса (смена)
+	auth.GET("/cash/shift/current", getCurrentCashShift)
+	auth.POST("/cash/shift/open", openCashShift)
+	auth.POST("/cash/shift/close", closeCashShift)
+	auth.POST("/cash/movement", addCashMovement)
+	auth.GET("/cash/shifts", listCashShifts)
 	auth.GET("/pending-sales", getPendingSales)
 	auth.POST("/pending-sales", createPendingSale)
 	auth.POST("/pending-sales/:id/confirm", confirmPendingSale)

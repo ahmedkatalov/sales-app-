@@ -233,6 +233,45 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
   const [aiAdvisorEnabled, setAiAdvisorEnabled] = useState(true);
   const aiDebounceRef = useRef(null);
 
+  // Денежная смена (касса)
+  const [cashShift, setCashShift] = useState(null); // объект смены или null
+  const [shiftModal, setShiftModal] = useState(null); // 'open' | 'close' | 'in' | 'out'
+  const [shiftInput, setShiftInput] = useState("");
+  const [shiftNote, setShiftNote] = useState("");
+  const [shiftResult, setShiftResult] = useState(null); // итог закрытия
+
+  const loadCashShift = async () => {
+    try {
+      const r = await get("/cash/shift/current");
+      setCashShift(r?.open ? r.shift : null);
+    } catch { /* ignore */ }
+  };
+  useEffect(() => { loadCashShift(); }, []);
+
+  const openShift = async () => {
+    try {
+      const r = await post("/cash/shift/open", { openingCash: num(shiftInput), openedBy: currentProfile?.name || "" });
+      setCashShift(r?.shift || null);
+      setShiftModal(null); setShiftInput(""); setShiftNote("");
+    } catch (e) { setError(e.message); }
+  };
+  const addShiftMovement = async (type) => {
+    try {
+      const r = await post("/cash/movement", { type, amount: num(shiftInput), note: shiftNote, by: currentProfile?.name || "" });
+      setCashShift(r?.shift || null);
+      setShiftModal(null); setShiftInput(""); setShiftNote("");
+    } catch (e) { setError(e.message); }
+  };
+  const closeShift = async () => {
+    try {
+      const r = await post("/cash/shift/close", { countedCash: num(shiftInput), closedBy: currentProfile?.name || "", note: shiftNote });
+      setShiftResult(r);
+      setCashShift(null);
+      setShiftModal(null); setShiftInput(""); setShiftNote("");
+      await loadCashShift();
+    } catch (e) { setError(e.message); }
+  };
+
   const [newSectionName, setNewSectionName] = useState("");
   const [newCategory, setNewCategory] = useState({ name: "", sectionId: "" });
   const [newProduct, setNewProduct] = useState({
@@ -563,6 +602,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
     setPaymentType("cash");
     setPaymentModal(false);
     await load();
+    await loadCashShift();
     window.dispatchEvent(new Event("sales-pending-change"));
   };
 
@@ -872,6 +912,40 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
         </div>
 
         <div className="xl:sticky xl:top-6 xl:self-start">
+        {/* Денежная смена (касса) */}
+        {cashShift ? (
+          <div className="mb-3 rounded-4xl border border-emerald-400/25 bg-emerald-500/[0.06] p-4 sm:p-5">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">Смена открыта</p>
+                <p className="text-sm font-bold text-slate-300">Размен {formatMoney(cashShift.openingCash)}{cashShift.openedBy ? ` · ${cashShift.openedBy}` : ""}</p>
+              </div>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-300">●</span>
+            </div>
+            <div className="rounded-2xl bg-white/[0.04] p-3">
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm text-slate-400">В кассе должно быть</span>
+                <b className="text-2xl font-black text-white">{formatMoney(cashShift.expectedCash)}</b>
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500">размен {formatMoney(cashShift.openingCash)} + налом {formatMoney(cashShift.cashSales)} + внесено {formatMoney(cashShift.cashIn)} − изъято {formatMoney(cashShift.cashOut)}</div>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <button type="button" onClick={() => { setShiftInput(""); setShiftNote(""); setShiftModal("in"); }} className="rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-emerald-300 transition hover:bg-white/10">+ Внести</button>
+              <button type="button" onClick={() => { setShiftInput(""); setShiftNote(""); setShiftModal("out"); }} className="rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-red-300 transition hover:bg-white/10">− Изъять</button>
+              <button type="button" onClick={() => { setShiftInput(""); setShiftNote(""); setShiftModal("close"); }} className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-2 py-2.5 text-sm font-black text-white transition hover:brightness-110">Закрыть</button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" onClick={() => { setShiftInput(""); setShiftResult(null); setShiftModal("open"); }}
+            className="mb-3 flex w-full items-center justify-between gap-3 rounded-4xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:bg-white/[0.07] sm:p-5">
+            <div>
+              <p className="text-sm font-black text-white">Открыть смену</p>
+              <p className="text-xs text-slate-400">Внеси размен — касса начнёт считать наличные</p>
+            </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300 text-lg">₽</span>
+          </button>
+        )}
+
         {extraProducts.length > 0 && (
           <div className="mb-3 rounded-4xl border border-amber-400/25 bg-amber-500/[0.06] p-4 sm:p-5">
             <div className="mb-3 flex items-center gap-2">
@@ -986,6 +1060,75 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
         </div>
         </div>
       </div>
+
+      {shiftModal === "open" && (
+        <Modal title="Открыть смену">
+          <p className="mb-4 text-sm text-slate-400">Сколько наличных в кассе сейчас (размен на сдачу)?</p>
+          <input type="number" value={shiftInput} autoFocus onChange={(e) => setShiftInput(e.target.value)}
+            placeholder="Размен, ₽" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
+          <div className="mt-6 flex gap-3">
+            <button type="button" onClick={() => setShiftModal(null)} className="btn-white flex-1">Отмена</button>
+            <button type="button" onClick={openShift} className="btn-blue flex-1">Открыть</button>
+          </div>
+        </Modal>
+      )}
+
+      {(shiftModal === "in" || shiftModal === "out") && (
+        <Modal title={shiftModal === "in" ? "Внести в кассу" : "Изъять из кассы"}>
+          <p className="mb-4 text-sm text-slate-400">
+            {shiftModal === "in" ? "Деньги, которые кладёшь в кассу (не продажа)." : "Деньги, которые забираешь из кассы (выплата, инкассация, такси и т.п.)."}
+          </p>
+          <input type="number" value={shiftInput} autoFocus onChange={(e) => setShiftInput(e.target.value)}
+            placeholder="Сумма, ₽" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
+          <input type="text" value={shiftNote} onChange={(e) => setShiftNote(e.target.value)}
+            placeholder="Комментарий (за что)" className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
+          <div className="mt-6 flex gap-3">
+            <button type="button" onClick={() => setShiftModal(null)} className="btn-white flex-1">Отмена</button>
+            <button type="button" onClick={() => addShiftMovement(shiftModal)} className="btn-blue flex-1">{shiftModal === "in" ? "Внести" : "Изъять"}</button>
+          </div>
+        </Modal>
+      )}
+
+      {shiftModal === "close" && cashShift && (
+        <Modal title="Закрыть смену">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm text-slate-400">По программе должно быть</span>
+              <b className="text-xl font-black text-white">{formatMoney(cashShift.expectedCash)}</b>
+            </div>
+            <div className="mt-1 text-[11px] text-slate-500">размен {formatMoney(cashShift.openingCash)} + налом {formatMoney(cashShift.cashSales)} + внесено {formatMoney(cashShift.cashIn)} − изъято {formatMoney(cashShift.cashOut)}</div>
+          </div>
+          <p className="mb-2 mt-4 text-sm font-bold text-slate-300">Пересчитай деньги в кассе и впиши фактическую сумму:</p>
+          <input type="number" value={shiftInput} autoFocus onChange={(e) => setShiftInput(e.target.value)}
+            placeholder="Фактически в кассе, ₽" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
+          {shiftInput !== "" && (
+            <p className={`mt-2 text-sm font-black ${num(shiftInput) - cashShift.expectedCash < -0.005 ? "text-red-400" : num(shiftInput) - cashShift.expectedCash > 0.005 ? "text-amber-400" : "text-emerald-400"}`}>
+              {(() => { const d = num(shiftInput) - cashShift.expectedCash; if (Math.abs(d) < 0.005) return "✓ Сходится"; return d < 0 ? `Недостача ${formatMoney(-d)}` : `Излишек ${formatMoney(d)}`; })()}
+            </p>
+          )}
+          <div className="mt-6 flex gap-3">
+            <button type="button" onClick={() => setShiftModal(null)} className="btn-white flex-1">Отмена</button>
+            <button type="button" onClick={closeShift} className="btn-blue flex-1">Закрыть смену</button>
+          </div>
+        </Modal>
+      )}
+
+      {shiftResult && (
+        <Modal title="Смена закрыта">
+          <div className="space-y-2">
+            <div className="flex justify-between text-slate-300"><span>Размен</span><b className="text-white">{formatMoney(shiftResult.openingCash)}</b></div>
+            <div className="flex justify-between text-slate-300"><span>Продажи налом</span><b className="text-white">{formatMoney(shiftResult.cashSales)}</b></div>
+            <div className="flex justify-between text-slate-300"><span>Внесено</span><b className="text-white">{formatMoney(shiftResult.cashIn)}</b></div>
+            <div className="flex justify-between text-slate-300"><span>Изъято</span><b className="text-white">−{formatMoney(shiftResult.cashOut)}</b></div>
+            <div className="flex justify-between border-t border-white/10 pt-2 text-lg"><span className="font-black">Должно быть</span><b className="font-black text-white">{formatMoney(shiftResult.expectedCash)}</b></div>
+            <div className="flex justify-between text-lg"><span className="font-black">По факту</span><b className="font-black text-white">{formatMoney(shiftResult.countedCash)}</b></div>
+          </div>
+          <div className={`mt-4 rounded-2xl p-4 text-center font-black ${Math.abs(shiftResult.difference) < 0.005 ? "bg-emerald-500/15 text-emerald-300" : shiftResult.difference < 0 ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300"}`}>
+            {Math.abs(shiftResult.difference) < 0.005 ? "✓ Касса сошлась" : shiftResult.difference < 0 ? `Недостача ${formatMoney(-shiftResult.difference)}` : `Излишек ${formatMoney(shiftResult.difference)}`}
+          </div>
+          <button type="button" onClick={() => setShiftResult(null)} className="btn-blue mt-6 w-full">Готово</button>
+        </Modal>
+      )}
 
       {paymentModal && (
         <Modal title="Способ оплаты" wide>

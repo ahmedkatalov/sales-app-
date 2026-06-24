@@ -160,6 +160,9 @@ export default function WarehousePage() {
     note: "",
   });
 
+  const [inventoryModal, setInventoryModal] = useState(false);
+  const [inventoryForm, setInventoryForm] = useState({ item: null, actual: "", note: "" });
+
   // Safe array guards
   const safe_items = Array.isArray(items) ? items : [];
   const safe_movements = Array.isArray(movements) ? movements : [];
@@ -423,6 +426,26 @@ export default function WarehousePage() {
     });
 
     setWriteOffModal(false);
+    await load();
+  };
+
+  const openInventory = (item) => {
+    setInventoryForm({ item, actual: String(item.quantity ?? ""), note: "" });
+    setError("");
+    setInventoryModal(true);
+  };
+
+  const doInventory = async () => {
+    setError("");
+    if (!inventoryForm.item) return;
+    if (inventoryForm.actual === "" || num(inventoryForm.actual) < 0) {
+      return setError("Введите фактический остаток");
+    }
+    await post(`/warehouse/items/${inventoryForm.item.id}/inventory`, {
+      actualQuantity: num(inventoryForm.actual),
+      note: inventoryForm.note,
+    });
+    setInventoryModal(false);
     await load();
   };
 
@@ -764,6 +787,15 @@ export default function WarehousePage() {
 
                         <button
                           type="button"
+                          onClick={() => openInventory(item)}
+                          title="Указать фактический остаток (инвентаризация)"
+                          className="h-9 rounded-xl border border-amber-400/20 bg-amber-400/10 px-2 text-[11px] font-black text-amber-300 transition hover:bg-amber-400/20"
+                        >
+                          Факт
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() => toggleHidden(item)}
                           className="h-9 rounded-xl border border-white/10 bg-white/[0.08] px-2 text-[11px] font-black text-slate-200 transition hover:bg-white/12"
                         >
@@ -878,6 +910,14 @@ export default function WarehousePage() {
                     className="rounded-xl border border-red-400/20 bg-red-400/10 px-3 py-2 text-sm font-black text-red-300"
                   >
                     Списать
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openInventory(item)}
+                    className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-sm font-black text-amber-300"
+                  >
+                    Факт. остаток
                   </button>
 
                   <button
@@ -1431,6 +1471,61 @@ export default function WarehousePage() {
               className="flex-1 rounded-2xl bg-red-600 px-5 py-3 font-black text-white shadow-sm transition hover:bg-red-700"
             >
               Списать
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {inventoryModal && inventoryForm.item && (
+        <Modal title="Фактический остаток" section="Инвентаризация">
+          <p className="mb-4 text-sm text-slate-400">
+            Пересчитал по факту? Укажи сколько реально на складе — система сама проведёт недостачу или излишек.
+          </p>
+          <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="min-w-0">
+              <p className="truncate text-base font-black text-white">{inventoryForm.item.name}</p>
+              <p className="text-xs text-slate-400">По учёту: {num(inventoryForm.item.quantity)} {unitLabel(inventoryForm.item.unit)}</p>
+            </div>
+          </div>
+          <label className="block">
+            <span className="mb-2 block text-sm font-black text-slate-400">Фактический остаток ({unitLabel(inventoryForm.item.unit)})</span>
+            <input
+              value={inventoryForm.actual}
+              onChange={(e) => setInventoryForm((p) => ({ ...p, actual: e.target.value }))}
+              placeholder="Сколько реально на складе"
+              type="number" autoFocus
+              className="input w-full"
+            />
+          </label>
+          {inventoryForm.actual !== "" && (
+            <p className={`mt-2 text-sm font-bold ${
+              num(inventoryForm.actual) - num(inventoryForm.item.quantity) < 0 ? "text-red-300"
+              : num(inventoryForm.actual) - num(inventoryForm.item.quantity) > 0 ? "text-emerald-300" : "text-slate-400"
+            }`}>
+              {(() => {
+                const d = num(inventoryForm.actual) - num(inventoryForm.item.quantity);
+                if (Math.abs(d) < 0.001) return "Совпадает с учётом";
+                return d < 0 ? `Недостача: ${Math.abs(d)} ${unitLabel(inventoryForm.item.unit)} (спишется)` : `Излишек: +${d} ${unitLabel(inventoryForm.item.unit)} (оприходуется)`;
+              })()}
+            </p>
+          )}
+          <label className="mt-3 block">
+            <span className="mb-2 block text-sm font-black text-slate-400">Комментарий <span className="font-bold text-slate-500">(необязательно)</span></span>
+            <input
+              value={inventoryForm.note}
+              onChange={(e) => setInventoryForm((p) => ({ ...p, note: e.target.value }))}
+              placeholder="Например: пересчёт смены"
+              className="input w-full"
+            />
+          </label>
+          <div className="mt-6 flex gap-3">
+            <button type="button" onClick={() => setInventoryModal(false)} className="btn-white flex-1">Отмена</button>
+            <button
+              type="button"
+              onClick={doInventory}
+              className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 font-black text-white transition hover:brightness-110"
+            >
+              Провести
             </button>
           </div>
         </Modal>

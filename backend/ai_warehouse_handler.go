@@ -920,7 +920,13 @@ func buildSmartContext(accID int, question string) map[string]any {
 	if containsAnyKw(q, "расход", "затрат", "аренд", "зарплат", "трат", "оплатил", "коммунал") {
 		ctx["expenses"] = queryGlobalExpenses(accID, 30)
 	}
-	if containsAnyKw(q, "сотрудник", "работник", "карт", "точк", "филиал", "касс", "смена") {
+	// Деньги / касса / сверка наличных — даём смену, продажи налом и расходы
+	if containsAnyKw(q, "касс", "налич", "денег", "деньг", "размен", "сверк", "недостач", "излишек", "не сходит", "не сходятся", "инкассац", "в ящике", "по факту") {
+		ctx["cashShift"] = queryCashShiftForAI(accID)
+		ctx["sales"] = queryRecentSales(accID, 20)
+		ctx["expenses"] = queryGlobalExpenses(accID, 15)
+	}
+	if containsAnyKw(q, "сотрудник", "работник", "карт", "точк", "филиал", "смена") {
 		ctx["employees"] = queryEmployees(accID)
 		ctx["workspaces"] = queryWorkspaces(accID)
 		ctx["cards"] = queryCards(accID)
@@ -940,6 +946,45 @@ func containsAnyKw(text string, keywords ...string) bool {
 		}
 	}
 	return false
+}
+
+// queryCashShiftForAI — состояние денежной кассы для ассистента:
+// текущая открытая смена (с живым расчётом) и последняя закрытая (с расхождением).
+func queryCashShiftForAI(accID int) map[string]any {
+	out := map[string]any{}
+	if s, ok := loadOpenShift(accID); ok {
+		out["currentOpen"] = map[string]any{
+			"openingCash":  s.OpeningCash,
+			"cashSales":    s.CashSales,
+			"cashIn":       s.CashIn,
+			"cashOut":      s.CashOut,
+			"expectedCash": s.Expected,
+			"openedBy":     s.OpenedBy,
+			"openedAt":     s.OpenedAt,
+			"note":         "В кассе сейчас должно быть expectedCash = размен + продажи налом + внесения − изъятия. Перевод/карта в наличку НЕ входят.",
+		}
+	} else {
+		out["currentOpen"] = nil
+		out["hint"] = "Открытой смены нет. Чтобы сверять наличные, нужно открывать смену с разменом."
+	}
+	var last cashShiftView
+	if db.QueryRow(`
+		SELECT opening_cash, cash_sales, cash_in, cash_out, expected_cash, counted_cash, difference, IFNULL(closed_at,''), IFNULL(closed_by,'')
+		FROM cash_shifts WHERE account_id=? AND status='closed' ORDER BY id DESC LIMIT 1
+	`, accID).Scan(&last.OpeningCash, &last.CashSales, &last.CashIn, &last.CashOut, &last.Expected, &last.Counted, &last.Difference, &last.ClosedAt, &last.ClosedBy) == nil {
+		out["lastClosed"] = map[string]any{
+			"openingCash":  last.OpeningCash,
+			"cashSales":    last.CashSales,
+			"cashIn":       last.CashIn,
+			"cashOut":      last.CashOut,
+			"expectedCash": last.Expected,
+			"countedCash":  last.Counted,
+			"difference":   last.Difference,
+			"closedAt":     last.ClosedAt,
+			"closedBy":     last.ClosedBy,
+		}
+	}
+	return out
 }
 
 func queryWarehouseItems(accID int) []map[string]any {

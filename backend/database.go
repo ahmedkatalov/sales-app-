@@ -296,6 +296,35 @@ func createTables() {
 		amount REAL DEFAULT 0,
 		comment TEXT
 	);
+
+	CREATE TABLE IF NOT EXISTS cash_shifts (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		account_id INTEGER DEFAULT 1,
+		status TEXT DEFAULT 'open',
+		opening_cash REAL DEFAULT 0,
+		opened_by TEXT DEFAULT '',
+		opened_at TEXT DEFAULT '',
+		closed_by TEXT DEFAULT '',
+		closed_at TEXT DEFAULT '',
+		expected_cash REAL DEFAULT 0,
+		counted_cash REAL DEFAULT 0,
+		difference REAL DEFAULT 0,
+		cash_sales REAL DEFAULT 0,
+		cash_in REAL DEFAULT 0,
+		cash_out REAL DEFAULT 0,
+		note TEXT DEFAULT ''
+	);
+
+	CREATE TABLE IF NOT EXISTS cash_movements (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		account_id INTEGER DEFAULT 1,
+		shift_id INTEGER DEFAULT 0,
+		type TEXT DEFAULT '',
+		amount REAL DEFAULT 0,
+		note TEXT DEFAULT '',
+		created_by TEXT DEFAULT '',
+		created_at TEXT DEFAULT ''
+	);
 	`)
 
 	if err != nil {

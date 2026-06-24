@@ -484,6 +484,88 @@ func writeOffWarehouseItem(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
+// inventoryWarehouseItem — физическая инвентаризация: пользователь вводит
+// ФАКТИЧЕСКИЙ остаток после пересчёта, система сама сводит с учётным:
+// недостачу списывает по FIFO, излишек приходует по текущей себестоимости.
+// Это закрывает реальные сценарии: усушка, бой, пересорт, ошибки кассы.
+func inventoryWarehouseItem(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	accID := accountID(c)
+
+	var req struct {
+		ActualQuantity float64 `json:"actualQuantity"`
+		Note           string  `json:"note"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.ActualQuantity < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Фактический остаток не может быть отрицательным"})
+		return
+	}
+
+	var system, unitCost float64
+	if err := db.QueryRow(`SELECT quantity, IFNULL(unit_cost, 0) FROM warehouse_items WHERE id = ? AND account_id = ?`, id, accID).Scan(&system, &unitCost); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Сырьё не найдено"})
+		return
+	}
+
+	const eps = 0.000001
+	diff := req.ActualQuantity - system
+	now := time.Now().Format(time.RFC3339)
+	note := strings.TrimSpace(req.Note)
+
+	switch {
+	case diff < -eps:
+		// Недостача — списываем разницу по FIFO (она всегда ≤ учётного остатка)
+		if err := consumeWarehouseFIFO(accID, id, -diff, "Инвентаризация: недостача", note, "inventory", now); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Не удалось провести недостачу"})
+			return
+		}
+	case diff > eps:
+		// Излишек — приходуем корректирующей партией по текущей себестоимости
+		tx, err := db.Begin()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer tx.Rollback()
+		if _, err := tx.Exec(`
+			INSERT INTO stock_batches(account_id, warehouse_item_id, quantity, remaining_quantity, purchase_price, unit_cost, supplier, expiry_date, note, created_at)
+			VALUES(?, ?, ?, ?, ?, ?, '', '', 'Инвентаризация: излишек', ?)
+		`, accID, id, diff, diff, diff*unitCost, unitCost, now); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if _, err := tx.Exec(`
+			INSERT INTO warehouse_movements(account_id, warehouse_item_id, movement_type, quantity, reason, note, created_at)
+			VALUES(?, ?, 'inventory', ?, 'Инвентаризация: излишек', ?, ?)
+		`, accID, id, diff, note, now); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if err := recalcWarehouseItemTx(tx, id, accID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	default:
+		// Совпало — фиксируем факт сверки в движениях
+		_, _ = db.Exec(`
+			INSERT INTO warehouse_movements(account_id, warehouse_item_id, movement_type, quantity, reason, note, created_at)
+			VALUES(?, ?, 'inventory', 0, 'Инвентаризация: совпало', ?, ?)
+		`, accID, id, note, now)
+	}
+
+	var newQty float64
+	_ = db.QueryRow(`SELECT quantity FROM warehouse_items WHERE id = ? AND account_id = ?`, id, accID).Scan(&newQty)
+	c.JSON(http.StatusOK, gin.H{"success": true, "quantity": newQty, "previous": system, "diff": req.ActualQuantity - system})
+}
+
 func recalcWarehouseItem(itemID int, accID int) {
 	var qty float64
 	var value float64
