@@ -152,6 +152,9 @@ export default function WarehousePage() {
     unitsPerPackage: "1",
     basePerUnit: "1",
   });
+  // AI-подсказка каноничного названия позиции (чтобы имена на складе и в составе совпадали)
+  const [nameAiSuggestions, setNameAiSuggestions] = useState([]);
+  const [nameAiLoading, setNameAiLoading] = useState(false);
 
   const [writeOffForm, setWriteOffForm] = useState({
     warehouseItemId: "",
@@ -183,6 +186,27 @@ export default function WarehousePage() {
   useEffect(() => {
     load().catch((e) => setError(e.message || "Ошибка загрузки склада"));
   }, []);
+
+  // AI подсказывает правильное название позиции при вводе (debounce),
+  // чтобы оно совпадало с тем, что пишут в составе блюд → корректная связка.
+  useEffect(() => {
+    const text = (form.name || "").trim();
+    if (text.length < 3) { setNameAiSuggestions([]); setNameAiLoading(false); return; }
+    setNameAiLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const r = await post("/ai/ingredient/suggest", {
+          text,
+          warehouseItems: (Array.isArray(items) ? items : []).map((w) => ({ id: w.id, name: w.name, unit: w.unit })),
+        });
+        const list = Array.isArray(r?.suggestions) ? r.suggestions : [];
+        // показываем только если каноничное имя отличается от введённого
+        setNameAiSuggestions(list.filter((s) => s?.name && s.name.trim().toLowerCase() !== text.toLowerCase()).slice(0, 3));
+      } catch { setNameAiSuggestions([]); }
+      finally { setNameAiLoading(false); }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [form.name, items]);
 
   const isHidden = (item) =>
     Boolean(item.hidden || item.isHidden || item.is_hidden);
@@ -1242,6 +1266,24 @@ export default function WarehousePage() {
                 placeholder="Зерно, рис, курица, молоко..."
                 className="input sm:col-span-2"
               />
+
+              {(nameAiLoading || nameAiSuggestions.length > 0) && (
+                <div className="sm:col-span-2 -mt-1 flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold text-violet-300">
+                    {nameAiLoading ? "✨ AI подбирает название…" : "✨ Правильнее:"}
+                  </span>
+                  {nameAiSuggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, name: s.name }))}
+                      className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-1.5 text-sm font-black text-violet-200 transition hover:bg-violet-500/20"
+                    >
+                      {s.name}{s.warehouseId ? " · уже на складе" : ""}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <input
                 value={form.purchaseQuantity || form.quantity}

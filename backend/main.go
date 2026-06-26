@@ -113,6 +113,7 @@ func main() {
 	auth.POST("/ai/expense/parse", parseExpenseAI)
 	auth.POST("/ai/menu/parse", parseMenuProductAI)
 	auth.POST("/ai/menu/suggest", suggestMenuProduct)
+	auth.POST("/ai/ingredient/suggest", suggestIngredient)
 	auth.POST("/warehouse/items/:id/purchase", purchaseWarehouseItem)
 	auth.PUT("/warehouse/items/:id", updateWarehouseItem)
 	auth.DELETE("/warehouse/items/:id", deleteWarehouseItem)

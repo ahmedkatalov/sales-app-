@@ -1710,6 +1710,78 @@ INTENT варианты:
 }
 
 // suggestMenuProduct — анализирует название позиции меню и возвращает типичный состав
+// suggestIngredient — умная подсказка по ОДНОМУ ингредиенту состава.
+// Исправляет опечатки, приводит к каноничному названию и — главное — если
+// ингредиент уже есть на складе (пусть с опечаткой/на другом языке), возвращает
+// ТОЧНОЕ складское имя и его id, чтобы названия совпадали и связка была верной.
+func suggestIngredient(c *gin.Context) {
+	var req struct {
+		Text           string `json:"text"`
+		WarehouseItems []struct {
+			ID   int    `json:"id"`
+			Name string `json:"name"`
+			Unit string `json:"unit"`
+		} `json:"warehouseItems"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	text := strings.TrimSpace(req.Text)
+	if len([]rune(text)) < 2 {
+		c.JSON(http.StatusOK, gin.H{"suggestions": []any{}})
+		return
+	}
+
+	warehouseList := "(склад пуст)"
+	if len(req.WarehouseItems) > 0 {
+		warehouseList = ""
+		for _, item := range req.WarehouseItems {
+			warehouseList += fmt.Sprintf("- %s (id:%d, %s)\n", item.Name, item.ID, item.Unit)
+		}
+	}
+
+	prompt := fmt.Sprintf(`Ты ведёшь склад кофейни/кафе в России. Пользователь вводит ингредиент для состава блюда: "%s".
+
+Точные названия позиций на складе:
+%s
+
+Сделай так, чтобы названия в составе и на складе СОВПАДАЛИ (для корректной связки):
+1) Исправь опечатки, приведи к каноничному русскому названию (бренды можно латиницей: Maxibon, Oreo, Nutella).
+2) Если такой ингредиент УЖЕ есть на складе (даже с опечаткой или на другом языке, напр. "максибон" = "Мороженое Maxibon") — верни ТОЧНОЕ название со склада и его warehouseId.
+3) Если на складе нет — верни исправленное каноничное название с warehouseId=null.
+Дай 1-4 варианта, самый вероятный первым.
+
+Верни ТОЛЬКО валидный JSON без markdown:
+{"suggestions":[{"name":"Мороженое Maxibon","warehouseId":12,"hint":"есть на складе"},{"name":"Мороженое пломбир","warehouseId":null,"hint":"альтернатива"}]}`, text, warehouseList)
+
+	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	if apiKey == "" {
+		c.JSON(http.StatusOK, gin.H{"suggestions": []any{}})
+		return
+	}
+	model := strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
+	if model == "" {
+		model = "openai/gpt-4.1-mini"
+	}
+
+	type sug struct {
+		Name        string `json:"name"`
+		WarehouseID *int   `json:"warehouseId"`
+		Hint        string `json:"hint"`
+	}
+	type respShape struct {
+		Suggestions []sug `json:"suggestions"`
+	}
+	result, err := callAIJSON[respShape](prompt, model, apiKey, "Ingredient Suggest")
+	if err != nil {
+		// Грейсфул: без подсказок (поле всё равно работает с локальным поиском по складу)
+		c.JSON(http.StatusOK, gin.H{"suggestions": []any{}})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"suggestions": result.Suggestions})
+}
+
 func suggestMenuProduct(c *gin.Context) {
 	var req struct {
 		Name           string   `json:"name"`

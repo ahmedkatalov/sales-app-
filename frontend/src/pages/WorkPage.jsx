@@ -13,13 +13,44 @@ import { formatMoney, money, num } from "../utils/format";
 function SmartIngredientInput({ value, onChange, warehouseItems = [], onSelectItem }) {
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState(null);
+  const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
+  const aiDebounce = useRef(null);
 
   const q = (value || "").trim().toLowerCase();
-  const suggestions = q.length >= 1
+  const localMatches = q.length >= 1
     ? warehouseItems.filter((i) => (i.name || "").toLowerCase().includes(q)).slice(0, 6)
     : [];
+
+  // AI-подсказка: исправляет название и привязывает к складу (через бэкенд).
+  useEffect(() => {
+    const text = (value || "").trim();
+    clearTimeout(aiDebounce.current);
+    if (text.length < 2) { setAiSuggestions([]); setAiLoading(false); return; }
+    setAiLoading(true);
+    aiDebounce.current = setTimeout(async () => {
+      try {
+        const r = await post("/ai/ingredient/suggest", {
+          text,
+          warehouseItems: (Array.isArray(warehouseItems) ? warehouseItems : []).map((w) => ({ id: w.id, name: w.name, unit: w.unit })),
+        });
+        setAiSuggestions(Array.isArray(r?.suggestions) ? r.suggestions : []);
+      } catch { setAiSuggestions([]); }
+      finally { setAiLoading(false); }
+    }, 500);
+    return () => clearTimeout(aiDebounce.current);
+  }, [value, warehouseItems]);
+
+  // Объединяем: склад (точное совпадение) + AI-подсказки, без дублей по имени
+  const seen = new Set(localMatches.map((m) => (m.name || "").toLowerCase()));
+  const merged = [
+    ...localMatches.map((m) => ({ key: "w" + m.id, name: m.name, warehouseId: m.id, sub: `остаток: ${m.quantity} ${m.unit}`, source: "warehouse" })),
+    ...aiSuggestions
+      .filter((s) => s?.name && !seen.has(String(s.name).toLowerCase()))
+      .map((s, i) => ({ key: "ai" + i, name: s.name, warehouseId: s.warehouseId || null, sub: s.hint || (s.warehouseId ? "есть на складе" : "новый ингредиент"), source: s.warehouseId ? "warehouse" : "ai" })),
+  ].slice(0, 7);
 
   const updateRect = useCallback(() => {
     const el = inputRef.current;
@@ -47,6 +78,12 @@ function SmartIngredientInput({ value, onChange, warehouseItems = [], onSelectIt
     };
   }, [open, updateRect]);
 
+  const pick = (s) => {
+    onChange(s.name);             // всегда подставляем правильное название
+    if (s.warehouseId) onSelectItem(s.warehouseId); // и привязываем к складу, если есть
+    setOpen(false);
+  };
+
   return (
     <div className="relative" ref={wrapRef}>
       <input
@@ -54,23 +91,26 @@ function SmartIngredientInput({ value, onChange, warehouseItems = [], onSelectIt
         type="text" value={value}
         onChange={(e) => { onChange(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
-        placeholder="Введи название ингредиента..."
+        placeholder="Введи название — AI исправит и привяжет к складу..."
         className="w-full rounded-2xl border border-violet-400/30 bg-violet-500/8 py-2.5 px-4 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60 focus:ring-2 focus:ring-violet-500/20"
       />
-      {open && suggestions.length > 0 && rect && createPortal(
+      {aiLoading && <span className="absolute right-3 top-3"><span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" /></span>}
+      {open && merged.length > 0 && rect && createPortal(
         <div
           data-ingredient-dropdown
           style={{ position: "fixed", left: rect.left, top: rect.top, width: rect.width, zIndex: 80 }}
           className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/50"
         >
-          {suggestions.map((s) => (
-            <button key={s.id} type="button"
-              onMouseDown={(e) => { e.preventDefault(); onSelectItem(s.id); onChange(s.name); setOpen(false); }}
+          {merged.map((s) => (
+            <button key={s.key} type="button"
+              onMouseDown={(e) => { e.preventDefault(); pick(s); }}
               className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/8">
-              <span className="shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black bg-emerald-500/20 text-emerald-300">склад</span>
+              <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black ${s.source === "warehouse" ? "bg-emerald-500/20 text-emerald-300" : "bg-violet-500/20 text-violet-300"}`}>
+                {s.source === "warehouse" ? "склад" : "AI"}
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-black text-white">{s.name}</p>
-                <p className="text-xs text-slate-400">остаток: {s.quantity} {s.unit}</p>
+                <p className="truncate text-xs text-slate-400">{s.sub}</p>
               </div>
             </button>
           ))}
