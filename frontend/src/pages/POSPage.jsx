@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { get, getSession, post } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, money, num } from "../utils/format";
@@ -93,106 +94,111 @@ const convertRecipePreview = (item, quantity, unit) => {
 
 
 // ─── AI-компонент ввода ингредиента вручную ──────────────────────────────────
+// Использует бэкенд /ai/ingredient/suggest: исправляет название из знаний модели
+// (даже если позиции нет на складе) и привязывает к складу для верной связки.
+// Список рендерится в портал (fixed), чтобы его не обрезала прокручиваемая модалка.
 function SmartIngredientInputPOS({ value, onChange, warehouseItems = [], onSelectItem }) {
-  const [suggestions, setSuggestions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const debounceRef = useRef(null);
+  const [rect, setRect] = useState(null);
+  const wrapRef = useRef(null);
+  const inputRef = useRef(null);
+  const aiDebounce = useRef(null);
 
-  const searchSuggestions = useCallback(async (text) => {
-    if (!text || text.length < 2) { setSuggestions([]); setOpen(false); return; }
-    setLoading(true);
-    const lower = text.toLowerCase();
+  const q = (value || "").trim().toLowerCase();
+  const localMatches = q.length >= 1
+    ? warehouseItems.filter((i) => (i.name || "").toLowerCase().includes(q)).slice(0, 5)
+    : [];
 
-    const localMatches = warehouseItems
-      .filter(i => i.name.toLowerCase().includes(lower))
-      .slice(0, 4)
-      .map(i => ({ id: i.id, name: i.name, source: "warehouse", unit: i.unit, qty: i.quantity, hint: `остаток: ${i.quantity} ${i.unit}` }));
+  useEffect(() => {
+    const text = (value || "").trim();
+    clearTimeout(aiDebounce.current);
+    if (text.length < 2) { setAiSuggestions([]); setAiLoading(false); return; }
+    setAiLoading(true);
+    aiDebounce.current = setTimeout(async () => {
+      try {
+        const r = await post("/ai/ingredient/suggest", {
+          text,
+          warehouseItems: (Array.isArray(warehouseItems) ? warehouseItems : []).map((w) => ({ id: w.id, name: w.name, unit: w.unit })),
+        });
+        setAiSuggestions(Array.isArray(r?.suggestions) ? r.suggestions : []);
+      } catch { setAiSuggestions([]); }
+      finally { setAiLoading(false); }
+    }, 500);
+    return () => clearTimeout(aiDebounce.current);
+  }, [value, warehouseItems]);
 
-    if (localMatches.length >= 3) {
-      setSuggestions(localMatches); setOpen(true); setLoading(false); return;
-    }
+  const seen = new Set(localMatches.map((m) => (m.name || "").toLowerCase()));
+  const merged = [
+    ...localMatches.map((m) => ({ key: "w" + m.id, name: m.name, warehouseId: m.id, sub: `остаток: ${m.quantity} ${m.unit}`, source: "warehouse" })),
+    ...aiSuggestions
+      .filter((s) => s?.name && !seen.has(String(s.name).toLowerCase()))
+      .map((s, i) => ({ key: "ai" + i, name: s.name, warehouseId: s.warehouseId || null, sub: s.hint || (s.warehouseId ? "есть на складе" : "новый ингредиент"), source: s.warehouseId ? "warehouse" : "ai" })),
+  ].slice(0, 7);
 
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 600,
-          tools: [{ type: "web_search_20250305", name: "web_search" }],
-          messages: [{ role: "user", content: `Пользователь кофейни вводит ингредиент: "${text}"
+  const updateRect = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setRect({ left: r.left, top: r.bottom + 6, width: r.width });
+  }, []);
 
-Используй web_search чтобы найти правильное русское название этого ингредиента и популярные аналоги в кофейнях России.
-
-На складе уже есть: ${warehouseItems.slice(0, 40).map(i => `${i.name}(id:${i.id})`).join(", ")}
-
-После поиска верни ТОЛЬКО JSON массив (без markdown):
-[{"name": "правильное название", "source": "warehouse|ai", "warehouseId": null, "hint": "пояснение"}]
-
-- Исправь опечатки, найди правильное написание
-- Если есть на складе — source=warehouse, укажи warehouseId
-- Максимум 5 вариантов` }]
-        })
-      });
-      const data = await res.json();
-      const raw = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("") || "[]";
-      const clean = raw.replace(/```json|```/g, "").trim();
-      const match = clean.match(/\[[\s\S]*\]/);
-      const aiItems = match ? JSON.parse(match[0]) : [];
-      const merged = [...localMatches];
-      for (const s of aiItems) {
-        if (merged.find(m => m.name.toLowerCase() === s.name.toLowerCase())) continue;
-        const wItem = warehouseItems.find(i => i.id === s.warehouseId);
-        merged.push({ id: wItem?.id || null, name: s.name, source: wItem ? "warehouse" : "ai", unit: wItem?.unit || "", qty: wItem?.quantity ?? null, hint: s.hint || "" });
-      }
-      setSuggestions(merged.slice(0, 6)); setOpen(true);
-    } catch {
-      setSuggestions(localMatches); setOpen(localMatches.length > 0);
-    } finally { setLoading(false); }
-  }, [warehouseItems]);
-
-  const handleChange = (e) => {
-    const val = e.target.value;
-    onChange(val);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => searchSuggestions(val), 400);
-  };
+  useEffect(() => {
+    if (!open) return;
+    updateRect();
+    const reposition = () => updateRect();
+    const onDown = (e) => {
+      if (wrapRef.current?.contains(e.target)) return;
+      if (e.target.closest?.("[data-pos-ingredient-dropdown]")) return;
+      setOpen(false);
+    };
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [open, updateRect]);
 
   const handleSelect = (s) => {
     onChange(s.name);
-    if (s.id) onSelectItem(s.id);
-    setSuggestions([]); setOpen(false);
+    if (s.warehouseId) onSelectItem(s.warehouseId);
+    setOpen(false);
   };
 
   return (
-    <div className="relative sm:col-span-4">
+    <div className="relative sm:col-span-4" ref={wrapRef}>
       <div className="relative flex items-center">
-        <span className="absolute left-3 text-sm">✨</span>
-        <input type="text" value={value} onChange={handleChange}
-          onFocus={() => value.length >= 2 && suggestions.length > 0 && setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
+        <span className="pointer-events-none absolute left-3 text-sm">✨</span>
+        <input ref={inputRef} type="text" value={value}
+          onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
           placeholder="Введи название — AI найдёт правильное..."
           className="w-full rounded-2xl border border-violet-400/30 bg-violet-500/8 py-2.5 pl-8 pr-8 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60 focus:ring-2 focus:ring-violet-500/20"
         />
-        {loading && <span className="absolute right-3"><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" /></span>}
+        {aiLoading && <span className="absolute right-3"><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" /></span>}
       </div>
-      {open && suggestions.length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
-          {suggestions.map((s, i) => (
-            <button key={i} type="button" onMouseDown={() => handleSelect(s)}
+      {open && merged.length > 0 && rect && createPortal(
+        <div data-pos-ingredient-dropdown
+          style={{ position: "fixed", left: rect.left, top: rect.top, width: rect.width, zIndex: 80 }}
+          className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/50">
+          {merged.map((s) => (
+            <button key={s.key} type="button" onMouseDown={(e) => { e.preventDefault(); handleSelect(s); }}
               className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/8">
               <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black ${s.source === "warehouse" ? "bg-emerald-500/20 text-emerald-300" : "bg-violet-500/20 text-violet-300"}`}>
                 {s.source === "warehouse" ? "склад" : "AI"}
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-black text-white">{s.name}</p>
-                {s.hint && <p className="text-xs text-slate-400">{s.hint}</p>}
+                {s.sub && <p className="text-xs text-slate-400">{s.sub}</p>}
               </div>
-              {s.source === "warehouse" && <span className="text-xs text-emerald-400">{s.qty} {s.unit}</span>}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
