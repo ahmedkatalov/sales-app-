@@ -386,3 +386,40 @@ button, a, select, input, textarea, label, [role="button"] {
   border-radius: 99px;
   background: var(--brand);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ДОСТУПНОСТЬ (a11y) И ОБЩАЯ ПОЛИРОВКА — глобально, без правки страниц
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Видимый фокус для клавиатуры у всех интерактивных элементов.
+   Показываем только при навигации с клавиатуры (:focus-visible),
+   при клике мышью кольцо не мешает. */
+:where(a, button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+:where(a, button, input, select, textarea):focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Уважаем системную настройку «уменьшить движение» */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Выделение текста — в тон бренду */
+::selection {
+  background: color-mix(in oklab, var(--brand) 35%, transparent);
+}
+
+/* Единое поведение курсора и отключённых элементов */
+button, [role="button"], a, label, summary { cursor: pointer; }
+button:disabled, [aria-disabled="true"] { cursor: not-allowed; }
+
+/* Чуть мягче авто-перенос длинных слов, чтобы не было горизонтального скролла */
+body { overflow-wrap: anywhere; }

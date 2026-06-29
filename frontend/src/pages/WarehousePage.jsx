@@ -155,6 +155,8 @@ export default function WarehousePage() {
   // AI-подсказка каноничного названия позиции (чтобы имена на складе и в составе совпадали)
   const [nameAiSuggestions, setNameAiSuggestions] = useState([]);
   const [nameAiLoading, setNameAiLoading] = useState(false);
+  // Раскрытая карточка товара на телефоне (тап по строке — разворачивает действия)
+  const [expandedId, setExpandedId] = useState(null);
 
   const [writeOffForm, setWriteOffForm] = useState({
     warehouseItemId: "",
@@ -545,34 +547,7 @@ export default function WarehousePage() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap xl:justify-end xl:pt-0">
-          <button
-            type="button"
-            onClick={() => openWriteOff()}
-            className="rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-sm font-black text-white shadow-[0_10px_28px_rgba(0,0,0,.22)] transition hover:bg-white/12 flex items-center justify-center gap-2 whitespace-nowrap"
-          >
-            <span>⊘</span>
-            <span>Утиль / списание</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={openDeletedHistory}
-            className="rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-sm font-black text-white shadow-[0_10px_28px_rgba(0,0,0,.22)] transition hover:bg-white/12 flex items-center justify-center gap-2 whitespace-nowrap"
-          >
-            <span>🗑</span>
-            <span>История удалений</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={load}
-            className="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-sm font-black text-white shadow-[0_10px_28px_rgba(0,0,0,.22)] transition hover:bg-slate-900 flex items-center justify-center gap-2 whitespace-nowrap"
-          >
-            <span>⟳</span>
-            <span>Обновить</span>
-          </button>
-
+        <div className="flex items-center gap-2 xl:justify-end xl:pt-0">
           <button
             type="button"
             onClick={() => {
@@ -580,11 +555,36 @@ export default function WarehousePage() {
               setPurchaseTargetItem(null);
               setAddModal(true);
             }}
-            className="rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-[0_14px_36px_rgba(37,99,235,.35)] transition hover:scale-[1.01] flex items-center justify-center gap-2 whitespace-nowrap"
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-4 py-3 text-sm font-black text-white shadow-[0_14px_36px_rgba(37,99,235,.35)] transition hover:scale-[1.01] whitespace-nowrap xl:flex-none"
           >
             <span className="text-lg leading-none">+</span>
             <span>Добавить закупку</span>
           </button>
+
+          {/* Второстепенные действия — компактные иконки (с подписями для доступности) */}
+          <button
+            type="button"
+            onClick={() => openWriteOff()}
+            aria-label="Утиль / списание"
+            title="Утиль / списание"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-lg text-slate-200 transition hover:bg-white/10"
+          >⊘</button>
+
+          <button
+            type="button"
+            onClick={openDeletedHistory}
+            aria-label="История удалений"
+            title="История удалений"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-base text-slate-200 transition hover:bg-white/10"
+          >🗑</button>
+
+          <button
+            type="button"
+            onClick={load}
+            aria-label="Обновить"
+            title="Обновить"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-lg text-slate-200 transition hover:bg-white/10"
+          >⟳</button>
         </div>
       </div>
 
@@ -594,57 +594,37 @@ export default function WarehousePage() {
         </div>
       )}
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] p-4 shadow-[0_14px_45px_rgba(0,0,0,.22)] backdrop-blur-xl">
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-            Позиций сырья
-          </p>
-          <p className="mt-2 text-2xl font-black text-white">
-            {stats.count}
-          </p>
-          <p className="mt-1 text-xs font-bold text-slate-400/90">
-            активных позиций
-          </p>
+      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300 sm:h-9 sm:w-9 sm:rounded-xl">📦</span>
+            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Позиций сырья</p>
+          </div>
+          <p className="mt-2 text-xl font-black text-white sm:text-2xl">{stats.count}</p>
         </div>
 
-        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] p-4 shadow-[0_14px_45px_rgba(0,0,0,.22)] backdrop-blur-xl">
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-            Стоимость остатков
-          </p>
-          <p className="mt-2 text-2xl font-black text-white">
-            {formatMoney(stats.value)}
-          </p>
-          <p className="mt-1 text-xs font-bold text-slate-400/90">
-            по текущему остатку
-          </p>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-300 sm:h-9 sm:w-9 sm:rounded-xl">₽</span>
+            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Стоимость остатков</p>
+          </div>
+          <p className="mt-2 text-xl font-black tabular-nums text-white sm:text-2xl">{formatMoney(stats.value)}</p>
         </div>
 
-        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] p-4 shadow-[0_14px_45px_rgba(0,0,0,.22)] backdrop-blur-xl">
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-            Низкий остаток
-          </p>
-          <p
-            className={`mt-2 text-3xl font-black ${
-              stats.low > 0 ? "text-red-600" : "text-emerald-600"
-            }`}
-          >
-            {stats.low}
-          </p>
-          <p className="mt-1 text-xs font-bold text-slate-400/90">
-            ниже минимума
-          </p>
+        <div className={`rounded-2xl border p-3 backdrop-blur-xl sm:p-4 ${stats.low > 0 ? "border-red-500/25 bg-red-500/[0.07]" : "border-white/10 bg-white/[0.05]"}`}>
+          <div className="flex items-center gap-2">
+            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${stats.low > 0 ? "bg-red-500/20 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}>⚠</span>
+            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Низкий остаток</p>
+          </div>
+          <p className={`mt-2 text-xl font-black sm:text-2xl ${stats.low > 0 ? "text-red-400" : "text-emerald-400"}`}>{stats.low}</p>
         </div>
 
-        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] p-4 shadow-[0_14px_45px_rgba(0,0,0,.22)] backdrop-blur-xl">
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-            Скрытые
-          </p>
-          <p className="mt-2 text-2xl font-black text-white">
-            {stats.hidden}
-          </p>
-          <p className="mt-1 text-xs font-bold text-slate-400/90">
-            не в основном списке
-          </p>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-500/15 text-slate-300 sm:h-9 sm:w-9 sm:rounded-xl">👁</span>
+            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Скрытые</p>
+          </div>
+          <p className="mt-2 text-xl font-black text-white sm:text-2xl">{stats.hidden}</p>
         </div>
       </div>
 
@@ -700,7 +680,6 @@ export default function WarehousePage() {
                 <th className="px-3 py-2">Ед.</th>
                 <th className="px-3 py-2">Остаток</th>
                 <th className="px-3 py-2">Мин.</th>
-                <th className="px-3 py-2">Цена ед.</th>
                 <th className="px-3 py-2">Сумма</th>
                 <th className="px-3 py-2">Поставщик</th>
                 <th className="px-3 py-2 text-center">Действия</th>
@@ -756,7 +735,7 @@ export default function WarehousePage() {
 
                     <td
                       className={`px-3 py-2 align-middle font-black ${
-                        low ? "text-red-600" : "text-emerald-600"
+                        low ? "text-red-400" : "text-emerald-400"
                       }`}
                     >
                       {qty} {unit}
@@ -764,10 +743,6 @@ export default function WarehousePage() {
 
                     <td className="px-3 py-2 align-middle font-bold text-slate-300">
                       {min} {unit}
-                    </td>
-
-                    <td className="px-3 py-2 align-middle font-bold text-white">
-                      {formatMoney(unitCost)}
                     </td>
 
                     <td className="px-3 py-2 align-middle font-black text-white">
@@ -842,7 +817,7 @@ export default function WarehousePage() {
 
               {!visibleItems.length && (
                 <tr>
-                  <td colSpan="8" className="p-10 text-center text-slate-400">
+                  <td colSpan="7" className="p-10 text-center text-slate-400">
                     Сырья пока нет
                   </td>
                 </tr>
@@ -860,106 +835,79 @@ export default function WarehousePage() {
             const unitCost = getUnitCost(item);
             const low = min > 0 && qty <= min;
 
+            const open = expandedId === item.id;
+
             return (
               <div
                 key={item.id}
-                className={`p-3 ${hidden ? "bg-white/[0.03] opacity-60" : ""}`}
+                className={`relative ${hidden ? "opacity-55" : ""} ${low ? "before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:bg-red-500" : ""}`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-base font-black text-white">
-                      {item.name}
-                    </p>
-                    <p className="text-sm text-slate-400">
-                      {item.supplier || "Поставщик не указан"}
-                    </p>
-                    <p className="mt-1 inline-flex rounded-xl bg-blue-500/15 px-2 py-1 text-xs font-black text-blue-300">
-                      {getSmartModeLabel(item)} режим
-                    </p>
+                {/* Свёрнутая строка — тап разворачивает действия */}
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(open ? null : item.id)}
+                  aria-expanded={open}
+                  className="flex w-full items-center justify-between gap-3 p-3.5 text-left"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-base">📦</span>
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-black text-white">{item.name}</p>
+                      <p className="truncate text-xs text-slate-400">
+                        {low ? "Ниже минимума" : "В наличии"}{item.supplier ? ` · ${item.supplier}` : ""}
+                      </p>
+                    </div>
                   </div>
 
-                  <p
-                    className={`font-black ${
-                      low ? "text-red-600" : "text-emerald-600"
-                    }`}
-                  >
-                    {qty} {unit}
-                  </p>
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-xl border border-white/10 bg-slate-950/45 p-2.5">
-                    <p className="text-slate-400">Мин.</p>
-                    <p className="font-black">
-                      {min} {unit}
-                    </p>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className={`rounded-xl px-2.5 py-1 text-sm font-black tabular-nums ${low ? "bg-red-500/15 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+                      {qty} {unit}
+                    </span>
+                    <span className={`text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}>⌄</span>
                   </div>
+                </button>
 
-                  <div className="rounded-xl border border-white/10 bg-slate-950/45 p-2.5">
-                    <p className="text-slate-400">Цена ед.</p>
-                    <p className="font-black">{formatMoney(unitCost)}</p>
+                {open && (
+                  <div className="px-3.5 pb-3.5">
+                    <div className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-xs">
+                      <div>
+                        <span className="text-slate-500">Минимум: </span>
+                        <span className={`font-black ${low ? "text-red-300" : "text-slate-200"}`}>{min} {unit}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-slate-500">Единица: </span>
+                        <span className="font-black text-slate-200">{unit}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openPurchaseForItem(item)}
+                        className="flex-1 rounded-xl bg-emerald-500/15 px-3 py-2.5 text-sm font-black text-emerald-300 transition active:scale-95 hover:bg-emerald-500/25"
+                      >
+                        + Закупка
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openInventory(item)}
+                        className="flex-1 rounded-xl bg-amber-500/15 px-3 py-2.5 text-sm font-black text-amber-300 transition active:scale-95 hover:bg-amber-500/25"
+                      >
+                        Факт. остаток
+                      </button>
+                    </div>
+
+                    <div className="mt-2 flex items-center gap-1 text-xs">
+                      <button type="button" onClick={() => openHistory(item)} className="flex-1 rounded-lg px-2 py-1.5 font-black text-slate-300 transition hover:bg-white/5">🕘 История</button>
+                      <span className="text-white/10">·</span>
+                      <button type="button" onClick={() => openWriteOff(item.id)} className="flex-1 rounded-lg px-2 py-1.5 font-black text-slate-300 transition hover:bg-white/5">Списать</button>
+                      <span className="text-white/10">·</span>
+                      <button type="button" onClick={() => toggleHidden(item)} className="flex-1 rounded-lg px-2 py-1.5 font-black text-slate-300 transition hover:bg-white/5">{hidden ? "Показать" : "Скрыть"}</button>
+                      <span className="text-white/10">·</span>
+                      <button type="button" onClick={() => openDeleteModal(item)} className="flex-1 rounded-lg px-2 py-1.5 font-black text-red-400/90 transition hover:bg-red-500/10">Удалить</button>
+                    </div>
                   </div>
-
-                  <div className="rounded-xl border border-white/10 bg-slate-950/45 p-2.5">
-                    <p className="text-slate-400">Сумма</p>
-                    <p className="font-black">{formatMoney(qty * unitCost)}</p>
-                  </div>
-
-                  <div className="rounded-xl border border-white/10 bg-slate-950/45 p-2.5">
-                    <p className="text-slate-400">Ед.</p>
-                    <p className="font-black">{unit}</p>
-                  </div>
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
-                  <button
-                    type="button"
-                    onClick={() => openPurchaseForItem(item)}
-                    className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-sm font-black text-emerald-300"
-                  >
-                    + Закупка
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => openHistory(item)}
-                    className="rounded-xl border border-blue-400/20 bg-blue-400/10 px-3 py-2 text-sm font-black text-blue-300"
-                  >
-                    🕘 История
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => openWriteOff(item.id)}
-                    className="rounded-xl border border-red-400/20 bg-red-400/10 px-3 py-2 text-sm font-black text-red-300"
-                  >
-                    Списать
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => openInventory(item)}
-                    className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-sm font-black text-amber-300"
-                  >
-                    Факт. остаток
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => toggleHidden(item)}
-                    className="rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-sm font-black text-slate-200"
-                  >
-                    {hidden ? "Показать" : "Скрыть"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => openDeleteModal(item)}
-                    className="rounded-xl bg-red-600 px-3 py-2 text-sm font-black text-white"
-                  >
-                    Удалить
-                  </button>
-                </div>
+                )}
               </div>
             );
           })}
@@ -1001,22 +949,21 @@ export default function WarehousePage() {
                   key={m.id}
                   className="flex items-center justify-between gap-3 px-4 py-3"
                 >
-                  <div>
-                    <p className="font-black text-white">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-black text-white">
                       {m.itemName || m.item_name || "Сырьё"}
                     </p>
-                    <p className="text-sm text-slate-400">
-                      {m.reason || type} {m.note ? `· ${m.note}` : ""}
+                    <p className="truncate text-xs text-slate-400 sm:text-sm">
+                      {m.reason || type}{m.note ? ` · ${m.note}` : ""}
                     </p>
                   </div>
 
                   <p
-                    className={`font-black ${
-                      type === "in" ? "text-emerald-600" : "text-red-600"
+                    className={`shrink-0 whitespace-nowrap text-sm font-black tabular-nums sm:text-base ${
+                      type === "in" ? "text-emerald-400" : "text-red-400"
                     }`}
                   >
-                    {type === "in" ? "+" : "-"}
-                    {num(m.quantity)} {unit}
+                    {type === "in" ? "+" : "−"}{num(m.quantity)} {unit}
                   </p>
                 </div>
               );

@@ -694,81 +694,60 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
       <div className="grid gap-5 xl:grid-cols-[1fr_420px] xl:items-start">
         <div className="space-y-5">
           <div className="rounded-4xl border border-white/10 bg-[#0f172a]/80 p-4 shadow-2xl backdrop-blur sm:p-5">
-            <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-sm font-bold text-slate-400">Меню</p>
-                <h3 className="text-2xl font-black">
+            <div className="flex items-center gap-3">
+              {openedCategory && (
+                <button
+                  type="button"
+                  onClick={() => { setOpenedCategory(null); setSearch(""); }}
+                  aria-label="Назад к категориям"
+                  title="Назад к категориям"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-lg text-slate-200 transition hover:bg-white/10"
+                >←</button>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                  {openedCategory ? (openedCategory.typeName || openedCategory.type || "Категория") : "Меню"}
+                </p>
+                <h3 className="truncate text-xl font-black sm:text-2xl">
                   {openedCategory ? openedCategory.name : "Категории"}
                 </h3>
               </div>
-
               {openedCategory && (
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Найти позицию"
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full lg:w-80"
+                  className="hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 lg:block lg:w-72"
                 />
               )}
             </div>
 
-            {!openedCategory && (
-              <div>
-                <p className="mb-2 text-sm font-black text-slate-400">
-                  Разделы меню
-                </p>
-
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  <button
-                    onClick={() => {
-                      setSelectedSectionId("all");
-                      setOpenedCategory(null);
-                    }}
-                    className={
-                      selectedSectionId === "all"
-                        ? "btn-dark shrink-0"
-                        : "btn-white shrink-0"
-                    }
-                  >
-                    Все
-                  </button>
-
-                  {safe_sections.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => {
-                        setSelectedSectionId(String(s.id));
-                        setOpenedCategory(null);
-                      }}
-                      className={
-                        String(selectedSectionId) === String(s.id)
-                          ? "btn-dark shrink-0"
-                          : "btn-white shrink-0"
-                      }
-                    >
-                      {s.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {openedCategory && (
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Найти позицию"
+                className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 lg:hidden"
+              />
             )}
 
-            {openedCategory && (
-              <div className="flex flex-col gap-3 rounded-[1.5rem] bg-slate-950 p-4 text-white sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-slate-400">Открытая категория</p>
-                  <p className="text-2xl font-black">{openedCategory.name}</p>
-                </div>
-
+            {!openedCategory && (
+              <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-0.5">
                 <button
-                  onClick={() => {
-                    setOpenedCategory(null);
-                    setSearch("");
-                  }}
-                  className="rounded-2xl bg-[#111827] px-4 py-3 font-black text-white"
+                  onClick={() => { setSelectedSectionId("all"); setOpenedCategory(null); }}
+                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${selectedSectionId === "all" ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white" : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
                 >
-                  ← Назад к категориям
+                  Все
                 </button>
+                {safe_sections.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => { setSelectedSectionId(String(s.id)); setOpenedCategory(null); }}
+                    className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${String(selectedSectionId) === String(s.id) ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white" : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
+                  >
+                    {s.name}
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -844,7 +823,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           )}
 
           {!openedCategory ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 2xl:grid-cols-4">
               {visibleCategories.map((cat) => (
                 <button
                   key={cat.id}
@@ -852,21 +831,13 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
                     setOpenedCategory(cat);
                     setSearch("");
                   }}
-                  className="group relative overflow-hidden rounded-4xl border border-white/10 bg-[#111827] p-5 text-left shadow-xl transition hover:-translate-y-1 hover:border-blue-500/40 hover:shadow-blue-900/20 focus:outline-none focus:ring-4 focus:ring-blue-500/30"
+                  className="group flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-3.5 text-left shadow-lg transition hover:-translate-y-0.5 hover:border-blue-500/40 focus:outline-none focus:ring-4 focus:ring-blue-500/30"
                 >
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/100/10 text-2xl">
-                    📁
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-xl">📁</span>
+                  <div className="min-w-0">
+                    <p className="truncate text-[11px] font-bold text-blue-400">{cat.typeName || cat.type || "Раздел"}</p>
+                    <h3 className="truncate text-base font-black text-white sm:text-lg">{cat.name}</h3>
                   </div>
-
-                  <p className="text-xs font-bold text-blue-400">
-                    {cat.typeName || cat.type || "Раздел"}
-                  </p>
-
-                  <h3 className="mt-1 text-xl font-black text-white">
-                    {cat.name}
-                  </h3>
-
-              
                 </button>
               ))}
 
@@ -887,18 +858,13 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
                 <button
                   key={p.id}
                   onClick={() => addToCart(p)}
-                  className="group relative overflow-hidden rounded-4xl border border-white/10 bg-[#111827] p-4 text-left shadow-xl transition hover:-translate-y-1 hover:border-blue-500/40 hover:shadow-blue-900/20 focus:outline-none focus:ring-4 focus:ring-blue-500/30"
+                  className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-3.5 text-left shadow-lg transition hover:-translate-y-0.5 hover:border-blue-500/40 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-blue-500/30 sm:p-4"
                 >
-                  <div className="text-xs font-bold text-blue-400">
-                    {p.category}
-                  </div>
-
-                  <div className="mt-1 text-lg font-black sm:text-xl">
+                  <div className="text-base font-black leading-tight text-white sm:text-lg">
                     {p.name}
                   </div>
-
-                  <div className="mt-3 text-lg font-black text-slate-200">
-                    {formatMoney(p.price)}
+                  <div className="mt-3 inline-flex w-fit items-baseline gap-1 rounded-lg bg-blue-500/15 px-2.5 py-1 text-base font-black text-blue-200 tabular-nums">
+                    {formatMoney(p.price)} <span className="text-xs font-bold text-blue-300/70">₽</span>
                   </div>
                 </button>
               ))}

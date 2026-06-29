@@ -876,22 +876,24 @@ export default function WorkPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Найти товар"
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 w-full sm:w-72"
+              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none shadow-inner shadow-black/10 placeholder:text-slate-500 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 sm:w-72"
             />
 
-            <button
-              onClick={() => setFilterModal(true)}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 w-full sm:w-auto"
-            >
-              Фильтр
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFilterModal(true)}
+                className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 backdrop-blur transition hover:bg-white/10 sm:flex-none"
+              >
+                Фильтр
+              </button>
 
-            <button
-              onClick={openProductModal}
-              className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] w-full sm:w-auto"
-            >
-              + Товар
-            </button>
+              <button
+                onClick={openProductModal}
+                className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] sm:flex-none"
+              >
+                + Товар
+              </button>
+            </div>
           </div>
         </div>
 
@@ -991,59 +993,56 @@ export default function WorkPage() {
             const hasRecipe = Array.isArray(p.recipe) && p.recipe.length > 0;
             const hasUnlinked = hasRecipe && p.recipe.some(r => r.unlinked);
             return (
-            <div key={p.id} className="p-4">
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-lg font-black text-white">{p.name}</p>
-                  <p className="text-sm text-slate-400">
-                    {p.typeName || p.type} • {p.category}
+            <div key={p.id} className="p-3.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-base font-black text-white">{p.name}</p>
+                  <p className="truncate text-xs text-slate-400">
+                    {p.typeName || p.type} · {p.category}
                   </p>
                   {hasRecipe ? (
-                    <span className={`mt-1 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-black ${hasUnlinked ? "bg-yellow-500/15 text-yellow-300" : "bg-emerald-500/15 text-emerald-300"}`}>
-                      {hasUnlinked ? `⚠ ${p.recipe.filter(r => r.unlinked).length} ингр. не на складе` : `✓ состав: ${p.recipe.length} ингр.`}
+                    <span className={`mt-1.5 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-black ${hasUnlinked ? "bg-yellow-500/15 text-yellow-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+                      {hasUnlinked ? `⚠ ${p.recipe.filter(r => r.unlinked).length} не на складе` : `✓ состав · ${p.recipe.length}`}
                     </span>
                   ) : (
-                    <span className="mt-1 inline-flex rounded-lg px-2 py-0.5 text-[10px] font-black bg-slate-700/50 text-slate-400">без состава</span>
+                    <span className="mt-1.5 inline-flex rounded-lg bg-slate-700/50 px-2 py-0.5 text-[10px] font-black text-slate-400">без состава</span>
                   )}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex shrink-0 gap-1.5">
                   <button
                     onClick={() => openEditProduct(p)}
-                    className="rounded-xl bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-400"
-                  >
-                    ✏
-                  </button>
+                    aria-label="Изменить"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition hover:bg-blue-500/20"
+                  >✏</button>
                   <button
                     onClick={() => deleteProduct(p.id)}
-                    className="rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-400"
-                  >
-                    ×
-                  </button>
+                    aria-label="Удалить"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/10 text-lg font-black text-red-400 transition hover:bg-red-500/20"
+                  >×</button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-2xl bg-[#0f172a]/90/5 p-3">
-                  <p className="text-slate-400">Себестоимость</p>
-                  <p className="font-black">{formatMoney(p.cost)}</p>
+              <div className="mt-3 flex items-stretch gap-2">
+                <div className="flex-1 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-[11px] text-slate-500">Цена</span>
+                    <span className="text-sm font-black tabular-nums text-white">{formatMoney(p.price)}</span>
+                  </div>
+                  <div className="mt-1 flex items-baseline justify-between gap-2">
+                    <span className="text-[11px] text-slate-500">Себест.</span>
+                    <span className="text-sm font-black tabular-nums text-slate-300">{formatMoney(p.cost)}</span>
+                  </div>
                 </div>
-
-                <div className="rounded-2xl bg-[#0f172a]/90/5 p-3">
-                  <p className="text-slate-400">Цена</p>
-                  <p className="font-black">{formatMoney(p.price)}</p>
-                </div>
-
-                <div className="rounded-2xl bg-[#0f172a]/90/5 p-3">
-                  <p className="text-slate-400">Кол-во</p>
-                  <p className="font-black">{p.quantity}</p>
-                </div>
-
-                <div className="rounded-2xl bg-emerald-500/10 p-3">
-                  <p className="text-slate-400">Чистая прибыль</p>
-                  <p className="font-black text-emerald-400">
-                    {formatMoney(p.cleanProfit)}
-                  </p>
+                <div className="flex-1 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.08] px-3 py-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-[11px] text-slate-500">Продано</span>
+                    <span className="text-sm font-black tabular-nums text-white">{p.quantity}</span>
+                  </div>
+                  <div className="mt-1 flex items-baseline justify-between gap-2">
+                    <span className="text-[11px] text-emerald-300/80">Прибыль</span>
+                    <span className="text-sm font-black tabular-nums text-emerald-400">{formatMoney(p.cleanProfit)}</span>
+                  </div>
                 </div>
               </div>
             </div>
