@@ -9,9 +9,12 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 )
@@ -103,7 +106,7 @@ func callOpenAIWarehouseParser(req aiWarehouseParseRequest) (aiWarehouseParseRes
 
 	itemsJSON, _ := json.Marshal(req.Items)
 	schema := `{
-  "name": "нормальное название товара без опечаток, например молоко",
+  "name": "ПРАВИЛЬНОЕ каноничное название товара: без опечаток, с корректным брендом и написанием. Примеры: 'морожжено максибон' -> 'Мороженое Maxibon', 'кокакола' -> 'Кока-Кола', 'малако' -> 'Молоко', 'сироп карамел' -> 'Сироп карамель'",
   "matchedItemId": 0,
   "purchaseQuantity": 1,
   "purchaseUnit": "box|pack|bottle|pcs|kg|g|l|ml",
@@ -124,6 +127,7 @@ func callOpenAIWarehouseParser(req aiWarehouseParseRequest) (aiWarehouseParseRes
 Верни СТРОГО один JSON без markdown.
 
 КРИТИЧЕСКИ ВАЖНО:
+- name ВСЕГДА возвращай как ПРАВИЛЬНОЕ каноничное название: исправь опечатки, приведи бренд к корректному написанию (например "морожжено максибон" -> "Мороженое Maxibon"). Это важно, чтобы название совпадало с тем, что пишут в составе блюд, и связка работала.
 - Не создавай товар из всей фразы. Если фрагмент "4 пачки молока" — name="молоко". Если во входе случайно несколько товаров, выбери только первый товар и добавь вопрос, что нужно разделить товары.
 - Если не хватает размера упаковки, количества или цены — НЕ СОХРАНЯЙ МОЛЧА. Добавь вопрос в questions.
 - Цена обязательна для закупки. Если пользователь не указал цену/стоимость закупки, price=0 и добавь вопрос "За сколько купили ...?".
@@ -497,7 +501,19 @@ func cleanAIProductName(name string) string {
 	s = re.ReplaceAllString(s, " ")
 	s = regexp.MustCompile(`\b(по|за|цена|стоимость|сумма|каждая|каждый|которые|который|которая|значит|примерно|граммовка|граммовку|одной|один|одна)\b`).ReplaceAllString(s, " ")
 	s = strings.Join(strings.Fields(s), " ")
-	return canonicalWarehouseProductName(s)
+	return capitalizeFirst(canonicalWarehouseProductName(s))
+}
+
+// capitalizeFirst делает первую букву заглавной (русский стиль предложения),
+// не трогая остальные слова: "мороженое maxibon" -> "Мороженое maxibon".
+func capitalizeFirst(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	r := []rune(s)
+	r[0] = unicode.ToUpper(r[0])
+	return string(r)
 }
 
 func canonicalWarehouseProductName(name string) string {
@@ -819,12 +835,15 @@ func callAIJSON[T any](prompt, model, apiKey, title string) (T, error) {
 	}
 	var endpoint string
 	var body map[string]any
+	// Небольшой лимит вывода: ответы этих эндпоинтов — компактный JSON.
+	// Без него провайдер резервирует полный лимит модели (десятки тысяч токенов),
+	// и при низком балансе OpenRouter отклоняет запрос целиком.
 	if useOpenRouter {
 		endpoint = baseURL + "/chat/completions"
-		body = map[string]any{"model": model, "messages": []map[string]string{{"role": "system", "content": "Возвращай только валидный JSON без markdown."}, {"role": "user", "content": prompt}}, "temperature": 0.1}
+		body = map[string]any{"model": model, "messages": []map[string]string{{"role": "system", "content": "Возвращай только валидный JSON без markdown."}, {"role": "user", "content": prompt}}, "temperature": 0.1, "max_tokens": 1024}
 	} else {
 		endpoint = baseURL + "/responses"
-		body = map[string]any{"model": model, "input": prompt, "temperature": 0.1}
+		body = map[string]any{"model": model, "input": prompt, "temperature": 0.1, "max_output_tokens": 1024}
 	}
 	bodyBytes, _ := json.Marshal(body)
 	httpReq, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
@@ -1601,7 +1620,7 @@ INTENT варианты:
 - Может быть несколько товаров в одном тексте — все в items[]
 - items[] схема:
   {"name":"апельсин","matchedItemId":0,"purchaseQuantity":3,"purchaseUnit":"kg","unit":"g","basePerUnit":1000,"price":500,"questions":[]}
-- name: ТОЛЬКО чистое название. БЕЗ слов купил/взял/за/рублей/кг/новые/это
+- name: ПРАВИЛЬНОЕ каноничное название БЕЗ слов купил/взял/за/рублей/кг/новые/это. Исправляй опечатки и приводи бренд к корректному написанию: "морожжено максибон"->"Мороженое Maxibon", "кокакола"->"Кока-Кола", "малако"->"Молоко". Это нужно, чтобы название совпадало с составом блюд и связка работала.
 - purchaseUnit: kg/g/l/ml/pcs/pack/bottle/box
 - unit: базовая единица хранения: g/ml/pcs
 - basePerUnit: сколько базовых в одной закупочной (kg→1000g, l→1000ml, иначе 1)
@@ -1714,14 +1733,56 @@ INTENT варианты:
 // Исправляет опечатки, приводит к каноничному названию и — главное — если
 // ингредиент уже есть на складе (пусть с опечаткой/на другом языке), возвращает
 // ТОЧНОЕ складское имя и его id, чтобы названия совпадали и связка была верной.
+type ingredientWHItem struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	Unit string `json:"unit"`
+}
+
+type ingredientSug struct {
+	Name        string `json:"name"`
+	WarehouseID *int   `json:"warehouseId"`
+	Hint        string `json:"hint"`
+}
+
+type ingredientCacheEntry struct {
+	data []ingredientSug
+	exp  time.Time
+}
+
+// Потокобезопасный кэш подсказок (Gin вызывает параллельно). TTL короткий —
+// свежесть важнее, но повторные вводы одного текста отвечают мгновенно.
+var ingredientSuggestCache sync.Map
+
+// localWarehouseMatches — быстрый локальный подбор складских позиций по имени
+// (нечёткое сравнение с транслитерацией кир↔лат), без обращения к ИИ.
+func localWarehouseMatches(text string, items []ingredientWHItem, minScore float64) []ingredientSug {
+	type scored struct {
+		sug   ingredientSug
+		score float64
+	}
+	var matched []scored
+	for i := range items {
+		if s := similarityScore(text, items[i].Name); s >= minScore {
+			id := items[i].ID
+			matched = append(matched, scored{ingredientSug{Name: items[i].Name, WarehouseID: &id, Hint: "есть на складе"}, s})
+		}
+	}
+	sort.Slice(matched, func(a, b int) bool { return matched[a].score > matched[b].score })
+	res := []ingredientSug{}
+	for i := range matched {
+		if i >= 4 {
+			break
+		}
+		res = append(res, matched[i].sug)
+	}
+	return res
+}
+
 func suggestIngredient(c *gin.Context) {
 	var req struct {
-		Text           string `json:"text"`
-		WarehouseItems []struct {
-			ID   int    `json:"id"`
-			Name string `json:"name"`
-			Unit string `json:"unit"`
-		} `json:"warehouseItems"`
+		Text           string             `json:"text"`
+		WarehouseItems []ingredientWHItem `json:"warehouseItems"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -1731,6 +1792,24 @@ func suggestIngredient(c *gin.Context) {
 	if len([]rune(text)) < 2 {
 		c.JSON(http.StatusOK, gin.H{"suggestions": []any{}})
 		return
+	}
+
+	accID := accountID(c)
+	local := localWarehouseMatches(text, req.WarehouseItems, 0.72)
+
+	// Мгновенный ответ: если позиция уже уверенно есть на складе — не тратим ИИ.
+	if len(local) > 0 && similarityScore(text, local[0].Name) >= 0.9 {
+		c.JSON(http.StatusOK, gin.H{"suggestions": local})
+		return
+	}
+
+	// Кэш (по аккаунту + нормализованному тексту + размеру склада).
+	cacheKey := fmt.Sprintf("%d|%s|%d", accID, normalizeWarehouseName(text), len(req.WarehouseItems))
+	if v, ok := ingredientSuggestCache.Load(cacheKey); ok {
+		if e, ok := v.(ingredientCacheEntry); ok && time.Now().Before(e.exp) {
+			c.JSON(http.StatusOK, gin.H{"suggestions": e.data})
+			return
+		}
 	}
 
 	warehouseList := "(склад пуст)"
@@ -1757,7 +1836,8 @@ func suggestIngredient(c *gin.Context) {
 
 	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
 	if apiKey == "" {
-		c.JSON(http.StatusOK, gin.H{"suggestions": []any{}})
+		// Без ключа — хотя бы локальные складские совпадения.
+		c.JSON(http.StatusOK, gin.H{"suggestions": local})
 		return
 	}
 	model := strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
@@ -1765,20 +1845,18 @@ func suggestIngredient(c *gin.Context) {
 		model = "openai/gpt-4.1-mini"
 	}
 
-	type sug struct {
-		Name        string `json:"name"`
-		WarehouseID *int   `json:"warehouseId"`
-		Hint        string `json:"hint"`
-	}
 	type respShape struct {
-		Suggestions []sug `json:"suggestions"`
+		Suggestions []ingredientSug `json:"suggestions"`
 	}
 	result, err := callAIJSON[respShape](prompt, model, apiKey, "Ingredient Suggest")
 	if err != nil {
-		// Грейсфул: без подсказок (поле всё равно работает с локальным поиском по складу)
-		c.JSON(http.StatusOK, gin.H{"suggestions": []any{}})
+		fmt.Printf("[ingredient/suggest] callAIJSON err (model=%s): %v\n", model, err)
+		// Грейсфул: при таймауте/ошибке ИИ отдаём локальные складские совпадения,
+		// а не пустоту — поле остаётся полезным.
+		c.JSON(http.StatusOK, gin.H{"suggestions": local})
 		return
 	}
+	ingredientSuggestCache.Store(cacheKey, ingredientCacheEntry{data: result.Suggestions, exp: time.Now().Add(60 * time.Second)})
 	c.JSON(http.StatusOK, gin.H{"suggestions": result.Suggestions})
 }
 

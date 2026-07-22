@@ -1174,7 +1174,35 @@ func normalizeWarehouseName(name string) string {
 		words[i] = w
 	}
 
-	return strings.Join(words, " ")
+	// Транслитерация кириллицы в латиницу — чтобы "максибон" и "maxibon"
+	// считались одним и тем же (кросс-скриптовое сопоставление брендов).
+	return translitCyrToLat(strings.Join(words, " "))
+}
+
+// translitCyrToLat приводит русское написание к латинице по фонетике,
+// чтобы Левенштейн-сравнение работало между кириллицей и латиницей.
+// Латинские символы проходят без изменений.
+func translitCyrToLat(s string) string {
+	// Диграфы сначала (важно для брендов): кс -> x
+	s = strings.ReplaceAll(s, "кс", "x")
+
+	table := map[rune]string{
+		'а': "a", 'б': "b", 'в': "v", 'г': "g", 'д': "d", 'е': "e", 'ж': "zh",
+		'з': "z", 'и': "i", 'й': "i", 'к': "k", 'л': "l", 'м': "m", 'н': "n",
+		'о': "o", 'п': "p", 'р': "r", 'с': "s", 'т': "t", 'у': "u", 'ф': "f",
+		'х': "h", 'ц': "c", 'ч': "ch", 'ш': "sh", 'щ': "sch", 'ъ': "", 'ы': "y",
+		'ь': "", 'э': "e", 'ю': "yu", 'я': "ya",
+	}
+
+	var b strings.Builder
+	for _, r := range s {
+		if lat, ok := table[r]; ok {
+			b.WriteString(lat)
+		} else {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 func minInt(a int, b int) int {

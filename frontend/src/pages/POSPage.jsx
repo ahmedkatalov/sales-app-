@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { get, getSession, post } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, money, num } from "../utils/format";
+import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
 
 const UNIT_LABELS = {
   g: "г",
@@ -98,43 +99,32 @@ const convertRecipePreview = (item, quantity, unit) => {
 // (даже если позиции нет на складе) и привязывает к складу для верной связки.
 // Список рендерится в портал (fixed), чтобы его не обрезала прокручиваемая модалка.
 function SmartIngredientInputPOS({ value, onChange, warehouseItems = [], onSelectItem }) {
-  const [aiSuggestions, setAiSuggestions] = useState([]);
-  const [aiLoading, setAiLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState(null);
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
-  const aiDebounce = useRef(null);
+
+  // AI-подсказки: общий хук (защита от гонок + кэш).
+  const { suggestions: aiSuggestions, loading: aiLoading } = useIngredientSuggest(value, warehouseItems);
 
   const q = (value || "").trim().toLowerCase();
   const localMatches = q.length >= 1
     ? warehouseItems.filter((i) => (i.name || "").toLowerCase().includes(q)).slice(0, 5)
     : [];
 
-  useEffect(() => {
-    const text = (value || "").trim();
-    clearTimeout(aiDebounce.current);
-    if (text.length < 2) { setAiSuggestions([]); setAiLoading(false); return; }
-    setAiLoading(true);
-    aiDebounce.current = setTimeout(async () => {
-      try {
-        const r = await post("/ai/ingredient/suggest", {
-          text,
-          warehouseItems: (Array.isArray(warehouseItems) ? warehouseItems : []).map((w) => ({ id: w.id, name: w.name, unit: w.unit })),
-        });
-        setAiSuggestions(Array.isArray(r?.suggestions) ? r.suggestions : []);
-      } catch { setAiSuggestions([]); }
-      finally { setAiLoading(false); }
-    }, 500);
-    return () => clearTimeout(aiDebounce.current);
-  }, [value, warehouseItems]);
-
-  const seen = new Set(localMatches.map((m) => (m.name || "").toLowerCase()));
+  const norm = (s) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const seen = new Set(localMatches.map((m) => norm(m.name)));
+  const seenIds = new Set(localMatches.map((m) => String(m.id)));
   const merged = [
     ...localMatches.map((m) => ({ key: "w" + m.id, name: m.name, warehouseId: m.id, sub: `остаток: ${m.quantity} ${m.unit}`, source: "warehouse" })),
     ...aiSuggestions
-      .filter((s) => s?.name && !seen.has(String(s.name).toLowerCase()))
-      .map((s, i) => ({ key: "ai" + i, name: s.name, warehouseId: s.warehouseId || null, sub: s.hint || (s.warehouseId ? "есть на складе" : "новый ингредиент"), source: s.warehouseId ? "warehouse" : "ai" })),
+      .filter((s) => {
+        if (!s?.name || seen.has(norm(s.name))) return false;
+        if (s.warehouseId && seenIds.has(String(s.warehouseId))) return false;
+        seen.add(norm(s.name));
+        return true;
+      })
+      .map((s) => ({ key: "ai-" + (s.warehouseId ?? norm(s.name)), name: s.name, warehouseId: s.warehouseId || null, sub: s.hint || (s.warehouseId ? "есть на складе" : "новый ингредиент"), source: s.warehouseId ? "warehouse" : "ai" })),
   ].slice(0, 7);
 
   const updateRect = useCallback(() => {
