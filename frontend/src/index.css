@@ -238,6 +238,15 @@ html[data-theme="light"] [class*="bg-[radial-gradient"] {
 
 /* ─── Глобальные мобильные улучшения ──────────────────────────── */
 
+/* Горизонтальный скролл без видимой полосы (табы, чипы) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 :root {
   --nav-h: 76px;
 }

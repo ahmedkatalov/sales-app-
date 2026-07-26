@@ -89,7 +89,7 @@ export default function DebtsPage() {
   const closeAllOpenDebts = async (customer) => {
     const openRecords = customer.records.filter((record) => record.status !== "paid");
     if (!openRecords.length) return;
-    if (!window.confirm(`Закрыть все открытые долги клиента ${customer.name}?`)) return;
+    if (!window.confirm(`Погасить весь долг клиента ${customer.name}?`)) return;
 
     for (const record of openRecords) {
       await post(`/debts/${record.id}/close`, {});
@@ -99,7 +99,7 @@ export default function DebtsPage() {
   };
 
   const clearHistory = async () => {
-    if (!window.confirm("Очистить закрытую историю долгов? Открытые долги останутся.")) return;
+    if (!window.confirm("Удалить закрытую историю долгов? Открытые долги останутся.")) return;
 
     await del("/debts/history");
     await load();
@@ -132,31 +132,34 @@ export default function DebtsPage() {
 
       <div className="relative z-10">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-bold text-blue-400">Клиенты</p>
 
-            <h2 className="text-4xl font-black leading-none text-white sm:text-5xl">
+            <h2 className="text-3xl font-black leading-none text-white sm:text-5xl">
               Долги
             </h2>
 
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 sm:mt-3 sm:text-base">
               Контроль открытых долгов, закрытой истории и оплат по каждому клиенту.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="flex shrink-0 gap-2.5">
             <button
               onClick={load}
-              className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-slate-200 shadow-xl transition hover:bg-white/10"
+              aria-label="Обновить"
+              className="flex h-12 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 font-black text-slate-200 shadow-xl transition hover:bg-white/10"
             >
-              ⟳ Обновить
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+              <span className="hidden sm:inline">Обновить</span>
             </button>
 
             <button
               onClick={clearHistory}
-              className="rounded-2xl border border-red-500/20 bg-red-500/10 px-5 py-3 font-black text-red-300 shadow-xl transition hover:bg-red-500/15"
+              className="flex h-12 items-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 font-black text-red-300 shadow-xl transition hover:bg-red-500/15"
             >
-              Очистить историю
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg>
+              <span>Удалить историю</span>
             </button>
           </div>
         </div>
@@ -167,39 +170,39 @@ export default function DebtsPage() {
           </div>
         )}
 
-        <div className="mb-5 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-[28px] border border-red-500/30 bg-red-500/10 p-5 shadow-2xl">
-            <p className="text-xs font-black uppercase tracking-wide text-red-200">
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 shadow-2xl sm:rounded-[28px] sm:p-5">
+            <p className="text-[10px] font-black uppercase tracking-wide text-red-200 sm:text-xs">
               Открытый долг
             </p>
-            <p className="mt-3 text-4xl font-black text-white">
+            <p className="mt-1.5 text-2xl font-black text-white sm:mt-3 sm:text-4xl">
               {formatMoney(totalOpen)}
             </p>
-            <p className="mt-1 text-sm font-bold text-slate-400">
+            <p className="mt-1 text-[11px] font-bold text-slate-400 sm:text-sm">
               нужно получить
             </p>
           </div>
 
-          <div className="rounded-[28px] border border-emerald-500/30 bg-emerald-500/10 p-5 shadow-2xl">
-            <p className="text-xs font-black uppercase tracking-wide text-emerald-200">
+          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 shadow-2xl sm:rounded-[28px] sm:p-5">
+            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-200 sm:text-xs">
               Уже оплачено
             </p>
-            <p className="mt-3 text-4xl font-black text-white">
+            <p className="mt-1.5 text-2xl font-black text-white sm:mt-3 sm:text-4xl">
               {formatMoney(totalPaid)}
             </p>
-            <p className="mt-1 text-sm font-bold text-slate-400">
+            <p className="mt-1 text-[11px] font-bold text-slate-400 sm:text-sm">
               закрытые долги
             </p>
           </div>
 
-          <div className="rounded-[28px] border border-blue-500/30 bg-blue-500/10 p-5 shadow-2xl">
-            <p className="text-xs font-black uppercase tracking-wide text-blue-200">
+          <div className="col-span-2 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 shadow-2xl sm:col-span-1 sm:rounded-[28px] sm:p-5">
+            <p className="text-[10px] font-black uppercase tracking-wide text-blue-200 sm:text-xs">
               Клиентов / записей
             </p>
-            <p className="mt-3 text-4xl font-black text-white">
+            <p className="mt-1.5 text-2xl font-black text-white sm:mt-3 sm:text-4xl">
               {customerGroups.length}/{totalRecords}
             </p>
-            <p className="mt-1 text-sm font-bold text-slate-400">
+            <p className="mt-1 text-[11px] font-bold text-slate-400 sm:text-sm">
               в истории долгов
             </p>
           </div>
@@ -253,39 +256,39 @@ export default function DebtsPage() {
                       </div>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[560px]">
-                      <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3">
-                        <p className="text-xs font-black uppercase text-slate-400">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3 xl:min-w-[560px]">
+                      <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 sm:rounded-2xl sm:px-4 sm:py-3">
+                        <p className="text-[10px] font-black uppercase text-slate-400 sm:text-xs">
                           Текущий долг
                         </p>
 
-                        <p className="text-xl font-black text-red-300">
+                        <p className="text-base font-black text-red-300 sm:text-xl">
                           {formatMoney(customer.totalDebt || 0)}
                         </p>
                       </div>
 
-                      <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
-                        <p className="text-xs font-black uppercase text-slate-400">
+                      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2.5 sm:rounded-2xl sm:px-4 sm:py-3">
+                        <p className="text-[10px] font-black uppercase text-slate-400 sm:text-xs">
                           Оплачено
                         </p>
 
-                        <p className="text-xl font-black text-emerald-300">
+                        <p className="text-base font-black text-emerald-300 sm:text-xl">
                           {formatMoney(customer.totalPaid || 0)}
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-                        <div>
-                          <p className="text-xs font-black uppercase text-slate-400">
+                      <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 sm:rounded-2xl sm:px-4 sm:py-3">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-black uppercase text-slate-400 sm:text-xs">
                             Всего
                           </p>
 
-                          <p className="text-xl font-black text-white">
+                          <p className="text-base font-black text-white sm:text-xl">
                             {formatMoney(customer.totalAll || 0)}
                           </p>
                         </div>
 
-                        {isOpen ? <ChevronUp size={22} /> : <ChevronDown size={22} />}
+                        <span className="shrink-0 text-slate-400">{isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}</span>
                       </div>
                     </div>
                   </div>
@@ -304,7 +307,7 @@ export default function DebtsPage() {
                           onClick={() => closeAllOpenDebts(customer)}
                           className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-950/30 transition hover:scale-[1.01]"
                         >
-                          Закрыть весь долг
+                          Погасить весь долг
                         </button>
                       )}
                     </div>
@@ -321,13 +324,18 @@ export default function DebtsPage() {
                       {customer.records.map((debt) => (
                         <div
                           key={debt.id}
-                          className="grid gap-3 border-t border-white/10 px-4 py-4 first:border-t-0 lg:grid-cols-[180px_1fr_130px_130px_130px] lg:items-center"
+                          className="border-t border-white/10 px-4 py-4 first:border-t-0 lg:grid lg:grid-cols-[180px_1fr_130px_130px_130px] lg:items-center lg:gap-3"
                         >
-                          <div className="font-black text-slate-300">
-                            {debt.createdAt ? new Date(debt.createdAt).toLocaleString("ru-RU") : "—"}
+                          <div className="flex items-center justify-between gap-3 lg:block">
+                            <div className="text-sm font-black text-slate-300 lg:text-base">
+                              {debt.createdAt ? new Date(debt.createdAt).toLocaleString("ru-RU") : "—"}
+                            </div>
+                            <div className="text-lg font-black text-white lg:hidden">
+                              {formatMoney(debt.amount)}
+                            </div>
                           </div>
 
-                          <div>
+                          <div className="mt-2 lg:mt-0">
                             <div className="flex items-start gap-2 font-bold text-slate-100">
                               <ReceiptText size={18} className="mt-1 shrink-0 text-slate-500" />
                               <span>
@@ -339,34 +347,43 @@ export default function DebtsPage() {
 
                             {!!debt.paidAt && (
                               <p className="mt-1 text-xs font-bold text-slate-500">
-                                Закрыто: {new Date(debt.paidAt).toLocaleString("ru-RU")}
+                                Оплачено: {new Date(debt.paidAt).toLocaleString("ru-RU")}
                               </p>
                             )}
                           </div>
 
-                          <div className="font-black text-white">
+                          <div className="hidden font-black text-white lg:block">
                             {formatMoney(debt.amount)}
                           </div>
 
-                          <div>
+                          <div className="mt-3 flex items-center justify-between gap-3 lg:mt-0 lg:block">
                             <span
-                              className={`rounded-2xl px-3 py-2 text-sm font-black ${
+                              className={`rounded-xl px-3 py-1.5 text-sm font-black lg:rounded-2xl lg:py-2 ${
                                 debt.status === "paid"
                                   ? "border border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
                                   : "border border-red-400/20 bg-red-400/10 text-red-300"
                               }`}
                             >
-                              {debt.status === "paid" ? "Закрыт" : "Открыт"}
+                              {debt.status === "paid" ? "Оплачен" : "В долгу"}
                             </span>
+
+                            {debt.status !== "paid" ? (
+                              <button
+                                onClick={() => closeDebt(debt.id)}
+                                className="rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:scale-[1.01] lg:hidden"
+                              >
+                                Оплатить
+                              </button>
+                            ) : null}
                           </div>
 
-                          <div>
+                          <div className="hidden lg:block">
                             {debt.status !== "paid" ? (
                               <button
                                 onClick={() => closeDebt(debt.id)}
                                 className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:scale-[1.01]"
                               >
-                                Закрыть
+                                Оплатить
                               </button>
                             ) : (
                               <span className="text-sm font-bold text-slate-500">

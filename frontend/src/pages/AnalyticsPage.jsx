@@ -314,28 +314,28 @@ export default function AnalyticsPage() {
   const statCards = [
     { title: "Общая выручка", value: formatMoney(totals.revenue), icon: "₽", tone: "from-blue-600/25 to-blue-950/10", text: "text-blue-200" },
     { title: "Чистая прибыль", value: formatMoney(totals.cleanProfit), icon: "↗", tone: "from-emerald-500/25 to-emerald-950/10", text: "text-emerald-200" },
-    { title: "Все расходы", value: formatMoney(totals.totalExpenses), icon: "↘", tone: "from-red-500/25 to-red-950/10", text: "text-red-200" },
-    { title: "Выручка после расходов", value: formatMoney(totals.revenueAfterExpenses), icon: "◆", tone: "from-violet-500/25 to-violet-950/10", text: "text-violet-200" },
-    { title: "Прибыль после расходов", value: formatMoney(totals.afterExpenses), icon: "✓", tone: "from-cyan-500/25 to-cyan-950/10", text: "text-cyan-200" },
+    { title: "Расходы", value: formatMoney(totals.totalExpenses), icon: "↘", tone: "from-red-500/25 to-red-950/10", text: "text-red-200" },
+    { title: "Выручка − расходы", value: formatMoney(totals.revenueAfterExpenses), icon: "◆", tone: "from-violet-500/25 to-violet-950/10", text: "text-violet-200" },
+    { title: "Прибыль − расходы", value: formatMoney(totals.afterExpenses), icon: "✓", tone: "from-cyan-500/25 to-cyan-950/10", text: "text-cyan-200" },
   ];
 
   const extraCards = [
     { title: "Кол-во продаж", value: totals.qty, icon: "#", tone: "from-slate-500/20 to-slate-950/10", text: "text-slate-200" },
     { title: "Сумма закупа", value: formatMoney(totals.purchaseTotal), icon: "⌁", tone: "from-orange-500/25 to-orange-950/10", text: "text-orange-200" },
-    { title: "Сумма продажных цен", value: formatMoney(totals.salePriceTotal), icon: "◈", tone: "from-blue-500/25 to-blue-950/10", text: "text-blue-200" },
+    { title: "Продажи по прайсу", value: formatMoney(totals.salePriceTotal), icon: "◈", tone: "from-blue-500/25 to-blue-950/10", text: "text-blue-200" },
     { title: "Изменение цены продажи", value: formatMoney(totals.salePriceChange), icon: "⇄", tone: "from-indigo-500/25 to-indigo-950/10", text: "text-indigo-200" },
     { title: "Изменение маржи", value: formatMoney(totals.marginChange), icon: "%", tone: "from-emerald-500/25 to-emerald-950/10", text: "text-emerald-200" },
   ];
 
-  const StatBox = ({ card }) => (
-    <div className={`relative overflow-hidden rounded-[1.6rem] border border-white/10 bg-gradient-to-br ${card.tone} p-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)] sm:p-5`}>
+  const StatBox = ({ card, className = "" }) => (
+    <div className={`relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br sm:rounded-[1.6rem] ${card.tone} p-3.5 shadow-[0_18px_60px_rgba(0,0,0,0.22)] sm:p-5 ${className}`}>
       <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{card.title}</p>
-          <p className="mt-3 text-2xl font-black text-white sm:text-3xl">{card.value}</p>
+      <div className="flex items-start justify-between gap-2.5">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 sm:text-[11px] sm:tracking-[0.18em]">{card.title}</p>
+          <p className="mt-1.5 truncate text-xl font-black text-white sm:mt-3 sm:text-3xl">{card.value}</p>
         </div>
-        <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/10 text-xl font-black ${card.text}`}>{card.icon}</div>
+        <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-base font-black sm:h-11 sm:w-11 sm:rounded-2xl sm:text-xl ${card.text}`}>{card.icon}</div>
       </div>
     </div>
   );
@@ -364,25 +364,26 @@ export default function AnalyticsPage() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-300">
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.9)]" />
-              Глобальный отчёт
+              Сводный отчёт по точкам
             </div>
-            <h2 className="mt-4 text-4xl font-black leading-none text-white sm:text-6xl">Аналитика</h2>
-            <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-slate-400 sm:text-base">
-              Смотри текущую точку, все филиалы или конкретный филиал. Графики, прибыль, расходы и детализация в одном месте.
+            <h2 className="mt-3 text-3xl font-black leading-none text-white sm:mt-4 sm:text-6xl">Аналитика</h2>
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-400 sm:mt-3 sm:text-base">
+              Смотрите текущую точку, все филиалы или конкретный филиал. Графики, прибыль, расходы и детализация в одном месте.
             </p>
           </div>
 
           <button
             onClick={loadAnalytics}
-            className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-5 py-4 font-black text-white shadow-[0_16px_40px_rgba(0,0,0,0.25)] transition hover:bg-white/15 sm:w-auto"
+            aria-label="Обновить"
+            className="group inline-flex items-center justify-center gap-2 self-start rounded-2xl border border-white/10 bg-white/10 px-4 py-3.5 font-black text-white shadow-[0_16px_40px_rgba(0,0,0,0.25)] transition hover:bg-white/15 sm:px-5 sm:py-4"
           >
-            <span className={loading ? "animate-spin" : "transition group-hover:rotate-180"}>⟳</span>
-            {loading ? "Загрузка..." : "Обновить"}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "animate-spin" : "transition group-hover:rotate-180"}><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+            <span className="hidden sm:inline">{loading ? "Обновление" : "Обновить"}</span>
           </button>
         </div>
 
         {error && (
-          <div className="mb-4 rounded-3xl border border-red-400/20 bg-red-500/10 px-4 py-3 font-bold text-red-200">
+          <div className="mb-4 rounded-3xl border border-red-400/20 bg-red-500/10 px-4 py-3 font-bold text-red-300">
             {error}
           </div>
         )}
@@ -400,7 +401,7 @@ export default function AnalyticsPage() {
                   <button key={key} type="button" onClick={action}
                     className={active
                       ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
-                      : "rounded-xl border border-white/10 bg-white/8 px-4 py-2 text-sm font-black text-slate-300 transition hover:bg-white/15"}>
+                      : "rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-slate-300 transition hover:bg-white/10"}>
                     {label}
                   </button>
                 );
@@ -411,12 +412,12 @@ export default function AnalyticsPage() {
             </div>
             <button type="button" onClick={() => setFilterOpen((v) => !v)}
               className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-black transition ${
-                filterOpen ? "border-blue-400/40 bg-blue-500/15 text-blue-200" : "border-white/10 bg-white/8 text-slate-300 hover:bg-white/15"
+                filterOpen ? "border-blue-400/40 bg-blue-500/15 text-blue-200" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
               }`}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
               Фильтр
               {(folderFilter !== "all" || workspaceFilter !== "current" || periodMode !== "month") && (
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[9px] font-black text-white">!</span>
+                <span className="h-2 w-2 rounded-full bg-blue-400" />
               )}
             </button>
           </div>
@@ -427,7 +428,7 @@ export default function AnalyticsPage() {
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {isOwner && (
                   <label className="block">
-                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">Точка / филиал</span>
+                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">Точка</span>
                     <select value={workspaceFilter} onChange={(e) => { setWorkspaceFilter(e.target.value); setFolderFilter("all"); }}
                       className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400">
                       <option value="current">Текущая точка</option>
@@ -477,7 +478,7 @@ export default function AnalyticsPage() {
               <div className="mt-3 flex justify-end">
                 <button type="button"
                   onClick={() => { const m = currentMonth(); setFolderFilter("all"); setPeriodMode("month"); setFrom(m); setTo(m); setSelectedProduct(""); setFilterOpen(false); }}
-                  className="rounded-xl bg-white px-5 py-2.5 text-sm font-black text-slate-950 transition hover:bg-blue-50">
+                  className="rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10">
                   Сбросить
                 </button>
               </div>
@@ -485,12 +486,16 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {statCards.map((card) => <StatBox key={card.title} card={card} />)}
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {statCards.map((card, i) => (
+            <StatBox key={card.title} card={card} className={i === statCards.length - 1 && statCards.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""} />
+          ))}
         </div>
 
-        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {extraCards.map((card) => <StatBox key={card.title} card={card} />)}
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {extraCards.map((card, i) => (
+            <StatBox key={card.title} card={card} className={i === extraCards.length - 1 && extraCards.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""} />
+          ))}
         </div>
 
         <div className="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
@@ -533,7 +538,7 @@ export default function AnalyticsPage() {
             </div>
 
             <select value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)} className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400 lg:w-80">
-              <option value="">Выбери товар</option>
+              <option value="">Выберите товар</option>
               {productNames.map((n) => (
                 <option key={n} value={n}>{n}</option>
               ))}
@@ -572,7 +577,7 @@ export default function AnalyticsPage() {
             </div>
           ) : (
             <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-slate-950/50 p-10 text-center font-bold text-slate-400">
-              Выбери товар для графика.
+              Выберите товар для графика.
             </div>
           )}
         </div>
@@ -593,10 +598,10 @@ export default function AnalyticsPage() {
                     "Выручка",
                     "Чистая прибыль",
                     "Расходы",
-                    "Выручка после расходов",
-                    "Чистая прибыль после расходов",
+                    "Выручка − расходы",
+                    "Прибыль − расходы",
                     "Сумма закупа",
-                    "Сумма продажных цен",
+                    "Продажи по прайсу",
                   ].map((h) => (
                     <th key={h} className="border-b border-white/10 p-4 text-center text-xs font-black uppercase tracking-wide first:text-left">{h}</th>
                   ))}
@@ -634,7 +639,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-3"><p className="text-slate-400">Выручка</p><b className="text-white">{formatMoney(m.revenue)}</b></div>
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-3"><p className="text-slate-400">Расходы</p><b className="text-red-200">{formatMoney(m.totalExpenses)}</b></div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-3"><p className="text-slate-400">Расходы</p><b className="text-red-300">{formatMoney(m.totalExpenses)}</b></div>
                   <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-3"><p className="text-slate-400">Закуп</p><b className="text-white">{formatMoney(m.purchaseTotal)}</b></div>
                   <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-3"><p className="text-slate-400">Чистая прибыль</p><b className="text-emerald-300">{formatMoney(m.cleanProfit)}</b></div>
                 </div>

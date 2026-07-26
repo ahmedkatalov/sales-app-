@@ -193,7 +193,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             {[
               ["month", "Этот месяц", () => { setFromDate(monthStart()); setToDate(monthEnd()); }],
               ["today", "Сегодня",    () => { const d = today(); setFromDate(d); setToDate(d); }],
-              ["all",   "Всё время",  () => { setFromDate(""); setToDate(""); }],
+              ["all",   "За всё время",  () => { setFromDate(""); setToDate(""); }],
             ].map(([key, label, action]) => {
               const isMonth = key === "month" && fromDate === monthStart() && toDate === monthEnd();
               const isToday = key === "today" && fromDate === today() && toDate === today();
@@ -234,7 +234,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             </svg>
             Фильтр
             {(filterCategory !== "all" || filterType !== "all" || (fromDate && fromDate !== monthStart())) && (
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[9px] font-black text-white">!</span>
+              <span className="h-2 w-2 rounded-full bg-blue-400" />
             )}
           </button>
         </div>
@@ -323,26 +323,34 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         )}
       </div>
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-[2rem] border border-red-400/20 bg-linear-to-br from-red-500/15 to-white/4 p-5 shadow-2xl backdrop-blur-xl">
-          <p className="text-xs font-black uppercase tracking-wide text-red-200">Итого расходов</p>
-          <p className="mt-3 text-3xl font-black text-white">{formatMoney(total)}</p>
-          <p className="mt-1 text-xs font-bold text-slate-400">по выбранному периоду</p>
+      <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+        <div className="rounded-2xl border border-red-400/25 bg-red-500/[0.08] p-3 backdrop-blur-xl sm:p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-500/20 text-red-300 sm:h-9 sm:w-9 sm:rounded-xl">₽</span>
+            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-red-200/90 sm:text-[11px]">Итого расходов</p>
+          </div>
+          <p className="mt-2 text-xl font-black tabular-nums text-white sm:text-2xl">{formatMoney(total)}</p>
         </div>
-        <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-2xl backdrop-blur-xl">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-400">Записей</p>
-          <p className="mt-3 text-3xl font-black text-white">{visibleExpenses.length}</p>
-          <p className="mt-1 text-xs font-bold text-slate-400">отфильтровано</p>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-500/15 text-slate-300 sm:h-9 sm:w-9 sm:rounded-xl">№</span>
+            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Записей</p>
+          </div>
+          <p className="mt-2 text-xl font-black text-white sm:text-2xl">{visibleExpenses.length}</p>
         </div>
-        <div className="rounded-[2rem] border border-blue-400/20 bg-blue-500/10 p-5 shadow-2xl backdrop-blur-xl">
-          <p className="text-xs font-black uppercase tracking-wide text-blue-200">Категория</p>
-          <p className="mt-3 text-2xl font-black text-white">{filterCategory === "all" ? "Все" : categoryLabel(filterCategory)}</p>
-          <p className="mt-1 text-xs font-bold text-slate-400">активный фильтр</p>
+        <div className="rounded-2xl border border-blue-400/20 bg-blue-500/[0.08] p-3 backdrop-blur-xl sm:p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 text-blue-300 sm:h-9 sm:w-9 sm:rounded-xl">🏷</span>
+            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-blue-200/90 sm:text-[11px]">Категория</p>
+          </div>
+          <p className="mt-2 truncate text-base font-black text-white sm:text-xl">{filterCategory === "all" ? "Все" : categoryLabel(filterCategory)}</p>
         </div>
-        <div className="rounded-[2rem] border border-violet-400/20 bg-violet-500/10 p-5 shadow-2xl backdrop-blur-xl">
-          <p className="text-xs font-black uppercase tracking-wide text-violet-200">Тип</p>
-          <p className="mt-3 truncate text-2xl font-black text-white">{filterType === "all" ? "Все типы" : filterType}</p>
-          <p className="mt-1 text-xs font-bold text-slate-400">внутри категории</p>
+        <div className="rounded-2xl border border-violet-400/20 bg-violet-500/[0.08] p-3 backdrop-blur-xl sm:p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-violet-300 sm:h-9 sm:w-9 sm:rounded-xl">≡</span>
+            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-violet-200/90 sm:text-[11px]">Тип</p>
+          </div>
+          <p className="mt-2 truncate text-base font-black text-white sm:text-xl">{filterType === "all" ? "Все типы" : filterType}</p>
         </div>
       </div>
 
@@ -360,14 +368,15 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* На телефоне добавление — плавающей кнопкой снизу, итог — в карточке сверху */}
+          <div className="hidden gap-3 sm:flex sm:items-center">
             <button
               onClick={() => setExpenseModal(true)}
-              className="w-full rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] sm:w-auto"
+              className="rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)]"
             >
               + Добавить расход
             </button>
-            <div className="rounded-3xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-white">
+            <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-white">
               <p className="text-sm text-red-200">Итого</p>
               <p className="text-2xl font-black">{formatMoney(total)}</p>
             </div>
@@ -381,7 +390,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 <th className="p-4">Дата</th>
                 <th className="p-4">Категория</th>
                 <th className="p-4">Тип</th>
-                <th className="p-4">За что</th>
+                <th className="p-4">Назначение</th>
                 <th className="p-4">Комментарий</th>
                 <th className="p-4">Сумма</th>
                 <th className="p-4">Кто добавил</th>
@@ -435,40 +444,36 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
         <div className="divide-y divide-white/10 md:hidden">
           {visibleExpenses.map((e) => (
-            <div key={e.id} className="p-4">
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-lg font-black text-white">{e.name}</p>
-                  <p className="text-sm text-slate-400">{categoryLabel(e.category)} · {e.type || "—"}</p>
-                  <p className="text-sm text-slate-500">{String(e.createdAt || "").slice(0, 10) || "—"}</p>
-                  {e.comment && <p className="mt-1 text-sm text-slate-400">{e.comment}</p>}
-                  <p className="mt-1 text-sm text-slate-500">Кто добавил: {e.employeeName || "—"}</p>
-                </div>
+            <div key={e.id} className="flex items-start justify-between gap-3 p-3.5">
+              <div className="min-w-0">
+                <p className="truncate text-base font-black text-white">{e.name}</p>
+                <p className="truncate text-xs text-slate-400">{categoryLabel(e.category)} · {e.type || "—"}</p>
+                <p className="mt-0.5 truncate text-xs text-slate-500">
+                  {String(e.createdAt || "").slice(0, 10) || "—"}{e.employeeName ? ` · ${e.employeeName}` : ""}
+                </p>
+                {e.comment && <p className="mt-1 truncate text-xs text-slate-400">{e.comment}</p>}
+              </div>
 
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="whitespace-nowrap text-base font-black tabular-nums text-red-400">−{formatMoney(e.amount)}</span>
                 {!workerMode && (
                   <button
                     onClick={() => openDeleteExpense(e)}
-                    className="shrink-0 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 font-black text-red-200"
+                    aria-label="Удалить расход"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/10 text-red-300 transition hover:bg-red-500/20"
                   >
-                    ×
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
                   </button>
                 )}
-              </div>
-
-              <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-3">
-                <p className="text-sm text-red-200">Сумма расхода</p>
-                <p className="text-xl font-black text-red-200">{formatMoney(e.amount)}</p>
               </div>
             </div>
           ))}
 
           {!visibleExpenses.length && <div className="p-10 text-center font-bold text-slate-400">Расходов пока нет</div>}
 
-          <div className="bg-slate-950/70 p-4 font-black text-white">
-            <div className="flex justify-between">
-              <span>Итого</span>
-              <span className="text-red-200">{formatMoney(total)}</span>
-            </div>
+          <div className="flex justify-between bg-slate-950/60 p-4 font-black text-white">
+            <span>Итого</span>
+            <span className="tabular-nums text-red-400">{formatMoney(total)}</span>
           </div>
         </div>
       </div>
@@ -510,7 +515,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             </label>
 
             <label>
-              <span className="mb-2 block text-sm font-black text-slate-300">За что оплатили</span>
+              <span className="mb-2 block text-sm font-black text-slate-300">Назначение</span>
               <input
                 value={form.name}
                 onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
@@ -553,7 +558,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               onClick={createExpense}
               className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)]"
             >
-              Создать
+              Добавить расход
             </button>
           </div>
         </Modal>

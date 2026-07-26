@@ -17,7 +17,7 @@ function saleDateParts(createdAt) {
 
 const moneyValue = (value) => formatMoney(Number(value || 0));
 
-function StatCard({ title, value, subtitle, icon, tone = "blue" }) {
+function StatCard({ title, value, subtitle, icon, tone = "blue", className = "" }) {
   const tones = {
     blue: "from-blue-600/25 to-indigo-700/10 border-blue-400/25 text-blue-200",
     green: "from-emerald-600/25 to-teal-700/10 border-emerald-400/25 text-emerald-200",
@@ -27,16 +27,16 @@ function StatCard({ title, value, subtitle, icon, tone = "blue" }) {
   };
 
   return (
-    <div className={`relative overflow-hidden rounded-[1.75rem] border bg-gradient-to-br ${tones[tone] || tones.blue} p-5 shadow-[0_24px_80px_rgba(0,0,0,0.22)]`}>
+    <div className={`relative overflow-hidden rounded-2xl border bg-gradient-to-br sm:rounded-[1.75rem] ${tones[tone] || tones.blue} p-3.5 shadow-[0_24px_80px_rgba(0,0,0,0.22)] sm:p-5 ${className}`}>
       <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
       <div className="absolute bottom-0 right-0 h-px w-32 bg-gradient-to-l from-white/30 to-transparent" />
-      <div className="relative flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{title}</p>
-          <p className="mt-3 text-3xl font-black text-white sm:text-4xl">{value}</p>
-          {subtitle && <p className="mt-2 text-xs font-bold text-slate-400">{subtitle}</p>}
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 sm:text-xs">{title}</p>
+          <p className="mt-1.5 text-xl font-black text-white sm:mt-3 sm:text-4xl">{value}</p>
+          {subtitle && <p className="mt-1 truncate text-[11px] font-bold text-slate-400 sm:mt-2 sm:text-xs">{subtitle}</p>}
         </div>
-        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/10 text-xl shadow-inner shadow-white/10">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-base shadow-inner shadow-white/10 sm:h-12 sm:w-12 sm:rounded-2xl sm:text-xl">
           {icon}
         </div>
       </div>
@@ -109,10 +109,11 @@ export default function SalesAnalyticsPage() {
             type="button"
             onClick={load}
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-slate-950/70 px-5 py-4 text-sm font-black text-white shadow-[0_20px_60px_rgba(0,0,0,0.25)] transition hover:border-blue-400/40 hover:bg-blue-600/20 disabled:opacity-60"
+            aria-label="Обновить"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3.5 text-sm font-black text-white shadow-[0_20px_60px_rgba(0,0,0,0.25)] transition hover:border-blue-400/40 hover:bg-blue-600/20 disabled:opacity-60 sm:px-5 sm:py-4"
           >
-            <span className={loading ? "inline-block animate-spin" : ""}>⟳</span>
-            {loading ? "Загрузка" : "Обновить"}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "animate-spin" : ""}><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+            <span className="hidden sm:inline">{loading ? "Обновление" : "Обновить"}</span>
           </button>
         </div>
 
@@ -139,7 +140,7 @@ export default function SalesAnalyticsPage() {
                   <button key={key} type="button" onClick={action}
                     className={active
                       ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
-                      : "rounded-xl border border-white/10 bg-white/8 px-4 py-2 text-sm font-black text-slate-300 transition hover:bg-white/15"}>
+                      : "rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-slate-300 transition hover:bg-white/10"}>
                     {label}
                   </button>
                 );
@@ -152,10 +153,10 @@ export default function SalesAnalyticsPage() {
             </div>
             <button type="button" onClick={() => setFilterOpen((v) => !v)}
               className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-black transition ${
-                filterOpen ? "border-blue-400/40 bg-blue-500/15 text-blue-200" : "border-white/10 bg-white/8 text-slate-300 hover:bg-white/15"
+                filterOpen ? "border-blue-400/40 bg-blue-500/15 text-blue-200" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
               }`}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-              Фильтр
+              Период
             </button>
           </div>
 
@@ -178,12 +179,12 @@ export default function SalesAnalyticsPage() {
           )}
         </div>
 
-        <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <StatCard title="Выручка" value={moneyValue(stats.totalRevenue)} subtitle="общая сумма" icon="₽" tone="blue" />
-          <StatCard title="Скидки" value={moneyValue(stats.totalDiscount)} subtitle="скидки за период" icon="%" tone="red" />
-          <StatCard title="Продаж" value={Number(stats.salesCount || 0)} subtitle="количество чеков" icon="🧾" tone="purple" />
+          <StatCard title="Скидки" value={moneyValue(stats.totalDiscount)} subtitle="за период" icon="%" tone="red" />
+          <StatCard title="Продаж" value={Number(stats.salesCount || 0)} subtitle="чеков" icon="🧾" tone="purple" />
           <StatCard title="Наличные" value={moneyValue(stats.cashTotal)} subtitle="оплата наличкой" icon="💵" tone="green" />
-          <StatCard title="Переводы" value={moneyValue(stats.transferTotal)} subtitle={`средний чек ${moneyValue(avgCheck)}`} icon="↗" tone="amber" />
+          <StatCard title="Переводы" value={moneyValue(stats.transferTotal)} subtitle={`средний чек ${moneyValue(avgCheck)}`} icon="↗" tone="amber" className="col-span-2 xl:col-span-1" />
         </div>
 
         <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
@@ -251,9 +252,8 @@ export default function SalesAnalyticsPage() {
             <section className="overflow-hidden rounded-[2rem] border border-amber-400/25 bg-amber-500/[0.05] shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl">
               <div className="flex items-center justify-between gap-3 border-b border-amber-400/20 p-5 sm:p-6">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300/80">Отдельно от меню</p>
-                  <h3 className="mt-0.5 text-xl font-black text-white sm:text-2xl">Доп. товары</h3>
-                  <p className="mt-0.5 text-sm text-slate-400">Стаканчики, лёд и т.п. — не входят в продажи блюд выше</p>
+                  <h3 className="text-xl font-black text-white sm:text-2xl">Доп. товары</h3>
+                  <p className="mt-0.5 text-sm text-slate-400">Стаканчики, лёд и т.п. — не входят в меню</p>
                 </div>
                 <div className="text-right">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Доход</p>
@@ -286,7 +286,7 @@ export default function SalesAnalyticsPage() {
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-violet-500/15 text-xl">🧾</div>
             </div>
 
-            <div className="max-h-[560px] divide-y divide-white/10 overflow-auto">
+            <div className="divide-y divide-white/10 sm:max-h-[560px] sm:overflow-auto">
               {normalizedSales.map((s) => (
                 <div key={s.id} className="p-4 transition hover:bg-white/[0.04] sm:p-5">
                   <div className="flex items-start justify-between gap-4">
@@ -299,11 +299,13 @@ export default function SalesAnalyticsPage() {
 
                   <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
                     <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-slate-300">
-                      {s.paymentType === "cash" ? "Наличные" : `Перевод ${s.cardName || ""}`}
+                      {s.paymentType === "cash" ? "Наличные" : (s.cardName ? `Перевод · ${s.cardName}` : "Перевод")}
                     </span>
-                    <span className="rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1.5 text-red-200">
-                      скидка {s.discountPercent || 0}%
-                    </span>
+                    {Number(s.discountPercent) > 0 && (
+                      <span className="rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1.5 text-red-200">
+                        скидка {s.discountPercent}%
+                      </span>
+                    )}
                   </div>
 
                   <p className="mt-3 text-sm leading-6 text-slate-300">

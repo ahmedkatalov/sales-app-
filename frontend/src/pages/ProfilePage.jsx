@@ -229,7 +229,7 @@ export default function ProfilePage({
   const createWorkspaceUser = async () => {
     setError("");
     const workspaceId = isOwner ? accountForm.workspaceId : workspace?.id;
-    if (!workspaceId)               return setError("Выбери точку");
+    if (!workspaceId)               return setError("Выберите точку");
     if (!accountForm.username.trim()) return setError("Введите логин");
     if (!accountForm.password.trim()) return setError("Введите пароль");
     const role = accountForm.role === "branch_admin" ? "branch_admin" : "worker";
@@ -285,8 +285,8 @@ export default function ProfilePage({
   // ── Мультидоступ ──────────────────────────────────────────────────────────
   const grantAccess = async () => {
     setError("");
-    if (!grantForm.userId)      return setError("Выбери пользователя");
-    if (!grantForm.workspaceId) return setError("Выбери точку");
+    if (!grantForm.userId)      return setError("Выберите пользователя");
+    if (!grantForm.workspaceId) return setError("Выберите точку");
     await post("/workspace-access", {
       userId:      Number(grantForm.userId),
       workspaceId: Number(grantForm.workspaceId),
@@ -375,10 +375,10 @@ export default function ProfilePage({
 
       <div className="relative z-10">
         <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm font-bold text-blue-400">Настройки</p>
-            <h2 className="text-4xl font-black leading-none text-white sm:text-5xl">Настройки</h2>
-            <p className="mt-2 text-slate-400">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-blue-400">{accountTypeLabel}</p>
+            <h2 className="text-3xl font-black leading-none text-white sm:text-5xl">Настройки</h2>
+            <p className="mt-2 text-sm text-slate-400 sm:text-base">
               {isOwner
                 ? "Точки, логины для входа и продавцы."
                 : "Выбор продавца и управление текущей точкой."}
@@ -386,25 +386,29 @@ export default function ProfilePage({
           </div>
           <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
             <ThemeToggle variant="full" className="w-full sm:w-auto" />
-            <button type="button" onClick={logout} className="btn-white w-full lg:w-auto">Выйти</button>
+            <button type="button" onClick={logout}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-500/25 bg-red-500/10 px-5 py-3 font-black text-red-300 transition hover:bg-red-500/20 sm:w-auto lg:w-auto">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              Выйти
+            </button>
           </div>
         </header>
 
         {error && (
-          <div role="alert" className="mb-4 rounded-2xl bg-red-50 px-4 py-3 font-bold text-red-600">{error}</div>
+          <div role="alert" className="mb-4 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 font-bold text-red-300">{error}</div>
         )}
 
         {/* Табы */}
-        <section className="mb-5 rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-2 shadow-2xl backdrop-blur">
-          <div role="tablist" className="grid gap-2 sm:flex">
+        <section className="mb-5 rounded-3xl border border-white/10 bg-[#0f172a]/80 p-2 shadow-2xl backdrop-blur">
+          <div role="tablist" className="no-scrollbar -mx-0.5 flex gap-2 overflow-x-auto px-0.5 sm:flex-wrap">
             {tabs.map((tab) => (
               <button key={tab.id} type="button" role="tab"
                 aria-selected={activeTab === tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`rounded-2xl px-5 py-3 text-left font-black transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
+                className={`shrink-0 rounded-2xl px-4 py-2.5 text-sm font-black transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 sm:px-5 sm:py-3 ${
                   activeTab === tab.id
-                    ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white"
-                    : "bg-[#111827]/5 text-slate-400 hover:bg-[#111827]/10"
+                    ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg"
+                    : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"
                 }`}>
                 {tab.label}
               </button>
@@ -412,15 +416,15 @@ export default function ProfilePage({
           </div>
         </section>
 
-        {loading && <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3 font-bold text-blue-400">Загрузка...</div>}
+        {loading && <div className="mb-4 rounded-2xl border border-blue-500/25 bg-blue-500/10 px-4 py-3 font-bold text-blue-300">Загрузка…</div>}
 
         {/* ── Обзор ── */}
         {activeTab === "overview" && (
           <section className="grid gap-5 xl:grid-cols-3">
             <div className="overflow-hidden rounded-[32px] border border-white/10 bg-[#0f172a]/80 shadow-2xl backdrop-blur xl:col-span-2">
-              <div className="bg-gradient-to-r from-blue-600 to-violet-600 p-6 text-white">
-                <p className="text-sm font-bold uppercase text-slate-300">{accountTypeLabel}</p>
-                <h3 className="mt-1 break-words text-3xl font-black">{session?.username}</h3>
+              <div className="bg-gradient-to-r from-blue-600 to-violet-600 p-5 text-white sm:p-6">
+                <p className="text-sm font-bold uppercase text-blue-100">{accountTypeLabel}</p>
+                <h3 className="mt-1 break-all text-xl font-black sm:text-3xl">{session?.username}</h3>
               </div>
               <div className="grid gap-4 p-5 sm:grid-cols-2">
                 <div className="rounded-3xl bg-white/5 p-5">
@@ -442,7 +446,7 @@ export default function ProfilePage({
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="text-2xl font-black">Точки и филиалы</h3>
-                <p className="mt-1 max-w-xl text-sm text-slate-400">Каждая точка — отдельный магазин со своими товарами, складом и продажами. Нажми на точку, чтобы переключиться на неё.</p>
+                <p className="mt-1 max-w-xl text-sm text-slate-400">Каждая точка — отдельный магазин со своими товарами, складом и продажами. Нажмите на точку, чтобы переключиться на неё.</p>
               </div>
               <button type="button" onClick={() => setModal("workspace")} className="btn-blue shrink-0">+ Новая точка</button>
             </div>
@@ -477,7 +481,7 @@ export default function ProfilePage({
               <div>
                 <h3 className="text-2xl font-black">Доступы к точкам</h3>
                 <p className="mt-1 text-sm text-slate-400">
-                  Дай одному пользователю доступ к нескольким точкам. Например, сделай Ахмеда администратором и «Noor Coffee», и «Ресторана Адол».
+                  Дайте одному пользователю доступ к нескольким точкам. Например, сделайте Ахмеда администратором и «Noor Coffee», и «Ресторана Адол».
                 </p>
               </div>
               <button type="button" onClick={() => setModal("grantAccess")} className="btn-blue shrink-0">
@@ -488,44 +492,70 @@ export default function ProfilePage({
             {safe_workspaceAccess.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-white/10 p-10 text-center">
                 <p className="text-lg font-black text-white">Мультидоступ не настроен</p>
-                <p className="mt-1 text-sm text-slate-400">Нажми «Добавить доступ», чтобы дать пользователю доступ к нескольким точкам.</p>
+                <p className="mt-1 text-sm text-slate-400">Нажмите «Добавить доступ», чтобы дать пользователю доступ к нескольким точкам.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-2xl border border-white/10">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-white/10 bg-white/5 text-xs uppercase tracking-wide text-slate-400">
-                    <tr>
-                      <th className="px-4 py-3 text-left">Пользователь</th>
-                      <th className="px-4 py-3 text-left">Точка</th>
-                      <th className="px-4 py-3 text-left">Роль</th>
-                      <th className="px-4 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {safe_workspaceAccess.map((a) => (
-                      <tr key={a.id} className="border-t border-white/10 hover:bg-white/[0.03]">
-                        <td className="px-4 py-3 font-black text-white">{a.username}</td>
-                        <td className="px-4 py-3 text-slate-300">{a.workspaceName}</td>
-                        <td className="px-4 py-3">
-                          <span className={`rounded-xl px-3 py-1 text-xs font-black ${
-                            a.role === "branch_admin"
-                              ? "bg-blue-500/20 text-blue-300"
-                              : "bg-slate-500/20 text-slate-300"
-                          }`}>
-                            {a.role === "branch_admin" ? "Администратор" : "Работник"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <button type="button" onClick={() => revokeAccess(a.id)}
-                            className="rounded-xl bg-red-500/10 px-3 py-1.5 text-xs font-black text-red-400 hover:bg-red-500/20">
-                            Убрать
-                          </button>
-                        </td>
+              <>
+                {/* Таблица — планшет и десктоп */}
+                <div className="hidden overflow-x-auto rounded-2xl border border-white/10 md:block">
+                  <table className="w-full text-sm">
+                    <thead className="border-b border-white/10 bg-white/5 text-xs uppercase tracking-wide text-slate-400">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Пользователь</th>
+                        <th className="px-4 py-3 text-left">Точка</th>
+                        <th className="px-4 py-3 text-left">Роль</th>
+                        <th className="px-4 py-3" />
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {safe_workspaceAccess.map((a) => (
+                        <tr key={a.id} className="border-t border-white/10 hover:bg-white/[0.03]">
+                          <td className="px-4 py-3 font-black text-white">{a.username}</td>
+                          <td className="px-4 py-3 text-slate-300">{a.workspaceName}</td>
+                          <td className="px-4 py-3">
+                            <span className={`rounded-xl px-3 py-1 text-xs font-black ${
+                              a.role === "branch_admin"
+                                ? "bg-blue-500/20 text-blue-300"
+                                : "bg-slate-500/20 text-slate-300"
+                            }`}>
+                              {a.role === "branch_admin" ? "Администратор" : "Кассир"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button type="button" onClick={() => revokeAccess(a.id)}
+                              className="rounded-xl bg-red-500/10 px-3 py-1.5 text-xs font-black text-red-400 hover:bg-red-500/20">
+                              Убрать
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Карточки — телефон */}
+                <div className="grid gap-3 md:hidden">
+                  {safe_workspaceAccess.map((a) => (
+                    <div key={a.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-black text-white">{a.username}</p>
+                          <p className="mt-0.5 truncate text-sm text-slate-400">{a.workspaceName}</p>
+                        </div>
+                        <span className={`shrink-0 rounded-xl px-3 py-1 text-xs font-black ${
+                          a.role === "branch_admin" ? "bg-blue-500/20 text-blue-300" : "bg-slate-500/20 text-slate-300"
+                        }`}>
+                          {a.role === "branch_admin" ? "Администратор" : "Кассир"}
+                        </span>
+                      </div>
+                      <button type="button" onClick={() => revokeAccess(a.id)}
+                        className="mt-3 w-full rounded-xl bg-red-500/10 px-3 py-2 text-sm font-black text-red-400 hover:bg-red-500/20">
+                        Убрать доступ
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </section>
         )}
@@ -553,7 +583,7 @@ export default function ProfilePage({
                   <div className="mt-auto grid gap-2 pt-5">
                     <button type="button" onClick={() => openManageProfiles(u)}
                       className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white transition hover:brightness-110">
-                      Продавцы под этим логином
+                      Продавцы логина
                     </button>
                     <button type="button" onClick={() => removeWorkspaceUser(u.id)}
                       className="rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm font-black text-red-300 transition hover:bg-red-500/20">
@@ -565,7 +595,7 @@ export default function ProfilePage({
               {!visibleWorkspaceUsers.length && (
                 <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center md:col-span-2 xl:col-span-3">
                   <p className="text-lg font-black text-white">Логинов пока нет</p>
-                  <p className="mt-1 text-sm text-slate-400">Создай логин — это вход в кассу для сотрудника. Потом добавь под ним продавцов.</p>
+                  <p className="mt-1 text-sm text-slate-400">Создайте логин — это вход в кассу для сотрудника. Потом добавьте под ним продавцов.</p>
                 </div>
               )}
             </div>
@@ -578,7 +608,7 @@ export default function ProfilePage({
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="text-2xl font-black">Продавцы</h3>
-                <p className="mt-1 max-w-xl text-sm text-slate-400">Имена продавцов — на кого записывается продажа. Пароль не нужен. Отметь, кто сейчас за кассой.</p>
+                <p className="mt-1 max-w-xl text-sm text-slate-400">Имена продавцов — на кого записывается продажа. Пароль не нужен. Отметьте, кто сейчас за кассой.</p>
               </div>
               <button type="button" onClick={() => setModal("employee")} className="btn-blue shrink-0">+ Добавить продавца</button>
             </div>
@@ -603,7 +633,7 @@ export default function ProfilePage({
                       className={`flex-1 rounded-2xl px-4 py-3 font-black transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
                         active ? "bg-white/15 text-white" : "bg-gradient-to-r from-blue-600 to-violet-600 text-white hover:brightness-110"
                       }`}>
-                      {active ? "Выбран" : "Поставить за кассу"}
+                      {active ? "Выбран" : "За кассу"}
                     </button>
                     <button type="button" onClick={() => removeEmployee(e.id)}
                       className={`rounded-2xl px-4 py-3 font-black transition focus:outline-none ${
@@ -618,7 +648,7 @@ export default function ProfilePage({
               {!safe_employees.length && (
                 <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center md:col-span-2 xl:col-span-3">
                   <p className="text-lg font-black text-white">Продавцов пока нет</p>
-                  <p className="mt-1 text-sm text-slate-400">Добавь продавца — его имя будет в чеках и отчётах по продажам.</p>
+                  <p className="mt-1 text-sm text-slate-400">Добавьте продавца — его имя будет в чеках и отчётах по продажам.</p>
                 </div>
               )}
             </div>
@@ -631,14 +661,14 @@ export default function ProfilePage({
             <div className="mb-5">
               <h3 className="text-2xl font-black">Права на страницы</h3>
               <p className="mt-1 text-sm text-slate-400">
-                Выбери пользователя и настрой какие страницы он видит. Owner и Admin всегда имеют полный доступ.
+                Выберите пользователя и настройте, какие страницы он видит. Владелец и администратор всегда имеют полный доступ.
               </p>
             </div>
 
             {safe_workspaceUsers.filter(u => u.role === "worker" || u.role === "branch_admin").length === 0 ? (
               <div className="rounded-3xl border border-dashed border-white/10 p-10 text-center">
                 <p className="text-lg font-black text-white">Логинов пока нет</p>
-                <p className="mt-1 text-sm text-slate-400">Создай логин в разделе «Логины».</p>
+                <p className="mt-1 text-sm text-slate-400">Создайте логин в разделе «Логины».</p>
               </div>
             ) : (
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -656,8 +686,8 @@ export default function ProfilePage({
                           <p className="text-xs text-slate-400">{u.workspaceName}</p>
                         </div>
                         <button type="button" onClick={() => openEditPerms(u)}
-                          className="rounded-xl bg-blue-500/20 px-3 py-1.5 text-xs font-black text-blue-300 hover:bg-blue-500/30">
-                          ✏ Права
+                          className="shrink-0 rounded-xl bg-blue-500/20 px-3 py-1.5 text-xs font-black text-blue-300 hover:bg-blue-500/30">
+                          Настроить
                         </button>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
@@ -707,7 +737,7 @@ export default function ProfilePage({
                       <p className="mt-1 text-sm font-bold text-slate-400">{card.owner || "Владелец не указан"}</p>
                     </div>
                     <button type="button" onClick={() => removeCard(card.id)}
-                      className="rounded-2xl bg-red-50 px-4 py-3 font-black text-red-600 hover:bg-red-100">
+                      className="shrink-0 rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm font-black text-red-300 transition hover:bg-red-500/20">
                       Удалить
                     </button>
                   </div>
@@ -727,7 +757,7 @@ export default function ProfilePage({
         {modal === "editPerms" && editingPerms && (
           <Modal title={`Права: ${editingPerms.username}`} wide>
             <p className="mb-4 text-sm text-slate-400">
-              Выбери страницы к которым у этого пользователя будет доступ.
+              Выберите страницы, к которым у этого пользователя будет доступ.
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
               {ALL_PAGES.map((page) => {
@@ -772,7 +802,7 @@ export default function ProfilePage({
                 <span className="mb-1.5 block text-sm font-black text-slate-300">Пользователь</span>
                 <select value={grantForm.userId} onChange={(e) => setGrantForm((p) => ({ ...p, userId: e.target.value }))}
                   className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
-                  <option value="">Выбери пользователя</option>
+                  <option value="">Выберите пользователя</option>
                   {safe_workspaceUsers.map((u) => (
                     <option key={u.id} value={u.id}>{u.username} — {u.workspaceName}</option>
                   ))}
@@ -782,7 +812,7 @@ export default function ProfilePage({
                 <span className="mb-1.5 block text-sm font-black text-slate-300">Точка доступа</span>
                 <select value={grantForm.workspaceId} onChange={(e) => setGrantForm((p) => ({ ...p, workspaceId: e.target.value }))}
                   className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
-                  <option value="">Выбери точку</option>
+                  <option value="">Выберите точку</option>
                   {safe_workspaces.map((w) => (
                     <option key={w.id} value={w.id}>{w.name}</option>
                   ))}
@@ -793,7 +823,7 @@ export default function ProfilePage({
                 <select value={grantForm.role} onChange={(e) => setGrantForm((p) => ({ ...p, role: e.target.value }))}
                   className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
                   <option value="branch_admin">Администратор точки</option>
-                  <option value="worker">Работник</option>
+                  <option value="worker">Кассир</option>
                 </select>
               </label>
             </div>
@@ -811,7 +841,7 @@ export default function ProfilePage({
               <p className="break-words text-2xl font-black">{managedAccount?.username}</p>
               <p className="mt-1 text-sm text-blue-100">{managedAccount?.workspaceName}</p>
             </div>
-            <p className="mb-3 text-sm text-slate-400">Добавь продавцов — их имена попадут в чеки и отчёты. Пароль необязателен: если задать, продавец будет вводить его, когда встаёт за кассу.</p>
+            <p className="mb-3 text-sm text-slate-400">Добавьте продавцов — их имена попадут в чеки и отчёты. Пароль необязателен: если задать, продавец будет вводить его, когда встаёт за кассу.</p>
             <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
               <label className="block">
                 <span className="mb-2 block text-sm font-black text-slate-400">Имя продавца</span>
@@ -841,7 +871,7 @@ export default function ProfilePage({
                 <div className="rounded-2xl bg-white/5 p-5 text-center text-slate-400 sm:col-span-2">Продавцов пока нет.</div>
               )}
             </div>
-            <button type="button" onClick={() => setModal(null)} className="btn-white mt-6 w-full">Готово</button>
+            <button type="button" onClick={() => setModal(null)} className="btn-white mt-6 w-full">Закрыть</button>
           </Modal>
         )}
 
@@ -908,7 +938,7 @@ export default function ProfilePage({
                   <select value={accountForm.workspaceId}
                     onChange={(e) => setAccountForm((p) => ({ ...p, workspaceId: e.target.value }))}
                     className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
-                    <option value="">Выбери точку</option>
+                    <option value="">Выберите точку</option>
                     {safe_workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
                   </select>
                 </label>
