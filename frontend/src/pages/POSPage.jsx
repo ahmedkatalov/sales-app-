@@ -543,15 +543,22 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
     if (!newProduct.categoryId) return setError("Выбери категорию");
     if (!newProduct.name.trim()) return setError("Введите название позиции");
 
+    const wItems = Array.isArray(warehouseItems) ? warehouseItems : [];
     const cleanRecipe = recipe
-      .filter((row) => row.warehouseItemId && num(row.quantity) > 0)
-      .map((row) => ({
-        warehouseItemId: Number(row.warehouseItemId),
-        warehouse_item_id: Number(row.warehouseItemId),
-        quantity: num(row.quantity),
-        quantityUnit: row.quantityUnit || "",
-        quantity_unit: row.quantityUnit || "",
-      }));
+      .filter((row) => (row.warehouseItemId || row.ingredientName) && num(row.quantity) > 0)
+      .map((row) => {
+        const wItem = wItems.find((w) => String(w.id) === String(row.warehouseItemId));
+        const unit = row.quantityUnit || wItem?.unit || "";
+        return {
+          warehouseItemId: Number(row.warehouseItemId) || 0,
+          warehouse_item_id: Number(row.warehouseItemId) || 0,
+          ingredientName: row.ingredientName || wItem?.name || "",
+          itemName: row.ingredientName || wItem?.name || "",
+          quantity: num(row.quantity),
+          quantityUnit: unit,
+          quantity_unit: unit,
+        };
+      });
 
     await post("/menu-products", {
       categoryId: Number(newProduct.categoryId),

@@ -2,7 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -353,8 +355,23 @@ func updateMenuProduct(c *gin.Context) {
 	accID := accountID(c)
 	productID := c.Param("id")
 
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Определяем, прислал ли клиент поле recipe ВООБЩЕ.
+	// Нет ключа recipe  → частичное обновление (цена/название) — состав НЕ трогаем.
+	// recipe: []        → клиент явно очистил состав.
+	// Это защищает от потери ингредиентов, когда обновляют только цену/название
+	// (старый фронт, быстрые правки, любой частичный PUT без состава).
+	var rawFields map[string]json.RawMessage
+	_ = json.Unmarshal(body, &rawFields)
+	_, recipeProvided := rawFields["recipe"]
+
 	var p MenuProduct
-	if err := c.ShouldBindJSON(&p); err != nil {
+	if err := json.Unmarshal(body, &p); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -388,87 +405,91 @@ func updateMenuProduct(c *gin.Context) {
 		return
 	}
 
-	// Delete old recipe and recreate
-	if _, err := tx.Exec(`DELETE FROM product_recipes WHERE product_id = ? AND account_id = ?`, productID, accID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	for _, recipeItem := range p.Recipe {
-		warehouseItemID := recipeItem.WarehouseItemID
-		if warehouseItemID == 0 {
-			warehouseItemID = recipeItem.WarehouseItemIDSnake
-		}
-		ingredientName := strings.TrimSpace(recipeItem.IngredientName)
-		if ingredientName == "" {
-			ingredientName = strings.TrimSpace(recipeItem.ItemName)
-		}
-		if (warehouseItemID <= 0 && ingredientName == "") || recipeItem.Quantity <= 0 {
-			continue
-		}
-		inputUnit := strings.TrimSpace(recipeItem.QuantityUnit)
-		if inputUnit == "" {
-			inputUnit = strings.TrimSpace(recipeItem.QuantityUnitSnake)
-		}
-		if inputUnit == "" {
-			inputUnit = "g"
+	// Состав переписываем ТОЛЬКО если клиент реально прислал recipe.
+	// Иначе (частичное обновление) — существующие ингредиенты сохраняются.
+	if recipeProvided {
+		// Delete old recipe and recreate
+		if _, err := tx.Exec(`DELETE FROM product_recipes WHERE product_id = ? AND account_id = ?`, productID, accID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
 
-		var storageQty float64
-		var conversionNote string
-
-		if warehouseItemID > 0 {
-			var convErr error
-			storageQty, conversionNote, convErr = convertRecipeToStorage(tx, accID, warehouseItemID, recipeItem.Quantity, inputUnit)
-			if convErr != nil {
-				storageQty = recipeItem.Quantity
-				conversionNote = "conversion_error"
+		for _, recipeItem := range p.Recipe {
+			warehouseItemID := recipeItem.WarehouseItemID
+			if warehouseItemID == 0 {
+				warehouseItemID = recipeItem.WarehouseItemIDSnake
 			}
-		} else {
-			storageQty = recipeItem.Quantity
-			conversionNote = "pending_link"
-			var foundID int
-			_ = tx.QueryRow(`
-				SELECT id FROM warehouse_items
-				WHERE account_id = ? AND LOWER(TRIM(name)) LIKE LOWER(TRIM(?)) AND (hidden IS NULL OR hidden = 0)
-				LIMIT 1
-			`, accID, "%"+strings.ToLower(strings.TrimSpace(ingredientName))+"%").Scan(&foundID)
-			if foundID == 0 {
-				foundID = fuzzyFindWarehouseItemTx(tx, accID, ingredientName)
+			ingredientName := strings.TrimSpace(recipeItem.IngredientName)
+			if ingredientName == "" {
+				ingredientName = strings.TrimSpace(recipeItem.ItemName)
 			}
-			if foundID > 0 {
-				warehouseItemID = foundID
+			if (warehouseItemID <= 0 && ingredientName == "") || recipeItem.Quantity <= 0 {
+				continue
+			}
+			inputUnit := strings.TrimSpace(recipeItem.QuantityUnit)
+			if inputUnit == "" {
+				inputUnit = strings.TrimSpace(recipeItem.QuantityUnitSnake)
+			}
+			if inputUnit == "" {
+				inputUnit = "g"
+			}
+
+			var storageQty float64
+			var conversionNote string
+
+			if warehouseItemID > 0 {
 				var convErr error
 				storageQty, conversionNote, convErr = convertRecipeToStorage(tx, accID, warehouseItemID, recipeItem.Quantity, inputUnit)
 				if convErr != nil {
 					storageQty = recipeItem.Quantity
-					conversionNote = "auto_linked"
+					conversionNote = "conversion_error"
+				}
+			} else {
+				storageQty = recipeItem.Quantity
+				conversionNote = "pending_link"
+				var foundID int
+				_ = tx.QueryRow(`
+				SELECT id FROM warehouse_items
+				WHERE account_id = ? AND LOWER(TRIM(name)) LIKE LOWER(TRIM(?)) AND (hidden IS NULL OR hidden = 0)
+				LIMIT 1
+			`, accID, "%"+strings.ToLower(strings.TrimSpace(ingredientName))+"%").Scan(&foundID)
+				if foundID == 0 {
+					foundID = fuzzyFindWarehouseItemTx(tx, accID, ingredientName)
+				}
+				if foundID > 0 {
+					warehouseItemID = foundID
+					var convErr error
+					storageQty, conversionNote, convErr = convertRecipeToStorage(tx, accID, warehouseItemID, recipeItem.Quantity, inputUnit)
+					if convErr != nil {
+						storageQty = recipeItem.Quantity
+						conversionNote = "auto_linked"
+					}
 				}
 			}
-		}
 
-		pid := 0
-		_ = tx.QueryRow(`SELECT id FROM menu_products WHERE id = ? AND account_id = ?`, productID, accID).Scan(&pid)
-		if _, err := tx.Exec(`
+			pid := 0
+			_ = tx.QueryRow(`SELECT id FROM menu_products WHERE id = ? AND account_id = ?`, productID, accID).Scan(&pid)
+			if _, err := tx.Exec(`
 			INSERT INTO product_recipes(account_id, product_id, warehouse_item_id, ingredient_name, quantity, input_quantity, input_unit, conversion_note)
 			VALUES(?, ?, ?, ?, ?, ?, ?, ?)
 		`, accID, productID, warehouseItemID, ingredientName, storageQty, recipeItem.Quantity, inputUnit, conversionNote); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
 		}
-	}
 
-	// Recalc auto cost from recipe
-	if len(p.Recipe) > 0 && p.CostMode != "manual" {
-		var autoCost float64
-		_ = tx.QueryRow(`
+		// Recalc auto cost from recipe
+		if len(p.Recipe) > 0 && p.CostMode != "manual" {
+			var autoCost float64
+			_ = tx.QueryRow(`
 			SELECT IFNULL(SUM(r.quantity * w.unit_cost), 0)
 			FROM product_recipes r
 			JOIN warehouse_items w ON w.id = r.warehouse_item_id AND w.account_id = r.account_id
 			WHERE r.product_id = ? AND r.account_id = ?
 		`, productID, accID).Scan(&autoCost)
-		if autoCost > 0 {
-			_, _ = tx.Exec(`UPDATE menu_products SET cost = ? WHERE id = ? AND account_id = ?`, autoCost, productID, accID)
+			if autoCost > 0 {
+				_, _ = tx.Exec(`UPDATE menu_products SET cost = ? WHERE id = ? AND account_id = ?`, autoCost, productID, accID)
+			}
 		}
 	}
 
