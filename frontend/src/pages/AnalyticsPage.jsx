@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -83,7 +83,10 @@ export default function AnalyticsPage() {
     setWorkspaces(ws || []);
   };
 
+  const reqRef = useRef(0);
+
   const loadAnalytics = async () => {
+    const seq = ++reqRef.current; // защита от гонки: устаревший ответ не затирает свежий
     setLoading(true);
     setError("");
 
@@ -200,14 +203,16 @@ export default function AnalyticsPage() {
         }
       }
 
+      if (seq !== reqRef.current) return; // пришёл более свежий запрос — не применяем
+
       setFolders(allFoldersForSelect);
 
       const sorted = Object.values(monthMap).sort((a, b) => a.month.localeCompare(b.month));
       setAnalytics(sorted);
     } catch (e) {
-      setError(e.message || "Ошибка загрузки аналитики");
+      if (seq === reqRef.current) setError(e.message || "Ошибка загрузки аналитики");
     } finally {
-      setLoading(false);
+      if (seq === reqRef.current) setLoading(false);
     }
   };
 
@@ -218,8 +223,10 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     loadAnalytics();
+    // safe_workspaces.length убрали из зависимостей: loadAnalytics сам догружает
+    // точки при необходимости, а этот dep вызывал повторный прогон всего каскада.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceFilter, folderFilter, periodMode, from, to, safe_workspaces.length]);
+  }, [workspaceFilter, folderFilter, periodMode, from, to]);
 
   const totals = useMemo(
     () =>

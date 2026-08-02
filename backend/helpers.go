@@ -2,11 +2,36 @@ package main
 
 import (
 	"database/sql"
-	"github.com/gin-gonic/gin"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
+
+// requireOwner — гейт «только владелец». Пишет 403 и возвращает false, если
+// текущий пользователь не owner. Защищает разрушительные действия и управление
+// доступами от кассиров/админов точек (раньше проверялось только на фронте).
+func requireOwner(c *gin.Context) bool {
+	if u, ok := currentUser(c); ok && strings.EqualFold(strings.TrimSpace(u.Role), "owner") {
+		return true
+	}
+	c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Доступно только владельцу"})
+	return false
+}
+
+// requireManager — гейт «владелец или админ точки» (не кассир).
+func requireManager(c *gin.Context) bool {
+	if u, ok := currentUser(c); ok {
+		r := strings.ToLower(strings.TrimSpace(u.Role))
+		if r == "owner" || r == "branch_admin" || r == "admin" {
+			return true
+		}
+	}
+	c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Недостаточно прав"})
+	return false
+}
 
 func parsePositiveInt(v string) int {
 	id, err := strconv.Atoi(strings.TrimSpace(v))

@@ -1,6 +1,9 @@
 FROM golang:1.21-alpine
 
-RUN apk add --no-cache gcc musl-dev
+# tzdata + фиксированный пояс: created_at пишется в местном времени, а SQL
+# сравнивает через date(...,'localtime') — иначе продажи у полуночи попадали не в тот день.
+RUN apk add --no-cache gcc musl-dev tzdata
+ENV TZ=Europe/Moscow
 
 WORKDIR /app
 COPY go.mod go.sum ./

@@ -654,11 +654,13 @@ func updateItem(c *gin.Context) {
 		return
 	}
 
+	// Скоуп по владельцу папки — иначе любой авторизованный пользователь мог бы
+	// править чужие позиции по id (IDOR).
 	_, err := db.Exec(`
 		UPDATE items
 		SET name = ?, cost = ?, price = ?, qty = ?
-		WHERE id = ?
-	`, i.Name, i.Cost, i.Price, i.Qty, c.Param("id"))
+		WHERE id = ? AND folder_id IN (SELECT id FROM folders WHERE account_id = ?)
+	`, i.Name, i.Cost, i.Price, i.Qty, c.Param("id"), accountID(c))
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -669,7 +671,8 @@ func updateItem(c *gin.Context) {
 }
 
 func deleteItem(c *gin.Context) {
-	_, err := db.Exec(`DELETE FROM items WHERE id = ?`, c.Param("id"))
+	// Скоуп по владельцу папки (IDOR-защита).
+	_, err := db.Exec(`DELETE FROM items WHERE id = ? AND folder_id IN (SELECT id FROM folders WHERE account_id = ?)`, c.Param("id"), accountID(c))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

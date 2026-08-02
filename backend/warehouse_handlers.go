@@ -524,7 +524,12 @@ func inventoryWarehouseItem(c *gin.Context) {
 			return
 		}
 	case diff > eps:
-		// Излишек — приходуем корректирующей партией по текущей себестоимости
+		// Излишек — приходуем корректирующей партией по себестоимости.
+		// Если позиция была обнулена (unit_cost = 0), берём последнюю известную
+		// цену из партий, иначе излишек оценился бы в 0 и занизил себестоимость.
+		if unitCost <= 0 {
+			_ = db.QueryRow(`SELECT unit_cost FROM stock_batches WHERE account_id = ? AND warehouse_item_id = ? AND unit_cost > 0 ORDER BY id DESC LIMIT 1`, accID, id).Scan(&unitCost)
+		}
 		tx, err := db.Begin()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

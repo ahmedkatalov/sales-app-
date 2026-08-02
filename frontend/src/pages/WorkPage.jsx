@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Boxes, TrendingUp, Wallet } from "lucide-react";
 import { del, get, post, put } from "../api";
 import Modal from "../components/Modal";
+import EmptyState from "../components/EmptyState";
 import { formatMoney, money, num } from "../utils/format";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
 
@@ -170,28 +171,40 @@ export default function WorkPage() {
 
   const fileInputRef = useRef(null);
 
-  const load = async () => {
-    const [typeList, folderList, productList, salesList, warehouseList] =
-      await Promise.all([
-        get("/product-types"),
-        get("/product-categories"),
-        get("/menu-products"),
-        get("/sales").catch(() => []),
-        get("/warehouse/items").catch(() => []),
-      ]);
+  const loadingRef = useRef(false); // идёт ли загрузка (чтобы не наслаивать тики)
+  const loadSeqRef = useRef(0);     // защита от гонки: устаревший ответ не затирает свежий
 
-    setTypes(typeList || []);
-    setFolders(folderList || []);
-    setProducts(productList || []);
-    setSales(salesList || []);
-    setWarehouseItems(warehouseList || []);
-    // По умолчанию показываем «Все товары» (selectedTypeId = "") — как на макете.
+  const load = async () => {
+    const seq = ++loadSeqRef.current;
+    loadingRef.current = true;
+    try {
+      const [typeList, folderList, productList, salesList, warehouseList] =
+        await Promise.all([
+          get("/product-types"),
+          get("/product-categories"),
+          get("/menu-products"),
+          get("/sales").catch(() => []),
+          get("/warehouse/items").catch(() => []),
+        ]);
+
+      if (seq !== loadSeqRef.current) return; // пришёл более свежий запрос
+
+      setTypes(typeList || []);
+      setFolders(folderList || []);
+      setProducts(productList || []);
+      setSales(salesList || []);
+      setWarehouseItems(warehouseList || []);
+      // По умолчанию показываем «Все товары» (selectedTypeId = "") — как на макете.
+    } finally {
+      loadingRef.current = false;
+    }
   };
 
   useEffect(() => {
     load().catch((e) => setError(e.message));
 
     const timer = setInterval(() => {
+      if (loadingRef.current) return; // не запускаем новый опрос поверх незавершённого
       load().catch(() => {});
     }, 5000);
 
@@ -253,42 +266,45 @@ export default function WorkPage() {
     return totalPrice / quantity;
   };
 
+  // Считаем продажи по СТАБИЛЬНОМУ id товара и по ЗАПИСАННЫМ в чеке суммам
+  // (price/cost/total на момент продажи), а не по текущей цене — иначе смена
+  // цены задним числом переписывала выручку, а одинаковые имена склеивались.
+  // Имя оставляем как запасной ключ для старых записей без id.
   const salesStatsByProduct = useMemo(() => {
-    const map = {};
+    const byId = {};
+    const byName = {};
 
     const addItem = (item) => {
-      const name =
-        item.productName ||
-        item.name ||
-        item.product_name ||
-        item.title ||
-        "";
+      const id = Number(item.productId || item.product_id || 0);
+      const name = item.productName || item.name || item.product_name || item.title || "";
+      const qty = Number(item.qty || item.quantity || item.count || 1) || 0;
+      if (qty <= 0) return;
+      const revenue = money(item.total != null ? item.total : money(item.price) * qty);
+      const cost = money(item.cost) * qty;
 
-      if (!name) return;
-
-      const key = String(name).trim().toLowerCase();
-      const qty = Number(item.qty || item.quantity || item.count || 1);
-
-      if (!map[key]) {
-        map[key] = {
-          quantity: 0,
-        };
+      let bucket;
+      if (id > 0) {
+        bucket = byId[id] || (byId[id] = { quantity: 0, revenue: 0, cost: 0 });
+      } else if (name) {
+        const key = String(name).trim().toLowerCase();
+        bucket = byName[key] || (byName[key] = { quantity: 0, revenue: 0, cost: 0 });
+      } else {
+        return;
       }
-
-      map[key].quantity += qty;
+      bucket.quantity += qty;
+      bucket.revenue += revenue;
+      bucket.cost += cost;
     };
 
     (Array.isArray(sales) ? sales : []).forEach((sale) => {
       if (Array.isArray(sale.items)) {
         sale.items.forEach(addItem);
-      }
-
-      if (sale.productName || sale.name || sale.product_name) {
+      } else if (sale.productName || sale.name || sale.product_name) {
         addItem(sale);
       }
     });
 
-    return map;
+    return { byId, byName };
   }, [sales]);
 
   const visibleProducts = useMemo(() => {
@@ -309,16 +325,18 @@ export default function WorkPage() {
 
   const productRows = useMemo(() => {
     return visibleProducts.map((p) => {
-      const key = String(p.name || "").trim().toLowerCase();
-      const quantity = salesStatsByProduct[key]?.quantity || 0;
+      const stat =
+        salesStatsByProduct.byId[p.id] ||
+        salesStatsByProduct.byName[String(p.name || "").trim().toLowerCase()] ||
+        null;
 
-      const costOne = money(p.cost);
-      const priceOne = money(p.price);
-
-      const totalCost = costOne * quantity;
-      const revenue = priceOne * quantity;
-      const profitOne = priceOne - costOne;
-      const cleanProfit = profitOne * quantity;
+      const quantity = stat?.quantity || 0;
+      // Выручка/себестоимость — из записанных сумм чека; если их нет (старые
+      // данные) — падаем на текущую цену × количество, как было раньше.
+      const revenue = stat && stat.revenue ? stat.revenue : money(p.price) * quantity;
+      const totalCost = stat && stat.cost ? stat.cost : money(p.cost) * quantity;
+      const cleanProfit = revenue - totalCost;
+      const profitOne = quantity > 0 ? cleanProfit / quantity : money(p.price) - money(p.cost);
 
       return {
         ...p,
@@ -1039,8 +1057,13 @@ export default function WorkPage() {
           })}
 
           {!productRows.length && (
-            <div className="p-8 text-center text-slate-400">
-              Товаров пока нет
+            <div className="p-4">
+              <EmptyState
+                title={search ? "Ничего не найдено" : "Товаров пока нет"}
+                text={search ? "Попробуйте изменить запрос." : "Добавьте первый товар в меню — из него будут складываться продажи и себестоимость."}
+                actionLabel={search ? undefined : "+ Добавить товар"}
+                onAction={search ? undefined : openProductModal}
+              />
             </div>
           )}
 

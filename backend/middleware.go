@@ -6,14 +6,15 @@ import (
 	"strings"
 )
 
-// tokenFromRequest извлекает Bearer-токен из заголовка Authorization
-// или из query-параметра ?token= (удобно для отладки).
+// tokenFromRequest извлекает Bearer-токен только из заголовка Authorization.
+// Раньше был фолбэк на ?token= — но токен в URL утекает в логи/историю/Referer,
+// а фронтенд его не использует, поэтому убрали.
 func tokenFromRequest(c *gin.Context) string {
 	auth := c.GetHeader("Authorization")
 	if strings.HasPrefix(auth, "Bearer ") {
 		return strings.TrimPrefix(auth, "Bearer ")
 	}
-	return c.Query("token")
+	return ""
 }
 
 // authRequired — middleware, который проверяет токен и кладёт userID в контекст.

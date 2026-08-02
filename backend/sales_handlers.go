@@ -51,7 +51,10 @@ func resolveSaleItemProduct(item SaleItem, accID int) SaleItem {
 	return item
 }
 
-func prepareSale(req *Sale) (map[int]float64, error) {
+// checkStock=false на пути подтверждения отложенного чека: остаток уже
+// зарезервирован (списан) при создании чека, поэтому повторная проверка
+// «хватает ли на складе» ложно проваливалась и блокировала подтверждение.
+func prepareSale(req *Sale, checkStock bool) (map[int]float64, error) {
 	if req.AccountID == 0 {
 		return nil, sql.ErrNoRows
 	}
@@ -90,21 +93,33 @@ func prepareSale(req *Sale) (map[int]float64, error) {
 		rows.Close()
 	}
 
-	for warehouseItemID, needQty := range stockNeeds {
-		var name, unit string
-		var available float64
-		err := db.QueryRow(`SELECT name, unit, quantity FROM warehouse_items WHERE id = ? AND account_id = ?`, warehouseItemID, req.AccountID).Scan(&name, &unit, &available)
-		if err != nil {
-			return nil, err
-		}
-		if available+0.000001 < needQty {
-			return nil, &stockError{name: name, unit: unit, need: needQty, available: available}
+	if checkStock {
+		for warehouseItemID, needQty := range stockNeeds {
+			var name, unit string
+			var available float64
+			err := db.QueryRow(`SELECT name, unit, quantity FROM warehouse_items WHERE id = ? AND account_id = ?`, warehouseItemID, req.AccountID).Scan(&name, &unit, &available)
+			if err != nil {
+				return nil, err
+			}
+			if available+0.000001 < needQty {
+				return nil, &stockError{name: name, unit: unit, need: needQty, available: available}
+			}
 		}
 	}
 
+	// Ограничиваем скидку диапазоном 0..100% — иначе >100 даёт отрицательный
+	// итог, а <0 завышает выручку, ломая отчёты и сверку кассы.
+	if req.DiscountPercent < 0 {
+		req.DiscountPercent = 0
+	} else if req.DiscountPercent > 100 {
+		req.DiscountPercent = 100
+	}
 	req.Subtotal = subtotal
 	req.DiscountAmount = subtotal * req.DiscountPercent / 100
 	req.Total = subtotal - req.DiscountAmount
+	if req.Total < 0 {
+		req.Total = 0
+	}
 	if req.PaymentType == "cash" {
 		req.ChangeAmount = req.CashGiven - req.Total
 	} else {
@@ -123,7 +138,7 @@ func (e *stockError) Error() string {
 }
 
 func saveSale(req *Sale) error {
-	if _, err := prepareSale(req); err != nil {
+	if _, err := prepareSale(req, true); err != nil {
 		return err
 	}
 	tx, err := db.Begin()
@@ -241,7 +256,7 @@ func createSale(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Введите имя клиента для долга"})
 		return
 	}
-	if _, err := prepareSale(&req); err != nil {
+	if _, err := prepareSale(&req, true); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -356,7 +371,7 @@ func createPendingSale(c *gin.Context) {
 		return
 	}
 	req.AccountID = accountID(c)
-	if _, err := prepareSale(&req); err != nil {
+	if _, err := prepareSale(&req, true); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -446,7 +461,7 @@ func confirmPendingSale(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Введите имя клиента для долга"})
 		return
 	}
-	if _, err := prepareSale(&req); err != nil {
+	if _, err := prepareSale(&req, false); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -527,12 +542,12 @@ func getSales(c *gin.Context) {
 	args := []any{accountID}
 
 	if from != "" {
-		where = append(where, "date(s.created_at) >= date(?)")
+		where = append(where, "date(s.created_at, 'localtime') >= date(?)")
 		args = append(args, from)
 	}
 
 	if to != "" {
-		where = append(where, "date(s.created_at) <= date(?)")
+		where = append(where, "date(s.created_at, 'localtime') <= date(?)")
 		args = append(args, to)
 	}
 
@@ -610,12 +625,12 @@ func getSalesStats(c *gin.Context) {
 	args := []any{accountID}
 
 	if from != "" {
-		where = append(where, "date(created_at) >= date(?)")
+		where = append(where, "date(created_at, 'localtime') >= date(?)")
 		args = append(args, from)
 	}
 
 	if to != "" {
-		where = append(where, "date(created_at) <= date(?)")
+		where = append(where, "date(created_at, 'localtime') <= date(?)")
 		args = append(args, to)
 	}
 
@@ -657,11 +672,11 @@ func getSalesStats(c *gin.Context) {
 	costWhere := []string{"s.account_id = ?"}
 	costArgs := []any{accountID}
 	if from != "" {
-		costWhere = append(costWhere, "date(s.created_at) >= date(?)")
+		costWhere = append(costWhere, "date(s.created_at, 'localtime') >= date(?)")
 		costArgs = append(costArgs, from)
 	}
 	if to != "" {
-		costWhere = append(costWhere, "date(s.created_at) <= date(?)")
+		costWhere = append(costWhere, "date(s.created_at, 'localtime') <= date(?)")
 		costArgs = append(costArgs, to)
 	}
 
@@ -680,12 +695,12 @@ func getSalesStats(c *gin.Context) {
 	itemArgs := []any{accountID}
 
 	if from != "" {
-		itemWhere = append(itemWhere, "date(s.created_at) >= date(?)")
+		itemWhere = append(itemWhere, "date(s.created_at, 'localtime') >= date(?)")
 		itemArgs = append(itemArgs, from)
 	}
 
 	if to != "" {
-		itemWhere = append(itemWhere, "date(s.created_at) <= date(?)")
+		itemWhere = append(itemWhere, "date(s.created_at, 'localtime') <= date(?)")
 		itemArgs = append(itemArgs, to)
 	}
 

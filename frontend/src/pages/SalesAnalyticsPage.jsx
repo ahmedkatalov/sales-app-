@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { get } from "../api";
-import { formatMoney } from "../utils/format";
+import { formatMoney, localISO } from "../utils/format";
 
 function saleDateParts(createdAt) {
   if (!createdAt) return { date: "", time: "" };
@@ -45,9 +45,9 @@ function StatCard({ title, value, subtitle, icon, tone = "blue", className = "" 
 }
 
 export default function SalesAnalyticsPage() {
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const monthStartStr = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10); })();
-  const monthEndStr = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10); })();
+  const todayStr = localISO();
+  const monthStartStr = (() => { const d = new Date(); return localISO(new Date(d.getFullYear(), d.getMonth(), 1)); })();
+  const monthEndStr = (() => { const d = new Date(); return localISO(new Date(d.getFullYear(), d.getMonth() + 1, 0)); })();
   const formatDateRu = (s) => { if (!s) return ""; const [y,m,d] = s.split("-"); return `${d}.${m}.${y}`; };
   const [from, setFrom] = useState(monthStartStr);
   const [to, setTo] = useState(monthEndStr);

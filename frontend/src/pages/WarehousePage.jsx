@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { del, get, post } from "../api";
 import Modal from "../components/Modal";
+import EmptyState from "../components/EmptyState";
 import { formatMoney, money, num } from "../utils/format";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
 
@@ -901,8 +902,13 @@ export default function WarehousePage() {
           })}
 
           {!visibleItems.length && (
-            <div className="p-8 text-center text-slate-500">
-              Сырья пока нет
+            <div className="p-4">
+              <EmptyState
+                title={search ? "Ничего не найдено" : "На складе пока пусто"}
+                text={search ? "Попробуйте изменить запрос." : "Добавьте первую позицию сырья — молоко, зёрна, сиропы. Остатки будут списываться автоматически при продажах."}
+                actionLabel={search ? undefined : "+ Добавить сырьё"}
+                onAction={search ? undefined : () => setAddModal(true)}
+              />
             </div>
           )}
         </div>

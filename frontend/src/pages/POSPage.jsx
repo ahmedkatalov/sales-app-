@@ -213,6 +213,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
   const [cart, setCart] = useState([]);
   const [discount, setDiscount] = useState("");
   const [paymentModal, setPaymentModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false); // защита от двойного проведения продажи
   const [paymentType, setPaymentType] = useState("cash");
   const [paidAmount, setPaidAmount] = useState("");
   const [cardId, setCardId] = useState("");
@@ -624,27 +625,35 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
   };
 
   const submitSale = async (mode) => {
+    if (submitting) return; // не даём двойной тап отправить продажу дважды
     setError("");
 
-    if (mode === "transfer" && !cardId) return setError("Выбери карту");
+    if (mode === "transfer" && !cardId) return setError("Выберите карту");
     if (mode === "debt" && !debtName.trim()) return setError("Введите имя клиента");
 
-    if (mode === "pending") {
-      await post("/pending-sales", salePayload());
+    setSubmitting(true);
+    try {
+      if (mode === "pending") {
+        await post("/pending-sales", salePayload());
+        await resetSale();
+        window.notify?.("Чек отправлен в ожидание оплаты", "success");
+        return;
+      }
+
+      await post("/sales", salePayload({
+        cardId: mode === "transfer" ? Number(cardId) : 0,
+        paymentType: mode,
+        cashGiven: mode === "cash" ? num(paidAmount) : 0,
+        customerName: mode === "debt" ? debtName.trim() : "",
+      }));
+
       await resetSale();
-      alert("Чек отправлен в ожидание оплаты");
-      return;
+      window.notify?.(mode === "debt" ? "Долг сохранён" : "Продажа сохранена", "success");
+    } catch (e) {
+      setError(e?.message || "Не удалось провести продажу. Попробуйте снова.");
+    } finally {
+      setSubmitting(false);
     }
-
-    await post("/sales", salePayload({
-      cardId: mode === "transfer" ? Number(cardId) : 0,
-      paymentType: mode,
-      cashGiven: mode === "cash" ? num(paidAmount) : 0,
-      customerName: mode === "debt" ? debtName.trim() : "",
-    }));
-
-    await resetSale();
-    alert(mode === "debt" ? "Долг сохранён" : "Продажа сохранена");
   };
 
   return (
@@ -1207,8 +1216,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
             <button onClick={() => setPaymentModal(false)} className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-slate-200 transition hover:bg-white/10">
               Назад
             </button>
-            <button onClick={() => submitSale(paymentType)} className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30">
-              {paymentType === "pending" ? "В ожидание" : "Подтвердить"}
+            <button onClick={() => submitSale(paymentType)} disabled={submitting}
+              className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60">
+              {submitting ? "Проводим…" : paymentType === "pending" ? "В ожидание" : "Подтвердить"}
             </button>
           </div>
         </Modal>

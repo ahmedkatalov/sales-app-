@@ -53,6 +53,9 @@ func getWorkspaces(c *gin.Context) {
 }
 
 func createWorkspace(c *gin.Context) {
+	if !requireOwner(c) {
+		return
+	}
 	var req struct {
 		AccountID int    `json:"accountId"`
 		Name      string `json:"name"`
@@ -98,6 +101,9 @@ func createWorkspace(c *gin.Context) {
 }
 
 func deleteWorkspace(c *gin.Context) {
+	if !requireOwner(c) {
+		return
+	}
 	ownerID := ownerAccountID(c)
 	id, _ := strconv.Atoi(c.Param("id"))
 
@@ -186,6 +192,9 @@ func getWorkspaceUsers(c *gin.Context) {
 }
 
 func createWorkspaceUser(c *gin.Context) {
+	if !requireManager(c) {
+		return
+	}
 	var req struct {
 		OwnerAccountID int    `json:"ownerAccountId"`
 		WorkspaceID    int    `json:"workspaceId"`
@@ -270,6 +279,9 @@ func createWorkspaceUser(c *gin.Context) {
 }
 
 func deleteWorkspaceUser(c *gin.Context) {
+	if !requireManager(c) {
+		return
+	}
 	ownerID := ownerAccountID(c)
 
 	_, err := db.Exec(`
@@ -322,6 +334,9 @@ func getWorkspaceAccess(c *gin.Context) {
 
 // POST /workspace-access — дать пользователю доступ к точке
 func grantWorkspaceAccess(c *gin.Context) {
+	if !requireOwner(c) {
+		return
+	}
 	ownerID := ownerAccountID(c)
 	var req struct {
 		UserID      int    `json:"userId"`
@@ -368,6 +383,9 @@ func grantWorkspaceAccess(c *gin.Context) {
 
 // DELETE /workspace-access/:id — убрать доступ
 func revokeWorkspaceAccess(c *gin.Context) {
+	if !requireOwner(c) {
+		return
+	}
 	ownerID := ownerAccountID(c)
 	id := c.Param("id")
 	_, err := db.Exec(`
@@ -514,6 +532,9 @@ func getMyPermissions(c *gin.Context) {
 
 // PUT /user-permissions/:userId — установить права пользователю
 func setUserPermissions(c *gin.Context) {
+	if !requireOwner(c) {
+		return
+	}
 	ownerID := ownerAccountID(c)
 	userID := c.Param("userId")
 

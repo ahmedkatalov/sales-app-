@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { del, get, post } from "../api";
 import Modal from "../components/Modal";
-import { formatMoney, money, num } from "../utils/format";
+import { formatMoney, localISO, money, num } from "../utils/format";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => localISO();
 const monthStart = () => {
   const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+  return localISO(new Date(d.getFullYear(), d.getMonth(), 1));
 };
 const monthEnd = () => {
   const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
+  return localISO(new Date(d.getFullYear(), d.getMonth() + 1, 0));
 };
 const formatDateRu = (dateStr) => {
   if (!dateStr) return "";
