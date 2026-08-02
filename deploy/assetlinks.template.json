@@ -1,0 +1,18 @@
+[
+  {
+    "//": "Digital Asset Links для Google Play TWA. Кладётся на сервер как",
+    "//2": "/var/www/okvion/.well-known/assetlinks.json и отдаётся nginx по HTTPS.",
+    "//3": "ВАЖНО: нужен SHA-256 КЛЮЧА ПОДПИСИ ОТ GOOGLE (Play App Signing), не только вашего.",
+    "//4": "Play Console → приложение → Test and release → Setup → App integrity → App signing.",
+    "//5": "Скопируйте ОБА отпечатка (App signing key И Upload key) в массив ниже.",
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ru.okvionsales.app",
+      "sha256_cert_fingerprints": [
+        "ВСТАВЬТЕ_SHA256_КЛЮЧА_ПОДПИСИ_GOOGLE_PLAY",
+        "ВСТАВЬТЕ_SHA256_ВАШЕГО_UPLOAD_КЛЮЧА"
+      ]
+    }
+  }
+]

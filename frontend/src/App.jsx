@@ -20,6 +20,7 @@ import {
 
 import { hydrateAppearance } from "./theme/engine";
 import HomePage from "./pages/HomePage";
+import EmployeeAnalyticsPage from "./pages/EmployeeAnalyticsPage";
 import AppearancePage from "./pages/AppearancePage";
 import WorkPage from "./pages/WorkPage";
 import ExpensesPage from "./pages/ExpensesPage";
@@ -30,6 +31,7 @@ import ProfilePage from "./pages/ProfilePage";
 import DesktopNavigation from "./components/DesktopNavigation";
 import ThemeToggle from "./components/ThemeToggle";
 import Modal from "./components/Modal";
+import InstallPrompt from "./components/InstallPrompt";
 import WarehousePage from "./pages/WarehousePage";
 import AIWarehousePage from "./pages/AIWarehousePage";
 import PendingPaymentsPage from "./pages/PendingPaymentsPage";
@@ -58,6 +60,7 @@ const ownerLinks = [
   ["/ai-warehouse", "Помощник", Bot],
   ["/warehouse", "Склад", Package],
   ["/sales-analytics", "Продажи", ReceiptText],
+  ["/team", "Сотрудники", Users],
   ["/analytics", "Аналитика", BarChart3],
   ["/appearance", "Оформление", Palette],
   ["/profile", "Настройки", Settings],
@@ -691,6 +694,7 @@ export default function App() {
           <Route path="/profile" element={isWorker ? <Navigate to="/pos" replace /> : <ProfilePage session={session} workspace={currentWorkspace} profile={profile} setProfile={setProfile} setWorkspaceState={setWorkspaceState} logout={logout} />} />
           <Route path="/sales-analytics" element={!canAccess("/sales-analytics") ? forbidden : <SalesAnalyticsPage />} />
           <Route path="/analytics" element={!canAccess("/analytics") ? forbidden : <AnalyticsPage />} />
+          <Route path="/team" element={isWorker ? <Navigate to="/pos" replace /> : <EmployeeAnalyticsPage />} />
           <Route path="/employees" element={<Navigate to="/profile" replace />} />
           <Route path="/cards" element={<Navigate to="/profile" replace />} />
           <Route path="*" element={<Navigate to={isWorker ? "/pos" : "/home"} replace />} />
@@ -815,6 +819,9 @@ export default function App() {
           );
         })}
       </div>
+
+      {/* Плашка «Установить приложение» (Android/десктоп — системная установка, iOS — подсказка) */}
+      <InstallPrompt />
     </div>
   );
 }

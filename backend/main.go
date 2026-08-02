@@ -99,6 +99,9 @@ func main() {
 	auth.GET("/settings/appearance", getAppearanceSettings)
 	auth.PUT("/settings/appearance", setAppearanceSettings)
 
+	// BI-аналитика по продавцам (управленческий отчёт)
+	auth.GET("/analytics/employees", getEmployeeAnalytics)
+
 	auth.GET("/product-types", getProductTypes)
 	auth.POST("/product-types", createProductType)
 	auth.DELETE("/product-types/:id", deleteProductType)

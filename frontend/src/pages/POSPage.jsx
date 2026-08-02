@@ -676,7 +676,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           </button>
           <div className="min-w-0">
             <p className="text-[11px] font-bold text-blue-400 sm:text-sm">Касса</p>
-            <h2 className="truncate text-lg font-black leading-none text-white sm:text-2xl">Магазин</h2>
+            <h2 className="truncate text-base font-black leading-none text-white sm:text-xl">Магазин</h2>
           </div>
         </div>
 
@@ -727,7 +727,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
                   {openedCategory ? (openedCategory.typeName || openedCategory.type || "Категория") : "Меню"}
                 </p>
-                <h3 className="truncate text-xl font-black sm:text-2xl">
+                <h3 className="truncate text-base font-black sm:text-lg">
                   {openedCategory ? openedCategory.name : "Категории"}
                 </h3>
               </div>
@@ -781,7 +781,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     value={newSectionName}
                     onChange={(e) => setNewSectionName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { createSection(); setInlineSection(false); } if (e.key === "Escape") setInlineSection(false); }}
-                    placeholder="Напитки, Еда, Десерты..."
+                    placeholder="Например: Бар, Кухня…"
                     autoFocus
                     className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-blue-400/50"
                   />
@@ -789,10 +789,15 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   <button onClick={() => setInlineSection(false)} className="shrink-0 text-slate-500 hover:text-white text-lg leading-none">×</button>
                 </div>
               ) : (
-                <button onClick={() => setInlineSection(true)}
-                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:border-blue-400/40 hover:bg-blue-500/10 hover:text-blue-300">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-xs">＋</span>
-                  Раздел
+                <button onClick={() => setInlineSection(true)} title="Большая группа меню — Бар, Кухня"
+                  className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:border-blue-400/40 hover:bg-blue-500/10">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                  </span>
+                  <span className="leading-tight">
+                    <span className="block text-sm font-black text-white">Раздел</span>
+                    <span className="block text-[10px] font-bold text-slate-400">напр. Бар, Кухня</span>
+                  </span>
                 </button>
               )}
 
@@ -805,7 +810,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                       value={newCategory.sectionId}
                       onChange={(e) => setNewCategory(p => ({ ...p, sectionId: e.target.value }))}
                       className="rounded-xl border border-white/10 bg-slate-900 px-2 py-1 text-xs font-bold text-white outline-none shrink-0">
-                      <option value="">Раздел...</option>
+                      <option value="">Выберите раздел…</option>
                       {safe_sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   )}
@@ -813,7 +818,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     value={newCategory.name}
                     onChange={(e) => setNewCategory(p => ({ ...p, name: e.target.value }))}
                     onKeyDown={(e) => { if (e.key === "Enter") { createCategory(); setInlineCategory(false); } if (e.key === "Escape") setInlineCategory(false); }}
-                    placeholder="Холодные напитки..."
+                    placeholder="Например: Коктейли, Чаи…"
                     autoFocus
                     className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-violet-400/50"
                   />
@@ -821,22 +826,35 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   <button onClick={() => setInlineCategory(false)} className="shrink-0 text-slate-500 hover:text-white text-lg leading-none">×</button>
                 </div>
               ) : (
-                <button onClick={() => { setNewCategory(p => ({ ...p, sectionId: selectedSectionId !== "all" ? selectedSectionId : "" })); setInlineCategory(true); }}
-                  className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:border-violet-400/40 hover:bg-violet-500/10 hover:text-violet-300">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-xs">＋</span>
-                  Категория
+                <button onClick={() => { setNewCategory(p => ({ ...p, sectionId: selectedSectionId !== "all" ? selectedSectionId : "" })); setInlineCategory(true); }} title="Группа товаров внутри раздела — Коктейли, Чаи"
+                  className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:border-violet-400/40 hover:bg-violet-500/10">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                  </span>
+                  <span className="leading-tight">
+                    <span className="block text-sm font-black text-white">Категория</span>
+                    <span className="block text-[10px] font-bold text-slate-400">напр. Коктейли, Чаи</span>
+                  </span>
                 </button>
               )}
 
-              {/* ── Добавить позицию ── */}
+              {/* ── Добавить товар ── */}
               <button onClick={openProductModal} disabled={!openedCategory}
-                className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black transition ${
+                title={openedCategory ? `Добавить товар в «${openedCategory.name}»` : "Сначала откройте категорию"}
+                className={`flex items-center gap-2.5 rounded-2xl px-3 py-2 text-left transition ${
                   openedCategory
-                    ? "bg-linear-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/30 hover:opacity-90"
-                    : "border border-white/10 bg-white/5 text-slate-500 cursor-not-allowed"
+                    ? "bg-linear-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/30 hover:brightness-110"
+                    : "border border-dashed border-white/12 bg-white/[0.03] text-slate-400 cursor-not-allowed"
                 }`}>
-                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/20 text-xs">＋</span>
-                {openedCategory ? `Позиция в «${openedCategory.name}»` : "Сначала выбери категорию"}
+                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${openedCategory ? "bg-white/20 text-white" : "bg-white/8 text-slate-400"}`}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                </span>
+                <span className="leading-tight">
+                  <span className="block text-sm font-black">Товар</span>
+                  <span className={`block text-[10px] font-bold ${openedCategory ? "text-white/75" : "text-slate-500"}`}>
+                    {openedCategory ? `в «${openedCategory.name}»` : "откройте категорию"}
+                  </span>
+                </span>
               </button>
             </div>
           )}
@@ -853,10 +871,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   }}
                   className="group flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-3.5 text-left shadow-lg transition hover:-translate-y-0.5 hover:border-blue-500/40 focus:outline-none focus:ring-4 focus:ring-blue-500/30"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-xl">📁</span>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-base">📁</span>
                   <div className="min-w-0">
                     <p className="truncate text-[11px] font-bold text-blue-400">{cat.typeName || cat.type || "Раздел"}</p>
-                    <h3 className="truncate text-base font-black text-white sm:text-lg">{cat.name}</h3>
+                    <h3 className="truncate text-sm font-black text-white sm:text-base">{cat.name}</h3>
                   </div>
                 </button>
               ))}
@@ -880,10 +898,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   onClick={() => addToCart(p)}
                   className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-3.5 text-left shadow-lg transition hover:-translate-y-0.5 hover:border-blue-500/40 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-blue-500/30 sm:p-4"
                 >
-                  <div className="text-base font-black leading-tight text-white sm:text-lg">
+                  <div className="text-sm font-black leading-tight text-white sm:text-base">
                     {p.name}
                   </div>
-                  <div className="mt-3 inline-flex w-fit items-baseline gap-1 rounded-lg bg-blue-500/15 px-2.5 py-1 text-base font-black text-blue-200 tabular-nums">
+                  <div className="mt-3 inline-flex w-fit items-baseline gap-1 rounded-lg bg-blue-500/15 px-2.5 py-1 text-sm font-black text-blue-200 tabular-nums">
                     {formatMoney(p.price)} <span className="text-xs font-bold text-blue-300/70">₽</span>
                   </div>
                 </button>
@@ -918,7 +936,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <div className="rounded-2xl bg-white/[0.04] p-3">
               <div className="flex items-baseline justify-between">
                 <span className="text-sm text-slate-400">В кассе должно быть</span>
-                <b className="text-2xl font-black text-white">{formatMoney(cashShift.expectedCash)}</b>
+                <b className="text-xl font-black text-white">{formatMoney(cashShift.expectedCash)}</b>
               </div>
               <div className="mt-1 text-[11px] text-slate-500">размен {formatMoney(cashShift.openingCash)} + налом {formatMoney(cashShift.cashSales)} + внесено {formatMoney(cashShift.cashIn)} − изъято {formatMoney(cashShift.cashOut)}</div>
             </div>
@@ -962,7 +980,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
         <div className="flex flex-col rounded-3xl border border-white/10 bg-[#0f172a]/90 p-3.5 shadow-2xl backdrop-blur sm:p-4 lg:min-h-0 lg:flex-1">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
-            <h3 className="text-xl font-black sm:text-2xl">Корзина</h3>
+            <h3 className="text-base font-black sm:text-lg">Корзина</h3>
 
             {safe_cart.length > 0 && (
               <button
@@ -1036,8 +1054,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   </>
                 )}
                 <div className={`flex items-baseline justify-between ${discountAmount > 0 ? "mt-2 border-t border-white/10 pt-2" : ""}`}>
-                  <span className="text-lg font-black">Итого</span>
-                  <b className="text-2xl font-black">{formatMoney(total)}</b>
+                  <span className="text-base font-black">Итого</span>
+                  <b className="text-xl font-black">{formatMoney(total)}</b>
                 </div>
               </div>
             </>

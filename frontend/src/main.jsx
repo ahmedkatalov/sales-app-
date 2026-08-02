@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import AppRouter from "./router/AppRouter";
 import "./index.css";
 import { initAppearance } from "./theme/engine";
+import "./pwa"; // регистрация сервис-воркера + перехват установки (только https)
 
 // Применяем сохранённое оформление до рендера (движок тем).
 initAppearance();
