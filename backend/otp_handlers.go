@@ -62,7 +62,7 @@ func requestLoginOTP(c *gin.Context) {
 	req.Password = strings.TrimSpace(req.Password)
 
 	if req.Username == "" || req.Password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Введи логин и пароль"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Введите логин и пароль"})
 		return
 	}
 
@@ -145,7 +145,7 @@ func confirmLoginOTP(c *gin.Context) {
 	req.Code = strings.TrimSpace(req.Code)
 
 	if req.Username == "" || req.Code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Введи логин и код"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Введите логин и код"})
 		return
 	}
 
@@ -172,7 +172,7 @@ func confirmLoginOTP(c *gin.Context) {
 	`, userID).Scan(&otpID, &storedCode, &expiresAt, &attempts)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Код не найден. Запроси новый."})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Код не найден. Запросите новый."})
 		return
 	}
 
@@ -181,7 +181,7 @@ func confirmLoginOTP(c *gin.Context) {
 	if time.Now().After(expTime) {
 		db.Exec(`UPDATE login_otp_codes SET used_at = ? WHERE id = ?`,
 			time.Now().Format(time.RFC3339), otpID)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Срок действия кода истёк. Запроси новый."})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Срок действия кода истёк. Запросите новый."})
 		return
 	}
 
@@ -196,7 +196,7 @@ func confirmLoginOTP(c *gin.Context) {
 		db.Exec(`UPDATE login_otp_codes SET attempts = attempts + 1 WHERE id = ?`, otpID)
 		remaining := 5 - attempts - 1
 		if remaining <= 0 {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверный код. Попытки исчерпаны — запроси новый."})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверный код. Попытки исчерпаны — запросите новый."})
 		} else {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": fmt.Sprintf("Неверный код. Осталось попыток: %d", remaining),

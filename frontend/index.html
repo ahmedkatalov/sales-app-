@@ -15,6 +15,14 @@
           }
           document.documentElement.setAttribute("data-theme", t);
           document.documentElement.style.colorScheme = t;
+          // Применяем кастомное оформление (движок тем) до рендера — без вспышки.
+          var css = localStorage.getItem("sales_app_appearance_css");
+          if (css) {
+            var s = document.createElement("style");
+            s.id = "appearance-style";
+            s.textContent = css;
+            document.head.appendChild(s);
+          }
         } catch (e) {
           document.documentElement.setAttribute("data-theme", "dark");
         }

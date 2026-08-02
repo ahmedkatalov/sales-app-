@@ -97,7 +97,7 @@ func registerAdmin(c *gin.Context) {
 	req.Password = strings.TrimSpace(req.Password)
 
 	if req.Username == "" || req.Password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Заполни логин/email и пароль"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Заполните логин/email и пароль"})
 		return
 	}
 	// ShopName необязателен — если не указан, берём username

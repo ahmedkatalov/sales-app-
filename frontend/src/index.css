@@ -247,6 +247,16 @@ html[data-theme="light"] [class*="bg-[radial-gradient"] {
   display: none;
 }
 
+/* Мягкое появление карточек (дашборд) */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-rise { animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise { animation: none; }
+}
+
 :root {
   --nav-h: 76px;
 }

@@ -6,9 +6,11 @@ import {
   Briefcase,
   Clock3,
   FileText,
+  LayoutDashboard,
   LogOut,
   Menu,
   Package,
+  Palette,
   ReceiptText,
   Settings,
   ShoppingCart,
@@ -16,6 +18,8 @@ import {
   Wallet,
 } from "lucide-react";
 
+import HomePage from "./pages/HomePage";
+import AppearancePage from "./pages/AppearancePage";
 import WorkPage from "./pages/WorkPage";
 import ExpensesPage from "./pages/ExpensesPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
@@ -44,6 +48,7 @@ import {
 } from "./api";
 
 const ownerLinks = [
+  ["/home", "Сводка", LayoutDashboard],
   ["/work", "Товары", Briefcase],
   ["/pos", "Касса", ShoppingCart],
   ["/pending-payments", "К оплате", Clock3, "pending"],
@@ -53,6 +58,7 @@ const ownerLinks = [
   ["/warehouse", "Склад", Package],
   ["/sales-analytics", "Продажи", ReceiptText],
   ["/analytics", "Аналитика", BarChart3],
+  ["/appearance", "Оформление", Palette],
   ["/profile", "Настройки", Settings],
 ];
 
@@ -120,8 +126,8 @@ function LoginPage({ onAuth }) {
     const cleanPassword = (password || "").trim();
     setError("");
     const errors = {};
-    if (!cleanUsername) errors.username = "Введи логин";
-    if (!cleanPassword) errors.password = "Введи пароль";
+    if (!cleanUsername) errors.username = "Введите логин";
+    if (!cleanPassword) errors.password = "Введите пароль";
     if (Object.keys(errors).length) { setFieldErrors(errors); return; }
     setFieldErrors({});
     setLoading(true);
@@ -134,10 +140,12 @@ function LoginPage({ onAuth }) {
       setTimeout(() => otpRefs[0]?.focus(), 100);
     } catch (e) {
       const msg = e?.message || "";
-      if (/неверн|unauthorized|invalid|not found/i.test(msg)) { setError("Неверный логин или пароль"); setFieldErrors({ username: true, password: true }); }
+      if (/неверн|unauthorized|invalid|not found|не найден|401/i.test(msg)) { setError("Неверный логин или пароль"); setFieldErrors({ username: true, password: true }); }
       else if (/email/i.test(msg)) setError(msg);
-      else if (/connect|ERR_CONNECTION|localhost:3000/i.test(msg)) setError("Не удаётся подключиться к серверу");
-      else setError(msg || "Ошибка входа");
+      else if (/слишком много|too many|429|rate/i.test(msg)) setError("Слишком много попыток. Подождите минуту и попробуйте снова.");
+      else if (/failed to fetch|networkerror|load failed|connect|ERR_CONNECTION|timeout|localhost:3000|сет|network/i.test(msg)) setError("Не удаётся подключиться к серверу. Проверьте интернет и попробуйте снова.");
+      else if (/50\d|server|внутренн/i.test(msg)) setError("Ошибка на сервере. Попробуйте чуть позже.");
+      else setError(msg || "Не удалось войти. Попробуйте снова.");
     } finally { setLoading(false); }
   };
 
@@ -152,10 +160,11 @@ function LoginPage({ onAuth }) {
       onAuth(user);
     } catch (e) {
       const msg = e?.message || "";
-      if (/истёк|expired/i.test(msg)) setError("Код истёк. Запроси новый.");
-      else if (/попытки|attempts/i.test(msg)) { setError(msg); setOtpValues(Array(6).fill("")); }
-      else if (/неверн|invalid|wrong/i.test(msg)) { setError(msg || "Неверный код"); setOtpValues(Array(6).fill("")); setTimeout(() => otpRefs[0]?.focus(), 50); }
-      else setError(msg || "Ошибка подтверждения");
+      if (/истёк|истек|expired/i.test(msg)) { setError("Код истёк. Запросите новый."); setOtpValues(Array(6).fill("")); setTimeout(() => otpRefs[0]?.focus(), 50); }
+      else if (/попыт|attempts/i.test(msg)) { setError(msg); setOtpValues(Array(6).fill("")); setTimeout(() => otpRefs[0]?.focus(), 50); }
+      else if (/неверн|invalid|wrong|не найден/i.test(msg)) { setError(msg || "Неверный код. Проверьте и введите снова."); setOtpValues(Array(6).fill("")); setTimeout(() => otpRefs[0]?.focus(), 50); }
+      else if (/failed to fetch|networkerror|load failed|connect|timeout|network/i.test(msg)) setError("Не удаётся подключиться к серверу. Проверьте интернет.");
+      else setError(msg || "Не удалось подтвердить код. Попробуйте снова.");
     } finally { setLoading(false); }
   };
 
@@ -195,9 +204,9 @@ function LoginPage({ onAuth }) {
             </div>
             <p className="mb-1 text-xs font-black uppercase tracking-widest text-blue-400">Sales App</p>
             {step === "credentials" ? (
-              <><h1 className="text-3xl font-black tracking-tight text-white">Добро пожаловать</h1><p className="mt-2 text-sm font-medium text-slate-400">Войди чтобы продолжить работу</p></>
+              <><h1 className="text-3xl font-black tracking-tight text-white">Добро пожаловать</h1><p className="mt-2 text-sm font-medium text-slate-400">Войдите, чтобы продолжить работу</p></>
             ) : (
-              <><h1 className="text-2xl font-black tracking-tight text-white">Подтверждение входа</h1><p className="mt-2 text-sm font-medium text-slate-400">Код отправлен на <span className="font-bold text-blue-400">{maskedEmail || "твой email"}</span></p></>
+              <><h1 className="text-2xl font-black tracking-tight text-white">Подтверждение входа</h1><p className="mt-2 text-sm font-medium text-slate-400">Код отправлен на <span className="font-bold text-blue-400">{maskedEmail || "ваш email"}</span></p></>
             )}
           </div>
 
@@ -260,6 +269,32 @@ function LoginPage({ onAuth }) {
   );
 }
 
+// ── Уведомления (тосты) ──────────────────────────────────────────────
+// Тип определяется по тексту, чтобы старые вызовы alert() автоматически
+// получали правильный цвет: ошибки — красные, успех — зелёные и т.д.
+function inferToastType(text) {
+  const t = String(text || "").toLowerCase();
+  if (/(ошибк|неверн|не удал|не удаётся|не удается|нельзя|пуст|выбери|выберите|заполни|обязательн|не найден|недостаточно|нет доступа|запрещ|провал|fail|error)/.test(t)) return "error";
+  if (/(сохран|заверш|готов|добавл|создан|удал|отправл|оплач|принят|успешн|импортирован|обновл|применен|применён)/.test(t)) return "success";
+  if (/(внимани|предупрежд|проверьте|уже существ|учтите)/.test(t)) return "warning";
+  return "info";
+}
+
+const TOAST_META = {
+  success: { ring: "bg-emerald-500/20 text-emerald-400", label: "Готово" },
+  error:   { ring: "bg-red-500/20 text-red-400",         label: "Ошибка" },
+  warning: { ring: "bg-amber-500/20 text-amber-300",     label: "Внимание" },
+  info:    { ring: "bg-blue-500/20 text-blue-300",       label: "Уведомление" },
+};
+
+function ToastIcon({ type }) {
+  const p = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.4, strokeLinecap: "round", strokeLinejoin: "round" };
+  if (type === "success") return <svg {...p}><path d="M20 6 9 17l-5-5" /></svg>;
+  if (type === "error")   return <svg {...p}><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6M9 9l6 6" /></svg>;
+  if (type === "warning") return <svg {...p}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>;
+  return <svg {...p}><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>;
+}
+
 export default function App() {
   const [session, setSessionState] = useState(getSession());
   const [workspace, setWorkspaceState] = useState(getCurrentWorkspace());
@@ -293,14 +328,19 @@ export default function App() {
 
   useEffect(() => {
     const originalAlert = window.alert;
-    window.alert = (message) => {
-      const text = String(message || "Готово");
+    const pushToast = (message, type) => {
+      const text = String(message ?? "").trim() || "Готово";
+      const kind = type || inferToastType(text);
       const id = `${Date.now()}-${Math.random()}`;
-      setToasts((items) => [...items, { id, text }].slice(-4));
-      window.setTimeout(() => setToasts((items) => items.filter((item) => item.id !== id)), 3600);
+      setToasts((items) => [...items, { id, text, type: kind }].slice(-4));
+      const ttl = kind === "error" ? 6000 : kind === "warning" ? 4800 : 3600;
+      window.setTimeout(() => setToasts((items) => items.filter((item) => item.id !== id)), ttl);
     };
-    window.showToast = (message) => window.alert(message);
-    return () => { window.alert = originalAlert; delete window.showToast; };
+    window.alert = (message) => pushToast(message);
+    // Явный типизированный вызов: window.notify("Сохранено", "success")
+    window.notify = (message, type) => pushToast(message, type);
+    window.showToast = (message, type) => pushToast(message, type);
+    return () => { window.alert = originalAlert; delete window.showToast; delete window.notify; };
   }, []);
 
   useEffect(() => {
@@ -417,7 +457,7 @@ export default function App() {
     : filteredLinks ? filteredLinks
     : isAdmin ? adminLinks
     : workerLinks;
-  const mobileMainPaths = isWorker ? ["/pos", "/pending-payments", "/expenses"] : ["/work", "/pos", "/pending-payments"];
+  const mobileMainPaths = isWorker ? ["/pos", "/pending-payments", "/expenses"] : ["/home", "/pos", "/pending-payments"];
   const mobileMainLinks = links.filter(([to]) => mobileMainPaths.includes(to));
   const mobileMoreLinks = links.filter(([to]) => !mobileMainPaths.includes(to));
 
@@ -575,15 +615,15 @@ export default function App() {
           </div>
         )}
 
-        {/* Мобильная шапка */}
-        <div className={`mb-3 flex items-center justify-between gap-2.5 rounded-[18px] border border-white/8 bg-slate-950/85 px-3 py-2.5 text-white backdrop-blur-md lg:hidden${isAIWarehouseRoute ? " hidden" : ""}`}>
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-linear-to-br from-blue-500 to-blue-700 text-sm font-black text-white shadow-lg shadow-blue-600/25">
+        {/* Мобильная шапка — компактная: аватар + название слева, ряд одинаковых кнопок справа */}
+        <div className={`mb-3 flex items-center justify-between gap-2.5 rounded-2xl border border-white/8 bg-slate-950/85 px-3 py-1.5 text-white backdrop-blur-md lg:hidden${isAIWarehouseRoute ? " hidden" : ""}`}>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-blue-700 text-sm font-black text-white shadow-lg shadow-blue-600/25">
               {(isWorker ? workerName : (currentWorkspace?.name || "Б"))?.[0]?.toUpperCase() || "Б"}
             </div>
             {isWorker ? (
               <select value={profile?.id || ""} onChange={(e) => handleProfileChange(e.target.value)}
-                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-transparent py-1 pl-1 pr-6 text-sm font-black text-blue-300 outline-none">
+                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-transparent py-1 pl-1.5 pr-6 text-sm font-black text-blue-300 outline-none">
                 <option value="">Сотрудник...</option>
                 {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
               </select>
@@ -598,30 +638,34 @@ export default function App() {
             )}
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
-            <ThemeToggle className="h-9 w-9" />
+            <ThemeToggle compact />
             {pendingCount > 0 && (
-              <NavLink to="/pending-payments" className="flex items-center gap-1 rounded-xl border border-blue-500/20 bg-blue-500/12 px-2.5 py-1.5 transition active:scale-95">
-                <Clock3 size={12} className="text-blue-400" strokeWidth={2.8} />
-                <span className="text-[11px] font-black text-blue-300">{pendingCount > 9 ? "9+" : pendingCount}</span>
+              <NavLink to="/pending-payments" aria-label="К оплате"
+                className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-blue-500/25 bg-blue-500/12 text-blue-400 transition active:scale-95">
+                <Clock3 size={16} strokeWidth={2.6} />
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border-[1.5px] border-slate-950 bg-blue-500 px-0.5 text-[9px] font-black leading-none text-white">{pendingCount > 9 ? "9+" : pendingCount}</span>
               </NavLink>
             )}
             {debtCount > 0 && (
-              <NavLink to="/debts" className="flex items-center gap-1 rounded-xl border border-red-500/20 bg-red-500/12 px-2.5 py-1.5 transition active:scale-95">
-                <FileText size={12} className="text-red-400" strokeWidth={2.8} />
-                <span className="text-[11px] font-black text-red-300">{debtCount > 9 ? "9+" : debtCount}</span>
+              <NavLink to="/debts" aria-label="Долги"
+                className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/25 bg-red-500/12 text-red-400 transition active:scale-95">
+                <FileText size={16} strokeWidth={2.6} />
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border-[1.5px] border-slate-950 bg-red-500 px-0.5 text-[9px] font-black leading-none text-white">{debtCount > 9 ? "9+" : debtCount}</span>
               </NavLink>
             )}
             {!isWorker && (
-              <NavLink to="/profile"
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/8 text-slate-400 transition active:scale-95 active:bg-white/15 hover:text-white">
-                <Settings size={17} strokeWidth={2.5} />
+              <NavLink to="/profile" aria-label="Настройки"
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-slate-400 transition active:scale-95 active:bg-white/15 hover:text-white">
+                <Settings size={16} strokeWidth={2.5} />
               </NavLink>
             )}
           </div>
         </div>
 
         <Routes>
-          <Route path="/" element={<Navigate to={isWorker ? "/pos" : "/work"} replace />} />
+          <Route path="/" element={<Navigate to={isWorker ? "/pos" : "/home"} replace />} />
+          <Route path="/home" element={isWorker ? <Navigate to="/pos" replace /> : <HomePage />} />
+          <Route path="/appearance" element={isWorker ? <Navigate to="/pos" replace /> : <AppearancePage />} />
           <Route path="/pos" element={<POSPage currentProfile={profile} ownerName={isWorker ? profile?.name : session.ownerName || session.username} openProfile={() => { if (!isWorker) window.location.href = "/profile"; }} />} />
           <Route path="/expenses" element={<ExpensesPage currentProfile={profile} workerMode={isWorker} />} />
           <Route path="/pending-payments" element={<PendingPaymentsPage />} />
@@ -634,7 +678,7 @@ export default function App() {
           <Route path="/analytics" element={!canAccess("/analytics") ? forbidden : <AnalyticsPage />} />
           <Route path="/employees" element={<Navigate to="/profile" replace />} />
           <Route path="/cards" element={<Navigate to="/profile" replace />} />
-          <Route path="*" element={<Navigate to={isWorker ? "/pos" : "/work"} replace />} />
+          <Route path="*" element={<Navigate to={isWorker ? "/pos" : "/home"} replace />} />
         </Routes>
       </main>
 
@@ -731,24 +775,30 @@ export default function App() {
       {/* Тосты на мобиле — над навигацией */}
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-60 flex flex-col-reverse gap-2 px-4 lg:hidden"
         style={{ paddingBottom: "calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px)" }}>
-        {toasts.slice(-2).map((toast) => (
-          <div key={toast.id} className="animate-toast pointer-events-auto flex items-center gap-3 rounded-2xl border border-white/12 bg-slate-800/97 px-4 py-3.5 shadow-2xl backdrop-blur-xl">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 text-base font-black">✓</span>
-            <p className="text-sm font-black text-white leading-snug">{toast.text}</p>
-          </div>
-        ))}
+        {toasts.slice(-2).map((toast) => {
+          const meta = TOAST_META[toast.type] || TOAST_META.info;
+          return (
+            <div key={toast.id} className="animate-toast pointer-events-auto flex items-center gap-3 rounded-2xl border border-white/12 bg-slate-800/97 px-4 py-3.5 shadow-2xl backdrop-blur-xl">
+              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${meta.ring}`}><ToastIcon type={toast.type} /></span>
+              <p className="text-sm font-black text-white leading-snug">{toast.text}</p>
+            </div>
+          );
+        })}
       </div>
       {/* Тосты на десктопе — правый верхний угол */}
       <div className="pointer-events-none fixed right-5 top-5 z-60 hidden w-full max-w-sm flex-col gap-2.5 lg:flex">
-        {toasts.map((toast) => (
-          <div key={toast.id} className="animate-toast pointer-events-auto flex items-start gap-3.5 rounded-2xl border border-white/12 bg-slate-800/97 px-5 py-4 shadow-2xl backdrop-blur-xl">
-            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 text-sm font-black">✓</span>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Уведомление</p>
-              <p className="mt-0.5 text-sm font-black text-white">{toast.text}</p>
+        {toasts.map((toast) => {
+          const meta = TOAST_META[toast.type] || TOAST_META.info;
+          return (
+            <div key={toast.id} className="animate-toast pointer-events-auto flex items-start gap-3.5 rounded-2xl border border-white/12 bg-slate-800/97 px-5 py-4 shadow-2xl backdrop-blur-xl">
+              <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${meta.ring}`}><ToastIcon type={toast.type} /></span>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{meta.label}</p>
+                <p className="mt-0.5 text-sm font-black text-white">{toast.text}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
