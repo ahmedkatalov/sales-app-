@@ -126,6 +126,7 @@ const BLUR_BASE = { xs: 2, sm: 4, md: 8, lg: 12, xl: 16, "2xl": 24, "3xl": 40 };
 export function buildCss(appearanceInput) {
   const a = { ...DEFAULT_APPEARANCE, ...(appearanceInput || {}) };
   const root = [];
+  const recolored = new Set();
 
   // Акцентные и статусные цвета → переопределяем семейства палитры
   const applyColor = (hex, families) => {
@@ -133,6 +134,7 @@ export function buildCss(appearanceInput) {
     const r = ramp(hex);
     if (!r) return;
     for (const fam of families) {
+      recolored.add(fam);
       for (const lvl of RAMP_LEVELS) root.push(`--color-${fam}-${lvl}:${r[lvl]};`);
     }
   };
@@ -169,6 +171,22 @@ export function buildCss(appearanceInput) {
   // порядка подключения стилей.
   const blocks = [];
   if (root.length) blocks.push(`html:root{${root.join("")}}`);
+
+  // Tailwind v4 инлайнит ЛИТЕРАЛЬНЫЙ цвет в --tw-gradient-from/-to/-via, поэтому
+  // переопределения --color-* сами по себе НЕ перекрашивают градиенты (главные
+  // CTA-кнопки from-blue-600 to-violet-600). Привязываем стопы градиента обратно
+  // к нашим токенам цвета — тогда весь бренд-градиент следует за акцентом.
+  if (recolored.size) {
+    const grad = [];
+    for (const fam of recolored) {
+      for (const lvl of RAMP_LEVELS) {
+        grad.push(`.from-${fam}-${lvl}{--tw-gradient-from:var(--color-${fam}-${lvl})!important}`);
+        grad.push(`.to-${fam}-${lvl}{--tw-gradient-to:var(--color-${fam}-${lvl})!important}`);
+        grad.push(`.via-${fam}-${lvl}{--tw-gradient-via:var(--color-${fam}-${lvl})!important}`);
+      }
+    }
+    blocks.push(grad.join(""));
+  }
 
   // Шрифт (system = дефолт приложения — не переопределяем)
   if (a.font && a.font !== "system") {
@@ -220,6 +238,19 @@ export function getAppearance() {
 
 export function setAppearance(partial) {
   const next = { ...getAppearance(), ...partial };
+  try { localStorage.setItem(KEY_APPEARANCE, JSON.stringify(next)); } catch { /* ignore */ }
+  applyAppearance(next);
+  window.dispatchEvent(new CustomEvent("sales-appearance-change", { detail: next }));
+  return next;
+}
+
+// hydrateAppearance — применить оформление, ПРИШЕДШЕЕ С СЕРВЕРА (общее на
+// аккаунт). Пишем в localStorage как базовое и применяем, но не шлём событие
+// изменения (это не действие пользователя, а синхронизация). null = сброс.
+export function hydrateAppearance(appearance) {
+  const next = appearance && typeof appearance === "object"
+    ? { ...DEFAULT_APPEARANCE, ...appearance }
+    : { ...DEFAULT_APPEARANCE };
   try { localStorage.setItem(KEY_APPEARANCE, JSON.stringify(next)); } catch { /* ignore */ }
   applyAppearance(next);
   window.dispatchEvent(new CustomEvent("sales-appearance-change", { detail: next }));

@@ -411,6 +411,9 @@ func createTables() {
 		`ALTER TABLE employees ADD COLUMN password TEXT DEFAULT ''`,
 		`ALTER TABLE menu_products ADD COLUMN is_extra INTEGER DEFAULT 0`,
 		`ALTER TABLE sale_items ADD COLUMN is_extra INTEGER DEFAULT 0`,
+		// Настройки аккаунта: оформление (appearance) — общее для всех сотрудников
+		`CREATE TABLE IF NOT EXISTS account_settings (account_id INTEGER PRIMARY KEY, appearance TEXT DEFAULT '')`,
+		`ALTER TABLE account_settings ADD COLUMN appearance TEXT DEFAULT ''`,
 	}
 
 	for _, q := range migrations {

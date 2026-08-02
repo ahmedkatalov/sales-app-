@@ -95,6 +95,10 @@ func main() {
 	auth.POST("/cards", createCard)
 	auth.DELETE("/cards/:id", deleteCard)
 
+	// Оформление — общее на аккаунт (владелец задаёт, у всех применяется)
+	auth.GET("/settings/appearance", getAppearanceSettings)
+	auth.PUT("/settings/appearance", setAppearanceSettings)
+
 	auth.GET("/product-types", getProductTypes)
 	auth.POST("/product-types", createProductType)
 	auth.DELETE("/product-types/:id", deleteProductType)

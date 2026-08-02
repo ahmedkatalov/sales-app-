@@ -18,6 +18,7 @@ import {
   Wallet,
 } from "lucide-react";
 
+import { hydrateAppearance } from "./theme/engine";
 import HomePage from "./pages/HomePage";
 import AppearancePage from "./pages/AppearancePage";
 import WorkPage from "./pages/WorkPage";
@@ -371,6 +372,16 @@ export default function App() {
     if (!session || !isWorker) return;
     get("/employees").then((list) => setEmployees(list || [])).catch(() => setEmployees([]));
   }, [session, workspace, isWorker]);
+
+  // Общее оформление аккаунта: владелец задаёт — применяется у всех.
+  // Тянем с сервера при входе; применяем только если владелец что-то задал
+  // (иначе не трогаем локальный/дефолтный вид).
+  useEffect(() => {
+    if (!session) return;
+    get("/settings/appearance")
+      .then((r) => { if (r && r.appearance) hydrateAppearance(r.appearance); })
+      .catch(() => {});
+  }, [session]);
 
   useEffect(() => {
     if (!session) return;

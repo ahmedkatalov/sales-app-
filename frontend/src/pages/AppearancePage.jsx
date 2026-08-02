@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  Check, Copy, Download, Moon, Palette, Plus, RotateCcw, Sparkles, Sun, Trash2, Upload,
+  Check, Copy, Download, Moon, Palette, Plus, RotateCcw, Sparkles, Sun, Trash2, Upload, Users,
 } from "lucide-react";
 import {
   DEFAULT_APPEARANCE, DENSITY_LABELS, FONT_LABELS, PRESETS, RADIUS_LABELS, RADIUS_PRESETS, SHADOW_LABELS,
@@ -8,6 +8,7 @@ import {
   resetAppearance, saveTheme, setAppearance,
 } from "../theme/engine";
 import { getTheme, setTheme } from "../theme";
+import { getSession, put } from "../api";
 
 const ACCENTS = ["#3b82f6", "#6366f1", "#8b5cf6", "#d946ef", "#ec4899", "#f43f5e", "#ef4444", "#f97316", "#f59e0b", "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9", "#d4af37", "#64748b"];
 const notify = (m, t) => window.notify?.(m, t);
@@ -99,6 +100,8 @@ export default function AppearancePage() {
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [newName, setNewName] = useState("");
+  const [savingAll, setSavingAll] = useState(false);
+  const isOwner = getSession()?.role === "owner";
 
   useEffect(() => {
     const onAp = (e) => setAp(e.detail || getAppearance());
@@ -149,6 +152,20 @@ export default function AppearancePage() {
 
   const onReset = () => { setAp(resetAppearance()); notify("Оформление сброшено", "success"); };
 
+  // Применить текущее оформление на весь аккаунт — у всех сотрудников.
+  // Тему (светлую/тёмную) не трогаем: она у каждого своя.
+  const onApplyForAll = async () => {
+    setSavingAll(true);
+    try {
+      await put("/settings/appearance", { appearance: ap });
+      notify("Оформление применено для всех сотрудников", "success");
+    } catch (e) {
+      notify(e?.message || "Не удалось сохранить оформление", "error");
+    } finally {
+      setSavingAll(false);
+    }
+  };
+
   return (
     <div className="relative pb-nav text-white sm:pb-10">
       <div className="pointer-events-none absolute -top-24 right-1/4 h-72 w-72 rounded-full bg-violet-600/20 blur-3xl" />
@@ -173,6 +190,28 @@ export default function AppearancePage() {
             </button>
           </div>
         </header>
+
+        {/* Оформление — общее для команды */}
+        {isOwner ? (
+          <div className="mb-6 flex flex-col gap-3 rounded-3xl border border-blue-400/25 bg-blue-500/[0.07] p-4 shadow-lg sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div className="flex items-start gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-blue-500/20 text-blue-300"><Users size={18} strokeWidth={2.4} /></span>
+              <div>
+                <p className="text-sm font-black text-white">Оформление для всей команды</p>
+                <p className="mt-0.5 text-[13px] text-slate-400">Настройте вид ниже и примените его на устройствах всех сотрудников. Светлую/тёмную тему каждый выбирает сам.</p>
+              </div>
+            </div>
+            <button type="button" onClick={onApplyForAll} disabled={savingAll}
+              className="flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60">
+              <Check size={16} strokeWidth={2.6} /> {savingAll ? "Применяю…" : "Применить для всех"}
+            </button>
+          </div>
+        ) : (
+          <div className="mb-6 flex items-start gap-3 rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/8 text-slate-400"><Palette size={16} /></span>
+            <p className="text-[13px] text-slate-400">Общее оформление задаёт владелец. Изменения здесь останутся только на этом устройстве.</p>
+          </div>
+        )}
 
         {importOpen && (
           <div className="mb-6 rounded-3xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
