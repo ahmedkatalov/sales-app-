@@ -75,17 +75,42 @@ const workerLinks = [
   ["/expenses", "Расходы", Wallet],
 ];
 
+// Запоминаем «код уже отправлен», чтобы уход в почту за кодом и возврат в браузер
+// (мобильный часто перезагружает страницу) НЕ сбрасывал форму. Пароль НЕ храним —
+// для подтверждения кода он не нужен (нужны только email + код).
+const OTP_PENDING_KEY = "sales_app_otp_pending";
+const OTP_PENDING_TTL = 10 * 60 * 1000; // 10 минут
+
+function readOtpPending() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(OTP_PENDING_KEY) || "null");
+    if (raw && raw.username && Date.now() - raw.sentAt < OTP_PENDING_TTL) return raw;
+  } catch { /* ignore */ }
+  return null;
+}
+function saveOtpPending(username, maskedEmail) {
+  try {
+    localStorage.setItem(OTP_PENDING_KEY, JSON.stringify({ username, maskedEmail: maskedEmail || "", sentAt: Date.now() }));
+  } catch { /* ignore */ }
+}
+function clearOtpPending() {
+  try { localStorage.removeItem(OTP_PENDING_KEY); } catch { /* ignore */ }
+}
+
 function LoginPage({ onAuth }) {
-  const [step, setStep] = useState("credentials");
-  const [username, setUsername] = useState("");
+  const [initialPending] = useState(readOtpPending); // читаем один раз при монтировании
+  const [step, setStep] = useState(initialPending ? "otp" : "credentials");
+  const [username, setUsername] = useState(initialPending?.username || "");
   const [password, setPassword] = useState("");
   const [otpValues, setOtpValues] = useState(Array(6).fill(""));
-  const [maskedEmail, setMaskedEmail] = useState("");
+  const [maskedEmail, setMaskedEmail] = useState(initialPending?.maskedEmail || "");
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(0);
+  const [secondsLeft, setSecondsLeft] = useState(() =>
+    initialPending ? Math.max(0, 60 - Math.floor((Date.now() - initialPending.sentAt) / 1000)) : 0
+  );
   const otpRefs = [];
 
   useEffect(() => {
@@ -141,6 +166,7 @@ function LoginPage({ onAuth }) {
       setOtpValues(Array(6).fill(""));
       setStep("otp");
       setSecondsLeft(60);
+      saveOtpPending(cleanUsername, res.maskedEmail); // помним, что код отправлен (переживёт перезагрузку)
       setTimeout(() => otpRefs[0]?.focus(), 100);
     } catch (e) {
       const msg = e?.message || "";
@@ -161,6 +187,7 @@ function LoginPage({ onAuth }) {
       const user = await post("/auth/login-otp/confirm", { username: username.trim(), code: otpCode });
       if (!user || !user.accountId) throw new Error("Сервер ответил без данных аккаунта");
       setSession(user);
+      clearOtpPending();
       onAuth(user);
     } catch (e) {
       const msg = e?.message || "";
@@ -174,13 +201,22 @@ function LoginPage({ onAuth }) {
 
   const resendOtp = async () => {
     if (secondsLeft > 0 || loading) return;
+    const cleanUsername = (username || "").trim();
+    const cleanPassword = (password || "").trim();
+    // После перезагрузки пароль не хранится — просим ввести данные заново
+    if (!cleanPassword) {
+      setStep("credentials");
+      setError("Введите пароль ещё раз, чтобы отправить новый код.");
+      return;
+    }
     setError("");
     setLoading(true);
     try {
-      const res = await post("/auth/login-otp/request", { username: username.trim(), password: password.trim() });
+      const res = await post("/auth/login-otp/request", { username: cleanUsername, password: cleanPassword });
       setMaskedEmail(res.maskedEmail || maskedEmail);
       setOtpValues(Array(6).fill(""));
       setSecondsLeft(60);
+      saveOtpPending(cleanUsername, res.maskedEmail || maskedEmail); // обновляем метку времени
       setTimeout(() => otpRefs[0]?.focus(), 100);
     } catch (e) { setError(e?.message || "Ошибка при повторной отправке"); }
     finally { setLoading(false); }
@@ -259,7 +295,7 @@ function LoginPage({ onAuth }) {
                 {loading ? <span className="flex items-center justify-center gap-2"><svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Проверяю...</span> : "Подтвердить вход"}
               </button>
               <div className="flex items-center justify-between gap-3">
-                <button type="button" onClick={() => { setStep("credentials"); setError(""); setOtpValues(Array(6).fill("")); }} className="text-sm font-bold text-slate-400 hover:text-white transition">← Изменить данные</button>
+                <button type="button" onClick={() => { setStep("credentials"); setError(""); setOtpValues(Array(6).fill("")); clearOtpPending(); }} className="text-sm font-bold text-slate-400 hover:text-white transition">← Изменить данные</button>
                 <button type="button" onClick={resendOtp} disabled={secondsLeft > 0 || loading} className="text-sm font-bold text-blue-400 hover:text-blue-300 disabled:cursor-not-allowed disabled:text-slate-500 transition">
                   {secondsLeft > 0 ? `Повторно через ${secondsLeft} сек` : "Отправить снова"}
                 </button>
