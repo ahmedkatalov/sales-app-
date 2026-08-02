@@ -172,7 +172,7 @@ export default function DebtsPage() {
 
         <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 shadow-2xl sm:rounded-[28px] sm:p-5">
-            <p className="text-[10px] font-black uppercase tracking-wide text-red-200 sm:text-xs">
+            <p className="text-[11px] font-black uppercase tracking-wide text-red-200 sm:text-xs">
               Открытый долг
             </p>
             <p className="mt-1.5 text-2xl font-black text-white sm:mt-3 sm:text-4xl">
@@ -184,7 +184,7 @@ export default function DebtsPage() {
           </div>
 
           <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 shadow-2xl sm:rounded-[28px] sm:p-5">
-            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-200 sm:text-xs">
+            <p className="text-[11px] font-black uppercase tracking-wide text-emerald-200 sm:text-xs">
               Уже оплачено
             </p>
             <p className="mt-1.5 text-2xl font-black text-white sm:mt-3 sm:text-4xl">
@@ -196,7 +196,7 @@ export default function DebtsPage() {
           </div>
 
           <div className="col-span-2 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 shadow-2xl sm:col-span-1 sm:rounded-[28px] sm:p-5">
-            <p className="text-[10px] font-black uppercase tracking-wide text-blue-200 sm:text-xs">
+            <p className="text-[11px] font-black uppercase tracking-wide text-blue-200 sm:text-xs">
               Клиентов / записей
             </p>
             <p className="mt-1.5 text-2xl font-black text-white sm:mt-3 sm:text-4xl">
@@ -258,7 +258,7 @@ export default function DebtsPage() {
 
                     <div className="grid grid-cols-3 gap-2 sm:gap-3 xl:min-w-[560px]">
                       <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 sm:rounded-2xl sm:px-4 sm:py-3">
-                        <p className="text-[10px] font-black uppercase text-slate-400 sm:text-xs">
+                        <p className="text-[11px] font-black uppercase text-slate-400 sm:text-xs">
                           Текущий долг
                         </p>
 
@@ -268,7 +268,7 @@ export default function DebtsPage() {
                       </div>
 
                       <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2.5 sm:rounded-2xl sm:px-4 sm:py-3">
-                        <p className="text-[10px] font-black uppercase text-slate-400 sm:text-xs">
+                        <p className="text-[11px] font-black uppercase text-slate-400 sm:text-xs">
                           Оплачено
                         </p>
 
@@ -279,7 +279,7 @@ export default function DebtsPage() {
 
                       <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 sm:rounded-2xl sm:px-4 sm:py-3">
                         <div className="min-w-0">
-                          <p className="text-[10px] font-black uppercase text-slate-400 sm:text-xs">
+                          <p className="text-[11px] font-black uppercase text-slate-400 sm:text-xs">
                             Всего
                           </p>
 
@@ -370,7 +370,7 @@ export default function DebtsPage() {
                             {debt.status !== "paid" ? (
                               <button
                                 onClick={() => closeDebt(debt.id)}
-                                className="rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:scale-[1.01] lg:hidden"
+                                className="rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:scale-[1.01] lg:hidden"
                               >
                                 Оплатить
                               </button>
@@ -381,7 +381,7 @@ export default function DebtsPage() {
                             {debt.status !== "paid" ? (
                               <button
                                 onClick={() => closeDebt(debt.id)}
-                                className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:scale-[1.01]"
+                                className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:scale-[1.01]"
                               >
                                 Оплатить
                               </button>

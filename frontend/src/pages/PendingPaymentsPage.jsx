@@ -86,17 +86,17 @@ export default function PendingPaymentsPage() {
 
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
         <div className="rounded-2xl border border-blue-500/25 bg-blue-500/[0.08] p-3 sm:p-4">
-          <p className="text-[10px] font-black uppercase tracking-wide text-blue-200/90 sm:text-[11px]">Ожидают</p>
+          <p className="text-[11px] font-black uppercase tracking-wide text-blue-200/90 sm:text-[11px]">Ожидают</p>
           <p className="mt-1.5 text-xl font-black text-white sm:text-2xl">{safe_list.length}</p>
           <p className="text-[11px] font-semibold text-slate-500">неоплаченных чеков</p>
         </div>
         <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.08] p-3 sm:p-4">
-          <p className="text-[10px] font-black uppercase tracking-wide text-emerald-200/90 sm:text-[11px]">Сумма</p>
+          <p className="text-[11px] font-black uppercase tracking-wide text-emerald-200/90 sm:text-[11px]">Сумма</p>
           <p className="mt-1.5 text-xl font-black tabular-nums text-white sm:text-2xl">{formatMoney(totalWaiting)}</p>
           <p className="text-[11px] font-semibold text-slate-500">к оплате</p>
         </div>
         <div className="col-span-2 rounded-2xl border border-violet-500/25 bg-violet-500/[0.08] p-3 sm:col-span-1 sm:p-4">
-          <p className="text-[10px] font-black uppercase tracking-wide text-violet-200/90 sm:text-[11px]">Товаров</p>
+          <p className="text-[11px] font-black uppercase tracking-wide text-violet-200/90 sm:text-[11px]">Товаров</p>
           <p className="mt-1.5 text-xl font-black text-white sm:text-2xl">{totalItems}</p>
           <p className="text-[11px] font-semibold text-slate-500">единиц всего</p>
         </div>

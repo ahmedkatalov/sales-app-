@@ -204,8 +204,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                   key={key}
                   onClick={action}
                   className={active
-                    ? "rounded-xl bg-linear-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
-                    : "rounded-xl border border-white/10 bg-white/8 px-4 py-2 text-sm font-black text-slate-300 transition hover:bg-white/15"}
+                    ? "rounded-xl bg-linear-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg"
+                    : "rounded-xl border border-white/10 bg-white/8 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-white/15"}
                 >
                   {label}
                 </button>
@@ -223,7 +223,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           {/* Кнопка открытия расширенного фильтра */}
           <button
             onClick={() => setFilterOpen((v) => !v)}
-            className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-black transition ${
+            className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-black transition ${
               filterOpen
                 ? "border-blue-400/40 bg-blue-500/15 text-blue-200"
                 : "border-white/10 bg-white/8 text-slate-300 hover:bg-white/15"
@@ -278,8 +278,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                     onClick={() => setCategory(key)}
                     className={
                       filterCategory === key
-                        ? "rounded-xl bg-linear-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
-                        : "rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/15"
+                        ? "rounded-xl bg-linear-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg"
+                        : "rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/15"
                     }
                   >
                     {label}
@@ -297,8 +297,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                     onClick={() => setFilterType("all")}
                     className={
                       filterType === "all"
-                        ? "rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-950"
-                        : "rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/15"
+                        ? "rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-black text-slate-950"
+                        : "rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/15"
                     }
                   >
                     Все типы
@@ -309,8 +309,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                       onClick={() => setFilterType(type)}
                       className={
                         filterType === type
-                          ? "rounded-xl bg-slate-100 px-4 py-2 text-sm font-black text-slate-950"
-                          : "rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-slate-200 transition hover:bg-white/15"
+                          ? "rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-black text-slate-950"
+                          : "rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/15"
                       }
                     >
                       {type}
@@ -323,32 +323,32 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         )}
       </div>
 
-      <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4">
         <div className="rounded-2xl border border-red-400/25 bg-red-500/[0.08] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-500/20 text-red-300 sm:h-9 sm:w-9 sm:rounded-xl">₽</span>
-            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-red-200/90 sm:text-[11px]">Итого расходов</p>
+            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-red-200/90 sm:text-[11px]">Итого расходов</p>
           </div>
           <p className="mt-2 text-xl font-black tabular-nums text-white sm:text-2xl">{formatMoney(total)}</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-500/15 text-slate-300 sm:h-9 sm:w-9 sm:rounded-xl">№</span>
-            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Записей</p>
+            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Записей</p>
           </div>
           <p className="mt-2 text-xl font-black text-white sm:text-2xl">{visibleExpenses.length}</p>
         </div>
         <div className="rounded-2xl border border-blue-400/20 bg-blue-500/[0.08] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 text-blue-300 sm:h-9 sm:w-9 sm:rounded-xl">🏷</span>
-            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-blue-200/90 sm:text-[11px]">Категория</p>
+            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-blue-200/90 sm:text-[11px]">Категория</p>
           </div>
           <p className="mt-2 truncate text-base font-black text-white sm:text-xl">{filterCategory === "all" ? "Все" : categoryLabel(filterCategory)}</p>
         </div>
         <div className="rounded-2xl border border-violet-400/20 bg-violet-500/[0.08] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-violet-300 sm:h-9 sm:w-9 sm:rounded-xl">≡</span>
-            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-violet-200/90 sm:text-[11px]">Тип</p>
+            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-violet-200/90 sm:text-[11px]">Тип</p>
           </div>
           <p className="mt-2 truncate text-base font-black text-white sm:text-xl">{filterType === "all" ? "Все типы" : filterType}</p>
         </div>
@@ -383,7 +383,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           </div>
         </div>
 
-        <div className="hidden overflow-x-auto md:block">
+        <div className="hidden overflow-x-auto xl:block">
           <table className="w-full min-w-[1050px] text-left text-sm">
             <thead className="border-y border-white/10 bg-slate-950/50 text-xs uppercase tracking-wide text-slate-400">
               <tr>
@@ -442,7 +442,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           </table>
         </div>
 
-        <div className="divide-y divide-white/10 md:hidden">
+        <div className="divide-y divide-white/10 xl:hidden">
           {visibleExpenses.map((e) => (
             <div key={e.id} className="flex items-start justify-between gap-3 p-3.5">
               <div className="min-w-0">

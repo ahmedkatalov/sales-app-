@@ -183,7 +183,7 @@ export default function ShopPage() {
       <div className="border-b border-white/10 px-5 py-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300">
               POS корзина
             </p>
             <h2 className="mt-0.5 text-xl font-black text-white">Заказ</h2>
@@ -366,7 +366,7 @@ export default function ShopPage() {
           <div className="shrink-0 border-b border-white/10 p-4 sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-300">
+                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-300">
                   Быстрая продажа
                 </p>
                 <h1 className="mt-1 text-3xl font-black leading-none sm:text-5xl">

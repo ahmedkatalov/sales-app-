@@ -649,48 +649,46 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
 
   return (
     <div
-      className="relative min-h-screen pb-nav text-white sm:pb-10"
+      className="relative flex flex-col pb-nav text-white sm:pb-10 lg:h-[calc(100vh-190px)] lg:overflow-hidden lg:pb-0"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute left-[-120px] top-[-120px] h-[360px] w-[360px] rounded-full bg-blue-600/20 blur-3xl" />
         <div className="absolute right-[-140px] bottom-[-140px] h-[360px] w-[360px] rounded-full bg-violet-600/20 blur-3xl" />
       </div>
-      <div className="relative z-10">
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="text-sm font-bold text-blue-400">Касса</p>
-          <h2 className="text-4xl font-black leading-none text-white sm:text-5xl">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+      <div className="mb-3 flex shrink-0 items-center justify-between gap-3 lg:mb-4">
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-blue-400 sm:text-sm">Касса</p>
+          <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">
             Магазин
           </h2>
         </div>
 
-        <div className="hidden rounded-4xl border border-white/10 bg-[#0f172a]/80 px-4 py-3 shadow-2xl backdrop-blur lg:block">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br from-blue-600 to-violet-600 text-lg font-black text-white">
-              {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase text-slate-400">
-                Сейчас работает
-              </p>
-              <p className="text-lg font-black text-white">
-                {activeWorkerName}
-              </p>
-            </div>
+        <div className="flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#0f172a]/80 px-2.5 py-2 shadow-lg backdrop-blur sm:px-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-violet-600 text-sm font-black text-white">
+            {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
+          </div>
+          <div className="hidden min-w-0 pr-1 sm:block">
+            <p className="text-[11px] font-black uppercase leading-none text-slate-400">
+              Сейчас работает
+            </p>
+            <p className="truncate text-sm font-black leading-tight text-white">
+              {activeWorkerName}
+            </p>
           </div>
         </div>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-2xl bg-red-500/10 px-4 py-3 font-bold text-red-300">
+        <div className="mb-3 shrink-0 rounded-2xl bg-red-500/10 px-4 py-3 font-bold text-red-300">
           {error}
         </div>
       )}
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_420px] xl:items-start">
-        <div className="space-y-5">
-          <div className="rounded-4xl border border-white/10 bg-[#0f172a]/80 p-4 shadow-2xl backdrop-blur sm:p-5">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+        <div className="flex min-h-0 flex-col gap-3 lg:flex-1">
+          <div className="shrink-0 rounded-3xl border border-white/10 bg-[#0f172a]/80 p-3 shadow-xl backdrop-blur sm:p-4">
             <div className="flex items-center gap-3">
               {openedCategory && (
                 <button
@@ -732,7 +730,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-0.5">
                 <button
                   onClick={() => { setSelectedSectionId("all"); setOpenedCategory(null); }}
-                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${selectedSectionId === "all" ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white" : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
+                  className={`shrink-0 rounded-full px-4 py-2.5 text-sm font-black transition ${selectedSectionId === "all" ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white" : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
                 >
                   Все
                 </button>
@@ -740,7 +738,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
                   <button
                     key={s.id}
                     onClick={() => { setSelectedSectionId(String(s.id)); setOpenedCategory(null); }}
-                    className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${String(selectedSectionId) === String(s.id) ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white" : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
+                    className={`shrink-0 rounded-full px-4 py-2.5 text-sm font-black transition ${String(selectedSectionId) === String(s.id) ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white" : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
                   >
                     {s.name}
                   </button>
@@ -750,7 +748,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           </div>
 
           {!isWorkspaceUser && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
               {/* ── Создать раздел inline ── */}
               {inlineSection ? (
                 <div className="flex flex-1 items-center gap-2 rounded-2xl border border-blue-400/30 bg-blue-500/10 px-3 py-2">
@@ -819,8 +817,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
             </div>
           )}
 
+          <div className="no-scrollbar lg:-mr-1 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1 lg:pb-1">
           {!openedCategory ? (
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 2xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-4">
               {visibleCategories.map((cat) => (
                 <button
                   key={cat.id}
@@ -850,7 +849,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {productsInsideCategory.map((p) => (
                 <button
                   key={p.id}
@@ -878,12 +877,13 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
               )}
             </div>
           )}
+          </div>
         </div>
 
-        <div className="xl:sticky xl:top-6 xl:self-start">
+        <div className="flex min-h-0 flex-col gap-3 lg:w-[360px] lg:shrink-0 xl:w-[400px]">
         {/* Денежная смена (касса) */}
         {cashShift ? (
-          <div className="mb-3 rounded-4xl border border-emerald-400/25 bg-emerald-500/[0.06] p-4 sm:p-5">
+          <div className="rounded-4xl border border-emerald-400/25 bg-emerald-500/[0.06] p-4 sm:p-5">
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">Смена открыта</p>
@@ -906,17 +906,17 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           </div>
         ) : (
           <button type="button" onClick={() => { setShiftInput(""); setShiftResult(null); setShiftModal("open"); }}
-            className="mb-3 flex w-full items-center justify-between gap-3 rounded-4xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:bg-white/[0.07] sm:p-5">
-            <div>
+            className="flex w-full shrink-0 items-center justify-between gap-3 rounded-3xl border border-white/10 bg-white/[0.04] p-3.5 text-left transition hover:bg-white/[0.07]">
+            <div className="min-w-0">
               <p className="text-sm font-black text-white">Открыть смену</p>
-              <p className="text-xs text-slate-400">Внеси размен — касса начнёт считать наличные</p>
+              <p className="truncate text-xs text-slate-400">Внесите размен — касса начнёт считать наличные</p>
             </div>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300 text-lg">₽</span>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-lg text-blue-300">₽</span>
           </button>
         )}
 
         {extraProducts.length > 0 && (
-          <div className="mb-3 rounded-4xl border border-amber-400/25 bg-amber-500/[0.06] p-4 sm:p-5">
+          <div className="rounded-4xl border border-amber-400/25 bg-amber-500/[0.06] p-4 sm:p-5">
             <div className="mb-3 flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300 text-sm">＋</span>
               <div>
@@ -936,9 +936,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           </div>
         )}
 
-        <div className="rounded-4xl border border-white/10 bg-[#0f172a]/90 p-4 shadow-2xl backdrop-blur sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="text-2xl font-black">Корзина</h3>
+        <div className="flex min-h-0 flex-1 flex-col rounded-3xl border border-white/10 bg-[#0f172a]/90 p-3.5 shadow-2xl backdrop-blur sm:p-4">
+          <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
+            <h3 className="text-xl font-black sm:text-2xl">Корзина</h3>
 
             {safe_cart.length > 0 && (
               <button
@@ -950,7 +950,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
             )}
           </div>
 
-          <div className="max-h-72 space-y-2 overflow-auto">
+          <div className="no-scrollbar max-h-72 space-y-2 overflow-auto lg:max-h-none lg:min-h-[96px] lg:flex-1">
             {safe_cart.map((i) => (
               <div
                 key={i.productId}
@@ -989,30 +989,30 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
 
           {safe_cart.length > 0 && (
             <>
-              <div className="mt-4">
+              <div className="mt-2 shrink-0">
                 <input
                   value={discount}
                   onChange={(e) => setDiscount(e.target.value)}
                   placeholder="Скидка %"
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 font-bold text-white outline-none placeholder:text-slate-500"
                 />
               </div>
 
-              <div className="mt-4 rounded-4xl border border-white/10 bg-linear-to-br from-blue-600/10 to-violet-600/10 p-5">
-                <div className="flex justify-between text-slate-300">
-                  <span>Сумма</span>
-                  <b className="text-white">{formatMoney(subtotal)}</b>
-                </div>
-
+              <div className="mt-2 shrink-0 rounded-2xl border border-white/10 bg-linear-to-br from-blue-600/10 to-violet-600/10 p-3">
                 {discountAmount > 0 && (
-                  <div className="mt-2 flex justify-between text-red-300">
-                    <span>Скидка</span>
-                    <b>−{formatMoney(discountAmount)}</b>
-                  </div>
+                  <>
+                    <div className="flex justify-between text-sm text-slate-300">
+                      <span>Сумма</span>
+                      <b className="text-white">{formatMoney(subtotal)}</b>
+                    </div>
+                    <div className="mt-1 flex justify-between text-sm text-red-300">
+                      <span>Скидка</span>
+                      <b>−{formatMoney(discountAmount)}</b>
+                    </div>
+                  </>
                 )}
-
-                <div className="mt-3 flex items-baseline justify-between border-t border-white/10 pt-3 text-2xl">
-                  <span className="font-black">Итого</span>
+                <div className={`flex items-baseline justify-between ${discountAmount > 0 ? "mt-2 border-t border-white/10 pt-2" : ""}`}>
+                  <span className="text-lg font-black">Итого</span>
                   <b className="text-2xl font-black">{formatMoney(total)}</b>
                 </div>
               </div>
@@ -1022,7 +1022,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           <button
             onClick={confirmSale}
             disabled={!safe_cart.length}
-            className="mt-4 w-full rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3.5 text-base font-black text-white shadow-xl shadow-blue-900/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:scale-100 sm:py-4 sm:text-lg"
+            className="mt-2 w-full shrink-0 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 text-base font-black text-white shadow-xl shadow-blue-900/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:scale-100 sm:py-3.5 sm:text-lg"
           >
             {safe_cart.length ? `Подтвердить покупку · ${formatMoney(total)}` : "Подтвердить покупку"}
           </button>

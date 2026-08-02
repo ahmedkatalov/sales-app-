@@ -814,7 +814,7 @@ export default function WorkPage() {
       <div className="no-scrollbar mb-4 flex gap-2 overflow-x-auto pb-1">
         <button
           onClick={() => setSelectedTypeId("")}
-          className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${
+          className={`shrink-0 rounded-full px-4 py-2.5 text-sm font-black transition ${
             selectedTypeId === ""
               ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-950/40"
               : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
@@ -826,7 +826,7 @@ export default function WorkPage() {
           <button
             key={t.id}
             onClick={() => setSelectedTypeId(String(t.id))}
-            className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${
+            className={`shrink-0 rounded-full px-4 py-2.5 text-sm font-black transition ${
               String(selectedTypeId) === String(t.id)
                 ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-950/40"
                 : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
@@ -886,7 +886,7 @@ export default function WorkPage() {
           </div>
         </div>
 
-        <div className="hidden overflow-x-auto md:block">
+        <div className="hidden overflow-x-auto xl:block">
           <table className="w-full min-w-[1050px] text-left">
             <thead className="bg-white/5 text-slate-300">
               <tr>
@@ -977,7 +977,7 @@ export default function WorkPage() {
           </table>
         </div>
 
-        <div className="divide-y divide-white/10 md:hidden">
+        <div className="divide-y divide-white/10 xl:hidden">
           {productRows.map((p) => {
             const hasRecipe = Array.isArray(p.recipe) && p.recipe.length > 0;
             const hasUnlinked = hasRecipe && p.recipe.some(r => r.unlinked);

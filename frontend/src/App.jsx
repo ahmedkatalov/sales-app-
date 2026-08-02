@@ -627,7 +627,7 @@ export default function App() {
         )}
 
         {/* Мобильная шапка — компактная: аватар + название слева, ряд одинаковых кнопок справа */}
-        <div className={`mb-3 flex items-center justify-between gap-2.5 rounded-2xl border border-white/8 bg-slate-950/85 px-3 py-1.5 text-white backdrop-blur-md lg:hidden${isAIWarehouseRoute ? " hidden" : ""}`}>
+        <div className={`mb-3 flex items-center justify-between gap-2.5 rounded-2xl border border-white/8 bg-slate-950/85 px-3 py-1.5 text-white backdrop-blur-md ${useHeaderNav ? "md:hidden" : "lg:hidden"}${isAIWarehouseRoute ? " hidden" : ""}`}>
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-blue-700 text-sm font-black text-white shadow-lg shadow-blue-600/25">
               {(isWorker ? workerName : (currentWorkspace?.name || "Б"))?.[0]?.toUpperCase() || "Б"}
@@ -695,11 +695,11 @@ export default function App() {
 
       {mobileMoreOpen && mobileMoreLinks.length > 0 && (
         <button type="button" aria-label="Закрыть меню" onClick={() => setMobileMoreOpen(false)}
-          className="animate-overlay fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden" />
+          className={`animate-overlay fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm ${useHeaderNav ? "md:hidden" : "lg:hidden"}`} />
       )}
 
       {mobileMoreOpen && mobileMoreLinks.length > 0 && (
-        <div className="animate-sheet fixed inset-x-0 bottom-0 z-50 lg:hidden"
+        <div className={`animate-sheet fixed inset-x-0 bottom-0 z-50 ${useHeaderNav ? "md:hidden" : "lg:hidden"}`}
           style={{ paddingBottom: "calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px)" }}>
           <div className="mx-3 overflow-hidden rounded-[1.7rem] border border-white/12 bg-slate-900/98 text-white shadow-2xl backdrop-blur-xl">
             <div className="flex justify-center pb-1 pt-3">
@@ -736,7 +736,7 @@ export default function App() {
         </div>
       )}
 
-      <nav className={`fixed inset-x-0 bottom-0 z-40 grid grid-flow-col auto-cols-fr rounded-t-2xl border-t border-white/10 bg-slate-950/96 px-1.5 pt-1.5 text-white shadow-[0_-10px_30px_-14px_rgba(2,6,23,0.6)] backdrop-blur-xl lg:hidden transition-transform duration-300 ease-out ${keyboardVisible || isAIWarehouseRoute ? "translate-y-full pointer-events-none" : "translate-y-0"}`}
+      <nav className={`fixed inset-x-0 bottom-0 z-40 grid grid-flow-col auto-cols-fr rounded-t-2xl border-t border-white/10 bg-slate-950/96 px-1.5 pt-1.5 text-white shadow-[0_-10px_30px_-14px_rgba(2,6,23,0.6)] backdrop-blur-xl ${useHeaderNav ? "md:hidden" : "lg:hidden"} transition-transform duration-300 ease-out ${keyboardVisible || isAIWarehouseRoute ? "translate-y-full pointer-events-none" : "translate-y-0"}`}
         style={{ paddingBottom: "max(6px, env(safe-area-inset-bottom, 0px))" }}
         aria-label="Нижняя навигация">
         {mobileMainLinks.map(([to, label, Icon, badge]) => (

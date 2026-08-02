@@ -696,18 +696,18 @@ function Message({ msg }) {
   return (
     <div className={`flex gap-2 sm:gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-sm shadow-lg shadow-blue-600/30 sm:flex">🤖</div>}
-      <div className={`max-w-[90%] rounded-3xl px-4 py-3 text-[13px] font-bold leading-6 shadow-lg sm:max-w-[78%] ${isUser ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white" : "bg-white text-slate-900"}`}>
+      <div className={`max-w-[90%] rounded-3xl px-4 py-3 text-[13px] font-bold leading-6 shadow-lg sm:max-w-[78%] ${isUser ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white" : "border border-white/10 bg-white/[0.08] text-slate-100 backdrop-blur"}`}>
         <p className="whitespace-pre-line">{msg.text}</p>
         {msg.cards?.length > 0 && (
           <div className="mt-3 space-y-2">
             {msg.cards.map((card, i) => (
-              <div key={i} className="rounded-2xl bg-slate-100 p-3 text-slate-900">
+              <div key={i} className="rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-slate-100">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-black">{card.name}</p>
-                    <p className="text-xs font-bold text-slate-500">{card.detail}</p>
+                    <p className="text-xs font-bold text-slate-400">{card.detail}</p>
                   </div>
-                  <span className="shrink-0 rounded-2xl bg-emerald-100 px-3 py-2 text-xs font-black text-emerald-700">+{card.qty}</span>
+                  <span className="shrink-0 rounded-2xl bg-emerald-500/15 px-3 py-2 text-xs font-black text-emerald-300">+{card.qty}</span>
                 </div>
               </div>
             ))}
@@ -1278,8 +1278,8 @@ ${lines}${expense ? `
                 <span className="hidden rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-black text-emerald-300 sm:inline">
                   AUTO SAVE
                 </span>
-                <button onClick={load} className="rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white hover:bg-white/15">⟳</button>
-                <Link to="/warehouse" className="rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white hover:bg-white/15">Склад →</Link>
+                <button onClick={load} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white transition hover:bg-white/15">⟳</button>
+                <Link to="/warehouse" className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white transition hover:bg-white/15">Склад →</Link>
               </div>
             </div>
 
@@ -1315,7 +1315,7 @@ ${lines}${expense ? `
                   <button
                     key={x}
                     onClick={() => setInput(x)}
-                    className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-bold text-slate-300 active:bg-white/15"
+                    className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-bold text-slate-300 transition active:scale-95 active:bg-white/15 hover:bg-white/10"
                   >
                     {x}
                   </button>
@@ -1343,7 +1343,7 @@ ${lines}${expense ? `
                 <button
                   onClick={send}
                   disabled={loading}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-lg font-black shadow-lg transition active:scale-95 disabled:opacity-50"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-lg font-black text-white shadow-lg transition active:scale-95 disabled:opacity-50"
                 >
                   {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : "↑"}
                 </button>

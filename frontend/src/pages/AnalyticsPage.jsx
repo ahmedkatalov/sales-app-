@@ -332,7 +332,7 @@ export default function AnalyticsPage() {
       <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
       <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 sm:text-[11px] sm:tracking-[0.18em]">{card.title}</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400 sm:text-[11px] sm:tracking-[0.18em]">{card.title}</p>
           <p className="mt-1.5 truncate text-xl font-black text-white sm:mt-3 sm:text-3xl">{card.value}</p>
         </div>
         <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-base font-black sm:h-11 sm:w-11 sm:rounded-2xl sm:text-xl ${card.text}`}>{card.icon}</div>
@@ -400,8 +400,8 @@ export default function AnalyticsPage() {
                 return (
                   <button key={key} type="button" onClick={action}
                     className={active
-                      ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
-                      : "rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-slate-300 transition hover:bg-white/10"}>
+                      ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg"
+                      : "rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-white/10"}>
                     {label}
                   </button>
                 );
@@ -411,7 +411,7 @@ export default function AnalyticsPage() {
               </span>
             </div>
             <button type="button" onClick={() => setFilterOpen((v) => !v)}
-              className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-black transition ${
+              className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-black transition ${
                 filterOpen ? "border-blue-400/40 bg-blue-500/15 text-blue-200" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
               }`}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
@@ -486,19 +486,19 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
           {statCards.map((card, i) => (
             <StatBox key={card.title} card={card} className={i === statCards.length - 1 && statCards.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""} />
           ))}
         </div>
 
-        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
           {extraCards.map((card, i) => (
             <StatBox key={card.title} card={card} className={i === extraCards.length - 1 && extraCards.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""} />
           ))}
         </div>
 
-        <div className="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
           <DarkChartCard title="Динамика по месяцам" subtitle="Выручка, прибыль и расходы по выбранному периоду">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={analytics} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
@@ -546,7 +546,7 @@ export default function AnalyticsPage() {
           </div>
 
           {selectedProduct ? (
-            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <DarkChartCard title="Цена и себестоимость">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={productAnalytics} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
@@ -588,7 +588,7 @@ export default function AnalyticsPage() {
             <p className="mt-1 text-sm font-bold text-slate-400">Подробная таблица отчёта</p>
           </div>
 
-          <div className="hidden overflow-x-auto md:block">
+          <div className="hidden overflow-x-auto xl:block">
             <table className="w-full min-w-[1150px] text-sm">
               <thead className="sticky top-0 bg-slate-950/95 text-slate-300 backdrop-blur">
                 <tr>
@@ -627,7 +627,7 @@ export default function AnalyticsPage() {
             </table>
           </div>
 
-          <div className="divide-y divide-white/10 md:hidden">
+          <div className="divide-y divide-white/10 xl:hidden">
             {safe_analytics.map((m) => (
               <div key={m.month} className="p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">

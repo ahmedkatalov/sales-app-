@@ -28,7 +28,7 @@ export default function DesktopNavigation({
   const showWorkspaceChip = workspaceName && accountName !== workspaceName;
 
   return (
-    <header className="sticky top-0 z-30 mb-5 hidden rounded-[1.4rem] border border-white/10 bg-slate-950/80 p-2 text-white shadow-xl shadow-slate-950/25 backdrop-blur-xl lg:block">
+    <header className="sticky top-0 z-30 mb-5 hidden rounded-[1.4rem] border border-white/10 bg-slate-950/80 p-2 text-white shadow-xl shadow-slate-950/25 backdrop-blur-xl md:block">
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
         <div className="flex min-w-[210px] items-center gap-2 px-1">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-600/25">

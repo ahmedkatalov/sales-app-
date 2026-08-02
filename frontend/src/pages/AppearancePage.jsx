@@ -219,8 +219,8 @@ export default function AppearancePage() {
             <textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={5} placeholder="Вставьте JSON темы сюда…"
               className="w-full rounded-2xl border border-white/10 bg-slate-950/60 p-3 font-mono text-xs text-white outline-none focus:border-blue-400/60" />
             <div className="mt-3 flex justify-end gap-2">
-              <button type="button" onClick={() => setImportOpen(false)} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-slate-200 hover:bg-white/10">Отмена</button>
-              <button type="button" onClick={onImport} className="rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white">Применить</button>
+              <button type="button" onClick={() => setImportOpen(false)} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-200 hover:bg-white/10">Отмена</button>
+              <button type="button" onClick={onImport} className="rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white">Применить</button>
             </div>
           </div>
         )}

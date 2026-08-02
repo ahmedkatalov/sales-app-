@@ -32,7 +32,7 @@ function StatCard({ title, value, subtitle, icon, tone = "blue", className = "" 
       <div className="absolute bottom-0 right-0 h-px w-32 bg-gradient-to-l from-white/30 to-transparent" />
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 sm:text-xs">{title}</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 sm:text-xs">{title}</p>
           <p className="mt-1.5 text-xl font-black text-white sm:mt-3 sm:text-4xl">{value}</p>
           {subtitle && <p className="mt-1 truncate text-[11px] font-bold text-slate-400 sm:mt-2 sm:text-xs">{subtitle}</p>}
         </div>
@@ -139,8 +139,8 @@ export default function SalesAnalyticsPage() {
                 return (
                   <button key={key} type="button" onClick={action}
                     className={active
-                      ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg"
-                      : "rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-black text-slate-300 transition hover:bg-white/10"}>
+                      ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg"
+                      : "rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-white/10"}>
                     {label}
                   </button>
                 );
@@ -152,7 +152,7 @@ export default function SalesAnalyticsPage() {
               )}
             </div>
             <button type="button" onClick={() => setFilterOpen((v) => !v)}
-              className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-black transition ${
+              className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-black transition ${
                 filterOpen ? "border-blue-400/40 bg-blue-500/15 text-blue-200" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
               }`}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
@@ -179,7 +179,7 @@ export default function SalesAnalyticsPage() {
           )}
         </div>
 
-        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
           <StatCard title="Выручка" value={moneyValue(stats.totalRevenue)} subtitle="общая сумма" icon="₽" tone="blue" />
           <StatCard title="Скидки" value={moneyValue(stats.totalDiscount)} subtitle="за период" icon="%" tone="red" />
           <StatCard title="Продаж" value={Number(stats.salesCount || 0)} subtitle="чеков" icon="🧾" tone="purple" />
@@ -187,7 +187,7 @@ export default function SalesAnalyticsPage() {
           <StatCard title="Переводы" value={moneyValue(stats.transferTotal)} subtitle={`средний чек ${moneyValue(avgCheck)}`} icon="↗" tone="amber" className="col-span-2 xl:col-span-1" />
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+        <div className="grid gap-5 lg:grid-cols-2">
           <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 p-5 sm:p-6">
               <div>
@@ -197,7 +197,7 @@ export default function SalesAnalyticsPage() {
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-blue-500/15 text-xl">🏆</div>
             </div>
 
-            <div className="hidden overflow-x-auto md:block">
+            <div className="hidden overflow-x-auto lg:block">
               <table className="w-full min-w-[620px] text-left text-sm">
                 <thead className="border-b border-white/10 bg-slate-950/40 text-xs uppercase tracking-[0.16em] text-slate-400">
                   <tr>
@@ -229,7 +229,7 @@ export default function SalesAnalyticsPage() {
               </table>
             </div>
 
-            <div className="divide-y divide-white/10 md:hidden">
+            <div className="divide-y divide-white/10 lg:hidden">
               {(stats.topProducts || []).map((p, index) => (
                 <div key={`${p.name}-${index}`} className="p-4">
                   <div className="flex items-start justify-between gap-3">

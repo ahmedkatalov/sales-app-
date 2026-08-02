@@ -586,7 +586,7 @@ export default function WarehousePage() {
         <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300 sm:h-9 sm:w-9 sm:rounded-xl">📦</span>
-            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Позиций сырья</p>
+            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Позиций сырья</p>
           </div>
           <p className="mt-2 text-xl font-black text-white sm:text-2xl">{stats.count}</p>
         </div>
@@ -594,7 +594,7 @@ export default function WarehousePage() {
         <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-300 sm:h-9 sm:w-9 sm:rounded-xl">₽</span>
-            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Стоимость остатков</p>
+            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Стоимость остатков</p>
           </div>
           <p className="mt-2 text-xl font-black tabular-nums text-white sm:text-2xl">{formatMoney(stats.value)}</p>
         </div>
@@ -602,7 +602,7 @@ export default function WarehousePage() {
         <div className={`rounded-2xl border p-3 backdrop-blur-xl sm:p-4 ${stats.low > 0 ? "border-red-500/25 bg-red-500/[0.07]" : "border-white/10 bg-white/[0.05]"}`}>
           <div className="flex items-center gap-2">
             <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${stats.low > 0 ? "bg-red-500/20 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}>⚠</span>
-            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Низкий остаток</p>
+            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Низкий остаток</p>
           </div>
           <p className={`mt-2 text-xl font-black sm:text-2xl ${stats.low > 0 ? "text-red-400" : "text-emerald-400"}`}>{stats.low}</p>
         </div>
@@ -610,7 +610,7 @@ export default function WarehousePage() {
         <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-500/15 text-slate-300 sm:h-9 sm:w-9 sm:rounded-xl">👁</span>
-            <p className="min-w-0 text-[10px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Скрытые</p>
+            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Скрытые</p>
           </div>
           <p className="mt-2 text-xl font-black text-white sm:text-2xl">{stats.hidden}</p>
         </div>
@@ -649,7 +649,7 @@ export default function WarehousePage() {
           </div>
         </div>
 
-        <div className="hidden overflow-x-auto lg:block">
+        <div className="hidden overflow-x-auto xl:block">
           <table className="w-full min-w-[1180px] table-fixed text-left text-xs">
             <colgroup>
               <col className="w-[20%]" />
@@ -814,7 +814,7 @@ export default function WarehousePage() {
           </table>
         </div>
 
-        <div className="divide-y divide-white/10 lg:hidden">
+        <div className="divide-y divide-white/10 xl:hidden">
           {visibleItems.map((item) => {
             const hidden = isHidden(item);
             const min = minQty(item);
@@ -1009,7 +1009,7 @@ export default function WarehousePage() {
             Здесь видно, что удалили, когда, какой был остаток и почему. Это не смешивается со скрытыми товарами.
           </div>
 
-          <div className="mt-4 overflow-x-auto rounded-3xl border border-slate-200">
+          <div className="mt-4 hidden overflow-x-auto rounded-3xl border border-white/10 lg:block">
             <table className="w-full min-w-[840px] text-left text-sm">
               <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
@@ -1041,6 +1041,27 @@ export default function WarehousePage() {
             </table>
           </div>
 
+          {/* Карточки — телефон и планшет */}
+          <div className="mt-4 space-y-2.5 lg:hidden">
+            {safe_deletedItems.map((item) => (
+              <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 break-words font-black text-white">{item.name}</p>
+                  <span className="shrink-0 text-sm font-black text-red-300">{num(item.quantity)} {unitLabel(item.unit)}</span>
+                </div>
+                <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                  <span className="text-slate-400">Дата</span><span className="text-right font-bold text-slate-200">{String(item.deletedAt || "").slice(0, 16).replace("T", " ") || "—"}</span>
+                  <span className="text-slate-400">Сумма</span><span className="text-right font-bold text-slate-200">{formatMoney(item.totalValue || num(item.quantity) * num(item.unitCost))}</span>
+                  <span className="text-slate-400">Причина</span><span className="text-right font-bold text-slate-200">{item.deleteReason || "—"}</span>
+                </div>
+                {(item.deleteNote || item.note) && <p className="mt-2 text-xs text-slate-400">{item.deleteNote || item.note}</p>}
+              </div>
+            ))}
+            {!safe_deletedItems.length && (
+              <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-500">Удалённых товаров пока нет</div>
+            )}
+          </div>
+
           <div className="mt-6 flex justify-end">
             <button type="button" onClick={() => setDeletedModal(false)} className="btn-blue">Закрыть</button>
           </div>
@@ -1057,7 +1078,7 @@ export default function WarehousePage() {
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-3xl border border-slate-200">
+          <div className="hidden overflow-x-auto rounded-3xl border border-white/10 lg:block">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
@@ -1106,6 +1127,28 @@ export default function WarehousePage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Карточки — телефон и планшет */}
+          <div className="space-y-2.5 lg:hidden">
+            {safe_historyBatches.map((b) => (
+              <div key={b.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-black text-white">{String(b.createdAt || "").slice(0, 10) || "—"}</span>
+                  <span className="text-sm font-black text-slate-200">{num(b.quantity)} {unitLabel(historyItem?.unit)}</span>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                  <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Осталось</p><b className="text-sm text-emerald-300">{num(b.remainingQuantity)} {unitLabel(historyItem?.unit)}</b></div>
+                  <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Цена закупки</p><b className="text-sm text-white">{formatMoney(b.purchasePrice)}</b></div>
+                  <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Цена ед.</p><b className="text-sm text-white">{formatMoney(b.unitCost)}</b></div>
+                  <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Поставщик</p><b className="text-sm text-slate-200">{b.supplier || "—"}</b></div>
+                </div>
+                {b.note && <p className="mt-2 text-xs text-slate-400">{b.note}</p>}
+              </div>
+            ))}
+            {!safe_historyBatches.length && (
+              <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-500">Истории закупок пока нет</div>
+            )}
           </div>
 
           <div className="mt-6 flex justify-end">

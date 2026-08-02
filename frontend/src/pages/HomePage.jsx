@@ -268,11 +268,11 @@ export default function HomePage() {
           <h2 className="text-sm font-black uppercase tracking-wider text-slate-400">Сегодня</h2>
         </div>
         {loading ? (
-          <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
             {[0, 1, 2, 3].map((i) => <Skel key={i} className="h-[104px] sm:h-[120px]" />)}
           </div>
         ) : (
-          <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
             <StatTile label="Выручка" value={t.totalRevenue} money icon={Wallet} tone="blue" sub="за сегодня" delay={0} />
             <StatTile label="Продаж" value={t.salesCount} icon={ReceiptText} tone="violet" sub={t.salesCount ? `средний чек ${formatMoney(num(t.totalRevenue) / Math.max(1, num(t.salesCount)))}` : "пока нет продаж"} delay={60} />
             <StatTile label="Наличные" value={t.cashTotal} money icon={Banknote} tone="emerald" sub="в кассе" delay={120} />

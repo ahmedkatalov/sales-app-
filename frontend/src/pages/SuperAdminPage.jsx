@@ -188,7 +188,7 @@ export default function SuperAdminPage() {
           </div>
           <button
             onClick={() => { sessionStorage.removeItem("super_token"); setAuthed(false); setToken(""); }}
-            className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-2 text-sm font-black text-slate-300 transition hover:bg-red-600 hover:text-white"
+            className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-red-600 hover:text-white"
           >
             Выйти
           </button>
