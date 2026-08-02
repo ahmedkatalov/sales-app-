@@ -195,7 +195,7 @@ function SmartIngredientInputPOS({ value, onChange, warehouseItems = [], onSelec
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function POSPage({ currentProfile, ownerName, openProfile }) {
+export default function POSPage({ currentProfile, ownerName, openProfile, isWorker, employees = [], onProfileChange, onExit }) {
   const session = getSession();
   const isWorkspaceUser =
     session?.role === "worker" || session?.role === "workspace";
@@ -658,35 +658,50 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
 
   return (
     <div
-      className="relative flex flex-col pb-nav text-white sm:pb-10 lg:h-[calc(100vh-190px)] lg:overflow-hidden lg:pb-0"
+      className="relative flex min-h-0 flex-1 flex-col overflow-y-auto p-3 text-white sm:p-4 lg:overflow-hidden"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute left-[-120px] top-[-120px] h-[360px] w-[360px] rounded-full bg-blue-600/20 blur-3xl" />
         <div className="absolute right-[-140px] bottom-[-140px] h-[360px] w-[360px] rounded-full bg-violet-600/20 blur-3xl" />
       </div>
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-      <div className="mb-3 flex shrink-0 items-center justify-between gap-3 lg:mb-4">
-        <div className="min-w-0">
-          <p className="text-xs font-bold text-blue-400 sm:text-sm">Касса</p>
-          <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">
-            Магазин
-          </h2>
+      <div className="relative z-10 flex flex-col lg:min-h-0 lg:flex-1">
+      {/* Шапка кассы (режим киоска): выход + продавец/смена */}
+      <div className="mb-3 flex shrink-0 items-center justify-between gap-2 sm:gap-3">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <button type="button" onClick={onExit} aria-label="Выйти из кассы" title="Выйти из кассы"
+            className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-3 font-black text-slate-200 transition hover:bg-white/10 active:scale-95 sm:px-3.5">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            <span className="hidden sm:inline">Выйти</span>
+          </button>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold text-blue-400 sm:text-sm">Касса</p>
+            <h2 className="truncate text-lg font-black leading-none text-white sm:text-2xl">Магазин</h2>
+          </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#0f172a]/80 px-2.5 py-2 shadow-lg backdrop-blur sm:px-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-violet-600 text-sm font-black text-white">
-            {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
+        {isWorker ? (
+          <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-[#0f172a]/80 px-2 py-1.5 shadow-lg backdrop-blur">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-blue-600 to-violet-600 text-xs font-black text-white">
+              {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
+            </div>
+            <select value={currentProfile?.id || ""} onChange={(e) => onProfileChange?.(e.target.value)}
+              className="max-w-[42vw] rounded-lg bg-transparent py-1 pr-6 text-sm font-black text-blue-300 outline-none [color-scheme:dark] sm:max-w-none">
+              <option value="">Сотрудник…</option>
+              {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </select>
           </div>
-          <div className="hidden min-w-0 pr-1 sm:block">
-            <p className="text-[11px] font-black uppercase leading-none text-slate-400">
-              Сейчас работает
-            </p>
-            <p className="truncate text-sm font-black leading-tight text-white">
-              {activeWorkerName}
-            </p>
+        ) : (
+          <div className="flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#0f172a]/80 px-2.5 py-2 shadow-lg backdrop-blur sm:px-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-violet-600 text-sm font-black text-white">
+              {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
+            </div>
+            <div className="hidden min-w-0 pr-1 sm:block">
+              <p className="text-[11px] font-black uppercase leading-none text-slate-400">Сейчас работает</p>
+              <p className="truncate text-sm font-black leading-tight text-white">{activeWorkerName}</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {error && (
@@ -695,8 +710,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
         </div>
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-        <div className="flex min-h-0 flex-col gap-3 lg:flex-1">
+      <div className="flex flex-col gap-4 lg:min-h-0 lg:flex-1 lg:flex-row">
+        <div className="flex flex-col gap-3 lg:min-h-0 lg:flex-1">
           <div className="shrink-0 rounded-3xl border border-white/10 bg-[#0f172a]/80 p-3 shadow-xl backdrop-blur sm:p-4">
             <div className="flex items-center gap-3">
               {openedCategory && (
@@ -889,7 +904,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-col gap-3 lg:w-[360px] lg:shrink-0 xl:w-[400px]">
+        <div className="flex flex-col gap-3 lg:min-h-0 lg:w-[360px] lg:shrink-0 xl:w-[400px]">
         {/* Денежная смена (касса) */}
         {cashShift ? (
           <div className="rounded-4xl border border-emerald-400/25 bg-emerald-500/[0.06] p-4 sm:p-5">
@@ -945,7 +960,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile }) {
           </div>
         )}
 
-        <div className="flex min-h-0 flex-1 flex-col rounded-3xl border border-white/10 bg-[#0f172a]/90 p-3.5 shadow-2xl backdrop-blur sm:p-4">
+        <div className="flex flex-col rounded-3xl border border-white/10 bg-[#0f172a]/90 p-3.5 shadow-2xl backdrop-blur sm:p-4 lg:min-h-0 lg:flex-1">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <h3 className="text-xl font-black sm:text-2xl">Корзина</h3>
 

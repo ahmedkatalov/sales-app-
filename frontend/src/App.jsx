@@ -316,6 +316,10 @@ export default function App() {
   const [desktopNavMode, setDesktopNavMode] = useState(() => localStorage.getItem("sales_app_desktop_nav_mode") || "header");
   const location = useLocation();
   const isAIWarehouseRoute = location.pathname === "/ai-warehouse";
+  const isPosRoute = location.pathname === "/pos";
+  // Полноэкранные («иммерсивные») экраны без общей навигации — как чат с ИИ.
+  // Касса работает в режиме киоска: своя шапка с выходом, вся навигация скрыта.
+  const isImmersive = isAIWarehouseRoute || isPosRoute;
   const isProfileRoute = location.pathname === "/profile";
   const useHeaderNav = desktopNavMode === "header";
 
@@ -529,8 +533,8 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-slate-950">
-      {!useHeaderNav && (
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-slate-100">
+      {!useHeaderNav && !isImmersive && (
         <aside className={`hidden h-screen shrink-0 flex-col overflow-y-auto border-r border-white/10 bg-slate-950 p-4 text-white transition-all duration-300 lg:flex ${sidebarOpen ? "w-80" : "w-24"}`}>
           <button type="button" onClick={() => setSidebarOpen((p) => !p)}
             className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-slate-300 transition hover:bg-blue-600 hover:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20 ${sidebarOpen ? "self-end" : "self-center"}`}>
@@ -605,10 +609,10 @@ export default function App() {
         </aside>
       )}
 
-      <main className={`flex-1 overflow-x-hidden ${isAIWarehouseRoute ? "flex flex-col overflow-hidden p-0" : "p-4 pb-nav sm:p-5 lg:pb-5 min-h-screen overflow-y-auto"}`}
-        style={isAIWarehouseRoute ? { height: "100dvh" } : {}}>
+      <main className={`flex-1 overflow-x-hidden ${isImmersive ? "flex flex-col overflow-hidden p-0" : "p-4 pb-nav sm:p-5 lg:pb-5 min-h-screen overflow-y-auto"}`}
+        style={isImmersive ? { height: "100dvh" } : {}}>
 
-        {useHeaderNav && (
+        {useHeaderNav && !isImmersive && (
           <DesktopNavigation
             links={links} session={session} isOwner={isOwner} isAdmin={isAdmin} isWorker={isWorker}
             workerName={workerName} pendingCount={pendingCount} debtCount={debtCount}
@@ -627,7 +631,7 @@ export default function App() {
         )}
 
         {/* Мобильная шапка — компактная: аватар + название слева, ряд одинаковых кнопок справа */}
-        <div className={`mb-3 flex items-center justify-between gap-2.5 rounded-2xl border border-white/8 bg-slate-950/85 px-3 py-1.5 text-white backdrop-blur-md ${useHeaderNav ? "md:hidden" : "lg:hidden"}${isAIWarehouseRoute ? " hidden" : ""}`}>
+        <div className={`mb-3 flex items-center justify-between gap-2.5 rounded-2xl border border-white/8 bg-slate-950/85 px-3 py-1.5 text-white backdrop-blur-md ${useHeaderNav ? "md:hidden" : "lg:hidden"}${isImmersive ? " hidden" : ""}`}>
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-blue-700 text-sm font-black text-white shadow-lg shadow-blue-600/25">
               {(isWorker ? workerName : (currentWorkspace?.name || "Б"))?.[0]?.toUpperCase() || "Б"}
@@ -677,7 +681,7 @@ export default function App() {
           <Route path="/" element={<Navigate to={isWorker ? "/pos" : "/home"} replace />} />
           <Route path="/home" element={isWorker ? <Navigate to="/pos" replace /> : <HomePage />} />
           <Route path="/appearance" element={isWorker ? <Navigate to="/pos" replace /> : <AppearancePage />} />
-          <Route path="/pos" element={<POSPage currentProfile={profile} ownerName={isWorker ? profile?.name : session.ownerName || session.username} openProfile={() => { if (!isWorker) window.location.href = "/profile"; }} />} />
+          <Route path="/pos" element={<POSPage currentProfile={profile} ownerName={isWorker ? profile?.name : session.ownerName || session.username} openProfile={() => { if (!isWorker) window.location.href = "/profile"; }} isWorker={isWorker} employees={employees} onProfileChange={handleProfileChange} onExit={() => { window.location.href = isWorker ? "/pending-payments" : "/home"; }} />} />
           <Route path="/expenses" element={<ExpensesPage currentProfile={profile} workerMode={isWorker} />} />
           <Route path="/pending-payments" element={<PendingPaymentsPage />} />
           <Route path="/debts" element={<DebtsPage />} />
@@ -736,7 +740,7 @@ export default function App() {
         </div>
       )}
 
-      <nav className={`fixed inset-x-0 bottom-0 z-40 grid grid-flow-col auto-cols-fr rounded-t-2xl border-t border-white/10 bg-slate-950/96 px-1.5 pt-1.5 text-white shadow-[0_-10px_30px_-14px_rgba(2,6,23,0.6)] backdrop-blur-xl ${useHeaderNav ? "md:hidden" : "lg:hidden"} transition-transform duration-300 ease-out ${keyboardVisible || isAIWarehouseRoute ? "translate-y-full pointer-events-none" : "translate-y-0"}`}
+      <nav className={`fixed inset-x-0 bottom-0 z-40 grid grid-flow-col auto-cols-fr rounded-t-2xl border-t border-white/10 bg-slate-950/96 px-1.5 pt-1.5 text-white shadow-[0_-10px_30px_-14px_rgba(2,6,23,0.6)] backdrop-blur-xl ${useHeaderNav ? "md:hidden" : "lg:hidden"} transition-transform duration-300 ease-out ${keyboardVisible || isImmersive ? "translate-y-full pointer-events-none" : "translate-y-0"}`}
         style={{ paddingBottom: "max(6px, env(safe-area-inset-bottom, 0px))" }}
         aria-label="Нижняя навигация">
         {mobileMainLinks.map(([to, label, Icon, badge]) => (
