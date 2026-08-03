@@ -14,7 +14,7 @@ import (
 
 // computeShiftCash считает движение наличных за смену:
 // продажи налом + ручные внесения − изъятия − расходы, оплаченные из кассы.
-func computeShiftCash(accID, shiftID int, openedAt, closedAt string) (cashSales, cashIn, cashOut, cashExpenses float64) {
+func computeShiftCash(accID, shiftID int, openedAt, closedAt string) (cashSales, cashIn, cashOut, cashExpenses, ownerCash float64) {
 	salesQuery := `SELECT IFNULL(SUM(total),0) FROM sales WHERE account_id=? AND payment_type='cash' AND created_at >= ?`
 	args := []any{accID, openedAt}
 	if strings.TrimSpace(closedAt) != "" {
@@ -35,6 +35,15 @@ func computeShiftCash(accID, shiftID int, openedAt, closedAt string) (cashSales,
 		expArgs = append(expArgs, closedAt)
 	}
 	_ = db.QueryRow(expQuery, expArgs...).Scan(&cashExpenses)
+
+	// Расчёты с владельцем за период смены: вклад +нал, возврат/изъятие −нал.
+	ownerQuery := `SELECT IFNULL(SUM(CASE WHEN kind='contribution' THEN amount ELSE -amount END),0) FROM owner_ledger WHERE account_id=? AND created_at >= ?`
+	ownerArgs := []any{accID, openedAt}
+	if strings.TrimSpace(closedAt) != "" {
+		ownerQuery += ` AND created_at <= ?`
+		ownerArgs = append(ownerArgs, closedAt)
+	}
+	_ = db.QueryRow(ownerQuery, ownerArgs...).Scan(&ownerCash)
 	return
 }
 
@@ -50,6 +59,7 @@ type cashShiftView struct {
 	CashIn       float64 `json:"cashIn"`
 	CashOut      float64 `json:"cashOut"`
 	CashExpenses float64 `json:"cashExpenses"` // расходы, оплаченные из кассы за смену
+	OwnerCash    float64 `json:"ownerCash"`    // расчёты с владельцем (вклад +, возврат/изъятие −) за смену
 	Expected     float64 `json:"expectedCash"`
 	Counted     float64 `json:"countedCash"`
 	Difference  float64 `json:"difference"`
@@ -65,8 +75,8 @@ func loadOpenShift(accID int) (*cashShiftView, bool) {
 	if err != nil {
 		return nil, false
 	}
-	s.CashSales, s.CashIn, s.CashOut, s.CashExpenses = computeShiftCash(accID, s.ID, s.OpenedAt, "")
-	s.Expected = s.OpeningCash + s.CashSales + s.CashIn - s.CashOut - s.CashExpenses
+	s.CashSales, s.CashIn, s.CashOut, s.CashExpenses, s.OwnerCash = computeShiftCash(accID, s.ID, s.OpenedAt, "")
+	s.Expected = s.OpeningCash + s.CashSales + s.CashIn - s.CashOut - s.CashExpenses + s.OwnerCash
 	return &s, true
 }
 
@@ -173,8 +183,8 @@ func closeCashShift(c *gin.Context) {
 	}
 	now := time.Now().Format(time.RFC3339)
 	// Фиксируем итоги на момент закрытия
-	cashSales, cashIn, cashOut, cashExpenses := computeShiftCash(accID, s.ID, s.OpenedAt, now)
-	expected := s.OpeningCash + cashSales + cashIn - cashOut - cashExpenses
+	cashSales, cashIn, cashOut, cashExpenses, ownerCash := computeShiftCash(accID, s.ID, s.OpenedAt, now)
+	expected := s.OpeningCash + cashSales + cashIn - cashOut - cashExpenses + ownerCash
 	difference := req.CountedCash - expected
 
 	if _, err := db.Exec(`
@@ -197,6 +207,7 @@ func closeCashShift(c *gin.Context) {
 		"cashIn":       cashIn,
 		"cashOut":      cashOut,
 		"cashExpenses": cashExpenses,
+		"ownerCash":    ownerCash,
 		"openingCash":  s.OpeningCash,
 	})
 }

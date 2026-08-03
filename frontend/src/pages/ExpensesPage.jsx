@@ -50,16 +50,50 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
     paymentSource: "cash", // cash | card | owner
   });
 
+  // Расчёты с владельцем (леджер)
+  const [ownerFin, setOwnerFin] = useState(null);
+  const [ownerModal, setOwnerModal] = useState(null); // 'contribution' | 'reimbursement' | 'withdrawal'
+  const [ownerForm, setOwnerForm] = useState({ amount: "", note: "" });
+
   // Safe array guards
 
   const load = async () => {
-    const [typeList, expenseList] = await Promise.all([
+    const [typeList, expenseList, owner] = await Promise.all([
       get("/product-types"),
       get("/global-expenses"),
+      // Расчёты с владельцем — только для владельца/админа; у сотрудника 403, тихо игнорируем.
+      get("/finance/owner").catch(() => null),
     ]);
 
     setTypes(typeList || []);
     setExpenses(expenseList || []);
+    if (owner) setOwnerFin(owner);
+  };
+
+  // Записать движение по расчётам с владельцем (вклад/возврат/изъятие).
+  const submitOwnerEntry = async () => {
+    if (!ownerModal) return;
+    if (num(ownerForm.amount) <= 0) return setError("Укажите сумму");
+    await guarded(async () => {
+      const res = await post("/finance/owner", {
+        kind: ownerModal,
+        amount: num(ownerForm.amount),
+        note: ownerForm.note.trim(),
+        employeeId: currentProfile?.id || 0,
+      });
+      if (res) setOwnerFin(res); // эндпоинт возвращает свежий баланс
+      setOwnerModal(null);
+      setOwnerForm({ amount: "", note: "" });
+      await load();
+    });
+  };
+
+  const deleteOwnerEntry = async (id) => {
+    await guarded(async () => {
+      const res = await del(`/finance/owner/${id}`);
+      if (res) setOwnerFin(res);
+      await load();
+    });
   };
 
   useEffect(() => {
@@ -121,6 +155,16 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
     owner: { label: "Владелец", cls: "border-amber-400/20 bg-amber-500/15 text-amber-300" },
   };
   const srcMeta = (e) => SRC_META[e?.paymentSource] || SRC_META.cash;
+
+  const OWNER_KIND = {
+    contribution: { label: "Вклад в кассу", prefix: "+", sign: "text-emerald-300", cta: "Владелец внёс в кассу",
+      hint: "Владелец кладёт личные деньги в кассу. Касса вырастет, и бизнес будет должен владельцу эту сумму." },
+    reimbursement: { label: "Возврат владельцу", prefix: "−", sign: "text-blue-300", cta: "Вернуть владельцу",
+      hint: "Бизнес возвращает владельцу из кассы. Касса уменьшится, и долг перед владельцем уменьшится." },
+    withdrawal: { label: "Изъятие прибыли", prefix: "−", sign: "text-slate-300", cta: "Изъятие прибыли",
+      hint: "Владелец забирает прибыль из кассы для себя. Касса уменьшится, долг перед владельцем НЕ меняется." },
+  };
+  const owedOwner = ownerFin ? ownerFin.owed : owedToOwner;
 
   const setCategory = (category) => {
     setFilterCategory(category);
@@ -431,30 +475,80 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           </div>
         </div>
 
-        {/* Разбивка по источнику оплаты + долг перед владельцем */}
-        <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        {/* Разбивка расходов по источнику оплаты (за период) */}
+        <div className="mb-4 grid grid-cols-3 gap-2.5 sm:gap-3">
           <div className="rounded-2xl border border-emerald-400/15 bg-emerald-500/[0.07] px-4 py-3">
             <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">💵 Из кассы</p>
-            <p className="mt-1 text-xl font-black text-white">{formatMoney(bySource.cash)}</p>
-            <p className="text-[11px] font-bold text-slate-500">уменьшили наличные</p>
+            <p className="mt-1 text-lg font-black text-white sm:text-xl">{formatMoney(bySource.cash)}</p>
+            <p className="hidden text-[11px] font-bold text-slate-500 sm:block">уменьшили наличные</p>
           </div>
           <div className="rounded-2xl border border-blue-400/15 bg-blue-500/[0.07] px-4 py-3">
             <p className="text-[11px] font-black uppercase tracking-wide text-blue-300/80">💳 С карты</p>
-            <p className="mt-1 text-xl font-black text-white">{formatMoney(bySource.card)}</p>
-            <p className="text-[11px] font-bold text-slate-500">перевод/карта</p>
+            <p className="mt-1 text-lg font-black text-white sm:text-xl">{formatMoney(bySource.card)}</p>
+            <p className="hidden text-[11px] font-bold text-slate-500 sm:block">перевод/карта</p>
           </div>
           <div className="rounded-2xl border border-amber-400/15 bg-amber-500/[0.07] px-4 py-3">
             <p className="text-[11px] font-black uppercase tracking-wide text-amber-300/80">👤 Личные владельца</p>
-            <p className="mt-1 text-xl font-black text-white">{formatMoney(bySource.owner)}</p>
-            <p className="text-[11px] font-bold text-slate-500">за период · кассу не трогали</p>
-          </div>
-          <div className="rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/15 to-orange-500/10 px-4 py-3"
-            title="Сколько бизнес должен вернуть владельцу за расходы, оплаченные его личными деньгами (за всё время).">
-            <p className="text-[11px] font-black uppercase tracking-wide text-amber-200">Бизнес должен владельцу</p>
-            <p className="mt-1 text-xl font-black text-amber-100">{formatMoney(owedToOwner)}</p>
-            <p className="text-[11px] font-bold text-amber-200/60">всего · вернуть владельцу</p>
+            <p className="mt-1 text-lg font-black text-white sm:text-xl">{formatMoney(bySource.owner)}</p>
+            <p className="hidden text-[11px] font-bold text-slate-500 sm:block">за период · кассу не трогали</p>
           </div>
         </div>
+
+        {/* Расчёты с владельцем — только владельцу/админу (эндпоинт вернул данные) */}
+        {ownerFin && (
+          <div className="mb-4 rounded-3xl border border-amber-400/20 bg-gradient-to-br from-amber-500/[0.08] to-orange-500/[0.04] p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-black text-amber-100">Расчёты с владельцем</p>
+                <p className="mt-0.5 text-xs font-bold text-slate-400">Личные деньги владельца в бизнесе</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[11px] font-black uppercase tracking-wide text-amber-200/70">Бизнес должен владельцу</p>
+                <p className="text-2xl font-black text-amber-100 sm:text-3xl">{formatMoney(owedOwner)}</p>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+              <div className="rounded-xl bg-white/[0.04] px-3 py-2"><span className="text-slate-400">Расходы владельца</span><br /><b className="text-white">{formatMoney(ownerFin.fromExpenses)}</b></div>
+              <div className="rounded-xl bg-white/[0.04] px-3 py-2"><span className="text-slate-400">Вклады в кассу</span><br /><b className="text-emerald-300">+{formatMoney(ownerFin.contributions)}</b></div>
+              <div className="rounded-xl bg-white/[0.04] px-3 py-2"><span className="text-slate-400">Возвраты владельцу</span><br /><b className="text-blue-300">−{formatMoney(ownerFin.reimbursements)}</b></div>
+              <div className="rounded-xl bg-white/[0.04] px-3 py-2" title="Изъятие прибыли не уменьшает долг перед владельцем."><span className="text-slate-400">Изъятия прибыли</span><br /><b className="text-slate-200">{formatMoney(ownerFin.withdrawals)}</b></div>
+            </div>
+
+            {!workerMode && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {Object.entries(OWNER_KIND).map(([kind, m]) => (
+                  <button key={kind} onClick={() => { setOwnerForm({ amount: "", note: "" }); setError(""); setOwnerModal(kind); }}
+                    className="rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-2.5 text-xs font-black text-white transition hover:bg-white/10">
+                    {m.cta}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {ownerFin.entries?.length > 0 && (
+              <div className="mt-3 divide-y divide-white/5 border-t border-white/5 pt-1">
+                {ownerFin.entries.slice(0, 6).map((en) => {
+                  const m = OWNER_KIND[en.kind] || { label: en.kind, prefix: "", sign: "text-white" };
+                  return (
+                    <div key={en.id} className="flex items-center justify-between gap-2 py-2 text-xs">
+                      <div className="min-w-0">
+                        <span className="font-black text-white">{m.label}</span>
+                        <span className="text-slate-500"> {en.note ? `· ${en.note} ` : ""}· {String(en.createdAt || "").slice(0, 10)}{en.employeeName ? ` · ${en.employeeName}` : ""}</span>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <b className={m.sign}>{m.prefix}{formatMoney(en.amount)}</b>
+                        {!workerMode && (
+                          <button onClick={() => deleteOwnerEntry(en.id)} aria-label="Удалить" className="rounded-md px-1.5 text-slate-500 transition hover:bg-white/10 hover:text-red-300">×</button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="hidden overflow-x-auto xl:block">
           <table className="w-full min-w-[1050px] text-left text-sm">
@@ -705,6 +799,46 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 className="flex-1 rounded-2xl bg-linear-to-r from-red-600 to-red-500 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(239,68,68,.25)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? "Удаляю…" : "Удалить"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {ownerModal && (
+        <Modal title={OWNER_KIND[ownerModal]?.cta || "Расчёт с владельцем"}>
+          <div className="grid gap-3">
+            <p className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold leading-snug text-slate-300">
+              {OWNER_KIND[ownerModal]?.hint}
+            </p>
+            <label>
+              <span className="mb-2 block text-sm font-black text-slate-300">Сумма</span>
+              <input
+                value={ownerForm.amount}
+                onChange={(e) => setOwnerForm((p) => ({ ...p, amount: e.target.value }))}
+                placeholder="Например: 5000"
+                type="number"
+                autoFocus
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-amber-400/70 focus:ring-4 focus:ring-amber-500/10"
+              />
+            </label>
+            <label>
+              <span className="mb-2 block text-sm font-black text-slate-300">Примечание</span>
+              <input
+                value={ownerForm.note}
+                onChange={(e) => setOwnerForm((p) => ({ ...p, note: e.target.value }))}
+                placeholder="За что / комментарий (необязательно)"
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-amber-400/70 focus:ring-4 focus:ring-amber-500/10"
+              />
+            </label>
+            <div className="mt-1 flex flex-col gap-3 sm:flex-row">
+              <button onClick={() => setOwnerModal(null)}
+                className="flex-1 rounded-2xl border border-white/10 bg-white/10 px-5 py-4 font-black text-white transition hover:bg-white/15">
+                Отмена
+              </button>
+              <button onClick={submitOwnerEntry} disabled={submitting}
+                className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(245,158,11,.25)] disabled:cursor-not-allowed disabled:opacity-60">
+                {submitting ? "Сохраняю…" : "Сохранить"}
               </button>
             </div>
           </div>

@@ -159,6 +159,11 @@ func main() {
 	auth.POST("/global-expenses", createGlobalExpense)
 	auth.DELETE("/global-expenses/:id", deleteGlobalExpense)
 
+	// Расчёты с владельцем (вклады/возвраты/изъятия)
+	auth.GET("/finance/owner", getOwnerFinance)
+	auth.POST("/finance/owner", createOwnerEntry)
+	auth.DELETE("/finance/owner/:id", deleteOwnerEntry)
+
 	auth.GET("/expenses/:folderId/:monthId", getExpenses)
 	auth.POST("/expenses", addExpense)
 	auth.DELETE("/expenses/:id", deleteExpense)
