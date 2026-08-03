@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   del,
   get,
@@ -117,7 +117,10 @@ export default function ProfilePage({
     return role || "Логин";
   };
 
+  // Защита от гонки: при переключении точки старый ответ не должен затирать свежие данные.
+  const reqRef = useRef(0);
   const load = async () => {
+    const seq = ++reqRef.current;
     setLoading(true);
     setError("");
     try {
@@ -130,6 +133,7 @@ export default function ProfilePage({
       if (isOwner) requests.push(get("/user-permissions"));
 
       const result = await Promise.all(requests);
+      if (seq !== reqRef.current) return; // устаревший ответ — игнорируем
       let i = 0;
 
       setEmployees(result[i++] || []);
@@ -145,14 +149,16 @@ export default function ProfilePage({
       if (isOwner) setWorkspaceAccess(result[i++] || []);
       if (isOwner) setPermissions(result[i++] || []);
     } catch (e) {
+      if (seq !== reqRef.current) return;
       setError(e.message || "Ошибка загрузки");
     } finally {
-      setLoading(false);
+      if (seq === reqRef.current) setLoading(false);
     }
   };
 
+  // Перезагружаем при смене точки (dataAccountId), иначе показываются продавцы/карты прошлой точки.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [workspace?.dataAccountId]);
   useEffect(() => {
     if (!isOwner && workspace?.id)
       setAccountForm((p) => ({ ...p, workspaceId: String(workspace.id) }));
@@ -345,24 +351,36 @@ export default function ProfilePage({
   };
   const removeEmployee = async (id) => {
     if (!confirm("Удалить профиль сотрудника?")) return;
-    await del(`/employees/${id}`);
-    if (profile?.id === id) { setCurrentProfile(null); setProfile(null); }
-    await load();
+    try {
+      await del(`/employees/${id}`);
+      if (profile?.id === id) { setCurrentProfile(null); setProfile(null); }
+      await load();
+    } catch (e) {
+      setError(e?.message || "Не удалось удалить сотрудника");
+    }
   };
 
   const createCard = async () => {
     setError("");
     if (!cardName.trim()) return setError("Введите название карты или банка");
-    await post("/cards", { name: cardName.trim(), owner: cardOwner.trim() });
-    setCardName("");
-    setCardOwner("");
-    await load();
+    try {
+      await post("/cards", { name: cardName.trim(), owner: cardOwner.trim() });
+      setCardName("");
+      setCardOwner("");
+      await load();
+    } catch (e) {
+      setError(e?.message || "Не удалось создать карту");
+    }
   };
 
   const removeCard = async (id) => {
     if (!confirm("Удалить карту?")) return;
-    await del(`/cards/${id}`);
-    await load();
+    try {
+      await del(`/cards/${id}`);
+      await load();
+    } catch (e) {
+      setError(e?.message || "Не удалось удалить карту");
+    }
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────

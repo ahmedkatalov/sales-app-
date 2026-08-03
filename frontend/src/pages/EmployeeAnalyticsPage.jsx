@@ -150,9 +150,17 @@ export default function EmployeeAnalyticsPage() {
   ].filter((p) => p.value > 0);
 
   const exportCsv = () => {
-    const head = ["Продавец", "Выручка", "Чеки", "Средний чек", "Наличные", "Переводы", "Долг", "Товаров", "Скидки", "Крупнейший чек", "Доля %"];
-    const rows = employees.map((e) => [e.name, num(e.revenue), e.orders, Math.round(num(e.aov)), num(e.cash), num(e.transfer), num(e.debt), num(e.itemsSold), num(e.discounts), num(e.biggestSale), Math.round(num(e.share))]);
-    const csv = [head, ...rows].map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(";")).join("\n");
+    // Текст: экранируем кавычки + гасим формульную инъекцию (=,+,-,@); числа: запятая-десятичная (русский Excel).
+    const cell = (v) => { let t = String(v ?? ""); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return `"${t.replaceAll('"', '""')}"`; };
+    const csvNum = (v) => `"${String(num(v)).replace(".", ",")}"`;
+    const head = ["Продавец", "Выручка", "Чеки", "Средний чек", "Наличные", "Переводы", "Долг", "Товаров", "Скидки", "Крупнейший чек", "Доля %"].map(cell);
+    const rows = employees.map((e) => [
+      cell(e.name),
+      csvNum(e.revenue), csvNum(e.orders), csvNum(Math.round(num(e.aov))),
+      csvNum(e.cash), csvNum(e.transfer), csvNum(e.debt),
+      csvNum(e.itemsSold), csvNum(e.discounts), csvNum(e.biggestSale), csvNum(Math.round(num(e.share))),
+    ]);
+    const csv = [head, ...rows].map((r) => r.join(";")).join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { del, get, post } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, localISO, money, num } from "../utils/format";
@@ -118,26 +118,44 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
     });
   };
 
+  // Защита от двойного запроса + показ ошибки (тост поверх модалки).
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const guarded = async (fn) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      await fn();
+    } catch (e) {
+      const msg = e?.message || "Операция не выполнена. Попробуйте снова.";
+      setError(msg);
+      window.notify?.(msg, "error");
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
+  };
+
   const createExpense = async () => {
     setError("");
-
     if (!form.category) return setError("Выбери категорию расхода");
     if (!form.type) return setError("Выбери тип расхода");
     if (!form.name.trim()) return setError("Напиши, за что оплатили");
     if (num(form.amount) <= 0) return setError("Укажи сумму расхода");
-
-    await post("/global-expenses", {
-      employeeId: currentProfile?.id || 0,
-      category: form.category,
-      type: form.type,
-      name: form.name.trim(),
-      amount: num(form.amount),
-      comment: form.comment.trim(),
+    await guarded(async () => {
+      await post("/global-expenses", {
+        employeeId: currentProfile?.id || 0,
+        category: form.category,
+        type: form.type,
+        name: form.name.trim(),
+        amount: num(form.amount),
+        comment: form.comment.trim(),
+      });
+      resetForm();
+      setExpenseModal(false);
+      await load();
     });
-
-    resetForm();
-    setExpenseModal(false);
-    await load();
   };
 
   const openDeleteExpense = (expense) => {
@@ -151,11 +169,12 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
   const deleteExpense = async () => {
     if (!expenseToDelete?.id) return;
-
     setError("");
-    await del(`/global-expenses/${expenseToDelete.id}`);
-    setExpenseToDelete(null);
-    await load();
+    await guarded(async () => {
+      await del(`/global-expenses/${expenseToDelete.id}`);
+      setExpenseToDelete(null);
+      await load();
+    });
   };
 
   return (
@@ -556,9 +575,10 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             </button>
             <button
               onClick={createExpense}
-              className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)]"
+              disabled={submitting}
+              className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Добавить расход
+              {submitting ? "Сохраняю…" : "Добавить расход"}
             </button>
           </div>
         </Modal>
@@ -591,9 +611,10 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
               <button
                 onClick={deleteExpense}
-                className="flex-1 rounded-2xl bg-linear-to-r from-red-600 to-red-500 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(239,68,68,.25)] transition hover:scale-[1.01]"
+                disabled={submitting}
+                className="flex-1 rounded-2xl bg-linear-to-r from-red-600 to-red-500 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(239,68,68,.25)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Удалить
+                {submitting ? "Удаляю…" : "Удалить"}
               </button>
             </div>
           </div>

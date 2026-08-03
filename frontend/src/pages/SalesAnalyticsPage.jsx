@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { get } from "../api";
 import { formatMoney, localISO } from "../utils/format";
 
@@ -57,7 +57,10 @@ export default function SalesAnalyticsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Защита от гонки: при быстром переключении периода устаревший ответ не затирает свежий.
+  const reqRef = useRef(0);
   const load = async () => {
+    const seq = ++reqRef.current;
     setError("");
     setLoading(true);
     const query = `from=${from}&to=${to}`;
@@ -67,12 +70,14 @@ export default function SalesAnalyticsPage() {
         get(`/sales/stats?${query}`),
         get(`/sales?${query}`),
       ]);
+      if (seq !== reqRef.current) return; // пришёл старый ответ — игнорируем
       setStats(s || { topProducts: [] });
       setSales(list || []);
     } catch (e) {
+      if (seq !== reqRef.current) return;
       setError(e.message || "Не удалось загрузить продажи");
     } finally {
-      setLoading(false);
+      if (seq === reqRef.current) setLoading(false);
     }
   };
 

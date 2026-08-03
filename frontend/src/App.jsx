@@ -390,9 +390,20 @@ export default function App() {
   useEffect(() => {
     const syncProfile = () => setProfile(getCurrentProfile());
     const syncWorkspace = () => { setWorkspaceState(getCurrentWorkspace()); setProfile(getCurrentProfile()); };
+    // Сессия истекла (401 на любом запросе, в т.ч. фоновом): мягко возвращаемся на вход,
+    // без перезагрузки страницы. api.js уже очистил localStorage.
+    const onSessionExpired = () => {
+      setSessionState(null); setWorkspaceState(null); setProfile(null);
+      window.notify?.("Сессия истекла. Войдите снова.", "warning");
+    };
     window.addEventListener("sales-profile-change", syncProfile);
     window.addEventListener("sales-workspace-change", syncWorkspace);
-    return () => { window.removeEventListener("sales-profile-change", syncProfile); window.removeEventListener("sales-workspace-change", syncWorkspace); };
+    window.addEventListener("sales-session-expired", onSessionExpired);
+    return () => {
+      window.removeEventListener("sales-profile-change", syncProfile);
+      window.removeEventListener("sales-workspace-change", syncWorkspace);
+      window.removeEventListener("sales-session-expired", onSessionExpired);
+    };
   }, []);
 
   useEffect(() => {

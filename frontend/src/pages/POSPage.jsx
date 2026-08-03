@@ -245,28 +245,39 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   };
   useEffect(() => { loadCashShift(); }, []);
 
+  // Кассовые движения — защита от двойного тапа (ref синхронный) + показ ошибки.
+  const [shiftBusy, setShiftBusy] = useState(false);
+  const shiftBusyRef = useRef(false);
+  const runShift = async (fn) => {
+    if (shiftBusyRef.current) return;
+    shiftBusyRef.current = true;
+    setShiftBusy(true);
+    try { await fn(); }
+    catch (e) { setError(e.message); }
+    finally { shiftBusyRef.current = false; setShiftBusy(false); }
+  };
   const openShift = async () => {
-    try {
+    await runShift(async () => {
       const r = await post("/cash/shift/open", { openingCash: num(shiftInput), openedBy: currentProfile?.name || "" });
       setCashShift(r?.shift || null);
       setShiftModal(null); setShiftInput(""); setShiftNote("");
-    } catch (e) { setError(e.message); }
+    });
   };
   const addShiftMovement = async (type) => {
-    try {
+    await runShift(async () => {
       const r = await post("/cash/movement", { type, amount: num(shiftInput), note: shiftNote, by: currentProfile?.name || "" });
       setCashShift(r?.shift || null);
       setShiftModal(null); setShiftInput(""); setShiftNote("");
-    } catch (e) { setError(e.message); }
+    });
   };
   const closeShift = async () => {
-    try {
+    await runShift(async () => {
       const r = await post("/cash/shift/close", { countedCash: num(shiftInput), closedBy: currentProfile?.name || "", note: shiftNote });
       setShiftResult(r);
       setCashShift(null);
       setShiftModal(null); setShiftInput(""); setShiftNote("");
       await loadCashShift();
-    } catch (e) { setError(e.message); }
+    });
   };
 
   const [newSectionName, setNewSectionName] = useState("");
@@ -430,8 +441,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     }));
     const rows = (aiSuggestion.ingredients || []).map(ing => {
       const found = safe_warehouseItems.find(w =>
-        w.name.toLowerCase().includes(ing.name.toLowerCase()) ||
-        ing.name.toLowerCase().includes(w.name.toLowerCase())
+        String(w.name || "").toLowerCase().includes(String(ing.name || "").toLowerCase()) ||
+        String(ing.name || "").toLowerCase().includes(String(w.name || "").toLowerCase())
       );
       return {
         warehouseItemId: found ? String(found.id) : "",
@@ -500,15 +511,18 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       return setError("Введите название раздела");
     }
 
-    const created = await post("/product-types", {
-      name: newSectionName.trim(),
-    });
-
-    setSectionModal(false);
-    setNewSectionName("");
-    setSelectedSectionId(String(created.id));
-    setOpenedCategory(null);
-    await load();
+    try {
+      const created = await post("/product-types", {
+        name: newSectionName.trim(),
+      });
+      setSectionModal(false);
+      setNewSectionName("");
+      setSelectedSectionId(String(created.id));
+      setOpenedCategory(null);
+      await load();
+    } catch (e) {
+      setError(e?.message || "Не удалось создать раздел. Попробуйте снова.");
+    }
   };
 
   const createCategory = async () => {
@@ -517,16 +531,19 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     if (!newCategory.sectionId) return setError("Выбери раздел меню");
     if (!newCategory.name.trim()) return setError("Введите название категории");
 
-    const created = await post("/product-categories", {
-      name: newCategory.name.trim(),
-      typeId: Number(newCategory.sectionId),
-    });
-
-    setCategoryModal(false);
-    setNewCategory({ name: "", sectionId: "" });
-    setSelectedSectionId(String(created.typeId));
-    setOpenedCategory(created);
-    await load();
+    try {
+      const created = await post("/product-categories", {
+        name: newCategory.name.trim(),
+        typeId: Number(newCategory.sectionId),
+      });
+      setCategoryModal(false);
+      setNewCategory({ name: "", sectionId: "" });
+      setSelectedSectionId(String(created.typeId));
+      setOpenedCategory(created);
+      await load();
+    } catch (e) {
+      setError(e?.message || "Не удалось создать категорию. Попробуйте снова.");
+    }
   };
 
   const openProductModal = () => {
@@ -564,24 +581,26 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         };
       });
 
-    await post("/menu-products", {
-      categoryId: Number(newProduct.categoryId),
-      name: newProduct.name.trim(),
-      price: num(newProduct.price),
-      cost: cleanRecipe.length ? recipeCost : num(newProduct.cost),
-      recipe: cleanRecipe,
-    });
-
-    setProductModal(false);
-    setRecipe([]);
-    setNewProduct({
-      categoryId: openedCategory?.id ? String(openedCategory.id) : "",
-      name: "",
-      price: "",
-      cost: "",
-    });
-
-    await load();
+    try {
+      await post("/menu-products", {
+        categoryId: Number(newProduct.categoryId),
+        name: newProduct.name.trim(),
+        price: num(newProduct.price),
+        cost: cleanRecipe.length ? recipeCost : num(newProduct.cost),
+        recipe: cleanRecipe,
+      });
+      setProductModal(false);
+      setRecipe([]);
+      setNewProduct({
+        categoryId: openedCategory?.id ? String(openedCategory.id) : "",
+        name: "",
+        price: "",
+        cost: "",
+      });
+      await load();
+    } catch (e) {
+      setError(e?.message || "Не удалось сохранить позицию. Попробуйте снова.");
+    }
   };
 
   const salePayload = (override = {}) => ({
@@ -608,8 +627,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     setDebtName("");
     setPaymentType("cash");
     setPaymentModal(false);
-    await load();
-    await loadCashShift();
+    // Продажа уже сохранена на сервере — сбой ФОНОВОЙ перезагрузки не должен показывать
+    // ложную ошибку «Не удалось провести продажу» и рушить успех.
+    await load().catch(() => {});
+    await loadCashShift().catch(() => {});
     window.dispatchEvent(new Event("sales-pending-change"));
   };
 
@@ -1082,7 +1103,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             placeholder="Размен, ₽" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
           <div className="mt-6 flex gap-3">
             <button type="button" onClick={() => setShiftModal(null)} className="btn-white flex-1">Отмена</button>
-            <button type="button" onClick={openShift} className="btn-blue flex-1">Открыть</button>
+            <button type="button" onClick={openShift} disabled={shiftBusy} className="btn-blue flex-1 disabled:cursor-not-allowed disabled:opacity-60">{shiftBusy ? "…" : "Открыть"}</button>
           </div>
         </Modal>
       )}
@@ -1098,7 +1119,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             placeholder="Комментарий (за что)" className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
           <div className="mt-6 flex gap-3">
             <button type="button" onClick={() => setShiftModal(null)} className="btn-white flex-1">Отмена</button>
-            <button type="button" onClick={() => addShiftMovement(shiftModal)} className="btn-blue flex-1">{shiftModal === "in" ? "Внести" : "Изъять"}</button>
+            <button type="button" onClick={() => addShiftMovement(shiftModal)} disabled={shiftBusy} className="btn-blue flex-1 disabled:cursor-not-allowed disabled:opacity-60">{shiftBusy ? "…" : shiftModal === "in" ? "Внести" : "Изъять"}</button>
           </div>
         </Modal>
       )}
@@ -1122,7 +1143,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           )}
           <div className="mt-6 flex gap-3">
             <button type="button" onClick={() => setShiftModal(null)} className="btn-white flex-1">Отмена</button>
-            <button type="button" onClick={closeShift} className="btn-blue flex-1">Закрыть смену</button>
+            <button type="button" onClick={closeShift} disabled={shiftBusy} className="btn-blue flex-1 disabled:cursor-not-allowed disabled:opacity-60">{shiftBusy ? "…" : "Закрыть смену"}</button>
           </div>
         </Modal>
       )}
@@ -1411,8 +1432,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   <p className="text-xs font-black text-slate-400 uppercase tracking-wide">Состав:</p>
                   {(aiSuggestion.ingredients || []).map((ing, i) => {
                     const found = safe_warehouseItems.find(w =>
-                      w.name.toLowerCase().includes(ing.name.toLowerCase()) ||
-                      ing.name.toLowerCase().includes(w.name.toLowerCase())
+                      String(w.name || "").toLowerCase().includes(String(ing.name || "").toLowerCase()) ||
+                      String(ing.name || "").toLowerCase().includes(String(w.name || "").toLowerCase())
                     );
                     return (
                       <div key={i} className="flex items-center gap-2 text-sm">

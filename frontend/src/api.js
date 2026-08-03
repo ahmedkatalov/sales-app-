@@ -212,7 +212,10 @@ async function request(url, options = {}) {
 
       if (!isAuthRoute) {
         clearSession();
-        window.location.reload();
+        // НЕ делаем window.location.reload(): фоновый опрос (каждые 5-30с) не должен
+        // внезапно перезагружать страницу и стирать корзину/недозаполненные формы.
+        // Сообщаем приложению на уровне React — оно мягко покажет экран входа.
+        window.dispatchEvent(new Event("sales-session-expired"));
         return;
       }
 

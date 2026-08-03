@@ -470,8 +470,8 @@ export default function WorkPage() {
     }));
     const rows = (aiSuggestion.ingredients || []).map(ing => {
       const found = safeWarehouseItems.find(w =>
-        w.name.toLowerCase().includes(ing.name.toLowerCase()) ||
-        ing.name.toLowerCase().includes(w.name.toLowerCase())
+        String(w.name || "").toLowerCase().includes(String(ing.name || "").toLowerCase()) ||
+        String(ing.name || "").toLowerCase().includes(String(w.name || "").toLowerCase())
       );
       return {
         warehouseItemId: found ? String(found.id) : "",
@@ -511,6 +511,18 @@ export default function WorkPage() {
     setRecipe((rows) => rows.filter((_, i) => i !== index));
   };
 
+  // Защита сохранения позиции меню: не даём двойной запрос (дубли) + показываем ошибку.
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const guardedSave = async (fn) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try { await fn(); }
+    catch (e) { setError(e?.message || "Не удалось сохранить. Попробуйте снова."); }
+    finally { savingRef.current = false; setSaving(false); }
+  };
+
   const createProduct = async () => {
     setError("");
 
@@ -533,19 +545,20 @@ export default function WorkPage() {
         };
       });
 
-    await post("/menu-products", {
-      categoryId: Number(selectedFolderId) || 0,
-      name: productForm.name.trim(),
-      cost: cleanRecipe.length ? recipeCost : num(productForm.cost),
-      price: num(productForm.price),
-      isExtra: !!productForm.isExtra,
-      recipe: cleanRecipe,
+    await guardedSave(async () => {
+      await post("/menu-products", {
+        categoryId: Number(selectedFolderId) || 0,
+        name: productForm.name.trim(),
+        cost: cleanRecipe.length ? recipeCost : num(productForm.cost),
+        price: num(productForm.price),
+        isExtra: !!productForm.isExtra,
+        recipe: cleanRecipe,
+      });
+      setProductModal(false);
+      setProductForm({ name: "", cost: "", price: "", isExtra: false });
+      setRecipe([]);
+      await load();
     });
-
-    setProductModal(false);
-    setProductForm({ name: "", cost: "", price: "", isExtra: false });
-    setRecipe([]);
-    await load();
   };
 
   const deleteProduct = async (id) => {
@@ -589,15 +602,17 @@ export default function WorkPage() {
           return sum + storageQty * num(item.unitCost ?? item.unit_cost ?? 0);
         }, 0)
       : null;
-    await put(`/menu-products/${editProduct.id}`, {
-      ...editProduct,
-      cost: autoCost !== null && autoCost > 0 ? autoCost : num(editProduct.cost),
-      price: num(editProduct.price),
-      costMode: editCostMode,
-      recipe: cleanRecipe,
+    await guardedSave(async () => {
+      await put(`/menu-products/${editProduct.id}`, {
+        ...editProduct,
+        cost: autoCost !== null && autoCost > 0 ? autoCost : num(editProduct.cost),
+        price: num(editProduct.price),
+        costMode: editCostMode,
+        recipe: cleanRecipe,
+      });
+      setEditModal(false);
+      await load();
     });
-    setEditModal(false);
-    await load();
   };
 
   const updateEditRecipeRow = (index, key, value) => {
@@ -611,36 +626,30 @@ export default function WorkPage() {
   };
 
   const csvCell = (value) => {
-    const text = String(value ?? "");
+    let text = String(value ?? "");
+    if (/^[=+\-@\t\r]/.test(text)) text = "'" + text; // нейтрализуем формульную инъекцию (=,+,-,@)
     return `"${text.replaceAll('"', '""')}"`;
   };
+  // Числовая ячейка: запятая-десятичная без группировки — русский Excel читает как число.
+  const csvNum = (value) => `"${String(num(value)).replace(".", ",")}"`;
 
   const exportExcel = () => {
     const rows = [
-      [
-        "Название",
-        "Тип",
-        "Папка",
-        "Себестоимость",
-        "Цена продажи",
-        "Кол-во",
-        "Выручка",
-        "Чистая прибыль",
-      ],
+      ["Название", "Тип", "Папка", "Себестоимость", "Цена продажи", "Кол-во", "Выручка", "Чистая прибыль"].map(csvCell),
       ...productRows.map((p) => [
-        p.name,
-        p.typeName || p.type || "",
-        p.category || "",
-        money(p.cost),
-        money(p.price),
-        p.quantity,
-        p.revenue,
-        p.cleanProfit,
+        csvCell(p.name),
+        csvCell(p.typeName || p.type || ""),
+        csvCell(p.category || ""),
+        csvNum(p.cost),
+        csvNum(p.price),
+        csvNum(p.quantity),
+        csvNum(p.revenue),
+        csvNum(p.cleanProfit),
       ]),
     ];
 
     const csv =
-      "\uFEFF" + rows.map((row) => row.map(csvCell).join(";")).join("\n");
+      "\uFEFF" + rows.map((row) => row.join(";")).join("\n");
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -1461,7 +1470,7 @@ export default function WorkPage() {
                 </div>
                 <div className="mb-3 space-y-1">
                   {(aiSuggestion.ingredients || []).map((ing, i) => {
-                    const found = safeWarehouseItems.find(w => w.name.toLowerCase().includes(ing.name.toLowerCase()));
+                    const found = safeWarehouseItems.find(w => String(w.name || "").toLowerCase().includes(String(ing.name || "").toLowerCase()));
                     return (
                       <div key={i} className="flex items-center gap-2 text-xs">
                         <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${found ? "bg-emerald-400" : "bg-yellow-400"}`}/>
@@ -1668,8 +1677,8 @@ export default function WorkPage() {
               Отмена
             </button>
 
-            <button onClick={createProduct} className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] flex-1">
-              Создать
+            <button onClick={createProduct} disabled={saving} className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] flex-1 disabled:cursor-not-allowed disabled:opacity-60">
+              {saving ? "Сохраняю…" : "Создать"}
             </button>
           </div>
         </Modal>
@@ -1794,8 +1803,8 @@ export default function WorkPage() {
           <div className="mt-6 flex gap-3">
             <button type="button" onClick={() => setEditModal(false)}
               className="btn-white flex-1">Отмена</button>
-            <button type="button" onClick={saveEditProduct}
-              className="btn-blue flex-1">Сохранить</button>
+            <button type="button" onClick={saveEditProduct} disabled={saving}
+              className="btn-blue flex-1 disabled:cursor-not-allowed disabled:opacity-60">{saving ? "Сохраняю…" : "Сохранить"}</button>
           </div>
         </Modal>
       )}

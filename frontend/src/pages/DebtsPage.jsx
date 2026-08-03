@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, History, ReceiptText } from "lucide-react";
 import { del, get, post } from "../api";
 import { formatMoney } from "../utils/format";
@@ -81,28 +81,51 @@ export default function DebtsPage() {
     );
   }, [customerGroups, query]);
 
+  // Защита от двойного запроса + показ ошибки тостом (setError на этой странице нет).
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const guarded = async (fn) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      await fn();
+    } catch (e) {
+      window.notify?.(e?.message || "Не удалось выполнить операцию. Попробуйте снова.", "error");
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
+  };
+
   const closeDebt = async (id) => {
-    await post(`/debts/${id}/close`, {});
-    await load();
+    await guarded(async () => {
+      await post(`/debts/${id}/close`, {});
+      await load();
+    });
   };
 
   const closeAllOpenDebts = async (customer) => {
     const openRecords = customer.records.filter((record) => record.status !== "paid");
     if (!openRecords.length) return;
     if (!window.confirm(`Погасить весь долг клиента ${customer.name}?`)) return;
-
-    for (const record of openRecords) {
-      await post(`/debts/${record.id}/close`, {});
-    }
-
-    await load();
+    await guarded(async () => {
+      try {
+        for (const record of openRecords) {
+          await post(`/debts/${record.id}/close`, {});
+        }
+      } finally {
+        await load(); // отражаем частичный прогресс, даже если оборвалось в середине
+      }
+    });
   };
 
   const clearHistory = async () => {
     if (!window.confirm("Удалить закрытую историю долгов? Открытые долги останутся.")) return;
-
-    await del("/debts/history");
-    await load();
+    await guarded(async () => {
+      await del("/debts/history");
+      await load();
+    });
   };
 
   const totalOpen = customerGroups.reduce(
@@ -156,7 +179,8 @@ export default function DebtsPage() {
 
             <button
               onClick={clearHistory}
-              className="flex h-12 items-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 font-black text-red-300 shadow-xl transition hover:bg-red-500/15"
+              disabled={submitting}
+              className="flex h-12 items-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 font-black text-red-300 shadow-xl transition hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg>
               <span>Удалить историю</span>
@@ -305,7 +329,8 @@ export default function DebtsPage() {
                       {!!openRecords.length && (
                         <button
                           onClick={() => closeAllOpenDebts(customer)}
-                          className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-950/30 transition hover:scale-[1.01]"
+                          disabled={submitting}
+                          className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-950/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           Погасить весь долг
                         </button>
@@ -370,7 +395,8 @@ export default function DebtsPage() {
                             {debt.status !== "paid" ? (
                               <button
                                 onClick={() => closeDebt(debt.id)}
-                                className="rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:scale-[1.01] lg:hidden"
+                                disabled={submitting}
+                                className="rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60 lg:hidden"
                               >
                                 Оплатить
                               </button>
@@ -381,7 +407,8 @@ export default function DebtsPage() {
                             {debt.status !== "paid" ? (
                               <button
                                 onClick={() => closeDebt(debt.id)}
-                                className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:scale-[1.01]"
+                                disabled={submitting}
+                                className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 Оплатить
                               </button>

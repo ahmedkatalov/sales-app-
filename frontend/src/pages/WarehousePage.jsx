@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { del, get, post } from "../api";
 import Modal from "../components/Modal";
 import EmptyState from "../components/EmptyState";
@@ -116,6 +116,7 @@ const smartPieceSuggestion = (name, unit) => {
 export default function WarehousePage() {
   const [items, setItems] = useState([]);
   const [movements, setMovements] = useState([]);
+  const [submitting, setSubmitting] = useState(false); // защита от двойного запроса + показ ошибки
 
   const [addModal, setAddModal] = useState(false);
   const [writeOffModal, setWriteOffModal] = useState(false);
@@ -362,30 +363,47 @@ export default function WarehousePage() {
     await createNewItemAnyway();
   };
 
+  // Единая защита операций склада: не даём двойной запрос (ref — синхронный, устойчив к
+  // двойному тапу без ре-рендера), ловим ошибку и показываем её.
+  const submittingRef = useRef(false);
+  const guarded = async (fn) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      await fn();
+    } catch (e) {
+      const msg = e?.message || "Операция не выполнена. Попробуйте снова.";
+      setError(msg);
+      window.notify?.(msg, "error"); // тост поверх модалки — виден, даже если баннер под ней
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
+  };
+
   const createNewItemAnyway = async () => {
     setError("");
-
     if (!validateForm()) return;
-
-    await post("/warehouse/items", payloadFromForm());
-
-    resetForm();
-    setAddModal(false);
-    setDuplicateModal(false);
-    await load();
+    await guarded(async () => {
+      await post("/warehouse/items", payloadFromForm());
+      resetForm();
+      setAddModal(false);
+      setDuplicateModal(false);
+      await load();
+    });
   };
 
   const addPurchaseToExisting = async (item) => {
     setError("");
-
     if (!validateForm()) return;
-
-    await post(`/warehouse/items/${item.id}/purchase`, payloadFromForm());
-
-    resetForm();
-    setAddModal(false);
-    setDuplicateModal(false);
-    await load();
+    await guarded(async () => {
+      await post(`/warehouse/items/${item.id}/purchase`, payloadFromForm());
+      resetForm();
+      setAddModal(false);
+      setDuplicateModal(false);
+      await load();
+    });
   };
 
   const openPurchaseForItem = (item) => {
@@ -434,14 +452,15 @@ export default function WarehousePage() {
       return setError("Введите количество списания");
     }
 
-    await post(`/warehouse/items/${writeOffForm.warehouseItemId}/writeoff`, {
-      quantity: num(writeOffForm.quantity),
-      reason: writeOffForm.reason,
-      note: writeOffForm.note,
+    await guarded(async () => {
+      await post(`/warehouse/items/${writeOffForm.warehouseItemId}/writeoff`, {
+        quantity: num(writeOffForm.quantity),
+        reason: writeOffForm.reason,
+        note: writeOffForm.note,
+      });
+      setWriteOffModal(false);
+      await load();
     });
-
-    setWriteOffModal(false);
-    await load();
   };
 
   const openInventory = (item) => {
@@ -456,12 +475,14 @@ export default function WarehousePage() {
     if (inventoryForm.actual === "" || num(inventoryForm.actual) < 0) {
       return setError("Введите фактический остаток");
     }
-    await post(`/warehouse/items/${inventoryForm.item.id}/inventory`, {
-      actualQuantity: num(inventoryForm.actual),
-      note: inventoryForm.note,
+    await guarded(async () => {
+      await post(`/warehouse/items/${inventoryForm.item.id}/inventory`, {
+        actualQuantity: num(inventoryForm.actual),
+        note: inventoryForm.note,
+      });
+      setInventoryModal(false);
+      await load();
     });
-    setInventoryModal(false);
-    await load();
   };
 
   const toggleHidden = async (item) => {
@@ -1405,9 +1426,10 @@ export default function WarehousePage() {
                     ? addPurchaseToExisting(purchaseTargetItem)
                     : checkDuplicatesAndCreate()
                 }
-                className="btn-blue flex-1"
+                disabled={submitting}
+                className="btn-blue flex-1 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Сохранить закупку
+                {submitting ? "Сохраняю…" : "Сохранить закупку"}
               </button>
             </div>
           </div>
@@ -1494,9 +1516,10 @@ export default function WarehousePage() {
             <button
               type="button"
               onClick={writeOffItem}
-              className="flex-1 rounded-2xl bg-red-600 px-5 py-3 font-black text-white shadow-sm transition hover:bg-red-700"
+              disabled={submitting}
+              className="flex-1 rounded-2xl bg-red-600 px-5 py-3 font-black text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Списать
+              {submitting ? "Списываю…" : "Списать"}
             </button>
           </div>
         </Modal>
@@ -1549,9 +1572,10 @@ export default function WarehousePage() {
             <button
               type="button"
               onClick={doInventory}
-              className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 font-black text-white transition hover:brightness-110"
+              disabled={submitting}
+              className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Провести
+              {submitting ? "Провожу…" : "Провести"}
             </button>
           </div>
         </Modal>
