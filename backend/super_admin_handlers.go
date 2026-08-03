@@ -191,23 +191,42 @@ func superDeleteAccount(c *gin.Context) {
 	}
 	rows.Close()
 
-	// Удаляем данные каждой точки
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer tx.Rollback()
+
+	// Данные каждой точки компании (полная очистка, без сирот)
 	for _, wid := range wsIDs {
-		dataID := workspaceDataAccountID(req.ID, wid)
-		db.Exec(`DELETE FROM employees WHERE account_id = ?`, dataID)
-		db.Exec(`DELETE FROM cards WHERE account_id = ?`, dataID)
-		db.Exec(`DELETE FROM product_types WHERE account_id = ?`, dataID)
-		db.Exec(`DELETE FROM product_categories WHERE account_id = ?`, dataID)
-		db.Exec(`DELETE FROM menu_products WHERE account_id = ?`, dataID)
-		db.Exec(`DELETE FROM sales WHERE account_id = ?`, dataID)
-		db.Exec(`DELETE FROM global_expenses WHERE account_id = ?`, dataID)
-		db.Exec(`DELETE FROM folders WHERE account_id = ?`, dataID)
-		db.Exec(`DELETE FROM warehouse_items WHERE account_id = ?`, dataID)
+		if err := deleteWorkspaceDataTx(tx, workspaceDataAccountID(req.ID, wid)); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
-	db.Exec(`DELETE FROM users WHERE account_id = ?`, req.ID)
-	db.Exec(`DELETE FROM workspaces WHERE account_id = ?`, req.ID)
-	db.Exec(`DELETE FROM accounts WHERE id = ?`, req.ID)
+	// Пользователи, сессии, доступы и сама компания
+	ownerCleanup := []string{
+		`DELETE FROM user_sessions WHERE user_id IN (SELECT id FROM users WHERE IFNULL(owner_account_id, account_id) = ?)`,
+		`DELETE FROM user_permissions WHERE owner_account_id = ?`,
+		`DELETE FROM user_workspaces WHERE owner_account_id = ?`,
+		`DELETE FROM users WHERE IFNULL(owner_account_id, account_id) = ?`,
+		`DELETE FROM account_settings WHERE account_id = ?`,
+		`DELETE FROM workspaces WHERE account_id = ?`,
+		`DELETE FROM accounts WHERE id = ?`,
+	}
+	for _, s := range ownerCleanup {
+		if _, err := tx.Exec(s, req.ID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -9,6 +10,43 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+// deleteWorkspaceDataTx удаляет ВСЕ данные, скоупленные dataAccountID (одна точка/филиал):
+// дети раньше родителей (sale_items до sales, items/months до folders). Используется и при
+// удалении филиала, и при удалении всей компании — чтобы не оставалось сирот.
+func deleteWorkspaceDataTx(tx *sql.Tx, dataID int) error {
+	stmts := []string{
+		`DELETE FROM sale_items WHERE sale_id IN (SELECT id FROM sales WHERE account_id = ?)`,
+		`DELETE FROM sales WHERE account_id = ?`,
+		`DELETE FROM items WHERE folder_id IN (SELECT id FROM folders WHERE account_id = ?)`,
+		`DELETE FROM months WHERE folder_id IN (SELECT id FROM folders WHERE account_id = ?)`,
+		`DELETE FROM expenses WHERE account_id = ?`,
+		`DELETE FROM folders WHERE account_id = ?`,
+		`DELETE FROM pending_sale_reservations WHERE account_id = ?`,
+		`DELETE FROM pending_sales WHERE account_id = ?`,
+		`DELETE FROM stock_batches WHERE account_id = ?`,
+		`DELETE FROM warehouse_movements WHERE account_id = ?`,
+		`DELETE FROM product_recipes WHERE account_id = ?`,
+		`DELETE FROM warehouse_items WHERE account_id = ?`,
+		`DELETE FROM menu_products WHERE account_id = ?`,
+		`DELETE FROM product_categories WHERE account_id = ?`,
+		`DELETE FROM product_types WHERE account_id = ?`,
+		`DELETE FROM debts WHERE account_id = ?`,
+		`DELETE FROM debt_customers WHERE account_id = ?`,
+		`DELETE FROM cash_movements WHERE account_id = ?`,
+		`DELETE FROM cash_shifts WHERE account_id = ?`,
+		`DELETE FROM global_expenses WHERE account_id = ?`,
+		`DELETE FROM employees WHERE account_id = ?`,
+		`DELETE FROM cards WHERE account_id = ?`,
+		`DELETE FROM account_settings WHERE account_id = ?`,
+	}
+	for _, s := range stmts {
+		if _, err := tx.Exec(s, dataID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func getWorkspaces(c *gin.Context) {
 	ownerID := ownerAccountID(c)
@@ -119,18 +157,42 @@ func deleteWorkspace(c *gin.Context) {
 	}
 
 	dataID := workspaceDataAccountID(ownerID, id)
-	db.Exec(`DELETE FROM users WHERE IFNULL(owner_account_id, account_id) = ? AND workspace_id = ? AND role IN ('branch_admin', 'worker', 'workspace')`, ownerID, id)
-	db.Exec(`DELETE FROM employees WHERE account_id = ?`, dataID)
-	db.Exec(`DELETE FROM cards WHERE account_id = ?`, dataID)
-	db.Exec(`DELETE FROM product_types WHERE account_id = ?`, dataID)
-	db.Exec(`DELETE FROM product_categories WHERE account_id = ?`, dataID)
-	db.Exec(`DELETE FROM menu_products WHERE account_id = ?`, dataID)
-	db.Exec(`DELETE FROM sales WHERE account_id = ?`, dataID)
-	db.Exec(`DELETE FROM global_expenses WHERE account_id = ?`, dataID)
-	db.Exec(`DELETE FROM folders WHERE account_id = ?`, dataID)
 
-	_, err = db.Exec(`DELETE FROM workspaces WHERE id = ? AND account_id = ?`, id, ownerID)
+	tx, err := db.Begin()
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer tx.Rollback()
+
+	// Все данные точки (склад, продажи, долги, касса, расходы, леджер и т.д.)
+	if err := deleteWorkspaceDataTx(tx, dataID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	// Пользователи филиала и их доступы. Сессии удаляем ДО пользователей (иначе останутся сироты-токены).
+	if _, err := tx.Exec(`DELETE FROM user_sessions WHERE user_id IN (SELECT id FROM users WHERE IFNULL(owner_account_id, account_id) = ? AND workspace_id = ? AND role IN ('branch_admin', 'worker', 'workspace'))`, ownerID, id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if _, err := tx.Exec(`DELETE FROM users WHERE IFNULL(owner_account_id, account_id) = ? AND workspace_id = ? AND role IN ('branch_admin', 'worker', 'workspace')`, ownerID, id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if _, err := tx.Exec(`DELETE FROM user_workspaces WHERE owner_account_id = ? AND workspace_id = ?`, ownerID, id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if _, err := tx.Exec(`DELETE FROM user_permissions WHERE owner_account_id = ? AND workspace_id = ?`, ownerID, id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if _, err := tx.Exec(`DELETE FROM workspaces WHERE id = ? AND account_id = ?`, id, ownerID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
