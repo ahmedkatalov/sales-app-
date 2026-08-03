@@ -164,6 +164,10 @@ func main() {
 	auth.POST("/finance/owner", createOwnerEntry)
 	auth.DELETE("/finance/owner/:id", deleteOwnerEntry)
 
+	// Стартовые балансы (миграция с другой системы)
+	auth.GET("/finance/opening", getOpeningBalances)
+	auth.PUT("/finance/opening", setOpeningBalances)
+
 	auth.GET("/expenses/:folderId/:monthId", getExpenses)
 	auth.POST("/expenses", addExpense)
 	auth.DELETE("/expenses/:id", deleteExpense)

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { del, get, post } from "../api";
+import { del, get, post, put } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, localISO, money, num } from "../utils/format";
 
@@ -55,19 +55,57 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   const [ownerModal, setOwnerModal] = useState(null); // 'contribution' | 'reimbursement' | 'withdrawal'
   const [ownerForm, setOwnerForm] = useState({ amount: "", note: "" });
 
+  // Стартовые балансы (миграция с другой системы)
+  const [opening, setOpening] = useState(null);
+  const [openingModal, setOpeningModal] = useState(false);
+  const [openingForm, setOpeningForm] = useState({
+    asOfDate: "", cash: "", bank: "", owedToOwner: "", inventoryValue: "",
+    customerDebts: "", supplierDebts: "", note: "",
+  });
+
   // Safe array guards
 
   const load = async () => {
-    const [typeList, expenseList, owner] = await Promise.all([
+    const [typeList, expenseList, owner, openingBal] = await Promise.all([
       get("/product-types"),
       get("/global-expenses"),
-      // Расчёты с владельцем — только для владельца/админа; у сотрудника 403, тихо игнорируем.
+      // Финансы — только для владельца/админа; у сотрудника 403, тихо игнорируем.
       get("/finance/owner").catch(() => null),
+      get("/finance/opening").catch(() => null),
     ]);
 
     setTypes(typeList || []);
     setExpenses(expenseList || []);
     if (owner) setOwnerFin(owner);
+    if (openingBal) setOpening(openingBal);
+  };
+
+  const openOpeningModal = () => {
+    const o = opening || {};
+    const s = (v) => (v ? String(v) : "");
+    setOpeningForm({
+      asOfDate: o.asOfDate || "",
+      cash: s(o.cash), bank: s(o.bank), owedToOwner: s(o.owedToOwner),
+      inventoryValue: s(o.inventoryValue), customerDebts: s(o.customerDebts),
+      supplierDebts: s(o.supplierDebts), note: o.note || "",
+    });
+    setError("");
+    setOpeningModal(true);
+  };
+
+  const saveOpening = async () => {
+    await guarded(async () => {
+      const res = await put("/finance/opening", {
+        asOfDate: openingForm.asOfDate,
+        cash: num(openingForm.cash), bank: num(openingForm.bank),
+        owedToOwner: num(openingForm.owedToOwner), inventoryValue: num(openingForm.inventoryValue),
+        customerDebts: num(openingForm.customerDebts), supplierDebts: num(openingForm.supplierDebts),
+        note: openingForm.note.trim(),
+      });
+      if (res) setOpening(res);
+      setOpeningModal(false);
+      await load(); // долг перед владельцем зависит от стартового баланса
+    });
   };
 
   // Записать движение по расчётам с владельцем (вклад/возврат/изъятие).
@@ -165,6 +203,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
       hint: "Владелец забирает прибыль из кассы для себя. Касса уменьшится, долг перед владельцем НЕ меняется." },
   };
   const owedOwner = ownerFin ? ownerFin.owed : owedToOwner;
+  const fieldCls = "w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10";
 
   const setCategory = (category) => {
     setFilterCategory(category);
@@ -505,6 +544,9 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               <div className="text-right">
                 <p className="text-[11px] font-black uppercase tracking-wide text-amber-200/70">Бизнес должен владельцу</p>
                 <p className="text-2xl font-black text-amber-100 sm:text-3xl">{formatMoney(owedOwner)}</p>
+                {ownerFin.openingOwed > 0 && (
+                  <p className="text-[11px] font-bold text-amber-200/50">в т.ч. на старте {formatMoney(ownerFin.openingOwed)}</p>
+                )}
               </div>
             </div>
 
@@ -523,6 +565,11 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                     {m.cta}
                   </button>
                 ))}
+                <button onClick={openOpeningModal}
+                  className="ml-auto rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-xs font-black text-slate-300 transition hover:bg-white/10"
+                  title="Начальное финансовое состояние при переходе с другой системы">
+                  ⚙ Стартовые балансы
+                </button>
               </div>
             )}
 
@@ -838,6 +885,53 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               </button>
               <button onClick={submitOwnerEntry} disabled={submitting}
                 className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(245,158,11,.25)] disabled:cursor-not-allowed disabled:opacity-60">
+                {submitting ? "Сохраняю…" : "Сохранить"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {openingModal && (
+        <Modal title="Стартовые балансы" wide>
+          <div className="grid gap-3">
+            <p className="rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-bold leading-snug text-blue-100">
+              Начальное состояние при переходе с другой системы. Это <b>не</b> транзакции — это точка отсчёта. Заполните то, что знаете на дату старта; остальное можно оставить нулём и уточнить позже.
+            </p>
+            <label>
+              <span className="mb-2 block text-sm font-black text-slate-300">Дата старта учёта</span>
+              <input type="date" value={openingForm.asOfDate}
+                onChange={(e) => setOpeningForm((p) => ({ ...p, asOfDate: e.target.value }))} className={fieldCls} />
+            </label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {[
+                ["cash", "Наличные в кассе", "нал на старте"],
+                ["bank", "На карте / счёте", "безнал на старте"],
+                ["owedToOwner", "Долг перед владельцем", "бизнес уже должен владельцу"],
+                ["inventoryValue", "Стоимость склада", "остатки товара по себестоимости"],
+                ["customerDebts", "Клиенты должны нам", "долги клиентов на старте"],
+                ["supplierDebts", "Мы должны поставщикам", "долги перед поставщиками"],
+              ].map(([key, label, hint]) => (
+                <label key={key}>
+                  <span className="mb-2 block text-sm font-black text-slate-300">{label}</span>
+                  <input type="number" value={openingForm[key]} placeholder="0"
+                    onChange={(e) => setOpeningForm((p) => ({ ...p, [key]: e.target.value }))} className={fieldCls} />
+                  <span className="mt-1 block px-1 text-[11px] font-bold text-slate-500">{hint}</span>
+                </label>
+              ))}
+            </div>
+            <label>
+              <span className="mb-2 block text-sm font-black text-slate-300">Примечание</span>
+              <input value={openingForm.note} placeholder="Необязательно"
+                onChange={(e) => setOpeningForm((p) => ({ ...p, note: e.target.value }))} className={fieldCls} />
+            </label>
+            <div className="mt-1 flex flex-col gap-3 sm:flex-row">
+              <button onClick={() => setOpeningModal(false)}
+                className="flex-1 rounded-2xl border border-white/10 bg-white/10 px-5 py-4 font-black text-white transition hover:bg-white/15">
+                Отмена
+              </button>
+              <button onClick={saveOpening} disabled={submitting}
+                className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] disabled:cursor-not-allowed disabled:opacity-60">
                 {submitting ? "Сохраняю…" : "Сохранить"}
               </button>
             </div>

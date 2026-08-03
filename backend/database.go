@@ -366,6 +366,22 @@ func createTables() {
 			employee_id INTEGER DEFAULT 0,
 			created_at TEXT
 		)`,
+		// Стартовые балансы (миграция): одна строка на точку — финансовая точка отсчёта
+		// при переходе с другой системы. Это НЕ транзакции.
+		`CREATE TABLE IF NOT EXISTS opening_balances (
+			account_id INTEGER PRIMARY KEY,
+			as_of_date TEXT DEFAULT '',
+			cash REAL DEFAULT 0,
+			bank REAL DEFAULT 0,
+			owed_to_owner REAL DEFAULT 0,
+			inventory_value REAL DEFAULT 0,
+			customer_debts REAL DEFAULT 0,
+			supplier_debts REAL DEFAULT 0,
+			revenue REAL DEFAULT 0,
+			expenses REAL DEFAULT 0,
+			note TEXT DEFAULT '',
+			updated_at TEXT DEFAULT ''
+		)`,
 		`ALTER TABLE folders ADD COLUMN account_id INTEGER DEFAULT 1`,
 		`ALTER TABLE workspaces ADD COLUMN is_main INTEGER DEFAULT 0`,
 		`ALTER TABLE warehouse_items ADD COLUMN account_id INTEGER DEFAULT 1`,
