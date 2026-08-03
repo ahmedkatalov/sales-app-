@@ -193,7 +193,8 @@ func saveSaleInTx(tx *sql.Tx, req *Sale, now string, reservedProductCosts map[in
 		if err != nil {
 			return err
 		}
-		if err := increaseMonthItemTx(tx, req.AccountID, item, now); err != nil {
+		discountFactor := 1.0 - req.DiscountPercent/100.0
+		if err := increaseMonthItemTx(tx, req.AccountID, item, discountFactor, now); err != nil {
 			return err
 		}
 	}

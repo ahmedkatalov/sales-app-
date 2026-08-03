@@ -71,7 +71,11 @@ func increaseMonthItem(accountID int, item SaleItem) {
 	}
 }
 
-func increaseMonthItemTx(tx *sql.Tx, accountID int, item SaleItem, now string) error {
+// increaseMonthItemTx копит продажи в помесячный леджер items, который читает «Аналитика».
+// Копим ДЕНЬГИ, а не «последнюю цену»: храним средневзвешенную ЧИСТУЮ цену и себестоимость,
+// поэтому price*qty = точная суммарная чистая выручка — учитывает и смену цены в течение
+// месяца, и скидку чека. discountFactor = 1 - скидка%/100 (0..1).
+func increaseMonthItemTx(tx *sql.Tx, accountID int, item SaleItem, discountFactor float64, now string) error {
 	folderName := "Еда"
 	if normalizeType(item.Type) == "drink" {
 		folderName = "Напитки"
@@ -87,19 +91,26 @@ func increaseMonthItemTx(tx *sql.Tx, accountID int, item SaleItem, now string) e
 		return err
 	}
 
+	if discountFactor < 0 {
+		discountFactor = 0
+	} else if discountFactor > 1 {
+		discountFactor = 1
+	}
+	netPrice := item.Price * discountFactor // чистая цена за единицу (после скидки чека)
+
 	var itemID int
-	var oldQty float64
+	var oldQty, oldPrice, oldCost float64
 	err = tx.QueryRow(`
-		SELECT id, qty
+		SELECT id, qty, price, cost
 		FROM items
 		WHERE folder_id = ? AND month_id = ? AND lower(name) = lower(?)
-	`, folderID, monthID, item.Name).Scan(&itemID, &oldQty)
+	`, folderID, monthID, item.Name).Scan(&itemID, &oldQty, &oldPrice, &oldCost)
 
 	if err == sql.ErrNoRows {
 		_, err = tx.Exec(`
 			INSERT INTO items(folder_id, month_id, name, cost, price, qty)
 			VALUES(?, ?, ?, ?, ?, ?)
-		`, folderID, monthID, item.Name, item.Cost, item.Price, item.Qty)
+		`, folderID, monthID, item.Name, item.Cost, netPrice, item.Qty)
 		return err
 	}
 
@@ -107,11 +118,20 @@ func increaseMonthItemTx(tx *sql.Tx, accountID int, item SaleItem, now string) e
 		return err
 	}
 
+	newQty := oldQty + item.Qty
+	if newQty <= 0 {
+		// защита от деления на ноль
+		_, err = tx.Exec(`UPDATE items SET qty = ?, price = ?, cost = ? WHERE id = ?`, item.Qty, netPrice, item.Cost, itemID)
+		return err
+	}
+	// средневзвешенные чистая цена и себестоимость: price*qty даёт точную сумму денег
+	newPrice := (oldQty*oldPrice + item.Qty*netPrice) / newQty
+	newCost := (oldQty*oldCost + item.Qty*item.Cost) / newQty
 	_, err = tx.Exec(`
 		UPDATE items
 		SET qty = ?, price = ?, cost = ?
 		WHERE id = ?
-	`, oldQty+item.Qty, item.Price, item.Cost, itemID)
+	`, newQty, newPrice, newCost, itemID)
 	return err
 }
 

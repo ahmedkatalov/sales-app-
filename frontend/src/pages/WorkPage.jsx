@@ -119,13 +119,35 @@ const UNIT_OPTIONS = [
   { value: "l", label: "л" },
 ];
 
-const toStorageQty = (qty, inputUnit, storageUnit) => {
-  if (!inputUnit || inputUnit === storageUnit) return qty;
-  if (inputUnit === "kg" && storageUnit === "g") return qty * 1000;
-  if (inputUnit === "g" && storageUnit === "kg") return qty / 1000;
-  if (inputUnit === "l" && storageUnit === "ml") return qty * 1000;
-  if (inputUnit === "ml" && storageUnit === "l") return qty / 1000;
-  return qty;
+// Приводим количество ингредиента в рецепте к единице хранения склада — ТОЧНО как бэкенд
+// (convertRecipeToStorage): конвертация кг/л → г/мл, штучная упаковка (packagingQuantity)
+// и запас на потери (lossPercent). Раньше предпросмотр себестоимости на кассе/в товарах
+// не учитывал потери и упаковку и занижал реальную себестоимость.
+const toStorageQty = (qty, inputUnit, storageUnit, packagingQuantity = 0, lossPercent = 0) => {
+  const pack = Number(packagingQuantity) || 0;
+  const loss = Number(lossPercent) || 0;
+  const piece = ["pcs", "bottle", "pack", "box"];
+
+  let from = inputUnit || storageUnit;
+  let converted = qty;
+
+  // нормализация кг→г, л→мл (единица хранения на складе — базовая: г/мл/шт)
+  if (from === "kg") { converted = qty * 1000; from = "g"; }
+  else if (from === "l") { converted = qty * 1000; from = "ml"; }
+  else if (from === "g" && storageUnit === "kg") { converted = qty / 1000; from = "kg"; }
+  else if (from === "ml" && storageUnit === "l") { converted = qty / 1000; from = "l"; }
+
+  const perOne = pack > 1 ? pack : 1; // если упаковка не задана — бэкенд угадывает; тут оставляем 1
+  if (from === storageUnit) {
+    // единицы совпадают
+  } else if (piece.includes(from) && (storageUnit === "g" || storageUnit === "ml")) {
+    converted = converted * perOne;
+  } else if (piece.includes(storageUnit) && (from === "g" || from === "ml")) {
+    converted = perOne > 0 ? converted / perOne : converted;
+  }
+
+  if (loss > 0) converted = converted * (1 + loss / 100); // запас на потери
+  return converted;
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -409,7 +431,7 @@ export default function WorkPage() {
         (item) => String(item.id) === String(row.warehouseItemId)
       );
       if (!warehouseItem) return sum;
-      const storageQty = toStorageQty(num(row.quantity), row.quantityUnit || warehouseItem.unit, warehouseItem.unit);
+      const storageQty = toStorageQty(num(row.quantity), row.quantityUnit || warehouseItem.unit, warehouseItem.unit, num(warehouseItem.packagingQuantity), num(warehouseItem.lossPercent));
       return sum + storageQty * getWarehouseUnitCost(warehouseItem);
     }, 0);
   }, [recipe, warehouseItems]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -563,7 +585,7 @@ export default function WorkPage() {
       ? cleanRecipe.reduce((sum, r) => {
           const item = safeWarehouseItems.find(w => String(w.id) === String(r.warehouseItemId));
           if (!item) return sum;
-          const storageQty = toStorageQty(num(r.quantity), r.quantityUnit || item.unit, item.unit);
+          const storageQty = toStorageQty(num(r.quantity), r.quantityUnit || item.unit, item.unit, num(item.packagingQuantity), num(item.lossPercent));
           return sum + storageQty * num(item.unitCost ?? item.unit_cost ?? 0);
         }, 0)
       : null;
@@ -1600,7 +1622,7 @@ export default function WorkPage() {
                     )}
                     {!isUnlinked && selected && (
                       <p className="text-xs text-emerald-400">
-                        ✓ {selected.name} · себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit) * getWarehouseUnitCost(selected))}
+                        ✓ {selected.name} · себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit, num(selected.packagingQuantity), num(selected.lossPercent)) * getWarehouseUnitCost(selected))}
                       </p>
                     )}
                   </div>
@@ -1749,7 +1771,7 @@ export default function WorkPage() {
                     )}
                     {selected && !isManual && (
                       <p className="text-xs text-emerald-400">
-                        ✓ себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit) * getWarehouseUnitCost(selected))}
+                        ✓ себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit, num(selected.packagingQuantity), num(selected.lossPercent)) * getWarehouseUnitCost(selected))}
                       </p>
                     )}
                   </div>

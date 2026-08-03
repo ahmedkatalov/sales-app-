@@ -344,7 +344,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   );
 
   const subtotal = safe_cart.reduce((s, i) => s + money(i.price) * money(i.qty), 0);
-  const discountAmount = (subtotal * num(discount)) / 100;
+  // Скидка 0..100% — как жёстко клампит бэкенд (sales_handlers.go), иначе итог
+  // на экране расходится с записанной суммой продажи (напр. отрицательная скидка).
+  const discountPct = Math.min(100, Math.max(0, num(discount)));
+  const discountAmount = (subtotal * discountPct) / 100;
   const total = Math.max(0, subtotal - discountAmount);
   const change =
     paymentType === "cash" && paidAmount !== "" ? num(paidAmount) - total : 0;
@@ -585,7 +588,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     employeeId: currentProfile?.id ? Number(currentProfile.id) : 0,
     employeeName: activeWorkerName,
     sellerName: activeWorkerName,
-    discountPercent: num(discount),
+    discountPercent: discountPct,
     items: safe_cart.map((item) => ({
       productId: Number(item.productId || item.id || 0),
       name: item.name,
