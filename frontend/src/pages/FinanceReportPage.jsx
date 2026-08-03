@@ -128,6 +128,14 @@ export default function FinanceReportPage() {
     }
   };
 
+  // Онбординг: при переходе с ?setup=1 сразу открываем мастер стартовых балансов.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("setup") === "1") {
+      openOpeningEditor();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const p = rep?.pnl || {};
   const cash = rep?.cash || {};
   const pos = rep?.position || {};
@@ -181,6 +189,49 @@ export default function FinanceReportPage() {
     window.notify?.("Отчёт выгружен в CSV", "success");
   };
 
+  // Печать / PDF: собираем чистый светлый документ в новом окне (не воюем с тёмной темой).
+  const printReport = () => {
+    if (!rep) return;
+    const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    const section = (title, items) =>
+      `<h2>${esc(title)}</h2><table>` +
+      items.map(([l, v, strong]) => `<tr class="${strong ? "t" : ""}"><td>${esc(l)}</td><td class="n">${esc(formatMoney(v))}</td></tr>`).join("") +
+      `</table>`;
+    const html =
+      `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Финансовый отчёт</title><style>` +
+      `body{font-family:system-ui,-apple-system,Arial,sans-serif;color:#111;max-width:760px;margin:24px auto;padding:0 20px}` +
+      `h1{font-size:24px;margin:0 0 2px}.period{color:#666;margin:0 0 20px;font-size:14px}` +
+      `h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#555;margin:22px 0 6px;border-bottom:2px solid #eee;padding-bottom:5px}` +
+      `table{width:100%;border-collapse:collapse}td{padding:6px 0;border-bottom:1px solid #f1f1f1;font-size:14px}` +
+      `td.n{text-align:right;font-weight:700;white-space:nowrap}tr.t td{border-top:2px solid #ddd;border-bottom:none;font-weight:800;font-size:15px;padding-top:8px}` +
+      `.foot{margin-top:28px;color:#aaa;font-size:11px}@media print{body{margin:8mm auto}}` +
+      `</style></head><body>` +
+      `<h1>Финансовый отчёт</h1>` +
+      `<p class="period">Период: ${esc(range.from || "начало")} — ${esc(range.to || "сегодня")}</p>` +
+      section("Прибыль за период", [
+        ["Выручка налом", p.revenueCash], ["Выручка картой", p.revenueCard], ["Выручка в долг", p.revenueDebt],
+        ["Итого выручка", p.revenue, true], ["Себестоимость", p.cogs], ["Валовая прибыль", p.grossProfit, true],
+        ["Расходы из кассы", p.expenseCash], ["Расходы с карты", p.expenseCard], ["Расходы из личных владельца", p.expenseOwner],
+        ["Итого расходы", p.expenses, true], ["Чистая прибыль", p.netProfit, true],
+      ]) +
+      section("Движение наличных за период", [
+        ["Продажи налом", cash.inSales], ["Вклады владельца", cash.inOwner], ["Расходы из кассы", cash.outExpenses],
+        ["Возвраты владельцу", cash.outReimburse], ["Изъятия прибыли", cash.outWithdraw], ["Чистое движение налом", cash.net, true],
+      ]) +
+      section("Финансовая позиция", [
+        ["Наличные (расчётные)", pos.cashNow], ["На карте / счёте", pos.bank], ["Склад по себестоимости", pos.inventory],
+        ["Клиенты должны нам", pos.receivables], ["Должны поставщикам", pos.payables], ["Должны владельцу", pos.owedToOwner],
+        ["Чистая позиция", pos.netPosition, true],
+      ]) +
+      `<p class="foot">Сформировано в NoorCoffe</p></body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { window.notify?.("Разрешите всплывающие окна, чтобы распечатать", "error"); return; }
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 350);
+  };
+
   const PRESETS = [
     ["this", "Этот месяц"],
     ["prev", "Прошлый месяц"],
@@ -219,11 +270,18 @@ export default function FinanceReportPage() {
             <input type="date" value={custom.to} onChange={(e) => { setCustom((c) => ({ ...c, to: e.target.value })); setPreset("custom"); }}
               className="rounded-xl bg-slate-950/60 px-2 py-1.5 text-xs font-bold text-white outline-none" />
           </div>
-          <button onClick={exportCSV} disabled={!rep}
-            className="ml-auto inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
-            Экспорт CSV
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <button onClick={printReport} disabled={!rep}
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" /></svg>
+              Печать / PDF
+            </button>
+            <button onClick={exportCSV} disabled={!rep}
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
+              Экспорт CSV
+            </button>
+          </div>
         </div>
 
         {error && (

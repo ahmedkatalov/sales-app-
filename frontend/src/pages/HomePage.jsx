@@ -160,6 +160,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const todayLabel = useMemo(
     () => new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" }),
@@ -171,13 +172,18 @@ export default function HomePage() {
     setError("");
     const today = localISO();
     const [mStart, mEnd] = monthBounds();
-    const [todayS, monthS, pend, debts, wh] = await Promise.all([
+    const [todayS, monthS, pend, debts, wh, opening] = await Promise.all([
       get(`/sales/stats?from=${today}&to=${today}`).catch(() => null),
       get(`/sales/stats?from=${mStart}&to=${mEnd}`).catch(() => null),
       get(`/pending-sales`).catch(() => []),
       get(`/debts`).catch(() => []),
       get(`/warehouse/items`).catch(() => []),
+      get(`/finance/opening`).catch(() => null), // для онбординга стартовых балансов
     ]);
+    try {
+      const dismissed = localStorage.getItem("noorcoffe_opening_onboarding_dismissed");
+      setShowOnboarding(!dismissed && !!opening && opening.isSet === false);
+    } catch { /* ignore */ }
     if (!todayS && !monthS) setError("Не удалось загрузить сводку. Попробуйте обновить.");
     const pendingList = Array.isArray(pend) ? pend : [];
     const debtList = (Array.isArray(debts) ? debts : []).filter((d) => d.status !== "paid" && !d.paid && !d.isPaid && !d.is_paid);
@@ -255,6 +261,27 @@ export default function HomePage() {
             </NavLink>
           </div>
         </header>
+
+        {showOnboarding && (
+          <div className="mb-5 flex flex-col gap-3 rounded-3xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/[0.1] to-blue-500/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div className="min-w-0">
+              <p className="text-sm font-black text-white sm:text-base">Начинаете вести учёт не с нуля?</p>
+              <p className="mt-0.5 text-xs font-bold leading-snug text-slate-300 sm:text-sm">
+                Задайте стартовые балансы (касса, банк, склад, долги) на дату старта — и отчёты сразу будут точными.
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <NavLink to="/finance?setup=1"
+                className="rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-2.5 text-sm font-black text-white shadow-lg transition hover:brightness-110">
+                Настроить
+              </NavLink>
+              <button onClick={() => { try { localStorage.setItem("noorcoffe_opening_onboarding_dismissed", "1"); } catch { /* ignore */ } setShowOnboarding(false); }}
+                className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-white/10">
+                Позже
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-300">
