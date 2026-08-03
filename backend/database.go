@@ -350,6 +350,11 @@ func createTables() {
 		`ALTER TABLE sales ADD COLUMN employee_id INTEGER DEFAULT 0`,
 		`ALTER TABLE global_expenses ADD COLUMN account_id INTEGER DEFAULT 1`,
 		`ALTER TABLE global_expenses ADD COLUMN employee_id INTEGER DEFAULT 0`,
+		// Источник оплаты расхода: 'cash' (из кассы) | 'card' (с карты) | 'owner' (личные деньги владельца).
+		// 'owner' не трогает кассу, но создаёт долг бизнеса перед владельцем.
+		`ALTER TABLE global_expenses ADD COLUMN payment_source TEXT DEFAULT 'cash'`,
+		// Расходы из кассы за смену — фиксируем в истории смены (уменьшают ожидаемую наличность).
+		`ALTER TABLE cash_shifts ADD COLUMN cash_expenses REAL DEFAULT 0`,
 		`ALTER TABLE folders ADD COLUMN account_id INTEGER DEFAULT 1`,
 		`ALTER TABLE workspaces ADD COLUMN is_main INTEGER DEFAULT 0`,
 		`ALTER TABLE warehouse_items ADD COLUMN account_id INTEGER DEFAULT 1`,

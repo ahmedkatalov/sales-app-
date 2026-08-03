@@ -962,7 +962,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 <span className="text-sm text-slate-400">В кассе должно быть</span>
                 <b className="text-xl font-black text-white">{formatMoney(cashShift.expectedCash)}</b>
               </div>
-              <div className="mt-1 text-[11px] text-slate-500">размен {formatMoney(cashShift.openingCash)} + налом {formatMoney(cashShift.cashSales)} + внесено {formatMoney(cashShift.cashIn)} − изъято {formatMoney(cashShift.cashOut)}</div>
+              <div className="mt-1 text-[11px] text-slate-500">размен {formatMoney(cashShift.openingCash)} + налом {formatMoney(cashShift.cashSales)} + внесено {formatMoney(cashShift.cashIn)} − изъято {formatMoney(cashShift.cashOut)}{cashShift.cashExpenses > 0 ? <> − расходы {formatMoney(cashShift.cashExpenses)}</> : null}</div>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2">
               <button type="button" onClick={() => { setShiftInput(""); setShiftNote(""); setShiftModal("in"); }} className="rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-emerald-300 transition hover:bg-white/10">+ Внести</button>
@@ -1131,7 +1131,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               <span className="text-sm text-slate-400">По программе должно быть</span>
               <b className="text-xl font-black text-white">{formatMoney(cashShift.expectedCash)}</b>
             </div>
-            <div className="mt-1 text-[11px] text-slate-500">размен {formatMoney(cashShift.openingCash)} + налом {formatMoney(cashShift.cashSales)} + внесено {formatMoney(cashShift.cashIn)} − изъято {formatMoney(cashShift.cashOut)}</div>
+            <div className="mt-1 text-[11px] text-slate-500">размен {formatMoney(cashShift.openingCash)} + налом {formatMoney(cashShift.cashSales)} + внесено {formatMoney(cashShift.cashIn)} − изъято {formatMoney(cashShift.cashOut)}{cashShift.cashExpenses > 0 ? <> − расходы {formatMoney(cashShift.cashExpenses)}</> : null}</div>
           </div>
           <p className="mb-2 mt-4 text-sm font-bold text-slate-300">Пересчитай деньги в кассе и впиши фактическую сумму:</p>
           <input type="number" value={shiftInput} autoFocus onChange={(e) => setShiftInput(e.target.value)}
@@ -1155,6 +1155,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <div className="flex justify-between text-slate-300"><span>Продажи налом</span><b className="text-white">{formatMoney(shiftResult.cashSales)}</b></div>
             <div className="flex justify-between text-slate-300"><span>Внесено</span><b className="text-white">{formatMoney(shiftResult.cashIn)}</b></div>
             <div className="flex justify-between text-slate-300"><span>Изъято</span><b className="text-white">−{formatMoney(shiftResult.cashOut)}</b></div>
+            {shiftResult.cashExpenses > 0 && (
+              <div className="flex justify-between text-slate-300"><span>Расходы из кассы</span><b className="text-white">−{formatMoney(shiftResult.cashExpenses)}</b></div>
+            )}
             <div className="flex justify-between border-t border-white/10 pt-2 text-lg"><span className="font-black">Должно быть</span><b className="font-black text-white">{formatMoney(shiftResult.expectedCash)}</b></div>
             <div className="flex justify-between text-lg"><span className="font-black">По факту</span><b className="font-black text-white">{formatMoney(shiftResult.countedCash)}</b></div>
           </div>

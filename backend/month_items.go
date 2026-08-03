@@ -245,6 +245,7 @@ func getGlobalExpenses(c *gin.Context) {
 			g.name,
 			g.amount,
 			g.comment,
+			IFNULL(g.payment_source, 'cash'),
 			g.created_at
 		FROM global_expenses g
 		LEFT JOIN employees e ON e.id = g.employee_id AND e.account_id = g.account_id
@@ -261,7 +262,7 @@ func getGlobalExpenses(c *gin.Context) {
 
 	for rows.Next() {
 		var e GlobalExpense
-		if err := rows.Scan(&e.ID, &e.AccountID, &e.EmployeeID, &e.EmployeeName, &e.Category, &e.Type, &e.Name, &e.Amount, &e.Comment, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.AccountID, &e.EmployeeID, &e.EmployeeName, &e.Category, &e.Type, &e.Name, &e.Amount, &e.Comment, &e.PaymentSource, &e.CreatedAt); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -288,10 +289,15 @@ func createGlobalExpense(c *gin.Context) {
 		return
 	}
 
+	// Источник оплаты: cash (из кассы) | card (с карты) | owner (личные деньги владельца).
+	if e.PaymentSource != "cash" && e.PaymentSource != "card" && e.PaymentSource != "owner" {
+		e.PaymentSource = "cash"
+	}
+
 	res, err := db.Exec(`
-		INSERT INTO global_expenses(account_id, employee_id, category, type, name, amount, comment, created_at)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-	`, e.AccountID, e.EmployeeID, e.Category, e.Type, e.Name, e.Amount, e.Comment, time.Now().Format(time.RFC3339))
+		INSERT INTO global_expenses(account_id, employee_id, category, type, name, amount, comment, payment_source, created_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, e.AccountID, e.EmployeeID, e.Category, e.Type, e.Name, e.Amount, e.Comment, e.PaymentSource, time.Now().Format(time.RFC3339))
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

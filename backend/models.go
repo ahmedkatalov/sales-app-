@@ -227,10 +227,11 @@ type GlobalExpense struct {
 	EmployeeName string  `json:"employeeName"`
 	Category     string  `json:"category"`
 	Type         string  `json:"type"`
-	Name         string  `json:"name"`
-	Amount       float64 `json:"amount"`
-	Comment      string  `json:"comment"`
-	CreatedAt    string  `json:"createdAt"`
+	Name          string  `json:"name"`
+	Amount        float64 `json:"amount"`
+	Comment       string  `json:"comment"`
+	PaymentSource string  `json:"paymentSource"` // cash | card | owner
+	CreatedAt     string  `json:"createdAt"`
 }
 
 type Expense struct {

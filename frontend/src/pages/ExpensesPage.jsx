@@ -47,6 +47,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
     name: "",
     amount: "",
     comment: "",
+    paymentSource: "cash", // cash | card | owner
   });
 
   // Safe array guards
@@ -95,6 +96,32 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
   const total = visibleExpenses.reduce((s, e) => s + money(e.amount), 0);
 
+  // Разбивка по источнику оплаты за выбранный период.
+  const bySource = useMemo(() => {
+    const acc = { cash: 0, card: 0, owner: 0 };
+    for (const e of visibleExpenses) {
+      const k = ["cash", "card", "owner"].includes(e.paymentSource) ? e.paymentSource : "cash";
+      acc[k] += num(e.amount);
+    }
+    return acc;
+  }, [visibleExpenses]);
+
+  // «Бизнес должен владельцу» — накопительно по всем расходам из личных денег владельца
+  // (возвраты владельцу появятся в следующей фазе и будут уменьшать эту сумму).
+  const owedToOwner = useMemo(
+    () => (Array.isArray(expenses) ? expenses : [])
+      .filter((e) => e.paymentSource === "owner")
+      .reduce((s, e) => s + num(e.amount), 0),
+    [expenses]
+  );
+
+  const SRC_META = {
+    cash: { label: "Из кассы", cls: "border-emerald-400/20 bg-emerald-500/15 text-emerald-300" },
+    card: { label: "С карты", cls: "border-blue-400/20 bg-blue-500/15 text-blue-300" },
+    owner: { label: "Владелец", cls: "border-amber-400/20 bg-amber-500/15 text-amber-300" },
+  };
+  const srcMeta = (e) => SRC_META[e?.paymentSource] || SRC_META.cash;
+
   const setCategory = (category) => {
     setFilterCategory(category);
     setFilterType("all");
@@ -115,6 +142,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
       name: "",
       amount: "",
       comment: "",
+      paymentSource: "cash",
     });
   };
 
@@ -151,6 +179,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         name: form.name.trim(),
         amount: num(form.amount),
         comment: form.comment.trim(),
+        paymentSource: form.paymentSource || "cash",
       });
       resetForm();
       setExpenseModal(false);
@@ -402,6 +431,31 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           </div>
         </div>
 
+        {/* Разбивка по источнику оплаты + долг перед владельцем */}
+        <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+          <div className="rounded-2xl border border-emerald-400/15 bg-emerald-500/[0.07] px-4 py-3">
+            <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">💵 Из кассы</p>
+            <p className="mt-1 text-xl font-black text-white">{formatMoney(bySource.cash)}</p>
+            <p className="text-[11px] font-bold text-slate-500">уменьшили наличные</p>
+          </div>
+          <div className="rounded-2xl border border-blue-400/15 bg-blue-500/[0.07] px-4 py-3">
+            <p className="text-[11px] font-black uppercase tracking-wide text-blue-300/80">💳 С карты</p>
+            <p className="mt-1 text-xl font-black text-white">{formatMoney(bySource.card)}</p>
+            <p className="text-[11px] font-bold text-slate-500">перевод/карта</p>
+          </div>
+          <div className="rounded-2xl border border-amber-400/15 bg-amber-500/[0.07] px-4 py-3">
+            <p className="text-[11px] font-black uppercase tracking-wide text-amber-300/80">👤 Личные владельца</p>
+            <p className="mt-1 text-xl font-black text-white">{formatMoney(bySource.owner)}</p>
+            <p className="text-[11px] font-bold text-slate-500">за период · кассу не трогали</p>
+          </div>
+          <div className="rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/15 to-orange-500/10 px-4 py-3"
+            title="Сколько бизнес должен вернуть владельцу за расходы, оплаченные его личными деньгами (за всё время).">
+            <p className="text-[11px] font-black uppercase tracking-wide text-amber-200">Бизнес должен владельцу</p>
+            <p className="mt-1 text-xl font-black text-amber-100">{formatMoney(owedToOwner)}</p>
+            <p className="text-[11px] font-bold text-amber-200/60">всего · вернуть владельцу</p>
+          </div>
+        </div>
+
         <div className="hidden overflow-x-auto xl:block">
           <table className="w-full min-w-[1050px] text-left text-sm">
             <thead className="border-y border-white/10 bg-slate-950/50 text-xs uppercase tracking-wide text-slate-400">
@@ -423,7 +477,10 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                   <td className="p-4 font-bold text-slate-400">{String(e.createdAt || "").slice(0, 10) || "—"}</td>
                   <td className="p-4 font-black text-white">{categoryLabel(e.category)}</td>
                   <td className="p-4 text-slate-300">{e.type || "—"}</td>
-                  <td className="p-4 font-bold text-white">{e.name}</td>
+                  <td className="p-4 font-bold text-white">
+                    {e.name}
+                    <span className={`ml-2 inline-block rounded-md border px-1.5 py-0.5 align-middle text-[10px] font-black ${srcMeta(e).cls}`}>{srcMeta(e).label}</span>
+                  </td>
                   <td className="p-4 text-slate-400">{e.comment || "—"}</td>
                   <td className="p-4 font-black text-red-300">{formatMoney(e.amount)}</td>
                   <td className="p-4 text-slate-300">{e.employeeName || "—"}</td>
@@ -467,6 +524,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               <div className="min-w-0">
                 <p className="truncate text-base font-black text-white">{e.name}</p>
                 <p className="truncate text-xs text-slate-400">{categoryLabel(e.category)} · {e.type || "—"}</p>
+                <span className={`mt-1 inline-block rounded-md border px-1.5 py-0.5 text-[10px] font-black ${srcMeta(e).cls}`}>{srcMeta(e).label}</span>
                 <p className="mt-0.5 truncate text-xs text-slate-500">
                   {String(e.createdAt || "").slice(0, 10) || "—"}{e.employeeName ? ` · ${e.employeeName}` : ""}
                 </p>
@@ -553,6 +611,38 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 type="number"
                 className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
               />
+            </label>
+
+            <label>
+              <span className="mb-2 block text-sm font-black text-slate-300">Чем оплатили</span>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  ["cash", "Из кассы", "💵"],
+                  ["card", "С карты", "💳"],
+                  ["owner", "Личные владельца", "👤"],
+                ].map(([val, label, icon]) => (
+                  <button key={val} type="button"
+                    onClick={() => setForm((p) => ({ ...p, paymentSource: val }))}
+                    className={`rounded-2xl border px-2 py-3 text-center text-xs font-black leading-tight transition ${
+                      form.paymentSource === val
+                        ? "border-blue-400/70 bg-blue-500/15 text-white"
+                        : "border-white/10 bg-slate-950/60 text-slate-300 hover:bg-white/5"
+                    }`}>
+                    <span className="mb-1 block text-lg">{icon}</span>{label}
+                  </button>
+                ))}
+              </div>
+              {form.paymentSource === "owner" && (
+                <p className="mt-2 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-200">
+                  Касса не уменьшится. Бизнес будет <b>должен владельцу</b> эту сумму.
+                </p>
+              )}
+              {form.paymentSource === "cash" && (
+                <p className="mt-2 px-1 text-xs font-bold text-slate-500">Уменьшит наличные в кассе.</p>
+              )}
+              {form.paymentSource === "card" && (
+                <p className="mt-2 px-1 text-xs font-bold text-slate-500">Оплата с карты/переводом — кассу не трогает.</p>
+              )}
             </label>
 
             <label>
