@@ -168,6 +168,9 @@ func main() {
 	auth.GET("/finance/opening", getOpeningBalances)
 	auth.PUT("/finance/opening", setOpeningBalances)
 
+	// Месячный финансовый отчёт
+	auth.GET("/finance/report", getFinanceReport)
+
 	auth.GET("/expenses/:folderId/:monthId", getExpenses)
 	auth.POST("/expenses", addExpense)
 	auth.DELETE("/expenses/:id", deleteExpense)

@@ -69,6 +69,123 @@ func getOwnerFinance(c *gin.Context) {
 	})
 }
 
+// GET /finance/report?from=&to= — месячный финансовый отчёт (P&L + движение налом + позиция).
+func getFinanceReport(c *gin.Context) {
+	if !requireManager(c) {
+		return
+	}
+	accID := accountID(c)
+	from := c.Query("from")
+	to := c.Query("to")
+
+	// Сумма за период [from..to] по колонке даты (date(...,'localtime')).
+	periodSum := func(base, dateCol string) float64 {
+		q := base
+		args := []any{accID}
+		if from != "" {
+			q += " AND date(" + dateCol + ",'localtime') >= date(?)"
+			args = append(args, from)
+		}
+		if to != "" {
+			q += " AND date(" + dateCol + ",'localtime') <= date(?)"
+			args = append(args, to)
+		}
+		var v float64
+		_ = db.QueryRow(q, args...).Scan(&v)
+		return v
+	}
+	// Нарастающим итогом до конца периода (только верхняя граница `to`).
+	uptoSum := func(base, dateCol string) float64 {
+		q := base
+		args := []any{accID}
+		if to != "" {
+			q += " AND date(" + dateCol + ",'localtime') <= date(?)"
+			args = append(args, to)
+		}
+		var v float64
+		_ = db.QueryRow(q, args...).Scan(&v)
+		return v
+	}
+
+	// ── Прибыль (P&L) за период ──
+	revenueCash := periodSum(`SELECT IFNULL(SUM(total),0) FROM sales WHERE account_id=? AND payment_type='cash'`, "created_at")
+	revenueCard := periodSum(`SELECT IFNULL(SUM(total),0) FROM sales WHERE account_id=? AND payment_type='transfer'`, "created_at")
+	revenueDebt := periodSum(`SELECT IFNULL(SUM(total),0) FROM sales WHERE account_id=? AND payment_type='debt'`, "created_at")
+	revenue := revenueCash + revenueCard + revenueDebt
+	cogs := periodSum(`SELECT IFNULL(SUM(si.cost*si.qty),0) FROM sale_items si JOIN sales s ON s.id=si.sale_id WHERE s.account_id=?`, "s.created_at")
+	grossProfit := revenue - cogs
+
+	expenseCash := periodSum(`SELECT IFNULL(SUM(amount),0) FROM global_expenses WHERE account_id=? AND IFNULL(payment_source,'cash')='cash'`, "created_at")
+	expenseCard := periodSum(`SELECT IFNULL(SUM(amount),0) FROM global_expenses WHERE account_id=? AND payment_source='card'`, "created_at")
+	expenseOwner := periodSum(`SELECT IFNULL(SUM(amount),0) FROM global_expenses WHERE account_id=? AND payment_source='owner'`, "created_at")
+	expenses := expenseCash + expenseCard + expenseOwner
+	netProfit := grossProfit - expenses
+
+	// ── Движение наличных за период ──
+	contribP := periodSum(`SELECT IFNULL(SUM(amount),0) FROM owner_ledger WHERE account_id=? AND kind='contribution'`, "created_at")
+	reimbP := periodSum(`SELECT IFNULL(SUM(amount),0) FROM owner_ledger WHERE account_id=? AND kind='reimbursement'`, "created_at")
+	withdrawP := periodSum(`SELECT IFNULL(SUM(amount),0) FROM owner_ledger WHERE account_id=? AND kind='withdrawal'`, "created_at")
+	cashIn := revenueCash + contribP
+	cashOut := expenseCash + reimbP + withdrawP
+	netCash := cashIn - cashOut
+
+	// ── Стартовые балансы ──
+	var op struct {
+		asOf                                                            string
+		cash, bank, owedOwner, inventory, custDebts, supDebts, rev, exp float64
+	}
+	_ = db.QueryRow(`SELECT IFNULL(as_of_date,''), IFNULL(cash,0), IFNULL(bank,0), IFNULL(owed_to_owner,0),
+		IFNULL(inventory_value,0), IFNULL(customer_debts,0), IFNULL(supplier_debts,0), IFNULL(revenue,0), IFNULL(expenses,0)
+		FROM opening_balances WHERE account_id=?`, accID).Scan(
+		&op.asOf, &op.cash, &op.bank, &op.owedOwner, &op.inventory, &op.custDebts, &op.supDebts, &op.rev, &op.exp)
+
+	// ── Позиция нарастающим итогом до конца периода ──
+	ownerExpUpto := uptoSum(`SELECT IFNULL(SUM(amount),0) FROM global_expenses WHERE account_id=? AND payment_source='owner'`, "created_at")
+	contribUpto := uptoSum(`SELECT IFNULL(SUM(amount),0) FROM owner_ledger WHERE account_id=? AND kind='contribution'`, "created_at")
+	reimbUpto := uptoSum(`SELECT IFNULL(SUM(amount),0) FROM owner_ledger WHERE account_id=? AND kind='reimbursement'`, "created_at")
+	withdrawUpto := uptoSum(`SELECT IFNULL(SUM(amount),0) FROM owner_ledger WHERE account_id=? AND kind='withdrawal'`, "created_at")
+	cashSalesUpto := uptoSum(`SELECT IFNULL(SUM(total),0) FROM sales WHERE account_id=? AND payment_type='cash'`, "created_at")
+	cashExpUpto := uptoSum(`SELECT IFNULL(SUM(amount),0) FROM global_expenses WHERE account_id=? AND IFNULL(payment_source,'cash')='cash'`, "created_at")
+
+	owedToOwner := op.owedOwner + ownerExpUpto + contribUpto - reimbUpto
+	cashNow := op.cash + cashSalesUpto + contribUpto - cashExpUpto - reimbUpto - withdrawUpto
+
+	// Текущие живые значения: остаток долгов клиентов и стоимость склада.
+	var receivables, inventoryLive float64
+	_ = db.QueryRow(`SELECT IFNULL(SUM(amount),0) FROM debts WHERE account_id=? AND status='open'`, accID).Scan(&receivables)
+	_ = db.QueryRow(`SELECT IFNULL(SUM(quantity*unit_cost),0) FROM warehouse_items WHERE account_id=? AND IFNULL(hidden,0)=0`, accID).Scan(&inventoryLive)
+	if inventoryLive == 0 {
+		inventoryLive = op.inventory
+	}
+	payables := op.supDebts
+	bank := op.bank
+	netPosition := cashNow + bank + inventoryLive + receivables - payables - owedToOwner
+
+	c.JSON(http.StatusOK, gin.H{
+		"period": gin.H{"from": from, "to": to},
+		"pnl": gin.H{
+			"revenueCash": revenueCash, "revenueCard": revenueCard, "revenueDebt": revenueDebt, "revenue": revenue,
+			"cogs": cogs, "grossProfit": grossProfit,
+			"expenseCash": expenseCash, "expenseCard": expenseCard, "expenseOwner": expenseOwner, "expenses": expenses,
+			"netProfit": netProfit,
+		},
+		"cash": gin.H{
+			"inSales": revenueCash, "inOwner": contribP, "outExpenses": expenseCash,
+			"outReimburse": reimbP, "outWithdraw": withdrawP, "net": netCash,
+		},
+		"position": gin.H{
+			"owedToOwner": owedToOwner, "cashNow": cashNow, "bank": bank,
+			"inventory": inventoryLive, "receivables": receivables, "payables": payables,
+			"netPosition": netPosition,
+		},
+		"opening": gin.H{
+			"asOfDate": op.asOf, "cash": op.cash, "bank": op.bank, "owedToOwner": op.owedOwner,
+			"inventoryValue": op.inventory, "customerDebts": op.custDebts, "supplierDebts": op.supDebts,
+			"isSet": op.asOf != "" || op.cash != 0 || op.owedOwner != 0,
+		},
+	})
+}
+
 // GET /finance/opening — стартовые балансы точки (или нули, если не заданы).
 func getOpeningBalances(c *gin.Context) {
 	if !requireManager(c) {

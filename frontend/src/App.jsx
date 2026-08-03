@@ -6,6 +6,7 @@ import {
   Briefcase,
   Clock3,
   FileText,
+  Landmark,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -21,6 +22,7 @@ import {
 import { hydrateAppearance } from "./theme/engine";
 import HomePage from "./pages/HomePage";
 import EmployeeAnalyticsPage from "./pages/EmployeeAnalyticsPage";
+import FinanceReportPage from "./pages/FinanceReportPage";
 import AppearancePage from "./pages/AppearancePage";
 import WorkPage from "./pages/WorkPage";
 import ExpensesPage from "./pages/ExpensesPage";
@@ -62,6 +64,7 @@ const ownerLinks = [
   ["/sales-analytics", "Продажи", ReceiptText],
   ["/team", "Сотрудники", Users],
   ["/analytics", "Аналитика", BarChart3],
+  ["/finance", "Отчёт", Landmark],
   ["/appearance", "Оформление", Palette],
   ["/profile", "Настройки", Settings],
 ];
@@ -742,6 +745,7 @@ export default function App() {
           <Route path="/sales-analytics" element={!canAccess("/sales-analytics") ? forbidden : <SalesAnalyticsPage />} />
           <Route path="/analytics" element={!canAccess("/analytics") ? forbidden : <AnalyticsPage />} />
           <Route path="/team" element={isWorker ? <Navigate to="/pos" replace /> : <EmployeeAnalyticsPage />} />
+          <Route path="/finance" element={isWorker ? <Navigate to="/pos" replace /> : <FinanceReportPage />} />
           <Route path="/employees" element={<Navigate to="/profile" replace />} />
           <Route path="/cards" element={<Navigate to="/profile" replace />} />
           <Route path="*" element={<Navigate to={isWorker ? "/pos" : "/home"} replace />} />
