@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { get } from "../api";
-import { formatMoney } from "../utils/format";
+import { get, put } from "../api";
+import { formatMoney, num } from "../utils/format";
+import Modal from "../components/Modal";
 
 const pad = (n) => String(n).padStart(2, "0");
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -55,6 +56,9 @@ export default function FinanceReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const reqRef = useRef(0);
+  const [openingModal, setOpeningModal] = useState(false);
+  const [openingForm, setOpeningForm] = useState(null);
+  const [savingOpening, setSavingOpening] = useState(false);
 
   const range = useMemo(() => {
     if (preset === "custom") return custom;
@@ -85,10 +89,97 @@ export default function FinanceReportPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range.from, range.to]);
 
+  const openOpeningEditor = async () => {
+    const cur = await get("/finance/opening").catch(() => null);
+    setOpeningForm({
+      asOfDate: cur?.asOfDate || "",
+      cash: cur?.cash || "",
+      bank: cur?.bank || "",
+      owedToOwner: cur?.owedToOwner || "",
+      inventoryValue: cur?.inventoryValue || "",
+      customerDebts: cur?.customerDebts || "",
+      supplierDebts: cur?.supplierDebts || "",
+      note: cur?.note || "",
+    });
+    setOpeningModal(true);
+  };
+
+  const saveOpening = async () => {
+    if (!openingForm || savingOpening) return;
+    setSavingOpening(true);
+    try {
+      await put("/finance/opening", {
+        asOfDate: openingForm.asOfDate,
+        cash: num(openingForm.cash),
+        bank: num(openingForm.bank),
+        owedToOwner: num(openingForm.owedToOwner),
+        inventoryValue: num(openingForm.inventoryValue),
+        customerDebts: num(openingForm.customerDebts),
+        supplierDebts: num(openingForm.supplierDebts),
+        note: openingForm.note,
+      });
+      setOpeningModal(false);
+      await load();
+      window.notify?.("Стартовые балансы сохранены", "success");
+    } catch (e) {
+      window.notify?.(e?.message || "Не удалось сохранить", "error");
+    } finally {
+      setSavingOpening(false);
+    }
+  };
+
   const p = rep?.pnl || {};
   const cash = rep?.cash || {};
   const pos = rep?.position || {};
   const op = rep?.opening || {};
+
+  const exportCSV = () => {
+    if (!rep) return;
+    const cell = (t) => {
+      let s = String(t ?? "");
+      if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; // защита от формульной инъекции
+      return `"${s.replaceAll('"', '""')}"`;
+    };
+    const m = (v) => String(num(v)).replace(".", ","); // десятичная запятая для Excel-RU
+    const rows = [
+      ["Раздел", "Показатель", "Значение"],
+      ["Период", "с", range.from || "начало"],
+      ["Период", "по", range.to || "сегодня"],
+      ["Прибыль", "Выручка налом", m(p.revenueCash)],
+      ["Прибыль", "Выручка картой", m(p.revenueCard)],
+      ["Прибыль", "Выручка в долг", m(p.revenueDebt)],
+      ["Прибыль", "Итого выручка", m(p.revenue)],
+      ["Прибыль", "Себестоимость", m(p.cogs)],
+      ["Прибыль", "Валовая прибыль", m(p.grossProfit)],
+      ["Прибыль", "Расходы из кассы", m(p.expenseCash)],
+      ["Прибыль", "Расходы с карты", m(p.expenseCard)],
+      ["Прибыль", "Расходы из личных владельца", m(p.expenseOwner)],
+      ["Прибыль", "Итого расходы", m(p.expenses)],
+      ["Прибыль", "Чистая прибыль", m(p.netProfit)],
+      ["Наличные", "Продажи налом", m(cash.inSales)],
+      ["Наличные", "Вклады владельца", m(cash.inOwner)],
+      ["Наличные", "Расходы из кассы", m(cash.outExpenses)],
+      ["Наличные", "Возвраты владельцу", m(cash.outReimburse)],
+      ["Наличные", "Изъятия прибыли", m(cash.outWithdraw)],
+      ["Наличные", "Чистое движение налом", m(cash.net)],
+      ["Позиция", "Наличные (расчётные)", m(pos.cashNow)],
+      ["Позиция", "На карте / счёте", m(pos.bank)],
+      ["Позиция", "Склад по себестоимости", m(pos.inventory)],
+      ["Позиция", "Клиенты должны нам", m(pos.receivables)],
+      ["Позиция", "Должны поставщикам", m(pos.payables)],
+      ["Позиция", "Должны владельцу", m(pos.owedToOwner)],
+      ["Позиция", "Чистая позиция", m(pos.netPosition)],
+    ];
+    const csv = rows.map((r) => r.map(cell).join(";")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `finance_${range.from || "all"}_${range.to || "all"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    window.notify?.("Отчёт выгружен в CSV", "success");
+  };
 
   const PRESETS = [
     ["this", "Этот месяц"],
@@ -128,6 +219,11 @@ export default function FinanceReportPage() {
             <input type="date" value={custom.to} onChange={(e) => { setCustom((c) => ({ ...c, to: e.target.value })); setPreset("custom"); }}
               className="rounded-xl bg-slate-950/60 px-2 py-1.5 text-xs font-bold text-white outline-none" />
           </div>
+          <button onClick={exportCSV} disabled={!rep}
+            className="ml-auto inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
+            Экспорт CSV
+          </button>
         </div>
 
         {error && (
@@ -202,26 +298,73 @@ export default function FinanceReportPage() {
               </Card>
 
               {/* Стартовые балансы */}
-              {op.isSet ? (
-                <Card title="Стартовые балансы" subtitle={op.asOfDate ? `Точка отсчёта на ${op.asOfDate}` : "Точка отсчёта"}>
-                  <Row label="Наличные на старте" value={op.cash} indent />
-                  <Row label="На карте на старте" value={op.bank} indent />
-                  <Row label="Долг перед владельцем на старте" value={op.owedToOwner} indent />
-                  <Row label="Склад на старте" value={op.inventoryValue} indent />
-                  <Row label="Клиенты должны (старт)" value={op.customerDebts} indent />
-                  <Row label="Поставщикам должны (старт)" value={op.supplierDebts} indent />
-                </Card>
-              ) : (
-                <Card title="Стартовые балансы" subtitle="Не заданы">
+              <Card title="Стартовые балансы" subtitle={op.isSet ? (op.asOfDate ? `Точка отсчёта на ${op.asOfDate}` : "Точка отсчёта") : "Не заданы"}>
+                {op.isSet ? (
+                  <>
+                    <Row label="Наличные на старте" value={op.cash} indent />
+                    <Row label="На карте на старте" value={op.bank} indent />
+                    <Row label="Долг перед владельцем на старте" value={op.owedToOwner} indent />
+                    <Row label="Склад на старте" value={op.inventoryValue} indent />
+                    <Row label="Клиенты должны (старт)" value={op.customerDebts} indent />
+                    <Row label="Поставщикам должны (старт)" value={op.supplierDebts} indent />
+                  </>
+                ) : (
                   <p className="py-2 text-sm font-bold text-slate-400">
-                    Если начали вести учёт не с нуля — задайте стартовые балансы на странице «Расходы» → «⚙ Стартовые балансы». Тогда позиция будет точной.
+                    Начали вести учёт не с нуля? Задайте остаток кассы, банка, долги и склад на дату старта — тогда позиция и долг перед владельцем будут точными.
                   </p>
-                </Card>
-              )}
+                )}
+                <button onClick={openOpeningEditor}
+                  className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-black text-white transition hover:bg-white/10">
+                  {op.isSet ? "Изменить стартовые балансы" : "Задать стартовые балансы"}
+                </button>
+              </Card>
             </div>
           </>
         ) : null}
       </div>
+
+      {openingModal && openingForm && (
+        <Modal title="Стартовые балансы" wide>
+          <div className="grid gap-3">
+            <p className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold leading-snug text-slate-300">
+              Введите состояние бизнеса на дату, с которой начинаете вести учёт в приложении. Это точка отсчёта, а не транзакции — в отчёте они не появятся как операции.
+            </p>
+            <label>
+              <span className="mb-1.5 block text-xs font-black text-slate-400">Дата старта</span>
+              <input type="date" value={openingForm.asOfDate} onChange={(e) => setOpeningForm((f) => ({ ...f, asOfDate: e.target.value }))}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70" />
+            </label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {[
+                ["cash", "Наличные в кассе"],
+                ["bank", "На карте / счёте"],
+                ["owedToOwner", "Долг перед владельцем"],
+                ["inventoryValue", "Стоимость склада"],
+                ["customerDebts", "Клиенты должны нам"],
+                ["supplierDebts", "Мы должны поставщикам"],
+              ].map(([key, label]) => (
+                <label key={key}>
+                  <span className="mb-1.5 block text-xs font-black text-slate-400">{label}</span>
+                  <input type="number" value={openingForm[key]} onChange={(e) => setOpeningForm((f) => ({ ...f, [key]: e.target.value }))} placeholder="0"
+                    className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-600 focus:border-blue-400/70" />
+                </label>
+              ))}
+            </div>
+            <label>
+              <span className="mb-1.5 block text-xs font-black text-slate-400">Примечание</span>
+              <input value={openingForm.note} onChange={(e) => setOpeningForm((f) => ({ ...f, note: e.target.value }))} placeholder="Необязательно"
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-600 focus:border-blue-400/70" />
+            </label>
+            <div className="mt-1 flex gap-3">
+              <button onClick={() => setOpeningModal(false)} className="btn-white flex-1">Отмена</button>
+              <button onClick={saveOpening} disabled={savingOpening}
+                className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-60">
+                {savingOpening ? "Сохраняю…" : "Сохранить"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
