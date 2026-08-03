@@ -12,6 +12,7 @@ export default function PendingPaymentsPage() {
   const [paidAmount, setPaidAmount] = useState("");
   const [error, setError] = useState("");
   const [modalError, setModalError] = useState("");
+  const [confirming, setConfirming] = useState(false); // защита от двойного тапа → дубль продажи
 
   const safe_list = Array.isArray(list) ? list : [];
   const safe_cards = Array.isArray(cards) ? cards : [];
@@ -31,18 +32,27 @@ export default function PendingPaymentsPage() {
   }, []);
 
   const confirmPayment = async () => {
-    if (!selected) return;
+    if (!selected || confirming) return; // не даём отправить второй запрос по тому же чеку
     if (paymentType === "transfer" && !cardId) return setModalError("Выберите карту");
-    await post(`/pending-sales/${selected.id}/confirm`, {
-      paymentType,
-      cardId: paymentType === "transfer" ? Number(cardId) : 0,
-      cashGiven: paymentType === "cash" ? num(paidAmount) : 0,
-    });
-    setSelected(null);
-    setCardId("");
-    setPaidAmount("");
-    setModalError("");
-    await load();
+    setConfirming(true);
+    try {
+      await post(`/pending-sales/${selected.id}/confirm`, {
+        paymentType,
+        cardId: paymentType === "transfer" ? Number(cardId) : 0,
+        cashGiven: paymentType === "cash" ? num(paidAmount) : 0,
+      });
+      setSelected(null);
+      setCardId("");
+      setPaidAmount("");
+      setModalError("");
+      await load();
+    } catch (e) {
+      // напр. 409 «Этот чек уже обработан» (параллельное подтверждение) — обновим список
+      setModalError(e?.message || "Не удалось подтвердить чек");
+      await load().catch(() => {});
+    } finally {
+      setConfirming(false);
+    }
   };
 
   const cancel = async (id) => {
@@ -219,8 +229,9 @@ export default function PendingPaymentsPage() {
             >Отмена</button>
             <button
               onClick={confirmPayment}
-              className="rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110"
-            >Подтвердить</button>
+              disabled={confirming}
+              className="rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            >{confirming ? "Подтверждаю…" : "Подтвердить"}</button>
           </div>
         </Modal>
       )}

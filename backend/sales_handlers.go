@@ -88,6 +88,9 @@ func prepareSale(req *Sale, checkStock bool) (map[int]float64, error) {
 				rows.Close()
 				return nil, err
 			}
+			if warehouseItemID <= 0 { // несвязанный (виртуальный) ингредиент — не списываем до привязки к складу
+				continue
+			}
 			stockNeeds[warehouseItemID] += recipeQty * item.Qty
 		}
 		rows.Close()
@@ -172,11 +175,16 @@ func saveSaleInTx(tx *sql.Tx, req *Sale, now string, reservedProductCosts map[in
 		item := req.Items[i]
 		actualUnitCost := item.Cost
 		if item.ProductID > 0 && item.Qty > 0 {
-			if reservedProductCosts != nil {
-				if reservedCost, ok := reservedProductCosts[item.ProductID]; ok && reservedCost > 0 && reservedProductQty[item.ProductID] > 0 {
+			reservedCost, wasReserved := reservedProductCosts[item.ProductID]
+			if reservedProductCosts != nil && wasReserved {
+				// Зарезервировано при создании отложенного чека — склад уже списан,
+				// берём стоимость из резерва (без повторного списания).
+				if reservedCost > 0 && reservedProductQty[item.ProductID] > 0 {
 					actualUnitCost = reservedCost / reservedProductQty[item.ProductID]
 				}
 			} else {
+				// Прямая продажа ИЛИ товар не был зарезервирован (рецепт привязан/добавлен
+				// уже ПОСЛЕ создания чека) — списываем склад сейчас, иначе остаток не уменьшится.
 				fifoCost, err := consumeRecipeFIFOForSaleItemTx(tx, req.AccountID, item.ProductID, item.Qty, "Продажа", "Продажа #"+strconv.FormatInt(saleID, 10)+" · "+item.Name, "sale", now)
 				if err != nil {
 					return err
@@ -223,7 +231,7 @@ func consumeRecipeFIFOForSaleItemTx(tx *sql.Tx, accID int, productID int, saleQt
 			return 0, err
 		}
 		needQty := recipeQty * saleQty
-		if needQty > 0 {
+		if needQty > 0 && warehouseItemID > 0 { // несвязанный ингредиент не списываем
 			needs = append(needs, recipeNeed{WarehouseItemID: warehouseItemID, Quantity: needQty})
 		}
 	}
@@ -320,7 +328,7 @@ func reservePendingSaleItemsTx(tx *sql.Tx, pendingSaleID int64, req Sale, now st
 				return err
 			}
 			needQty := recipeQty * item.Qty
-			if needQty > 0 {
+			if needQty > 0 && warehouseItemID > 0 { // несвязанный ингредиент не резервируем
 				needs = append(needs, recipeNeed{WarehouseItemID: warehouseItemID, Quantity: needQty})
 			}
 		}
@@ -474,6 +482,20 @@ func confirmPendingSale(c *gin.Context) {
 	}
 	defer tx.Rollback()
 
+	// Идемпотентность: сначала «забираем» отложенный чек его удалением. Транзакции
+	// сериализуются на единственном коннекте, поэтому при двойном тапе/гонке только
+	// один запрос удалит строку (RowsAffected=1), второй увидит 0 → откат без дубля
+	// продажи, долга и записи в леджер.
+	claim, err := tx.Exec(`DELETE FROM pending_sales WHERE id = ? AND account_id = ?`, id, accountID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if n, _ := claim.RowsAffected(); n == 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "Этот чек уже обработан"})
+		return
+	}
+
 	reservedCosts, err := reservedProductCostsTx(tx, id, accountID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -496,10 +518,6 @@ func confirmPendingSale(c *gin.Context) {
 		}
 	}
 	if _, err := tx.Exec(`DELETE FROM pending_sale_reservations WHERE pending_sale_id = ? AND account_id = ?`, id, accountID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	if _, err := tx.Exec(`DELETE FROM pending_sales WHERE id = ? AND account_id = ?`, id, accountID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

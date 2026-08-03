@@ -351,11 +351,16 @@ func createWarehouseItem(c *gin.Context) {
 		// Это важно для сценариев вроде: сырьё хранится в граммах, а новая закупка введена как
 		// "5 упаковок × 100 г" — коэффициент упаковки должен остаться у товара для рецептов.
 		if item.PackagingQuantity > 0 {
+			// Сохраняем коэффициент упаковки, но НЕ затираем уже настроенные режим/потери/метод
+			// значениями из формы создания (там дефолты от единицы).
 			_, _ = db.Exec(`
 				UPDATE warehouse_items
-				SET packaging_quantity = ?, control_mode = ?, loss_percent = ?, inventory_method = ?
+				SET packaging_quantity = ?,
+				    control_mode = CASE WHEN ? != '' THEN ? ELSE control_mode END,
+				    loss_percent = CASE WHEN ? > 0 THEN ? ELSE loss_percent END,
+				    inventory_method = CASE WHEN ? != '' THEN ? ELSE inventory_method END
 				WHERE id = ? AND account_id = ?
-			`, item.PackagingQuantity, item.ControlMode, item.LossPercent, item.InventoryMethod, itemID, item.AccountID)
+			`, item.PackagingQuantity, item.ControlMode, item.ControlMode, item.LossPercent, item.LossPercent, item.InventoryMethod, item.InventoryMethod, itemID, item.AccountID)
 		}
 	}
 
@@ -989,10 +994,14 @@ func deleteLastWarehousePurchase(c *gin.Context) {
 	var qty float64
 	var remaining float64
 	var createdAt string
+	// Берём последнюю ЗАКУПКУ, а не любую партию: партии излишка инвентаризации
+	// (note='Инвентаризация: излишек') исключаем, чтобы «удалить последнюю закупку»
+	// не стёрло корректировку инвентаризации.
 	if err := db.QueryRow(`
 		SELECT id, quantity, remaining_quantity, IFNULL(created_at, '')
 		FROM stock_batches
 		WHERE warehouse_item_id = ? AND account_id = ?
+		  AND IFNULL(note, '') <> 'Инвентаризация: излишек'
 		ORDER BY datetime(created_at) DESC, id DESC
 		LIMIT 1
 	`, id, accID).Scan(&batchID, &qty, &remaining, &createdAt); err != nil {
@@ -1016,6 +1025,7 @@ func deleteLastWarehousePurchase(c *gin.Context) {
 		WHERE id IN (
 			SELECT id FROM warehouse_movements
 			WHERE warehouse_item_id = ? AND account_id = ? AND movement_type = 'in'
+			  AND IFNULL(reason, '') NOT LIKE 'Инвентаризац%'
 			ORDER BY datetime(created_at) DESC, id DESC
 			LIMIT 1
 		)
@@ -1456,15 +1466,16 @@ func purchaseWarehouseItem(c *gin.Context) {
 	}
 
 	if req.MinQuantity > 0 || req.PackagingQuantity > 0 {
+		// loss_percent НЕ трогаем при закупке: он настраивается при создании/редактировании
+		// товара, а форма закупки присылает дефолт от единицы (мл=5, г=3) и затирала бы, напр., 10%.
 		_, _ = db.Exec(`
 			UPDATE warehouse_items
 			SET min_quantity = CASE WHEN ? > 0 THEN ? ELSE min_quantity END,
 			    packaging_quantity = CASE WHEN ? > 0 THEN ? ELSE packaging_quantity END,
 			    control_mode = CASE WHEN ? != '' THEN ? ELSE control_mode END,
-			    loss_percent = ?,
 			    inventory_method = CASE WHEN ? != '' THEN ? ELSE inventory_method END
 			WHERE id = ? AND account_id = ?
-		`, req.MinQuantity, req.MinQuantity, req.PackagingQuantity, req.PackagingQuantity, req.ControlMode, req.ControlMode, req.LossPercent, req.InventoryMethod, req.InventoryMethod, itemID, accID)
+		`, req.MinQuantity, req.MinQuantity, req.PackagingQuantity, req.PackagingQuantity, req.ControlMode, req.ControlMode, req.InventoryMethod, req.InventoryMethod, itemID, accID)
 	}
 
 	_, _ = db.Exec(`

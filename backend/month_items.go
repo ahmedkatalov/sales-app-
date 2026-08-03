@@ -509,6 +509,11 @@ func createMonth(c *gin.Context) {
 		return
 	}
 
+	if !folderOwnedBy(req.FolderID, accountID(c)) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Папка не найдена для этого аккаунта"})
+		return
+	}
+
 	res, err := db.Exec(`
 		INSERT INTO months(folder_id, month, created_at)
 		VALUES(?, ?, ?)
@@ -547,6 +552,13 @@ func copyItemsToMonth(c *gin.Context) {
 
 	if req.FolderID == 0 || req.FromMonthID == 0 || req.ToMonthID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "folderId, fromMonthId and toMonthId required"})
+		return
+	}
+
+	// Скоуп: папка должна принадлежать аккаунту. DELETE и copyItems ниже фильтруются по
+	// folder_id = req.FolderID, поэтому проверки владения папкой достаточно.
+	if !folderOwnedBy(req.FolderID, accountID(c)) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Папка не найдена для этого аккаунта"})
 		return
 	}
 
@@ -637,6 +649,13 @@ func getItems(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
+// folderOwnedBy — папка принадлежит аккаунту (скоуп, чтобы операции не трогали чужие данные).
+func folderOwnedBy(folderID, accID int) bool {
+	var n int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM folders WHERE id = ? AND account_id = ?`, folderID, accID).Scan(&n)
+	return n > 0
+}
+
 func addItem(c *gin.Context) {
 	var i Item
 
@@ -647,6 +666,16 @@ func addItem(c *gin.Context) {
 
 	if i.FolderID == 0 || i.MonthID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "folderId and monthId required"})
+		return
+	}
+
+	// Скоуп: папка и месяц должны принадлежать аккаунту (иначе вставка в чужой леджер).
+	var own int
+	if err := db.QueryRow(`
+		SELECT COUNT(*) FROM folders f JOIN months m ON m.folder_id = f.id
+		WHERE f.id = ? AND m.id = ? AND f.account_id = ?
+	`, i.FolderID, i.MonthID, accountID(c)).Scan(&own); err != nil || own == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Папка или месяц не найдены для этого аккаунта"})
 		return
 	}
 

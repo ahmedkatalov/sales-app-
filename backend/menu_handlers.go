@@ -86,10 +86,21 @@ func linkUnlinkedRecipes(accID int, warehouseItemID int, itemName string) {
 		// расстояние Левенштейна. Ловит опечатки и варианты (огурец/угурец,
 		// «Мороженое Синнабон»/«мороженое синобан»), а не только точное/«содержит».
 		// Порог 0.82 — консервативный, чтобы авто-связывание не путало разные продукты.
-		if similarityScore(itemName, c.name) >= 0.82 {
-			_, _ = db.Exec(`
-				UPDATE product_recipes SET warehouse_item_id = ? WHERE id = ? AND account_id = ?
-			`, warehouseItemID, c.id, accID)
+		if similarityScore(itemName, c.name) < 0.82 {
+			continue
+		}
+		// Пересчитываем quantity в единицы хранения нового склада по сохранённым
+		// input_quantity/input_unit. Иначе продажа спишет сырое число (напр. 0.2 л
+		// как 0.2 мл вместо 200 мл) — остаток занижался в разы.
+		var inputQty float64
+		var inputUnit string
+		_ = db.QueryRow(`SELECT IFNULL(input_quantity, 0), IFNULL(input_unit, '') FROM product_recipes WHERE id = ? AND account_id = ?`, c.id, accID).Scan(&inputQty, &inputUnit)
+		storageQty, _, convErr := convertRecipeToStorage(db, accID, warehouseItemID, inputQty, inputUnit)
+		if convErr == nil && storageQty > 0 {
+			_, _ = db.Exec(`UPDATE product_recipes SET warehouse_item_id = ?, quantity = ?, conversion_note = 'auto_linked' WHERE id = ? AND account_id = ?`, warehouseItemID, storageQty, c.id, accID)
+		} else {
+			// нет сохранённого input_quantity (старые записи) — линкуем без порчи quantity
+			_, _ = db.Exec(`UPDATE product_recipes SET warehouse_item_id = ? WHERE id = ? AND account_id = ?`, warehouseItemID, c.id, accID)
 		}
 	}
 }
