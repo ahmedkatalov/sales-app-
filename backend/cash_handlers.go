@@ -48,22 +48,22 @@ func computeShiftCash(accID, shiftID int, openedAt, closedAt string) (cashSales,
 }
 
 type cashShiftView struct {
-	ID          int     `json:"id"`
-	Status      string  `json:"status"`
-	OpeningCash float64 `json:"openingCash"`
-	OpenedBy    string  `json:"openedBy"`
-	OpenedAt    string  `json:"openedAt"`
-	ClosedBy    string  `json:"closedBy"`
-	ClosedAt    string  `json:"closedAt"`
+	ID           int     `json:"id"`
+	Status       string  `json:"status"`
+	OpeningCash  float64 `json:"openingCash"`
+	OpenedBy     string  `json:"openedBy"`
+	OpenedAt     string  `json:"openedAt"`
+	ClosedBy     string  `json:"closedBy"`
+	ClosedAt     string  `json:"closedAt"`
 	CashSales    float64 `json:"cashSales"`
 	CashIn       float64 `json:"cashIn"`
 	CashOut      float64 `json:"cashOut"`
 	CashExpenses float64 `json:"cashExpenses"` // расходы, оплаченные из кассы за смену
 	OwnerCash    float64 `json:"ownerCash"`    // расчёты с владельцем (вклад +, возврат/изъятие −) за смену
 	Expected     float64 `json:"expectedCash"`
-	Counted     float64 `json:"countedCash"`
-	Difference  float64 `json:"difference"`
-	Note        string  `json:"note"`
+	Counted      float64 `json:"countedCash"`
+	Difference   float64 `json:"difference"`
+	Note         string  `json:"note"`
 }
 
 func loadOpenShift(accID int) (*cashShiftView, bool) {
@@ -190,9 +190,9 @@ func closeCashShift(c *gin.Context) {
 	if _, err := db.Exec(`
 		UPDATE cash_shifts SET
 			status='closed', closed_by=?, closed_at=?,
-			cash_sales=?, cash_in=?, cash_out=?, cash_expenses=?, expected_cash=?, counted_cash=?, difference=?, note=?
+			cash_sales=?, cash_in=?, cash_out=?, cash_expenses=?, owner_cash=?, expected_cash=?, counted_cash=?, difference=?, note=?
 		WHERE id=? AND account_id=?
-	`, strings.TrimSpace(req.ClosedBy), now, cashSales, cashIn, cashOut, cashExpenses, expected, req.CountedCash, difference,
+	`, strings.TrimSpace(req.ClosedBy), now, cashSales, cashIn, cashOut, cashExpenses, ownerCash, expected, req.CountedCash, difference,
 		strings.TrimSpace(req.Note), s.ID, accID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -217,7 +217,7 @@ func listCashShifts(c *gin.Context) {
 	accID := accountID(c)
 	rows, err := db.Query(`
 		SELECT id, status, opening_cash, IFNULL(opened_by,''), IFNULL(opened_at,''), IFNULL(closed_by,''), IFNULL(closed_at,''),
-		       cash_sales, cash_in, cash_out, IFNULL(cash_expenses,0), expected_cash, counted_cash, difference, IFNULL(note,'')
+		       cash_sales, cash_in, cash_out, IFNULL(cash_expenses,0), IFNULL(owner_cash,0), expected_cash, counted_cash, difference, IFNULL(note,'')
 		FROM cash_shifts WHERE account_id=? AND status='closed' ORDER BY id DESC LIMIT 60
 	`, accID)
 	if err != nil {
@@ -229,7 +229,7 @@ func listCashShifts(c *gin.Context) {
 	for rows.Next() {
 		var s cashShiftView
 		if rows.Scan(&s.ID, &s.Status, &s.OpeningCash, &s.OpenedBy, &s.OpenedAt, &s.ClosedBy, &s.ClosedAt,
-			&s.CashSales, &s.CashIn, &s.CashOut, &s.CashExpenses, &s.Expected, &s.Counted, &s.Difference, &s.Note) == nil {
+			&s.CashSales, &s.CashIn, &s.CashOut, &s.CashExpenses, &s.OwnerCash, &s.Expected, &s.Counted, &s.Difference, &s.Note) == nil {
 			list = append(list, s)
 		}
 	}

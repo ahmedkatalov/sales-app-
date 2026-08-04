@@ -355,6 +355,8 @@ func createTables() {
 		`ALTER TABLE global_expenses ADD COLUMN payment_source TEXT DEFAULT 'cash'`,
 		// Расходы из кассы за смену — фиксируем в истории смены (уменьшают ожидаемую наличность).
 		`ALTER TABLE cash_shifts ADD COLUMN cash_expenses REAL DEFAULT 0`,
+		// Движение владельца за смену (вклад +, возврат/изъятие −) — чтобы история сходилась.
+		`ALTER TABLE cash_shifts ADD COLUMN owner_cash REAL DEFAULT 0`,
 		// Леджер расчётов с владельцем: вклад в кассу (contribution: +касса, +долг),
 		// возврат владельцу (reimbursement: −касса, −долг), изъятие прибыли (withdrawal: −касса).
 		`CREATE TABLE IF NOT EXISTS owner_ledger (

@@ -78,6 +78,16 @@ func getFinanceReport(c *gin.Context) {
 	from := c.Query("from")
 	to := c.Query("to")
 
+	// ── Стартовые балансы (точка отсчёта миграции; читаем первыми — нужны для нижней границы) ──
+	var op struct {
+		asOf                                                            string
+		cash, bank, owedOwner, inventory, custDebts, supDebts, rev, exp float64
+	}
+	_ = db.QueryRow(`SELECT IFNULL(as_of_date,''), IFNULL(cash,0), IFNULL(bank,0), IFNULL(owed_to_owner,0),
+		IFNULL(inventory_value,0), IFNULL(customer_debts,0), IFNULL(supplier_debts,0), IFNULL(revenue,0), IFNULL(expenses,0)
+		FROM opening_balances WHERE account_id=?`, accID).Scan(
+		&op.asOf, &op.cash, &op.bank, &op.owedOwner, &op.inventory, &op.custDebts, &op.supDebts, &op.rev, &op.exp)
+
 	// Сумма за период [from..to] по колонке даты (date(...,'localtime')).
 	periodSum := func(base, dateCol string) float64 {
 		q := base
@@ -94,10 +104,16 @@ func getFinanceReport(c *gin.Context) {
 		_ = db.QueryRow(q, args...).Scan(&v)
 		return v
 	}
-	// Нарастающим итогом до конца периода (только верхняя граница `to`).
+	// Нарастающим итогом до конца периода. Нижняя граница — дата стартовых балансов (если
+	// задана): операции ДО неё уже включены в сами стартовые балансы, иначе задвоятся.
 	uptoSum := func(base, dateCol string) float64 {
 		q := base
 		args := []any{accID}
+		if op.asOf != "" {
+			// >= : стартовые балансы — состояние на НАЧАЛО даты старта, операции этой даты и позже уже новые.
+			q += " AND date(" + dateCol + ",'localtime') >= date(?)"
+			args = append(args, op.asOf)
+		}
 		if to != "" {
 			q += " AND date(" + dateCol + ",'localtime') <= date(?)"
 			args = append(args, to)
@@ -129,16 +145,6 @@ func getFinanceReport(c *gin.Context) {
 	cashOut := expenseCash + reimbP + withdrawP
 	netCash := cashIn - cashOut
 
-	// ── Стартовые балансы ──
-	var op struct {
-		asOf                                                            string
-		cash, bank, owedOwner, inventory, custDebts, supDebts, rev, exp float64
-	}
-	_ = db.QueryRow(`SELECT IFNULL(as_of_date,''), IFNULL(cash,0), IFNULL(bank,0), IFNULL(owed_to_owner,0),
-		IFNULL(inventory_value,0), IFNULL(customer_debts,0), IFNULL(supplier_debts,0), IFNULL(revenue,0), IFNULL(expenses,0)
-		FROM opening_balances WHERE account_id=?`, accID).Scan(
-		&op.asOf, &op.cash, &op.bank, &op.owedOwner, &op.inventory, &op.custDebts, &op.supDebts, &op.rev, &op.exp)
-
 	// ── Позиция нарастающим итогом до конца периода ──
 	ownerExpUpto := uptoSum(`SELECT IFNULL(SUM(amount),0) FROM global_expenses WHERE account_id=? AND payment_source='owner'`, "created_at")
 	contribUpto := uptoSum(`SELECT IFNULL(SUM(amount),0) FROM owner_ledger WHERE account_id=? AND kind='contribution'`, "created_at")
@@ -152,9 +158,12 @@ func getFinanceReport(c *gin.Context) {
 
 	// Текущие живые значения: остаток долгов клиентов и стоимость склада.
 	var receivables, inventoryLive float64
+	var invCount int
 	_ = db.QueryRow(`SELECT IFNULL(SUM(amount),0) FROM debts WHERE account_id=? AND status='open'`, accID).Scan(&receivables)
-	_ = db.QueryRow(`SELECT IFNULL(SUM(quantity*unit_cost),0) FROM warehouse_items WHERE account_id=? AND IFNULL(hidden,0)=0`, accID).Scan(&inventoryLive)
-	if inventoryLive == 0 {
+	_ = db.QueryRow(`SELECT COUNT(*), IFNULL(SUM(quantity*unit_cost),0) FROM warehouse_items WHERE account_id=? AND IFNULL(hidden,0)=0`, accID).Scan(&invCount, &inventoryLive)
+	// Склад вообще не заведён в приложении → берём стартовую оценку. Если товары есть, но
+	// остаток честно равен 0 — оставляем 0 (не подменяем стартовым значением).
+	if invCount == 0 {
 		inventoryLive = op.inventory
 	}
 	payables := op.supDebts
@@ -181,7 +190,7 @@ func getFinanceReport(c *gin.Context) {
 		"opening": gin.H{
 			"asOfDate": op.asOf, "cash": op.cash, "bank": op.bank, "owedToOwner": op.owedOwner,
 			"inventoryValue": op.inventory, "customerDebts": op.custDebts, "supplierDebts": op.supDebts,
-			"isSet": op.asOf != "" || op.cash != 0 || op.owedOwner != 0,
+			"isSet": op.asOf != "" || op.cash != 0 || op.bank != 0 || op.owedOwner != 0 || op.inventory != 0 || op.custDebts != 0 || op.supDebts != 0,
 		},
 	})
 }

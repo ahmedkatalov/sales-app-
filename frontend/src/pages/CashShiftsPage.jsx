@@ -191,7 +191,7 @@ export default function CashShiftsPage() {
                 <tr>
                   <th className="p-3">Открыта</th><th className="p-3">Закрыта</th><th className="p-3">Размен</th>
                   <th className="p-3">Продажи</th><th className="p-3">Внесено</th><th className="p-3">Изъято</th>
-                  <th className="p-3">Расходы</th><th className="p-3">Ожидалось</th><th className="p-3">Факт</th><th className="p-3">Разница</th>
+                  <th className="p-3">Расходы</th><th className="p-3">Владелец</th><th className="p-3">Ожидалось</th><th className="p-3">Факт</th><th className="p-3">Разница</th>
                 </tr>
               </thead>
               <tbody>
@@ -206,13 +206,14 @@ export default function CashShiftsPage() {
                       <td className="p-3 text-emerald-300">+{formatMoney(s.cashIn)}</td>
                       <td className="p-3 text-red-300">−{formatMoney(s.cashOut)}</td>
                       <td className="p-3 text-red-300">−{formatMoney(s.cashExpenses)}</td>
+                      <td className="p-3 text-slate-300">{num(s.ownerCash) ? (num(s.ownerCash) > 0 ? "+" : "−") + formatMoney(Math.abs(num(s.ownerCash))) : "—"}</td>
                       <td className="p-3 text-slate-300">{formatMoney(s.expectedCash)}</td>
                       <td className="p-3 font-bold text-white">{formatMoney(s.countedCash)}</td>
                       <td className={`p-3 font-black ${dm.cls}`}>{dm.label}</td>
                     </tr>
                   );
                 })}
-                {!visible.length && <tr><td colSpan={10} className="p-10 text-center font-bold text-slate-400">{loading ? "Загрузка…" : "Закрытых смен пока нет"}</td></tr>}
+                {!visible.length && <tr><td colSpan={11} className="p-10 text-center font-bold text-slate-400">{loading ? "Загрузка…" : "Закрытых смен пока нет"}</td></tr>}
               </tbody>
             </table>
           </div>
@@ -233,6 +234,7 @@ export default function CashShiftsPage() {
                     <div>Ожидалось<br /><b className="text-slate-200">{formatMoney(s.expectedCash)}</b></div>
                     <div>Внесено<br /><b className="text-emerald-300">+{formatMoney(s.cashIn)}</b></div>
                     <div>Изъято/расходы<br /><b className="text-red-300">−{formatMoney(num(s.cashOut) + num(s.cashExpenses))}</b></div>
+                    <div>Владелец<br /><b className="text-slate-200">{num(s.ownerCash) ? (num(s.ownerCash) > 0 ? "+" : "−") + formatMoney(Math.abs(num(s.ownerCash))) : "0"}</b></div>
                     <div>Факт<br /><b className="text-white">{formatMoney(s.countedCash)}</b></div>
                   </div>
                 </div>
