@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Package, Eye, AlertTriangle, ChevronDown, RefreshCw, Trash2, Ban, History, Wallet, Plus } from "lucide-react";
 import { del, get, post } from "../api";
 import Modal from "../components/Modal";
 import EmptyState from "../components/EmptyState";
@@ -448,7 +449,7 @@ export default function WarehousePage() {
     setError("");
 
     if (!writeOffForm.warehouseItemId) {
-      return setError("Выбери сырьё для списания");
+      return setError("Выберите сырьё для списания");
     }
 
     if (num(writeOffForm.quantity) <= 0) {
@@ -570,7 +571,7 @@ export default function WarehousePage() {
             }}
             className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-4 py-3 text-sm font-black text-white shadow-[0_14px_36px_rgba(37,99,235,.35)] transition hover:scale-[1.01] whitespace-nowrap xl:flex-none"
           >
-            <span className="text-lg leading-none">+</span>
+            <Plus size={18} strokeWidth={2.4} />
             <span>Добавить закупку</span>
           </button>
 
@@ -580,24 +581,24 @@ export default function WarehousePage() {
             onClick={() => openWriteOff()}
             aria-label="Утиль / списание"
             title="Утиль / списание"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-lg text-slate-200 transition hover:bg-white/10"
-          >⊘</button>
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
+          ><Ban size={18} strokeWidth={2.2} /></button>
 
           <button
             type="button"
             onClick={openDeletedHistory}
             aria-label="История удалений"
             title="История удалений"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-base text-slate-200 transition hover:bg-white/10"
-          >🗑</button>
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
+          ><Trash2 size={17} strokeWidth={2.2} /></button>
 
           <button
             type="button"
             onClick={load}
             aria-label="Обновить"
             title="Обновить"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-lg text-slate-200 transition hover:bg-white/10"
-          >⟳</button>
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
+          ><RefreshCw size={18} strokeWidth={2.4} /></button>
         </div>
       </div>
 
@@ -609,7 +610,7 @@ export default function WarehousePage() {
 
       {stats.negative > 0 && (
         <div className="mb-4 flex items-start gap-3 rounded-2xl border border-red-400/30 bg-red-500/[0.09] px-4 py-3 backdrop-blur">
-          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-500/25 text-sm text-red-200">⚠</span>
+          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-500/25 text-red-200"><AlertTriangle size={14} strokeWidth={2.4} /></span>
           <div>
             <p className="text-sm font-black text-red-200">{stats.negative} {stats.negative === 1 ? "товар ушёл" : "товаров ушли"} в минус</p>
             <p className="mt-0.5 text-xs font-bold leading-snug text-red-200/70">
@@ -619,10 +620,10 @@ export default function WarehousePage() {
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4">
         <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300 sm:h-9 sm:w-9 sm:rounded-xl">📦</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300 sm:h-9 sm:w-9 sm:rounded-xl"><Package className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
             <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Позиций сырья</p>
           </div>
           <p className="mt-2 text-xl font-black text-white sm:text-2xl">{stats.count}</p>
@@ -630,7 +631,7 @@ export default function WarehousePage() {
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-300 sm:h-9 sm:w-9 sm:rounded-xl">₽</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-300 sm:h-9 sm:w-9 sm:rounded-xl"><Wallet className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
             <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Стоимость остатков</p>
           </div>
           <p className="mt-2 text-xl font-black tabular-nums text-white sm:text-2xl">{formatMoney(stats.value)}</p>
@@ -638,7 +639,7 @@ export default function WarehousePage() {
 
         <div className={`rounded-2xl border p-3 backdrop-blur-xl sm:p-4 ${stats.low > 0 ? "border-red-500/25 bg-red-500/[0.07]" : "border-white/10 bg-white/[0.05]"}`}>
           <div className="flex items-center gap-2">
-            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${stats.low > 0 ? "bg-red-500/20 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}>⚠</span>
+            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${stats.low > 0 ? "bg-red-500/20 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}><AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
             <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Низкий остаток</p>
           </div>
           <p className={`mt-2 text-xl font-black sm:text-2xl ${stats.low > 0 ? "text-red-400" : "text-emerald-400"}`}>{stats.low}</p>
@@ -646,7 +647,7 @@ export default function WarehousePage() {
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-500/15 text-slate-300 sm:h-9 sm:w-9 sm:rounded-xl">👁</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-500/15 text-slate-300 sm:h-9 sm:w-9 sm:rounded-xl"><Eye className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
             <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Скрытые</p>
           </div>
           <p className="mt-2 text-xl font-black text-white sm:text-2xl">{stats.hidden}</p>
@@ -693,7 +694,6 @@ export default function WarehousePage() {
               <col className="w-[6%]" />
               <col className="w-[10%]" />
               <col className="w-[8%]" />
-              <col className="w-[10%]" />
               <col className="w-[10%]" />
               <col className="w-[10%]" />
               <col className="w-[26%]" />
@@ -787,10 +787,10 @@ export default function WarehousePage() {
                         <button
                           type="button"
                           onClick={() => openPurchaseForItem(item)}
-                          className="h-9 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-2 text-[11px] font-black leading-none text-emerald-300 transition hover:bg-emerald-400/20"
+                          className="flex h-9 items-center justify-center gap-1 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-2 text-[11px] font-black leading-none text-emerald-300 transition hover:bg-emerald-400/20"
                           title="Добавить новую закупку к этому товару"
                         >
-                          + Закупка
+                          <Plus size={13} strokeWidth={2.4} />Закупка
                         </button>
 
                         <button
@@ -800,7 +800,7 @@ export default function WarehousePage() {
                           title="История закупок"
                           aria-label="История закупок"
                         >
-                          🕘
+                          <History size={16} strokeWidth={2.2} />
                         </button>
 
                         <button
@@ -877,7 +877,7 @@ export default function WarehousePage() {
                   className="flex w-full items-center justify-between gap-3 p-3.5 text-left"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-base">📦</span>
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${neg ? "bg-red-500/15 text-red-300" : "bg-white/[0.06] text-slate-300"}`}>{neg ? <AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.2} /> : <Package className="h-[18px] w-[18px]" strokeWidth={2.2} />}</span>
                     <div className="min-w-0">
                       <p className="truncate text-base font-black text-white">{item.name}</p>
                       <p className={`truncate text-xs ${neg ? "font-black text-red-300" : "text-slate-400"}`}>
@@ -890,7 +890,7 @@ export default function WarehousePage() {
                     <span className={`rounded-xl px-2.5 py-1 text-sm font-black tabular-nums ${low || neg ? "bg-red-500/15 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}>
                       {qty} {unit}
                     </span>
-                    <span className={`text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}>⌄</span>
+                    <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`} strokeWidth={2.4} />
                   </div>
                 </button>
 
@@ -911,9 +911,9 @@ export default function WarehousePage() {
                       <button
                         type="button"
                         onClick={() => openPurchaseForItem(item)}
-                        className="flex-1 rounded-xl bg-emerald-500/15 px-3 py-2.5 text-sm font-black text-emerald-300 transition active:scale-95 hover:bg-emerald-500/25"
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500/15 px-3 py-2.5 text-sm font-black text-emerald-300 transition active:scale-95 hover:bg-emerald-500/25"
                       >
-                        + Закупка
+                        <Plus size={16} strokeWidth={2.4} />Закупка
                       </button>
                       <button
                         type="button"
@@ -925,13 +925,13 @@ export default function WarehousePage() {
                     </div>
 
                     <div className="mt-2 flex items-center gap-1 text-xs">
-                      <button type="button" onClick={() => openHistory(item)} className="flex-1 rounded-lg px-2 py-1.5 font-black text-slate-300 transition hover:bg-white/5">🕘 История</button>
+                      <button type="button" onClick={() => openHistory(item)} className="flex min-h-[40px] flex-1 items-center justify-center gap-1 rounded-lg px-2 py-2.5 font-black text-slate-300 transition hover:bg-white/5"><History size={13} strokeWidth={2.2} />История</button>
                       <span className="text-white/10">·</span>
-                      <button type="button" onClick={() => openWriteOff(item.id)} className="flex-1 rounded-lg px-2 py-1.5 font-black text-slate-300 transition hover:bg-white/5">Списать</button>
+                      <button type="button" onClick={() => openWriteOff(item.id)} className="min-h-[40px] flex-1 rounded-lg px-2 py-2.5 font-black text-slate-300 transition hover:bg-white/5">Списать</button>
                       <span className="text-white/10">·</span>
-                      <button type="button" onClick={() => toggleHidden(item)} className="flex-1 rounded-lg px-2 py-1.5 font-black text-slate-300 transition hover:bg-white/5">{hidden ? "Показать" : "Скрыть"}</button>
+                      <button type="button" onClick={() => toggleHidden(item)} className="min-h-[40px] flex-1 rounded-lg px-2 py-2.5 font-black text-slate-300 transition hover:bg-white/5">{hidden ? "Показать" : "Скрыть"}</button>
                       <span className="text-white/10">·</span>
-                      <button type="button" onClick={() => openDeleteModal(item)} className="flex-1 rounded-lg px-2 py-1.5 font-black text-red-400/90 transition hover:bg-red-500/10">Удалить</button>
+                      <button type="button" onClick={() => openDeleteModal(item)} className="min-h-[40px] flex-1 rounded-lg px-2 py-2.5 font-black text-red-400/90 transition hover:bg-red-500/10">Удалить</button>
                     </div>
                   </div>
                 )}
@@ -1212,7 +1212,7 @@ export default function WarehousePage() {
           <div className="rounded-3xl bg-yellow-50 p-4 text-yellow-800">
             <p className="font-black">Защита от дублей</p>
             <p className="mt-1 text-sm font-bold">
-              Ты вводишь “{form.name}”. Возможно, это уже есть на складе.
+              Вы вводите «{form.name}». Возможно, это уже есть на складе.
               Лучше добавить новую закупку к существующему товару, чтобы
               остатки и себестоимость считались правильно.
             </p>
@@ -1467,7 +1467,7 @@ export default function WarehousePage() {
               }
               className="input w-full"
             >
-              <option value="">Выбери сырьё</option>
+              <option value="">Выберите сырьё</option>
               {items
                 .filter((item) => !isHidden(item))
                 .map((item) => (
@@ -1545,7 +1545,7 @@ export default function WarehousePage() {
       {inventoryModal && inventoryForm.item && (
         <Modal title="Фактический остаток" section="Инвентаризация">
           <p className="mb-4 text-sm text-slate-400">
-            Пересчитал по факту? Укажи сколько реально на складе — система сама проведёт недостачу или излишек.
+            Пересчитали по факту? Укажите, сколько реально на складе — система сама проведёт недостачу или излишек.
           </p>
           <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
             <div className="min-w-0">

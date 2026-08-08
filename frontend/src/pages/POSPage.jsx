@@ -4,6 +4,7 @@ import { get, getSession, post } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, money, num } from "../utils/format";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
+import { FolderOpen, ChevronLeft, Plus, Banknote, Minus, Package, AlertTriangle, Check, X, Lightbulb } from "lucide-react";
 
 const UNIT_LABELS = {
   g: "г",
@@ -160,7 +161,7 @@ function SmartIngredientInputPOS({ value, onChange, warehouseItems = [], onSelec
   };
 
   return (
-    <div className="relative sm:col-span-4" ref={wrapRef}>
+    <div className="relative sm:col-span-1" ref={wrapRef}>
       <div className="relative flex items-center">
         <span className="pointer-events-none absolute left-3 text-sm">✨</span>
         <input ref={inputRef} type="text" value={value}
@@ -682,14 +683,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
   return (
     <div
-      className="relative flex min-h-0 flex-1 flex-col overflow-y-auto p-3 text-white sm:p-4 lg:overflow-hidden"
+      className="relative flex min-h-0 flex-1 flex-col overflow-y-auto p-3 text-white sm:p-4 md:overflow-hidden"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute left-[-120px] top-[-120px] h-[360px] w-[360px] rounded-full bg-blue-600/20 blur-3xl" />
         <div className="absolute right-[-140px] bottom-[-140px] h-[360px] w-[360px] rounded-full bg-violet-600/20 blur-3xl" />
       </div>
-      <div className="relative z-10 flex flex-col lg:min-h-0 lg:flex-1">
+      <div className="relative z-10 flex flex-col md:min-h-0 md:flex-1">
       {/* Шапка кассы (режим киоска): выход + продавец/смена */}
       <div className="mb-3 flex shrink-0 items-center justify-between gap-2 sm:gap-3">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -734,8 +735,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         </div>
       )}
 
-      <div className="flex flex-col gap-4 lg:min-h-0 lg:flex-1 lg:flex-row">
-        <div className="flex flex-col gap-3 lg:min-h-0 lg:flex-1">
+      <div className="flex flex-col gap-4 md:min-h-0 md:flex-1 md:flex-row">
+        <div className="flex flex-col gap-3 md:min-h-0 md:flex-1">
           <div className="shrink-0 rounded-3xl border border-white/10 bg-[#0f172a]/80 p-3 shadow-xl backdrop-blur sm:p-4">
             <div className="flex items-center gap-3">
               {openedCategory && (
@@ -744,8 +745,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   onClick={() => { setOpenedCategory(null); setSearch(""); }}
                   aria-label="Назад к категориям"
                   title="Назад к категориям"
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-lg text-slate-200 transition hover:bg-white/10"
-                >←</button>
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
+                ><ChevronLeft size={20} strokeWidth={2.4} /></button>
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
@@ -809,8 +810,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     autoFocus
                     className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-blue-400/50"
                   />
-                  <button onClick={() => { createSection(); setInlineSection(false); }} className="shrink-0 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-black text-white hover:bg-blue-500">Добавить</button>
-                  <button onClick={() => setInlineSection(false)} className="shrink-0 text-slate-500 hover:text-white text-lg leading-none">×</button>
+                  <button onClick={() => { createSection(); setInlineSection(false); }} className="shrink-0 rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-black text-white hover:bg-blue-500">Добавить</button>
+                  <button onClick={() => setInlineSection(false)} aria-label="Закрыть" title="Закрыть" className="shrink-0 rounded-lg px-2 py-1 leading-none text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
                 </div>
               ) : (
                 <button onClick={() => setInlineSection(true)} title="Большая группа меню — Бар, Кухня"
@@ -827,7 +828,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
               {/* ── Создать категорию inline ── */}
               {inlineCategory ? (
-                <div className="flex flex-1 items-center gap-2 rounded-2xl border border-violet-400/30 bg-violet-500/10 px-3 py-2">
+                <div className="flex flex-1 flex-wrap items-center gap-2 rounded-2xl border border-violet-400/30 bg-violet-500/10 px-3 py-2">
                   <span className="text-sm font-black text-violet-300 shrink-0">Категория:</span>
                   {safe_sections.length > 0 && (
                     <select
@@ -846,8 +847,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     autoFocus
                     className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-violet-400/50"
                   />
-                  <button onClick={() => { createCategory(); setInlineCategory(false); }} className="shrink-0 rounded-xl bg-violet-600 px-3 py-1.5 text-xs font-black text-white hover:bg-violet-500">Добавить</button>
-                  <button onClick={() => setInlineCategory(false)} className="shrink-0 text-slate-500 hover:text-white text-lg leading-none">×</button>
+                  <button onClick={() => { createCategory(); setInlineCategory(false); }} className="shrink-0 rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-black text-white hover:bg-violet-500">Добавить</button>
+                  <button onClick={() => setInlineCategory(false)} aria-label="Закрыть" title="Закрыть" className="shrink-0 rounded-lg px-2 py-1 leading-none text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
                 </div>
               ) : (
                 <button onClick={() => { setNewCategory(p => ({ ...p, sectionId: selectedSectionId !== "all" ? selectedSectionId : "" })); setInlineCategory(true); }} title="Группа товаров внутри раздела — Коктейли, Чаи"
@@ -883,9 +884,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             </div>
           )}
 
-          <div className="no-scrollbar lg:-mr-1 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1 lg:pb-1">
+          <div className="no-scrollbar md:-mr-1 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1 md:pb-1">
           {!openedCategory ? (
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {visibleCategories.map((cat) => (
                 <button
                   key={cat.id}
@@ -895,7 +896,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   }}
                   className="group flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-3.5 text-left shadow-lg transition hover:-translate-y-0.5 hover:border-blue-500/40 focus:outline-none focus:ring-4 focus:ring-blue-500/30"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-base">📁</span>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300"><FolderOpen className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
                   <div className="min-w-0">
                     <p className="truncate text-[11px] font-bold text-blue-400">{cat.typeName || cat.type || "Раздел"}</p>
                     <h3 className="truncate text-sm font-black text-white sm:text-base">{cat.name}</h3>
@@ -915,7 +916,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {productsInsideCategory.map((p) => (
                 <button
                   key={p.id}
@@ -946,7 +947,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 lg:min-h-0 lg:w-[360px] lg:shrink-0 xl:w-[400px]">
+        <div className="flex flex-col gap-3 md:min-h-0 md:w-[300px] md:shrink-0 lg:w-[360px] xl:w-[400px]">
         {/* Денежная смена (касса) */}
         {cashShift ? (
           <div className="rounded-4xl border border-emerald-400/25 bg-emerald-500/[0.06] p-4 sm:p-5">
@@ -955,7 +956,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">Смена открыта</p>
                 <p className="text-sm font-bold text-slate-300">Размен {formatMoney(cashShift.openingCash)}{cashShift.openedBy ? ` · ${cashShift.openedBy}` : ""}</p>
               </div>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-300">●</span>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /></span>
             </div>
             <div className="rounded-2xl bg-white/[0.04] p-3">
               <div className="flex items-baseline justify-between">
@@ -977,14 +978,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               <p className="text-sm font-black text-white">Открыть смену</p>
               <p className="truncate text-xs text-slate-400">Внесите размен — касса начнёт считать наличные</p>
             </div>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-lg text-blue-300">₽</span>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300"><Banknote size={18} strokeWidth={2.2} /></span>
           </button>
         )}
 
         {extraProducts.length > 0 && (
           <div className="rounded-4xl border border-amber-400/25 bg-amber-500/[0.06] p-4 sm:p-5">
             <div className="mb-3 flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300 text-sm">＋</span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300"><Plus size={15} strokeWidth={3} /></span>
               <div>
                 <p className="text-sm font-black text-white leading-tight">Доп. товары</p>
                 <p className="text-[11px] text-slate-400 leading-tight">Стаканчик, лёд и т.п. — в доходах отдельно</p>
@@ -993,7 +994,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <div className="flex flex-wrap gap-2">
               {extraProducts.map((p) => (
                 <button key={p.id} type="button" onClick={() => addToCart(p)}
-                  className="flex items-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm font-black text-white transition hover:bg-amber-500/20 active:scale-95">
+                  className="flex min-w-0 items-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm font-black text-white transition hover:bg-amber-500/20 active:scale-95">
                   <span className="truncate">{p.name}</span>
                   <span className="shrink-0 text-amber-300">{formatMoney(p.price)}</span>
                 </button>
@@ -1002,7 +1003,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           </div>
         )}
 
-        <div className="flex flex-col rounded-3xl border border-white/10 bg-[#0f172a]/90 p-3.5 shadow-2xl backdrop-blur sm:p-4 lg:min-h-0 lg:flex-1">
+        <div className="flex flex-col rounded-3xl border border-white/10 bg-[#0f172a]/90 p-3.5 shadow-2xl backdrop-blur sm:p-4 md:min-h-0 md:flex-1">
           <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <h3 className="text-base font-black sm:text-lg">Корзина</h3>
 
@@ -1022,25 +1023,29 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 key={i.productId}
                 className="flex items-center justify-between gap-3 rounded-3xl border border-white/10 bg-white/[0.03] p-3"
               >
-                <div>
-                  <div className="font-bold">{i.name}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold truncate">{i.name}</div>
                   <div className="text-sm text-slate-400">
                     {formatMoney(i.price)} × {i.qty}
                   </div>
                 </div>
 
-                <div className="flex gap-1.5">
+                <div className="flex gap-1.5 shrink-0">
                   <button
                     onClick={() => decreaseCartItem(i.productId)}
-                    className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-lg font-black text-white transition active:scale-95 hover:bg-white/15"
+                    aria-label="Уменьшить количество"
+                    title="Уменьшить количество"
+                    className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/8 font-black text-white transition active:scale-95 hover:bg-white/15"
                   >
-                    −
+                    <Minus size={18} strokeWidth={3}/>
                   </button>
                   <button
                     onClick={() => increaseCartItem(i.productId)}
-                    className="flex h-10 w-10 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/12 text-lg font-black text-blue-300 transition active:scale-95 hover:bg-blue-500/20"
+                    aria-label="Увеличить количество"
+                    title="Увеличить количество"
+                    className="flex h-10 w-10 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/12 font-black text-blue-300 transition active:scale-95 hover:bg-blue-500/20"
                   >
-                    +
+                    <Plus size={18} strokeWidth={3}/>
                   </button>
                 </div>
               </div>
@@ -1138,7 +1143,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             placeholder="Фактически в кассе, ₽" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
           {shiftInput !== "" && (
             <p className={`mt-2 text-sm font-black ${num(shiftInput) - cashShift.expectedCash < -0.005 ? "text-red-400" : num(shiftInput) - cashShift.expectedCash > 0.005 ? "text-amber-400" : "text-emerald-400"}`}>
-              {(() => { const d = num(shiftInput) - cashShift.expectedCash; if (Math.abs(d) < 0.005) return "✓ Сходится"; return d < 0 ? `Недостача ${formatMoney(-d)}` : `Излишек ${formatMoney(d)}`; })()}
+              {(() => { const d = num(shiftInput) - cashShift.expectedCash; if (Math.abs(d) < 0.005) return <><Check size={14} className="inline"/> Сходится</>; return d < 0 ? `Недостача ${formatMoney(-d)}` : `Излишек ${formatMoney(d)}`; })()}
             </p>
           )}
           <div className="mt-6 flex gap-3">
@@ -1162,7 +1167,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <div className="flex justify-between text-lg"><span className="font-black">По факту</span><b className="font-black text-white">{formatMoney(shiftResult.countedCash)}</b></div>
           </div>
           <div className={`mt-4 rounded-2xl p-4 text-center font-black ${Math.abs(shiftResult.difference) < 0.005 ? "bg-emerald-500/15 text-emerald-300" : shiftResult.difference < 0 ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300"}`}>
-            {Math.abs(shiftResult.difference) < 0.005 ? "✓ Касса сошлась" : shiftResult.difference < 0 ? `Недостача ${formatMoney(-shiftResult.difference)}` : `Излишек ${formatMoney(shiftResult.difference)}`}
+            {Math.abs(shiftResult.difference) < 0.005 ? <><Check size={14} className="inline"/> Касса сошлась</> : shiftResult.difference < 0 ? `Недостача ${formatMoney(-shiftResult.difference)}` : `Излишек ${formatMoney(shiftResult.difference)}`}
           </div>
           <button type="button" onClick={() => setShiftResult(null)} className="btn-blue mt-6 w-full">Готово</button>
         </Modal>
@@ -1416,8 +1421,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     <p className="mt-1 text-base font-black text-white">{aiSuggestion.displayName}</p>
                     <p className="text-sm text-slate-400">{aiSuggestion.description}</p>
                   </div>
-                  <button type="button" onClick={() => setAiSuggestion(null)}
-                    className="text-slate-500 hover:text-white text-lg">×</button>
+                  <button type="button" onClick={() => setAiSuggestion(null)} aria-label="Закрыть" title="Закрыть"
+                    className="shrink-0 rounded-lg px-2 py-1 text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
                 </div>
 
                 <div className="flex gap-3 mb-3 text-sm">
@@ -1453,7 +1458,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 </div>
 
                 {aiSuggestion.tip && (
-                  <p className="text-xs text-slate-400 italic mb-3">💡 {aiSuggestion.tip}</p>
+                  <p className="text-xs text-slate-400 italic mb-3"><Lightbulb size={13} className="inline"/> {aiSuggestion.tip}</p>
                 )}
 
                 <button type="button" onClick={applyAiSuggestion}
@@ -1515,16 +1520,17 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     <div className="flex items-center gap-2">
                       <button type="button"
                         onClick={() => updateRecipeRow(index, "mode", "warehouse")}
-                        className={`rounded-xl px-3 py-1 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
-                        📦 Со склада
+                        className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 min-h-[40px] text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        <Package size={13} strokeWidth={2.5}/> Со склада
                       </button>
                       <button type="button"
                         onClick={() => { updateRecipeRow(index, "mode", "manual"); updateRecipeRow(index, "warehouseItemId", ""); }}
-                        className={`rounded-xl px-3 py-1 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 min-h-[40px] text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
                         ✨ Вручную (AI)
                       </button>
                       <button type="button" onClick={() => removeRecipeRow(index)}
-                        className="ml-auto rounded-xl bg-red-500/10 px-3 py-1 text-xs font-black text-red-400 hover:bg-red-500/20">
+                        aria-label="Удалить ингредиент" title="Удалить ингредиент"
+                        className="ml-auto rounded-xl bg-red-500/10 px-3 py-2 min-h-[40px] text-xs font-black text-red-400 hover:bg-red-500/20">
                         удалить
                       </button>
                     </div>
@@ -1577,10 +1583,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     </div>
 
                     {isManual && row.ingredientName && !row.warehouseItemId && (
-                      <p className="text-xs font-bold text-yellow-500">⚠ Добавь на склад — привяжется автоматически</p>
+                      <p className="text-xs font-bold text-yellow-500"><AlertTriangle size={14} className="inline"/> Добавь на склад — привяжется автоматически</p>
                     )}
                     {isManual && row.warehouseItemId && (
-                      <p className="text-xs font-bold text-emerald-400">✓ Найден и привязан к складу</p>
+                      <p className="text-xs font-bold text-emerald-400"><Check size={14} className="inline"/> Найден и привязан к складу</p>
                     )}
                     {selected && num(row.quantity) > 0 && (
                       <p className="rounded-2xl border border-blue-400/20 bg-blue-400/10 px-4 py-2 text-xs font-bold text-blue-300">

@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowLeftRight,
+  BadgeCheck,
+  Hash,
+  Package,
+  Percent,
+  Tag,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
+import {
   Bar,
   BarChart,
   CartesianGrid,
@@ -320,18 +331,18 @@ export default function AnalyticsPage() {
 
   const statCards = [
     { title: "Общая выручка", value: formatMoney(totals.revenue), icon: "₽", tone: "from-blue-600/25 to-blue-950/10", text: "text-blue-200" },
-    { title: "Чистая прибыль", value: formatMoney(totals.cleanProfit), icon: "↗", tone: "from-emerald-500/25 to-emerald-950/10", text: "text-emerald-200" },
-    { title: "Расходы", value: formatMoney(totals.totalExpenses), icon: "↘", tone: "from-red-500/25 to-red-950/10", text: "text-red-200" },
-    { title: "Выручка − расходы", value: formatMoney(totals.revenueAfterExpenses), icon: "◆", tone: "from-violet-500/25 to-violet-950/10", text: "text-violet-200" },
-    { title: "Прибыль − расходы", value: formatMoney(totals.afterExpenses), icon: "✓", tone: "from-cyan-500/25 to-cyan-950/10", text: "text-cyan-200" },
+    { title: "Чистая прибыль", value: formatMoney(totals.cleanProfit), icon: TrendingUp, tone: "from-emerald-500/25 to-emerald-950/10", text: "text-emerald-200" },
+    { title: "Расходы", value: formatMoney(totals.totalExpenses), icon: TrendingDown, tone: "from-red-500/25 to-red-950/10", text: "text-red-200" },
+    { title: "Выручка − расходы", value: formatMoney(totals.revenueAfterExpenses), icon: Wallet, tone: "from-violet-500/25 to-violet-950/10", text: "text-violet-200" },
+    { title: "Прибыль − расходы", value: formatMoney(totals.afterExpenses), icon: BadgeCheck, tone: "from-cyan-500/25 to-cyan-950/10", text: "text-cyan-200" },
   ];
 
   const extraCards = [
-    { title: "Кол-во продаж", value: totals.qty, icon: "#", tone: "from-slate-500/20 to-slate-950/10", text: "text-slate-200" },
-    { title: "Сумма закупа", value: formatMoney(totals.purchaseTotal), icon: "⌁", tone: "from-orange-500/25 to-orange-950/10", text: "text-orange-200" },
-    { title: "Продажи по прайсу", value: formatMoney(totals.salePriceTotal), icon: "◈", tone: "from-blue-500/25 to-blue-950/10", text: "text-blue-200" },
-    { title: "Изменение цены продажи", value: formatMoney(totals.salePriceChange), icon: "⇄", tone: "from-indigo-500/25 to-indigo-950/10", text: "text-indigo-200" },
-    { title: "Изменение маржи", value: formatMoney(totals.marginChange), icon: "%", tone: "from-emerald-500/25 to-emerald-950/10", text: "text-emerald-200" },
+    { title: "Кол-во продаж", value: totals.qty, icon: Hash, tone: "from-slate-500/20 to-slate-950/10", text: "text-slate-200" },
+    { title: "Сумма закупа", value: formatMoney(totals.purchaseTotal), icon: Package, tone: "from-orange-500/25 to-orange-950/10", text: "text-orange-200" },
+    { title: "Продажи по прайсу", value: formatMoney(totals.salePriceTotal), icon: Tag, tone: "from-blue-500/25 to-blue-950/10", text: "text-blue-200" },
+    { title: "Изменение цены продажи", value: formatMoney(totals.salePriceChange), icon: ArrowLeftRight, tone: "from-indigo-500/25 to-indigo-950/10", text: "text-indigo-200" },
+    { title: "Изменение маржи", value: formatMoney(totals.marginChange), icon: Percent, tone: "from-emerald-500/25 to-emerald-950/10", text: "text-emerald-200" },
   ];
 
   const StatBox = ({ card, className = "" }) => (
@@ -342,7 +353,9 @@ export default function AnalyticsPage() {
           <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400 sm:text-[11px] sm:tracking-[0.18em]">{card.title}</p>
           <p className="mt-1.5 truncate text-xl font-black text-white sm:mt-3 sm:text-3xl">{card.value}</p>
         </div>
-        <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-base font-black sm:h-11 sm:w-11 sm:rounded-2xl sm:text-xl ${card.text}`}>{card.icon}</div>
+        <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-base font-black sm:h-11 sm:w-11 sm:rounded-2xl sm:text-xl ${card.text}`}>
+          {typeof card.icon === "string" ? card.icon : <card.icon size={20} strokeWidth={2.4} />}
+        </div>
       </div>
     </div>
   );
@@ -382,6 +395,7 @@ export default function AnalyticsPage() {
           <button
             onClick={loadAnalytics}
             aria-label="Обновить"
+            title="Обновить"
             className="group inline-flex items-center justify-center gap-2 self-start rounded-2xl border border-white/10 bg-white/10 px-4 py-3.5 font-black text-white shadow-[0_16px_40px_rgba(0,0,0,0.25)] transition hover:bg-white/15 sm:px-5 sm:py-4"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "animate-spin" : "transition group-hover:rotate-180"}><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>

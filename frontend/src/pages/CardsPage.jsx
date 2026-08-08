@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { RefreshCw, CreditCard } from "lucide-react";
 import { apiDelete, apiGet, apiPost } from "../api";
 
 export default function CardsPage() {
@@ -65,13 +66,13 @@ export default function CardsPage() {
 
         <button
           onClick={load}
-          className="w-full rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-black text-white shadow-xl transition hover:bg-white/15 sm:w-auto"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-black text-white shadow-xl transition hover:bg-white/15 sm:w-auto"
         >
-          ⟳ Обновить
+          <RefreshCw size={16} strokeWidth={2.4} /> Обновить
         </button>
       </div>
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-3">
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-[28px] border border-blue-500/30 bg-blue-500/10 p-5 shadow-2xl">
           <p className="text-xs font-black uppercase tracking-wide text-blue-200">
             Всего карт
@@ -174,8 +175,8 @@ export default function CardsPage() {
 
                 <div className="relative">
                   <div className="mb-6 flex items-start justify-between gap-3">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-2xl font-black text-white">
-                      💳
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white">
+                      <CreditCard size={26} strokeWidth={2.2} />
                     </div>
 
                     <button
@@ -213,8 +214,8 @@ export default function CardsPage() {
           </div>
         ) : (
           <div className="p-10 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10 text-3xl">
-              💳
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10 text-slate-200">
+              <CreditCard size={30} strokeWidth={2} />
             </div>
 
             <p className="text-xl font-black text-white">

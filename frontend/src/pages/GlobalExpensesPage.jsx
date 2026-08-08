@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { RefreshCw } from "lucide-react";
 import { apiDelete, apiGet, apiPost } from "../api";
 import { formatMoney } from "../utils/format";
 
@@ -81,13 +82,13 @@ export default function GlobalExpensesPage() {
 
         <button
           onClick={load}
-          className="w-full rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-black text-white shadow-xl transition hover:bg-white/15 sm:w-auto"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-black text-white shadow-xl transition hover:bg-white/15 sm:w-auto"
         >
-          ⟳ Обновить
+          <RefreshCw size={16} strokeWidth={2.4} /> Обновить
         </button>
       </div>
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-3">
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-[28px] border border-red-500/30 bg-red-500/10 p-5 shadow-2xl">
           <p className="text-xs font-black uppercase tracking-wide text-red-200">
             Всего расходов
@@ -264,7 +265,7 @@ export default function GlobalExpensesPage() {
               <span className="font-black text-red-300">
                 {formatMoney(expenseToDelete.amount)}
               </span>{" "}
-              будет удалён без системного alert.
+              будет удалён безвозвратно.
             </p>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">

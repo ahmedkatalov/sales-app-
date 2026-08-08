@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CheckCircle2 } from "lucide-react";
 import { del, get, post } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, num } from "../utils/format";
@@ -164,7 +165,7 @@ export default function PendingPaymentsPage() {
           </div>
         ) : (
           <div className="p-10 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-2xl text-emerald-300">✓</div>
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300"><CheckCircle2 size={28} strokeWidth={2.4} /></div>
             <p className="text-lg font-black text-white">Всё оплачено</p>
             <p className="mt-1 text-sm text-slate-400">Чеков в ожидании нет.</p>
           </div>

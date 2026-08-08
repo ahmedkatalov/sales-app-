@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Minus, Plus, RefreshCw, Search, ShoppingCart, X } from "lucide-react";
 import { apiGet, apiPost } from "../api";
 import { formatMoney } from "../utils/format";
 
@@ -136,7 +137,7 @@ export default function ShopPage() {
 
   const confirmSale = async () => {
     if (!employeeId) {
-      alert("Выбери сотрудника");
+      alert("Выберите сотрудника");
       return;
     }
 
@@ -146,7 +147,7 @@ export default function ShopPage() {
     }
 
     if (paymentType === "transfer" && !cardId) {
-      alert("Выбери карту для перевода");
+      alert("Выберите карту для перевода");
       return;
     }
 
@@ -196,9 +197,11 @@ export default function ShopPage() {
             <button
               type="button"
               onClick={() => setCartOpen(false)}
-              className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-lg font-black text-white"
+              aria-label="Закрыть корзину"
+              title="Закрыть корзину"
+              className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 font-black text-white"
             >
-              ×
+              <X size={18} strokeWidth={2.4} />
             </button>
           )}
         </div>
@@ -221,9 +224,11 @@ export default function ShopPage() {
               <button
                 type="button"
                 onClick={() => removeFromCart(item.productId)}
-                className="rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-300"
+                aria-label="Удалить товар"
+                title="Удалить товар"
+                className="flex items-center justify-center rounded-xl bg-red-500/10 px-3 py-2.5 font-black text-red-300"
               >
-                ×
+                <X size={18} strokeWidth={2.4} />
               </button>
             </div>
 
@@ -232,17 +237,21 @@ export default function ShopPage() {
                 <button
                   type="button"
                   onClick={() => decreaseQty(item.productId)}
-                  className="h-9 w-9 rounded-xl bg-white/5 font-black text-white"
+                  aria-label="Уменьшить количество"
+                  title="Уменьшить количество"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 font-black text-white"
                 >
-                  −
+                  <Minus size={18} strokeWidth={2.4} />
                 </button>
                 <span className="w-12 text-center font-black text-white">{item.qty}</span>
                 <button
                   type="button"
                   onClick={() => increaseQty(item.productId)}
-                  className="h-9 w-9 rounded-xl bg-cyan-500 font-black text-slate-950"
+                  aria-label="Увеличить количество"
+                  title="Увеличить количество"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500 font-black text-slate-950"
                 >
-                  +
+                  <Plus size={18} strokeWidth={2.4} />
                 </button>
               </div>
 
@@ -255,12 +264,12 @@ export default function ShopPage() {
 
         {!safe_cart.length && (
           <div className="flex h-full min-h-[220px] flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-8 text-center">
-            <div className="mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-cyan-500/10 text-3xl">
-              🛒
+            <div className="mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-cyan-500/10 text-cyan-300">
+              <ShoppingCart size={30} strokeWidth={2} />
             </div>
             <p className="text-lg font-black text-white">Корзина пустая</p>
             <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-              Нажми на товар слева, чтобы добавить его в заказ.
+              Нажмите на товар слева, чтобы добавить его в заказ.
             </p>
           </div>
         )}
@@ -295,7 +304,7 @@ export default function ShopPage() {
           <input
             value={cashGiven}
             onChange={(e) => setCashGiven(e.target.value)}
-            placeholder="Сколько дал клиент"
+            placeholder="Сумма от клиента"
             type="number"
             className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white placeholder:text-slate-500 outline-none focus:border-cyan-400"
           />
@@ -391,9 +400,11 @@ export default function ShopPage() {
                 <button
                   type="button"
                   onClick={load}
-                  className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 font-black text-white transition hover:bg-white/10"
+                  aria-label="Обновить"
+                  title="Обновить"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10"
                 >
-                  {loading ? "…" : "⟳"}
+                  <RefreshCw size={17} strokeWidth={2.4} className={loading ? "animate-spin" : ""} />
                 </button>
               </div>
             </div>
@@ -461,12 +472,12 @@ export default function ShopPage() {
             {!filteredProducts.length && (
               <div className="grid min-h-65 place-items-center rounded-4xl border border-dashed border-white/10 bg-white/3 p-8 text-center">
                 <div>
-                  <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-3xl bg-white/5 text-2xl">
-                    🔎
+                  <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-3xl bg-white/5 text-slate-300">
+                    <Search size={26} strokeWidth={2.2} />
                   </div>
                   <p className="text-lg font-black text-white">Товары не найдены</p>
                   <p className="mt-1 text-xs font-semibold text-slate-500">
-                    Попробуй изменить поиск или категорию
+                    Попробуйте изменить поиск или категорию
                   </p>
                 </div>
               </div>
@@ -485,7 +496,7 @@ export default function ShopPage() {
         className="fixed left-4 right-4 z-40 flex items-center justify-between rounded-3xl bg-linear-to-r from-cyan-400 to-blue-500 px-5 py-3.5 font-black text-slate-950 shadow-2xl shadow-cyan-500/30 xl:hidden"
         style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 10px)" }}
       >
-        <span className="text-sm">🛒 Корзина · {safe_cart.reduce((s, i) => s + i.qty, 0)} шт</span>
+        <span className="flex items-center gap-2 text-sm"><ShoppingCart size={16} strokeWidth={2.4} /> Корзина · {safe_cart.reduce((s, i) => s + i.qty, 0)} шт</span>
         <span className="text-base">{formatMoney(total)}</span>
       </button>
 

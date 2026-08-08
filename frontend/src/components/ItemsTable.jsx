@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import { formatMoney } from "../utils/format";
 
 export default function ItemsTable({ items = [], totals = {}, updateItem, deleteItem }) {
@@ -34,7 +35,7 @@ export default function ItemsTable({ items = [], totals = {}, updateItem, delete
                 ))}
                 <td className="p-3 text-center font-bold">{formatMoney(revenue)}</td>
                 <td className="p-3 text-center font-bold text-emerald-600">{formatMoney(profit)}</td>
-                <td className="p-3 text-center"><button onClick={() => deleteItem?.(item.id)} className="px-3 py-2 rounded-lg bg-red-50 text-red-600 font-bold hover:bg-red-100">✕</button></td>
+                <td className="p-3 text-center"><button onClick={() => deleteItem?.(item.id)} aria-label="Удалить товар" title="Удалить" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100"><Trash2 size={16} strokeWidth={2.2} /></button></td>
               </tr>
             );
           })}

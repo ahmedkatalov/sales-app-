@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { RefreshCw, X, Send } from "lucide-react";
 import { get, getCurrentWorkspace, getSession, post } from "../api";
 import { formatMoney, num } from "../utils/format";
 
@@ -1297,7 +1298,7 @@ ${lines}${expense ? `
                 <span className="hidden rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-black text-emerald-300 sm:inline">
                   AUTO SAVE
                 </span>
-                <button onClick={load} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white transition hover:bg-white/15">⟳</button>
+                <button onClick={load} aria-label="Обновить" title="Обновить" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15"><RefreshCw size={16} strokeWidth={2.4} /></button>
                 <Link to="/warehouse" className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white transition hover:bg-white/15">Склад →</Link>
                 <button onClick={exitChat} aria-label="Закрыть помощника" title="Закрыть (Esc)"
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition hover:bg-red-500/20 hover:text-red-300">
@@ -1322,8 +1323,8 @@ ${lines}${expense ? `
 
             <div className="shrink-0 border-t border-white/10 bg-slate-950/50 px-3 py-2">
               <div className="mb-2 flex justify-end lg:hidden">
-                <Link to="/work" className="text-xs font-bold text-slate-500 hover:text-slate-300 transition">
-                  ✕ Завершить чат
+                <Link to="/work" className="flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-300 transition">
+                  <X size={13} strokeWidth={2.4} /> Завершить чат
                 </Link>
               </div>
               <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none" style={{scrollbarWidth:"none"}}>
@@ -1338,7 +1339,7 @@ ${lines}${expense ? `
                   <button
                     key={x}
                     onClick={() => setInput(x)}
-                    className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-bold text-slate-300 transition active:scale-95 active:bg-white/15 hover:bg-white/10"
+                    className="flex min-h-[40px] shrink-0 items-center rounded-full border border-white/10 bg-white/5 px-3.5 py-2.5 text-xs font-bold text-slate-300 transition active:scale-95 active:bg-white/15 hover:bg-white/10"
                   >
                     {x}
                   </button>
@@ -1366,9 +1367,11 @@ ${lines}${expense ? `
                 <button
                   onClick={send}
                   disabled={loading}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-lg font-black text-white shadow-lg transition active:scale-95 disabled:opacity-50"
+                  aria-label="Отправить"
+                  title="Отправить"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 font-black text-white shadow-lg transition active:scale-95 disabled:opacity-50"
                 >
-                  {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : "↑"}
+                  {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Send size={18} />}
                 </button>
               </div>
             </div>

@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import { formatMoney, money } from "../utils/format";
 
 export default function ExpensesTable({ expenses = [], deleteExpense }) {
@@ -26,7 +27,7 @@ export default function ExpensesTable({ expenses = [], deleteExpense }) {
               <td className="p-4 text-center">{e.price || "-"}</td>
               <td className="p-4 text-center font-black text-red-600">{formatMoney(e.amount)}</td>
               <td className="p-4">{e.comment || "-"}</td>
-              <td className="p-4 text-center"><button onClick={() => deleteExpense?.(e.id)} className="px-3 py-2 rounded-lg bg-red-50 text-red-600 font-bold hover:bg-red-100">✕</button></td>
+              <td className="p-4 text-center"><button onClick={() => deleteExpense?.(e.id)} aria-label="Удалить расход" title="Удалить" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100"><Trash2 size={16} strokeWidth={2.2} /></button></td>
             </tr>
           ))}
           {expenses.length === 0 && <tr><td colSpan="8" className="p-12 text-center text-slate-400">Расходов пока нет.</td></tr>}

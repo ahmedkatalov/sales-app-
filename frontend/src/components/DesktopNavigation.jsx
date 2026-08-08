@@ -58,8 +58,10 @@ export default function DesktopNavigation({
             <NavLink
               key={to}
               to={to}
+              title={label}
+              aria-label={label}
               className={({ isActive }) =>
-                `group relative flex h-11 shrink-0 items-center gap-2 rounded-xl px-3 text-xs font-black transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-500/20 ${
+                `group relative flex h-11 shrink-0 items-center gap-2 rounded-xl px-2 text-xs font-black transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-500/20 lg:px-3 ${
                   isActive
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
                     : "bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
@@ -81,7 +83,7 @@ export default function DesktopNavigation({
                 )}
               </span>
 
-              <span className="whitespace-nowrap">{label}</span>
+              <span className="hidden whitespace-nowrap lg:inline">{label}</span>
             </NavLink>
           ))}
         </nav>
@@ -92,21 +94,24 @@ export default function DesktopNavigation({
             <button
               type="button"
               onClick={onToggleMode}
-              className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 text-xs font-black text-blue-200 transition hover:bg-blue-500/20"
+              className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-2.5 text-xs font-black text-blue-200 transition hover:bg-blue-500/20 lg:px-3"
               title="Переключить меню сбоку / сверху"
+              aria-label="Переключить расположение меню"
             >
               <Menu size={18} strokeWidth={2.4} />
-              Сбоку
+              <span className="hidden lg:inline">Сбоку</span>
             </button>
           )}
 
           <button
             type="button"
             onClick={onLogout}
-            className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-black text-slate-300 transition hover:border-red-500/40 hover:bg-red-600 hover:text-white"
+            title="Выйти"
+            aria-label="Выйти"
+            className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2.5 text-xs font-black text-slate-300 transition hover:border-red-500/40 hover:bg-red-600 hover:text-white lg:px-3"
           >
             <LogOut size={18} strokeWidth={2.4} />
-            Выйти
+            <span className="hidden lg:inline">Выйти</span>
           </button>
         </div>
       </div>

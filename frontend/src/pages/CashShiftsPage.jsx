@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, Minus, Plus } from "lucide-react";
 import { get, post, getCurrentProfile } from "../api";
 import { formatMoney, num } from "../utils/format";
 import Modal from "../components/Modal";
@@ -154,8 +155,8 @@ export default function CashShiftsPage() {
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <button onClick={() => openModal("in")} className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-black text-white transition hover:bg-white/10">＋ Внести</button>
-                <button onClick={() => openModal("out")} className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-black text-white transition hover:bg-white/10">− Изъять</button>
+                <button onClick={() => openModal("in")} className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-black text-white transition hover:bg-white/10"><Plus size={16} strokeWidth={2.4} /> Внести</button>
+                <button onClick={() => openModal("out")} className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-black text-white transition hover:bg-white/10"><Minus size={16} strokeWidth={2.4} /> Изъять</button>
                 <button onClick={() => openModal("close")} className="rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg transition hover:brightness-110">Закрыть смену</button>
               </div>
             </>
@@ -282,7 +283,7 @@ export default function CashShiftsPage() {
           <input type="number" value={amount} autoFocus onChange={(e) => setAmount(e.target.value)} placeholder="Фактическая сумма"
             className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70" />
           {closeDiff !== null && (
-            <p className={`mt-2 text-sm font-black ${diffMeta(closeDiff).cls}`}>{Math.abs(closeDiff) < 0.005 ? "✓ Сходится" : diffMeta(closeDiff).label}</p>
+            <p className={`mt-2 flex items-center gap-1.5 text-sm font-black ${diffMeta(closeDiff).cls}`}>{Math.abs(closeDiff) < 0.005 ? (<><Check size={16} strokeWidth={2.4} /> Сходится</>) : diffMeta(closeDiff).label}</p>
           )}
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Примечание (необязательно)"
             className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70" />

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeftRight, Banknote, Percent, Plus, Receipt, Trophy } from "lucide-react";
 import { get } from "../api";
 import { formatMoney, localISO } from "../utils/format";
 
@@ -17,7 +18,7 @@ function saleDateParts(createdAt) {
 
 const moneyValue = (value) => formatMoney(Number(value || 0));
 
-function StatCard({ title, value, subtitle, icon, tone = "blue", className = "" }) {
+function StatCard({ title, value, subtitle, icon: Icon, tone = "blue", className = "" }) {
   const tones = {
     blue: "from-blue-600/25 to-indigo-700/10 border-blue-400/25 text-blue-200",
     green: "from-emerald-600/25 to-teal-700/10 border-emerald-400/25 text-emerald-200",
@@ -37,7 +38,7 @@ function StatCard({ title, value, subtitle, icon, tone = "blue", className = "" 
           {subtitle && <p className="mt-1 truncate text-[11px] font-bold text-slate-400 sm:mt-2 sm:text-xs">{subtitle}</p>}
         </div>
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-base shadow-inner shadow-white/10 sm:h-12 sm:w-12 sm:rounded-2xl sm:text-xl">
-          {icon}
+          {typeof Icon === "string" ? Icon : <Icon size={20} strokeWidth={2.4} />}
         </div>
       </div>
     </div>
@@ -115,6 +116,7 @@ export default function SalesAnalyticsPage() {
             onClick={load}
             disabled={loading}
             aria-label="Обновить"
+            title="Обновить"
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3.5 text-sm font-black text-white shadow-[0_20px_60px_rgba(0,0,0,0.25)] transition hover:border-blue-400/40 hover:bg-blue-600/20 disabled:opacity-60 sm:px-5 sm:py-4"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "animate-spin" : ""}><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
@@ -186,10 +188,10 @@ export default function SalesAnalyticsPage() {
 
         <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
           <StatCard title="Выручка" value={moneyValue(stats.totalRevenue)} subtitle="общая сумма" icon="₽" tone="blue" />
-          <StatCard title="Скидки" value={moneyValue(stats.totalDiscount)} subtitle="за период" icon="%" tone="red" />
-          <StatCard title="Продаж" value={Number(stats.salesCount || 0)} subtitle="чеков" icon="🧾" tone="purple" />
-          <StatCard title="Наличные" value={moneyValue(stats.cashTotal)} subtitle="оплата наличкой" icon="💵" tone="green" />
-          <StatCard title="Переводы" value={moneyValue(stats.transferTotal)} subtitle={`средний чек ${moneyValue(avgCheck)}`} icon="↗" tone="amber" className="col-span-2 xl:col-span-1" />
+          <StatCard title="Скидки" value={moneyValue(stats.totalDiscount)} subtitle="за период" icon={Percent} tone="red" />
+          <StatCard title="Продаж" value={Number(stats.salesCount || 0)} subtitle="чеков" icon={Receipt} tone="purple" />
+          <StatCard title="Наличные" value={moneyValue(stats.cashTotal)} subtitle="оплата наличкой" icon={Banknote} tone="green" />
+          <StatCard title="Переводы" value={moneyValue(stats.transferTotal)} subtitle={`средний чек ${moneyValue(avgCheck)}`} icon={ArrowLeftRight} tone="amber" className="col-span-2 xl:col-span-1" />
         </div>
 
         <div className="grid gap-5 lg:grid-cols-2">
@@ -199,7 +201,7 @@ export default function SalesAnalyticsPage() {
                 <h3 className="text-2xl font-black tracking-[-0.03em] text-white">Самые продаваемые товары</h3>
                 <p className="mt-1 text-sm font-medium text-slate-400">Топ по количеству и сумме продаж.</p>
               </div>
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-blue-500/15 text-xl">🏆</div>
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-blue-500/15 text-blue-200"><Trophy size={22} strokeWidth={2.4} /></div>
             </div>
 
             <div className="hidden overflow-x-auto lg:block">
@@ -269,7 +271,7 @@ export default function SalesAnalyticsPage() {
                 {(stats.extraItems || []).map((p, index) => (
                   <div key={`extra-${p.name}-${index}`} className="flex items-center justify-between gap-3 p-4 sm:px-6">
                     <div className="flex items-center gap-3">
-                      <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-500/15 text-amber-200 text-sm">＋</span>
+                      <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-500/15 text-amber-200"><Plus size={16} strokeWidth={2.4} /></span>
                       <div>
                         <p className="font-black text-white">{p.name}</p>
                         <p className="text-sm font-bold text-slate-400">Кол-во: {p.qty}</p>
@@ -288,7 +290,7 @@ export default function SalesAnalyticsPage() {
                 <h3 className="text-2xl font-black tracking-[-0.03em] text-white">Последние чеки</h3>
                 <p className="mt-1 text-sm font-medium text-slate-400">Недавние продажи и способ оплаты.</p>
               </div>
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-violet-500/15 text-xl">🧾</div>
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-violet-500/15 text-violet-200"><Receipt size={22} strokeWidth={2.4} /></div>
             </div>
 
             <div className="divide-y divide-white/10 sm:max-h-[560px] sm:overflow-auto">

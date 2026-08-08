@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Boxes, TrendingUp, Wallet } from "lucide-react";
+import { AlertTriangle, Boxes, Check, Lightbulb, Package, Pencil, Settings, Trash2, TrendingUp, Wallet, X, Zap } from "lucide-react";
 import { del, get, post, put } from "../api";
 import Modal from "../components/Modal";
 import EmptyState from "../components/EmptyState";
@@ -797,9 +797,9 @@ export default function WorkPage() {
           <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 sm:mx-0 sm:px-0 sm:flex-wrap sm:justify-end">
             <button
               onClick={() => setStructureModal(true)}
-              className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 backdrop-blur transition hover:bg-white/10 sm:rounded-2xl sm:px-4 sm:py-3 sm:font-black sm:text-base sm:text-slate-100"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 backdrop-blur transition hover:bg-white/10 sm:rounded-2xl sm:px-4 sm:py-3 sm:font-black sm:text-base sm:text-slate-100"
             >
-              ⚙️ Типы и папки
+              <Settings size={16} /> Типы и папки
             </button>
 
             <button
@@ -821,13 +821,13 @@ export default function WorkPage() {
             onClick={openProductModal}
             className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] w-full sm:w-auto"
           >
-            + Добавить товар
+            + Товар
           </button>
         </div>
       </div>
 
       {/* Сводные метрики — как на макете */}
-      <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-4">
+      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4">
         <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur sm:p-5">
           <div className="flex items-center gap-1.5 sm:gap-2.5">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-400 sm:h-10 sm:w-10 sm:rounded-xl">
@@ -961,7 +961,11 @@ export default function WorkPage() {
                     <p className="font-black">{p.name}</p>
                     {hasRecipe ? (
                       <span className={`mt-0.5 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-black ${hasUnlinked ? "bg-yellow-500/15 text-yellow-300" : "bg-emerald-500/15 text-emerald-300"}`}>
-                        {hasUnlinked ? `⚠ ${p.recipe.filter(r => r.unlinked).length} не на складе` : `✓ ${p.recipe.length} ингр.`}
+                        {hasUnlinked ? (
+                          <><AlertTriangle size={12} /> {p.recipe.filter(r => r.unlinked).length} не на складе</>
+                        ) : (
+                          <><Check size={12} /> {p.recipe.length} ингр.</>
+                        )}
                       </span>
                     ) : (
                       <span className="mt-0.5 inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-black bg-slate-700/50 text-slate-400">
@@ -985,15 +989,17 @@ export default function WorkPage() {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => openEditProduct(p)}
-                        className="rounded-xl bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-400 hover:bg-blue-500/20"
+                        className="inline-flex items-center gap-1 rounded-xl bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-400 hover:bg-blue-500/20"
                       >
-                        ✏ Изменить
+                        <Pencil size={14} /> Изменить
                       </button>
                       <button
                         onClick={() => deleteProduct(p.id)}
+                        aria-label="Удалить"
+                        title="Удалить"
                         className="rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-400"
                       >
-                        ×
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>
@@ -1040,7 +1046,11 @@ export default function WorkPage() {
                   </p>
                   {hasRecipe ? (
                     <span className={`mt-1.5 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-black ${hasUnlinked ? "bg-yellow-500/15 text-yellow-300" : "bg-emerald-500/15 text-emerald-300"}`}>
-                      {hasUnlinked ? `⚠ ${p.recipe.filter(r => r.unlinked).length} не на складе` : `✓ состав · ${p.recipe.length}`}
+                      {hasUnlinked ? (
+                        <><AlertTriangle size={12} /> {p.recipe.filter(r => r.unlinked).length} не на складе</>
+                      ) : (
+                        <><Check size={12} /> состав · {p.recipe.length}</>
+                      )}
                     </span>
                   ) : (
                     <span className="mt-1.5 inline-flex rounded-lg bg-slate-700/50 px-2 py-0.5 text-[10px] font-black text-slate-400">без состава</span>
@@ -1051,13 +1061,15 @@ export default function WorkPage() {
                   <button
                     onClick={() => openEditProduct(p)}
                     aria-label="Изменить"
-                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition hover:bg-blue-500/20"
-                  >✏</button>
+                    title="Изменить"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition hover:bg-blue-500/20"
+                  ><Pencil size={16} /></button>
                   <button
                     onClick={() => deleteProduct(p.id)}
                     aria-label="Удалить"
-                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/10 text-lg font-black text-red-400 transition hover:bg-red-500/20"
-                  >×</button>
+                    title="Удалить"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 font-black text-red-400 transition hover:bg-red-500/20"
+                  ><Trash2 size={16} /></button>
                 </div>
               </div>
 
@@ -1119,7 +1131,7 @@ export default function WorkPage() {
         onClick={openProductModal}
         className="fixed bottom-4 left-4 right-4 z-30 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-2xl shadow-blue-950/50 sm:hidden"
       >
-        + Добавить товар
+        + Товар
       </button>
 
       {filterModal && (
@@ -1209,7 +1221,7 @@ export default function WorkPage() {
                     className={`w-full rounded-2xl px-4 py-4 text-left font-black ${
                       String(selectedTypeId) === String(t.id)
                         ? "bg-[#070b1a] text-white"
-                        : "bg-[#0f172a]/90/5 text-slate-100"
+                        : "bg-white/5 text-slate-100"
                     }`}
                   >
                     {t.name}
@@ -1252,7 +1264,7 @@ export default function WorkPage() {
                     className={`w-full rounded-2xl px-4 py-4 text-left font-black ${
                       String(selectedFolderId) === String(f.id)
                         ? "bg-[#070b1a] text-white"
-                        : "bg-[#0f172a]/90/5 text-slate-100"
+                        : "bg-white/5 text-slate-100"
                     }`}
                   >
                     {f.name}
@@ -1456,7 +1468,7 @@ export default function WorkPage() {
                     <p className="mt-1 font-black text-white">{aiSuggestion.displayName}</p>
                     <p className="text-xs text-slate-400">{aiSuggestion.description}</p>
                   </div>
-                  <button type="button" onClick={() => setAiSuggestion(null)} className="text-slate-500 hover:text-white">×</button>
+                  <button type="button" onClick={() => setAiSuggestion(null)} aria-label="Закрыть" title="Закрыть" className="text-slate-500 hover:text-white"><X size={16} /></button>
                 </div>
                 <div className="flex gap-3 mb-3 text-sm">
                   <div className="rounded-xl bg-emerald-500/10 border border-emerald-400/20 px-3 py-2">
@@ -1481,7 +1493,7 @@ export default function WorkPage() {
                     );
                   })}
                 </div>
-                {aiSuggestion.tip && <p className="text-xs text-slate-400 italic mb-3">💡 {aiSuggestion.tip}</p>}
+                {aiSuggestion.tip && <p className="flex items-start gap-1.5 text-xs text-slate-400 italic mb-3"><Lightbulb size={14} className="mt-0.5 shrink-0" /> {aiSuggestion.tip}</p>}
                 <button type="button" onClick={applyAiSuggestionWork}
                   className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 py-2 font-black text-white text-xs hover:opacity-90">
                   ✨ Применить — заполнить состав и цены
@@ -1529,7 +1541,7 @@ export default function WorkPage() {
             </button>
           </div>
 
-          <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-[#0f172a]/90/5 p-4">
+          <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-[#0f172a]/90 p-4">
             <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="text-xl font-black">Состав / рецепт</h3>
@@ -1563,16 +1575,16 @@ export default function WorkPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <button type="button"
                         onClick={() => updateRecipeRow(index, "mode", "warehouse")}
-                        className={`rounded-xl px-3 py-1 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
-                        📦 Со склада
+                        className={`inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        <Package size={14} /> Со склада
                       </button>
                       <button type="button"
                         onClick={() => { updateRecipeRow(index, "mode", "manual"); updateRecipeRow(index, "warehouseItemId", ""); }}
-                        className={`rounded-xl px-3 py-1 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        className={`inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
                         ✨ Вручную (AI)
                       </button>
                       <button type="button" onClick={() => removeRecipeRow(index)}
-                        className="ml-auto rounded-xl bg-red-500/10 px-3 py-1 text-xs font-black text-red-400 hover:bg-red-500/20">
+                        className="ml-auto inline-flex min-h-[40px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-400 hover:bg-red-500/20">
                         удалить
                       </button>
                     </div>
@@ -1625,13 +1637,13 @@ export default function WorkPage() {
                     </div>
 
                     {isUnlinked && (
-                      <p className="text-xs font-bold text-yellow-500">
-                        ⚠ «{row.ingredientName}» — добавь на склад, тогда привяжется и себестоимость посчитается
+                      <p className="flex items-start gap-1 text-xs font-bold text-yellow-500">
+                        <AlertTriangle size={12} className="mt-0.5 shrink-0" /> «{row.ingredientName}» — добавь на склад, тогда привяжется и себестоимость посчитается
                       </p>
                     )}
                     {!isUnlinked && selected && (
-                      <p className="text-xs text-emerald-400">
-                        ✓ {selected.name} · себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit, num(selected.packagingQuantity), num(selected.lossPercent)) * getWarehouseUnitCost(selected))}
+                      <p className="flex items-start gap-1 text-xs text-emerald-400">
+                        <Check size={12} className="mt-0.5 shrink-0" /> {selected.name} · себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit, num(selected.packagingQuantity), num(selected.lossPercent)) * getWarehouseUnitCost(selected))}
                       </p>
                     )}
                   </div>
@@ -1699,12 +1711,12 @@ export default function WorkPage() {
             <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
               <span className="text-sm font-black text-slate-300">Себестоимость:</span>
               <button type="button" onClick={() => setEditCostMode("auto")}
-                className={`rounded-xl px-3 py-1 text-xs font-black transition ${editCostMode === "auto" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
-                ⚡ Авто
+                className={`inline-flex items-center gap-1 rounded-xl px-3 py-1 text-xs font-black transition ${editCostMode === "auto" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                <Zap size={14} /> Авто
               </button>
               <button type="button" onClick={() => setEditCostMode("manual")}
-                className={`rounded-xl px-3 py-1 text-xs font-black transition ${editCostMode === "manual" ? "bg-orange-500/20 text-orange-300 border border-orange-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
-                ✏ Вручную
+                className={`inline-flex items-center gap-1 rounded-xl px-3 py-1 text-xs font-black transition ${editCostMode === "manual" ? "bg-orange-500/20 text-orange-300 border border-orange-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                <Pencil size={14} /> Вручную
               </button>
             </div>
 
@@ -1714,8 +1726,8 @@ export default function WorkPage() {
                 placeholder="Себестоимость (вручную)" type="number" className="input sm:col-span-2"/>
             )}
             {editCostMode === "auto" && (
-              <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-bold text-blue-300 sm:col-span-2">
-                ⚡ Авто-себестоимость считается из состава ниже
+              <div className="flex items-center gap-2 rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-bold text-blue-300 sm:col-span-2">
+                <Zap size={14} className="shrink-0" /> Авто-себестоимость считается из состава ниже
               </div>
             )}
           </div>
@@ -1731,15 +1743,15 @@ export default function WorkPage() {
                   <div key={index} className="flex flex-col gap-2 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
                     <div className="flex items-center gap-2">
                       <button type="button" onClick={() => updateEditRecipeRow(index, "mode", "warehouse")}
-                        className={`rounded-xl px-3 py-1 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
-                        📦 Со склада
+                        className={`inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                        <Package size={14} /> Со склада
                       </button>
                       <button type="button" onClick={() => { updateEditRecipeRow(index, "mode", "manual"); updateEditRecipeRow(index, "warehouseItemId", ""); }}
-                        className={`rounded-xl px-3 py-1 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                        className={`inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
                         ✨ Вручную (AI)
                       </button>
                       <button type="button" onClick={() => removeEditRecipeRow(index)}
-                        className="ml-auto rounded-xl bg-red-500/10 px-3 py-1 text-xs font-black text-red-400">удалить</button>
+                        className="ml-auto inline-flex min-h-[40px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-400">удалить</button>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-[1fr_90px_72px]">
                       {isManual ? (
@@ -1776,11 +1788,11 @@ export default function WorkPage() {
                       </select>
                     </div>
                     {isManual && row.ingredientName && !row.warehouseItemId && (
-                      <p className="text-xs font-bold text-yellow-500">⚠ Добавь на склад — привяжется автоматически</p>
+                      <p className="flex items-center gap-1 text-xs font-bold text-yellow-500"><AlertTriangle size={12} strokeWidth={2.4} /> Добавьте на склад — привяжется автоматически</p>
                     )}
                     {selected && !isManual && (
-                      <p className="text-xs text-emerald-400">
-                        ✓ себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit, num(selected.packagingQuantity), num(selected.lossPercent)) * getWarehouseUnitCost(selected))}
+                      <p className="flex items-center gap-1 text-xs text-emerald-400">
+                        <Check size={12} strokeWidth={2.4} /> себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit, num(selected.packagingQuantity), num(selected.lossPercent)) * getWarehouseUnitCost(selected))}
                       </p>
                     )}
                   </div>

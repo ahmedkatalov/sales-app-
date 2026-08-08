@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  BarChart3, Bot, Briefcase, Clock, FileText, Lightbulb,
+  Package, ShoppingCart, Trash2, TrendingUp, Wallet,
+} from "lucide-react";
+import {
   del,
   get,
   post,
@@ -12,15 +16,15 @@ import ThemeToggle from "../components/ThemeToggle";
 
 // Все доступные страницы для назначения прав
 const ALL_PAGES = [
-  { path: "/pos",            label: "Касса",              icon: "🛒" },
-  { path: "/pending-payments", label: "К оплате",         icon: "⏳" },
-  { path: "/debts",          label: "Долги",              icon: "📄" },
-  { path: "/expenses",       label: "Расходы",            icon: "💰" },
-  { path: "/work",           label: "Товары",             icon: "💼" },
-  { path: "/warehouse",      label: "Склад",              icon: "📦" },
-  { path: "/ai-warehouse",   label: "Помощник",           icon: "🤖" },
-  { path: "/sales-analytics", label: "Продажи",           icon: "📊" },
-  { path: "/analytics",      label: "Аналитика",          icon: "📈" },
+  { path: "/pos",            label: "Касса",              icon: ShoppingCart },
+  { path: "/pending-payments", label: "К оплате",         icon: Clock },
+  { path: "/debts",          label: "Долги",              icon: FileText },
+  { path: "/expenses",       label: "Расходы",            icon: Wallet },
+  { path: "/work",           label: "Товары",             icon: Briefcase },
+  { path: "/warehouse",      label: "Склад",              icon: Package },
+  { path: "/ai-warehouse",   label: "Помощник",           icon: Bot },
+  { path: "/sales-analytics", label: "Продажи",           icon: BarChart3 },
+  { path: "/analytics",      label: "Аналитика",          icon: TrendingUp },
 ];
 
 const ownerTabs = [
@@ -654,10 +658,11 @@ export default function ProfilePage({
                       {active ? "Выбран" : "За кассу"}
                     </button>
                     <button type="button" onClick={() => removeEmployee(e.id)}
-                      className={`rounded-2xl px-4 py-3 font-black transition focus:outline-none ${
+                      aria-label="Удалить продавца" title="Удалить продавца"
+                      className={`flex items-center justify-center rounded-2xl px-4 py-3 font-black transition focus:outline-none ${
                         active ? "bg-white/15 text-white hover:bg-white/25" : "bg-red-500/10 text-red-300 hover:bg-red-500/20"
                       }`}>
-                      ×
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </article>
@@ -714,8 +719,8 @@ export default function ProfilePage({
                         ) : pages.map(path => {
                           const page = ALL_PAGES.find(p => p.path === path);
                           return page ? (
-                            <span key={path} className="rounded-xl bg-white/5 px-2 py-1 text-[10px] font-bold text-slate-300">
-                              {page.icon} {page.label}
+                            <span key={path} className="inline-flex items-center gap-1 rounded-xl bg-white/5 px-2 py-1 text-[10px] font-bold text-slate-300">
+                              <page.icon size={12} /> {page.label}
                             </span>
                           ) : null;
                         })}
@@ -790,7 +795,7 @@ export default function ProfilePage({
                     <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border-2 text-xs font-black ${checked ? "border-blue-400 bg-blue-500 text-white" : "border-white/20"}`}>
                       {checked && "✓"}
                     </span>
-                    <span className="text-lg">{page.icon}</span>
+                    <page.icon size={18} className="shrink-0" />
                     <span className="text-sm font-bold">{page.label}</span>
                   </button>
                 );
@@ -812,8 +817,9 @@ export default function ProfilePage({
 
         {modal === "grantAccess" && (
           <Modal title="Добавить доступ к точке" wide>
-            <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-4 text-sm text-violet-200 mb-4">
-              💡 Например: Ахмед уже есть как аккаунт «Noor Coffee» — дай ему доступ ещё и к «Ресторану Адол».
+            <div className="mb-4 flex items-start gap-2 rounded-2xl border border-violet-400/20 bg-violet-500/10 p-4 text-sm text-violet-200">
+              <Lightbulb size={16} className="mt-0.5 shrink-0" />
+              <span>Например: Ахмед уже есть как аккаунт «Noor Coffee» — дай ему доступ ещё и к «Ресторану Адол».</span>
             </div>
             <div className="grid gap-3">
               <label className="block">
@@ -882,7 +888,8 @@ export default function ProfilePage({
                 <div key={e.id} className="flex items-center justify-between rounded-2xl bg-white/5 p-4">
                   <p className="font-black">{e.name}</p>
                   <button type="button" onClick={() => removeManagedEmployee(e.id)}
-                    className="rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-300 transition hover:bg-red-500/20">×</button>
+                    aria-label="Удалить продавца" title="Удалить продавца"
+                    className="flex min-h-[40px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-300 transition hover:bg-red-500/20"><Trash2 size={16} /></button>
                 </div>
               ))}
               {!safe_managedEmployees.length && (

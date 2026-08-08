@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Banknote, CreditCard, User, Tag, Settings, Hash, List, Trash2 } from "lucide-react";
 import { del, get, post, put } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, localISO, money, num } from "../utils/format";
@@ -464,21 +465,21 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-500/15 text-slate-300 sm:h-9 sm:w-9 sm:rounded-xl">№</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-500/15 text-slate-300 sm:h-9 sm:w-9 sm:rounded-xl"><Hash className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
             <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Записей</p>
           </div>
           <p className="mt-2 text-xl font-black text-white sm:text-2xl">{visibleExpenses.length}</p>
         </div>
         <div className="rounded-2xl border border-blue-400/20 bg-blue-500/[0.08] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 text-blue-300 sm:h-9 sm:w-9 sm:rounded-xl">🏷</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 text-blue-300 sm:h-9 sm:w-9 sm:rounded-xl"><Tag className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
             <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-blue-200/90 sm:text-[11px]">Категория</p>
           </div>
           <p className="mt-2 truncate text-base font-black text-white sm:text-xl">{filterCategory === "all" ? "Все" : categoryLabel(filterCategory)}</p>
         </div>
         <div className="rounded-2xl border border-violet-400/20 bg-violet-500/[0.08] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-violet-300 sm:h-9 sm:w-9 sm:rounded-xl">≡</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-violet-300 sm:h-9 sm:w-9 sm:rounded-xl"><List className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
             <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-violet-200/90 sm:text-[11px]">Тип</p>
           </div>
           <p className="mt-2 truncate text-base font-black text-white sm:text-xl">{filterType === "all" ? "Все типы" : filterType}</p>
@@ -517,17 +518,17 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         {/* Разбивка расходов по источнику оплаты (за период) */}
         <div className="mb-4 grid grid-cols-3 gap-2.5 sm:gap-3">
           <div className="rounded-2xl border border-emerald-400/15 bg-emerald-500/[0.07] px-4 py-3">
-            <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">💵 Из кассы</p>
+            <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-emerald-300/80"><Banknote size={14} strokeWidth={2.4} /> Из кассы</p>
             <p className="mt-1 text-lg font-black text-white sm:text-xl">{formatMoney(bySource.cash)}</p>
             <p className="hidden text-[11px] font-bold text-slate-500 sm:block">уменьшили наличные</p>
           </div>
           <div className="rounded-2xl border border-blue-400/15 bg-blue-500/[0.07] px-4 py-3">
-            <p className="text-[11px] font-black uppercase tracking-wide text-blue-300/80">💳 С карты</p>
+            <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-blue-300/80"><CreditCard size={14} strokeWidth={2.4} /> С карты</p>
             <p className="mt-1 text-lg font-black text-white sm:text-xl">{formatMoney(bySource.card)}</p>
             <p className="hidden text-[11px] font-bold text-slate-500 sm:block">перевод/карта</p>
           </div>
           <div className="rounded-2xl border border-amber-400/15 bg-amber-500/[0.07] px-4 py-3">
-            <p className="text-[11px] font-black uppercase tracking-wide text-amber-300/80">👤 Личные владельца</p>
+            <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-amber-300/80"><User size={14} strokeWidth={2.4} /> Личные владельца</p>
             <p className="mt-1 text-lg font-black text-white sm:text-xl">{formatMoney(bySource.owner)}</p>
             <p className="hidden text-[11px] font-bold text-slate-500 sm:block">за период · кассу не трогали</p>
           </div>
@@ -566,9 +567,9 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                   </button>
                 ))}
                 <button onClick={openOpeningModal}
-                  className="ml-auto rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-xs font-black text-slate-300 transition hover:bg-white/10"
+                  className="ml-auto flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-xs font-black text-slate-300 transition hover:bg-white/10"
                   title="Начальное финансовое состояние при переходе с другой системы">
-                  ⚙ Стартовые балансы
+                  <Settings size={14} strokeWidth={2.2} /> Стартовые балансы
                 </button>
               </div>
             )}
@@ -586,7 +587,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                       <div className="flex shrink-0 items-center gap-2">
                         <b className={m.sign}>{m.prefix}{formatMoney(en.amount)}</b>
                         {!workerMode && (
-                          <button onClick={() => deleteOwnerEntry(en.id)} aria-label="Удалить" className="rounded-md px-1.5 text-slate-500 transition hover:bg-white/10 hover:text-red-300">×</button>
+                          <button onClick={() => deleteOwnerEntry(en.id)} aria-label="Удалить" title="Удалить" className="flex h-9 w-9 items-center justify-center rounded-md text-slate-500 transition hover:bg-white/10 hover:text-red-300"><Trash2 size={16} /></button>
                         )}
                       </div>
                     </div>
@@ -630,9 +631,11 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                     <td className="p-4 text-right">
                       <button
                         onClick={() => openDeleteExpense(e)}
+                        aria-label="Удалить расход"
+                        title="Удалить расход"
                         className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 font-black text-red-200 transition hover:bg-red-500/20"
                       >
-                        ×
+                        <Trash2 size={16} />
                       </button>
                     </td>
                   )}
@@ -758,18 +761,18 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               <span className="mb-2 block text-sm font-black text-slate-300">Чем оплатили</span>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  ["cash", "Из кассы", "💵"],
-                  ["card", "С карты", "💳"],
-                  ["owner", "Личные владельца", "👤"],
-                ].map(([val, label, icon]) => (
+                  ["cash", "Из кассы", Banknote],
+                  ["card", "С карты", CreditCard],
+                  ["owner", "Личные владельца", User],
+                ].map(([val, label, Icon]) => (
                   <button key={val} type="button"
                     onClick={() => setForm((p) => ({ ...p, paymentSource: val }))}
-                    className={`rounded-2xl border px-2 py-3 text-center text-xs font-black leading-tight transition ${
+                    className={`flex flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 text-center text-xs font-black leading-tight transition ${
                       form.paymentSource === val
                         ? "border-blue-400/70 bg-blue-500/15 text-white"
                         : "border-white/10 bg-slate-950/60 text-slate-300 hover:bg-white/5"
                     }`}>
-                    <span className="mb-1 block text-lg">{icon}</span>{label}
+                    <Icon size={20} strokeWidth={2.2} />{label}
                   </button>
                 ))}
               </div>

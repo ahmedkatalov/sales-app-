@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ArrowRight, Star, Store } from "lucide-react";
 import { get, setCurrentWorkspace } from "../api";
 
 export default function WorkspaceSelectPage({ session, onSelect }) {
@@ -28,12 +29,12 @@ export default function WorkspaceSelectPage({ session, onSelect }) {
       <div className="w-full max-w-lg">
         {/* Шапка */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-600 text-3xl shadow-2xl shadow-blue-600/30">
-            🏪
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-600 text-white shadow-2xl shadow-blue-600/30">
+            <Store size={30} strokeWidth={2} />
           </div>
-          <h1 className="text-3xl font-black text-white">Выбери заведение</h1>
+          <h1 className="text-3xl font-black text-white">Выберите заведение</h1>
           <p className="mt-2 text-slate-400">
-            Привет, <span className="font-black text-white">{session?.username}</span>! Выбери точку для работы.
+            Здравствуйте, <span className="font-black text-white">{session?.username}</span>! Выберите точку для работы.
           </p>
         </div>
 
@@ -43,7 +44,7 @@ export default function WorkspaceSelectPage({ session, onSelect }) {
           </div>
         ) : workspaces.length === 0 ? (
           <div className="rounded-3xl border border-red-400/20 bg-red-500/10 p-6 text-center text-red-300">
-            У тебя нет доступа ни к одной точке. Обратись к владельцу.
+            У вас нет доступа ни к одной точке. Обратитесь к владельцу.
           </div>
         ) : (
           <div className="grid gap-3">
@@ -54,17 +55,17 @@ export default function WorkspaceSelectPage({ session, onSelect }) {
                 onClick={() => handleSelect(ws)}
                 className="group flex items-center gap-4 rounded-3xl border border-white/10 bg-white/[0.06] p-5 text-left shadow-xl transition hover:border-blue-400/40 hover:bg-blue-500/10"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-xl shadow-lg">
-                  {ws.isMain ? "⭐" : "🏪"}
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg">
+                  {ws.isMain ? <Star size={22} strokeWidth={2} /> : <Store size={22} strokeWidth={2} />}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-lg font-black text-white">{ws.name}</p>
                   <p className="text-sm text-slate-400">
-                    {ws.role === "owner" ? "Владелец" : ws.role === "branch_admin" ? "Администратор" : "Сотрудник"}
+                    {ws.role === "owner" ? "Владелец" : ws.role === "branch_admin" ? "Администратор" : "Кассир"}
                     {ws.isMain ? " · Основная" : ""}
                   </p>
                 </div>
-                <span className="shrink-0 text-slate-500 transition group-hover:translate-x-1 group-hover:text-white">→</span>
+                <span className="shrink-0 text-slate-500 transition group-hover:translate-x-1 group-hover:text-white"><ArrowRight size={20} strokeWidth={2.4} /></span>
               </button>
             ))}
           </div>

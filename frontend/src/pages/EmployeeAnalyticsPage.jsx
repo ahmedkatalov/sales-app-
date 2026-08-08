@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Calendar, Clock, CreditCard, Trophy } from "lucide-react";
 import {
   Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -131,13 +132,13 @@ export default function EmployeeAnalyticsPage() {
     const out = [];
     const hours = data.byHour || [];
     const peak = hours.reduce((m, h) => (num(h.revenue) > num(m.revenue) ? h : m), { revenue: 0, hour: 0 });
-    if (num(peak.revenue) > 0) out.push({ icon: "⏰", text: `Пик продаж: ${String(peak.hour).padStart(2, "0")}:00–${String((peak.hour + 1) % 24).padStart(2, "0")}:00` });
+    if (num(peak.revenue) > 0) out.push({ icon: Clock, text: `Пик продаж: ${String(peak.hour).padStart(2, "0")}:00–${String((peak.hour + 1) % 24).padStart(2, "0")}:00` });
     const wd = data.byWeekday || [];
     const bestWd = wd.reduce((m, w) => (num(w.revenue) > num(m.revenue) ? w : m), { revenue: 0, weekday: 0 });
-    if (num(bestWd.revenue) > 0) out.push({ icon: "📅", text: `Лучший день недели — ${WEEKDAYS_FULL[bestWd.weekday]}` });
-    if (employees[0] && num(employees[0].revenue) > 0) out.push({ icon: "🏆", text: `Лидер — ${employees[0].name}: ${Math.round(num(employees[0].share))}% выручки` });
+    if (num(bestWd.revenue) > 0) out.push({ icon: Calendar, text: `Лучший день недели — ${WEEKDAYS_FULL[bestWd.weekday]}` });
+    if (employees[0] && num(employees[0].revenue) > 0) out.push({ icon: Trophy, text: `Лидер — ${employees[0].name}: ${Math.round(num(employees[0].share))}% выручки` });
     const c = num(totals.cash), tr = num(totals.transfer), tot = c + tr || 1;
-    out.push({ icon: "💳", text: `Наличные ${Math.round((c / tot) * 100)}% · переводы ${Math.round((tr / tot) * 100)}%` });
+    out.push({ icon: CreditCard, text: `Наличные ${Math.round((c / tot) * 100)}% · переводы ${Math.round((tr / tot) * 100)}%` });
     return out;
   }, [data, employees, totals]);
 
@@ -188,12 +189,12 @@ export default function EmployeeAnalyticsPage() {
             <p className="mt-1 text-sm font-medium text-slate-400">Кто сколько заработал, чеки, средний чек, наличные и переводы — в одном месте.</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <button onClick={exportCsv} disabled={!hasData}
+            <button onClick={exportCsv} disabled={!hasData} aria-label="Экспорт CSV" title="Экспорт CSV"
               className="flex h-11 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
               <span className="hidden sm:inline">Экспорт CSV</span>
             </button>
-            <button onClick={load} aria-label="Обновить"
+            <button onClick={load} aria-label="Обновить" title="Обновить"
               className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-slate-200 transition hover:bg-white/10">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "animate-spin" : ""}><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" /></svg>
             </button>
@@ -260,7 +261,7 @@ export default function EmployeeAnalyticsPage() {
           <div className="mb-5 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
             {insights.map((ins, i) => (
               <div key={i} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-500/15 text-base">{ins.icon}</span>
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-500/15 text-blue-300"><ins.icon size={18} /></span>
                 <span className="text-[13px] font-bold leading-tight text-slate-200">{ins.text}</span>
               </div>
             ))}
@@ -283,7 +284,7 @@ export default function EmployeeAnalyticsPage() {
                 <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto rounded-xl border border-white/10 bg-white/[0.03] p-1">
                   {[["revenue", "Выручка"], ["orders", "Чеки"], ["aov", "Ср. чек"], ["items", "Товары"]].map(([k, l]) => (
                     <button key={k} onClick={() => setSort(k)}
-                      className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-black transition ${sort === k ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white" : "text-slate-400 hover:text-white"}`}>{l}</button>
+                      className={`flex min-h-[40px] shrink-0 items-center rounded-lg px-2.5 py-2 text-xs font-black transition ${sort === k ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white" : "text-slate-400 hover:text-white"}`}>{l}</button>
                   ))}
                 </div>
               }>

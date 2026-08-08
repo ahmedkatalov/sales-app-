@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Settings, Check } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "/api";
 
@@ -137,7 +138,7 @@ export default function SuperAdminPage() {
           <div className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-7 shadow-2xl backdrop-blur-xl">
             <div className="mb-6">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-violet-700 shadow-lg shadow-violet-600/30">
-                <span className="text-xl font-black text-white">⚙</span>
+                <Settings size={22} strokeWidth={2.4} className="text-white" />
               </div>
               <p className="text-xs font-black uppercase tracking-widest text-violet-400">Super Admin</p>
               <h1 className="mt-1 text-2xl font-black text-white">Панель управления</h1>
@@ -203,7 +204,7 @@ export default function SuperAdminPage() {
         )}
         {success && (
           <div className="mb-4 flex items-start gap-3 rounded-2xl border border-green-500/20 bg-green-500/10 px-4 py-3.5">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500 text-[11px] font-black text-white">✓</span>
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500 text-white"><Check size={12} strokeWidth={3} /></span>
             <p className="text-sm font-bold text-green-300">{success}</p>
           </div>
         )}
