@@ -4,7 +4,7 @@ import { get, getSession, post } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, money, num } from "../utils/format";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
-import { FolderOpen, ChevronLeft, Plus, Banknote, Minus, Package, AlertTriangle, Check, X, Lightbulb } from "lucide-react";
+import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb } from "lucide-react";
 
 const UNIT_LABELS = {
   g: "г",
@@ -948,8 +948,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         </div>
 
         <div className="flex flex-col gap-3 md:min-h-0 md:w-[300px] md:shrink-0 lg:w-[360px] xl:w-[400px]">
-        {/* Денежная смена (касса) */}
-        {cashShift ? (
+        {/* Денежная смена (касса) — панель активной смены. Открыть/закрыть смену — на странице «Смены». */}
+        {cashShift && (
           <div className="rounded-4xl border border-emerald-400/25 bg-emerald-500/[0.06] p-4 sm:p-5">
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="min-w-0">
@@ -971,15 +971,6 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               <button type="button" onClick={() => { setShiftInput(""); setShiftNote(""); setShiftModal("close"); }} className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-2 py-2.5 text-sm font-black text-white transition hover:brightness-110">Закрыть</button>
             </div>
           </div>
-        ) : (
-          <button type="button" onClick={() => { setShiftInput(""); setShiftResult(null); setShiftModal("open"); }}
-            className="flex w-full shrink-0 items-center justify-between gap-3 rounded-3xl border border-white/10 bg-white/[0.04] p-3.5 text-left transition hover:bg-white/[0.07]">
-            <div className="min-w-0">
-              <p className="text-sm font-black text-white">Открыть смену</p>
-              <p className="truncate text-xs text-slate-400">Внесите размен — касса начнёт считать наличные</p>
-            </div>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300"><Banknote size={18} strokeWidth={2.2} /></span>
-          </button>
         )}
 
         {extraProducts.length > 0 && (
