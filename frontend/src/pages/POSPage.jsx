@@ -884,7 +884,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             </div>
           )}
 
-          <div className="no-scrollbar md:-mr-1 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1 md:pb-1">
+          <div className="no-scrollbar md:-mr-1 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1 md:pb-1 md:pt-1">
           {!openedCategory ? (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {visibleCategories.map((cat) => (
@@ -894,7 +894,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     setOpenedCategory(cat);
                     setSearch("");
                   }}
-                  className="group flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-3.5 text-left shadow-lg transition hover:-translate-y-0.5 hover:border-blue-500/40 focus:outline-none focus:ring-4 focus:ring-blue-500/30"
+                  className="group flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-3.5 text-left shadow-lg transition hover:border-blue-500/50 hover:bg-[#151d30] hover:shadow-xl hover:shadow-blue-950/30 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-blue-500/30"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300"><FolderOpen className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
                   <div className="min-w-0">
@@ -921,7 +921,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 <button
                   key={p.id}
                   onClick={() => addToCart(p)}
-                  className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-3.5 text-left shadow-lg transition hover:-translate-y-0.5 hover:border-blue-500/40 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-blue-500/30 sm:p-4"
+                  className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-3.5 text-left shadow-lg transition hover:border-blue-500/50 hover:bg-[#151d30] hover:shadow-xl hover:shadow-blue-950/30 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-blue-500/30 sm:p-4"
                 >
                   <div className="text-sm font-black leading-tight text-white sm:text-base">
                     {p.name}
