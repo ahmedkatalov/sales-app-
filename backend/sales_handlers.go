@@ -265,7 +265,9 @@ func createSale(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Введите имя клиента для долга"})
 		return
 	}
-	if _, err := prepareSale(&req, true); err != nil {
+	// checkStock=false: продажу НЕ блокируем из-за нехватки склада — она пробивается всегда,
+	// а нехватка уходит в минус на складе (видно как предупреждение). См. consumeWarehouseFIFOTx.
+	if _, err := prepareSale(&req, false); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -380,7 +382,8 @@ func createPendingSale(c *gin.Context) {
 		return
 	}
 	req.AccountID = accountID(c)
-	if _, err := prepareSale(&req, true); err != nil {
+	// checkStock=false: отложенный чек тоже не блокируем из-за нехватки склада (уйдёт в минус).
+	if _, err := prepareSale(&req, false); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

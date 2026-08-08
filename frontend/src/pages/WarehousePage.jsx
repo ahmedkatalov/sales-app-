@@ -252,11 +252,14 @@ export default function WarehousePage() {
     const lowItems = activeItems.filter(
       (item) => minQty(item) > 0 && num(item.quantity) <= minQty(item)
     );
+    // Товары, ушедшие в минус — продано больше, чем было на складе (нужно пополнить/сверить).
+    const negativeItems = activeItems.filter((item) => num(item.quantity) < -0.000001);
 
     return {
       count: activeItems.length,
       value: totalValue,
       low: lowItems.length,
+      negative: negativeItems.length,
       hidden: (Array.isArray(items) ? items : []).length - activeItems.length,
     };
   }, [items, activeItems]);
@@ -604,6 +607,18 @@ export default function WarehousePage() {
         </div>
       )}
 
+      {stats.negative > 0 && (
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-red-400/30 bg-red-500/[0.09] px-4 py-3 backdrop-blur">
+          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-500/25 text-sm text-red-200">⚠</span>
+          <div>
+            <p className="text-sm font-black text-red-200">{stats.negative} {stats.negative === 1 ? "товар ушёл" : "товаров ушли"} в минус</p>
+            <p className="mt-0.5 text-xs font-bold leading-snug text-red-200/70">
+              Продали больше, чем было на складе. Продажи прошли (их не блокируем), но остаток стал отрицательным — пополните закупкой или проведите инвентаризацию, чтобы себестоимость и отчёты были точными.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
         <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
@@ -705,6 +720,7 @@ export default function WarehousePage() {
                 const unitCost = getUnitCost(item);
                 const totalValue = qty * unitCost;
                 const low = min > 0 && qty <= min;
+                const neg = qty < -0.000001; // продано в минус — нужно пополнить/сверить
 
                 return (
                   <tr
@@ -745,10 +761,11 @@ export default function WarehousePage() {
 
                     <td
                       className={`px-3 py-2 align-middle font-black ${
-                        low ? "text-red-400" : "text-emerald-400"
+                        neg || low ? "text-red-400" : "text-emerald-400"
                       }`}
                     >
                       {qty} {unit}
+                      {neg && <span className="ml-1 rounded bg-red-500/20 px-1.5 py-0.5 align-middle text-[10px] font-black text-red-300">в минусе</span>}
                     </td>
 
                     <td className="px-3 py-2 align-middle font-bold text-slate-300">
@@ -842,15 +859,15 @@ export default function WarehousePage() {
             const min = minQty(item);
             const qty = num(item.quantity);
             const unit = unitLabel(item.unit);
-            const unitCost = getUnitCost(item);
             const low = min > 0 && qty <= min;
+            const neg = qty < -0.000001;
 
             const open = expandedId === item.id;
 
             return (
               <div
                 key={item.id}
-                className={`relative ${hidden ? "opacity-55" : ""} ${low ? "before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:bg-red-500" : ""}`}
+                className={`relative ${hidden ? "opacity-55" : ""} ${low || neg ? "before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:bg-red-500" : ""}`}
               >
                 {/* Свёрнутая строка — тап разворачивает действия */}
                 <button
@@ -863,14 +880,14 @@ export default function WarehousePage() {
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-base">📦</span>
                     <div className="min-w-0">
                       <p className="truncate text-base font-black text-white">{item.name}</p>
-                      <p className="truncate text-xs text-slate-400">
-                        {low ? "Ниже минимума" : "В наличии"}{item.supplier ? ` · ${item.supplier}` : ""}
+                      <p className={`truncate text-xs ${neg ? "font-black text-red-300" : "text-slate-400"}`}>
+                        {neg ? "В минусе — пополните" : low ? "Ниже минимума" : "В наличии"}{item.supplier ? ` · ${item.supplier}` : ""}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className={`rounded-xl px-2.5 py-1 text-sm font-black tabular-nums ${low ? "bg-red-500/15 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+                    <span className={`rounded-xl px-2.5 py-1 text-sm font-black tabular-nums ${low || neg ? "bg-red-500/15 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}>
                       {qty} {unit}
                     </span>
                     <span className={`text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}>⌄</span>

@@ -654,10 +654,7 @@ func consumeWarehouseFIFOTx(tx *sql.Tx, accID int, itemID int, qty float64, reas
 		return 0, err
 	}
 
-	if remaining > 0.000001 {
-		return 0, sql.ErrNoRows
-	}
-
+	// Списываем всё доступное из партий (FIFO).
 	for _, need := range needs {
 		res, err := tx.Exec(`
 			UPDATE stock_batches
@@ -671,6 +668,23 @@ func consumeWarehouseFIFOTx(tx *sql.Tx, accID int, itemID int, qty float64, reas
 		if affected == 0 {
 			return 0, sql.ErrNoRows
 		}
+	}
+
+	// Не хватило склада — продажу НЕ блокируем. Создаём отрицательную партию-овердрафт:
+	// остаток товара уходит в минус (видно как предупреждение), а нехватку оцениваем по
+	// текущей себестоимости (может быть 0, если склада не было — стоимость неизвестна).
+	// При следующей закупке минус автоматически перекроется.
+	if remaining > 0.000001 {
+		var unitCost float64
+		_ = tx.QueryRow(`SELECT IFNULL(unit_cost, 0) FROM warehouse_items WHERE id = ? AND account_id = ?`, itemID, accID).Scan(&unitCost)
+		if _, err := tx.Exec(`
+			INSERT INTO stock_batches(account_id, warehouse_item_id, quantity, remaining_quantity, purchase_price, unit_cost, note, created_at)
+			VALUES(?, ?, ?, ?, 0, ?, ?, ?)
+		`, accID, itemID, -remaining, -remaining, unitCost, "Продажа без остатка (в минус)", createdAt); err != nil {
+			return 0, err
+		}
+		totalCost += remaining * unitCost
+		remaining = 0
 	}
 
 	if _, err := tx.Exec(`
@@ -729,10 +743,6 @@ func reserveWarehouseFIFOTx(tx *sql.Tx, pendingSaleID int64, accID int, productI
 	if err := rows.Close(); err != nil {
 		return 0, err
 	}
-	if remaining > 0.000001 {
-		return 0, sql.ErrNoRows
-	}
-
 	for _, need := range needs {
 		res, err := tx.Exec(`
 			UPDATE stock_batches
@@ -752,6 +762,29 @@ func reserveWarehouseFIFOTx(tx *sql.Tx, pendingSaleID int64, accID int, productI
 		`, pendingSaleID, accID, productID, itemID, need.ID, need.Take, need.UnitCost, need.Take*need.UnitCost, createdAt); err != nil {
 			return 0, err
 		}
+	}
+
+	// Не хватило склада — резерв НЕ блокируем: отрицательная партия-овердрафт + резерв на неё,
+	// чтобы остаток ушёл в минус (предупреждение). При отмене ожидания резерв вернётся — минус исчезнет.
+	if remaining > 0.000001 {
+		var unitCost float64
+		_ = tx.QueryRow(`SELECT IFNULL(unit_cost, 0) FROM warehouse_items WHERE id = ? AND account_id = ?`, itemID, accID).Scan(&unitCost)
+		res, err := tx.Exec(`
+			INSERT INTO stock_batches(account_id, warehouse_item_id, quantity, remaining_quantity, purchase_price, unit_cost, note, created_at)
+			VALUES(?, ?, ?, ?, 0, ?, ?, ?)
+		`, accID, itemID, -remaining, -remaining, unitCost, "Резерв без остатка (в минус)", createdAt)
+		if err != nil {
+			return 0, err
+		}
+		negBatchID, _ := res.LastInsertId()
+		if _, err := tx.Exec(`
+			INSERT INTO pending_sale_reservations(pending_sale_id, account_id, product_id, warehouse_item_id, batch_id, quantity, unit_cost, total_cost, created_at)
+			VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, pendingSaleID, accID, productID, itemID, negBatchID, remaining, unitCost, remaining*unitCost, createdAt); err != nil {
+			return 0, err
+		}
+		totalCost += remaining * unitCost
+		remaining = 0
 	}
 
 	if _, err := tx.Exec(`

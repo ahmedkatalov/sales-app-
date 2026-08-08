@@ -190,12 +190,17 @@ export default function HomePage() {
     const lowStock = (Array.isArray(wh) ? wh : []).filter(
       (i) => num(i.minQuantity) > 0 && num(i.quantity) <= num(i.minQuantity) && !i.hidden && !i.deleted
     );
+    // Товары в минусе — продано больше, чем было на складе (нужно пополнить/сверить).
+    const negStock = (Array.isArray(wh) ? wh : []).filter(
+      (i) => num(i.quantity) < -0.000001 && !i.hidden && !i.deleted
+    );
     setData({
       today: todayS || {},
       month: monthS || {},
       pending: { count: pendingList.length, sum: pendingList.reduce((s, x) => s + num(x.total), 0) },
       debts: { count: debtList.length, sum: debtList.reduce((s, x) => s + num(x.amount), 0) },
       lowStock: { count: lowStock.length, items: lowStock.slice(0, 4) },
+      negStock: { count: negStock.length, items: negStock.slice(0, 4) },
     });
     setLoading(false);
   };
@@ -218,6 +223,11 @@ export default function HomePage() {
       key: "debts", to: "/debts", icon: FileText, tone: "red",
       title: "Долги клиентов", hint: `${data.debts.count} ${plural(data.debts.count, "должник", "должника", "должников")}`,
       value: formatMoney(data.debts.sum),
+    },
+    data?.negStock?.count > 0 && {
+      key: "neg", to: "/warehouse", icon: AlertTriangle, tone: "red",
+      title: "Товары в минусе", hint: data.negStock.items.map((i) => i.name).filter(Boolean).slice(0, 2).join(", ") || "Продано больше, чем было — пополните",
+      value: `${data.negStock.count}`,
     },
     data?.lowStock?.count > 0 && {
       key: "stock", to: "/warehouse", icon: AlertTriangle, tone: "amber",
