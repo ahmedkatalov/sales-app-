@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import {
-  Banknote,
   BarChart3,
   Bot,
   Briefcase,
@@ -24,7 +23,6 @@ import { hydrateAppearance } from "./theme/engine";
 import HomePage from "./pages/HomePage";
 import EmployeeAnalyticsPage from "./pages/EmployeeAnalyticsPage";
 import FinanceReportPage from "./pages/FinanceReportPage";
-import CashShiftsPage from "./pages/CashShiftsPage";
 import AppearancePage from "./pages/AppearancePage";
 import WorkPage from "./pages/WorkPage";
 import ExpensesPage from "./pages/ExpensesPage";
@@ -58,7 +56,6 @@ const ownerLinks = [
   ["/home", "Сводка", LayoutDashboard],
   ["/work", "Товары", Briefcase],
   ["/pos", "Касса", ShoppingCart],
-  ["/shifts", "Смены", Banknote],
   ["/pending-payments", "К оплате", Clock3, "pending"],
   ["/debts", "Долги", FileText, "debt"],
   ["/expenses", "Расходы", Wallet],
@@ -749,7 +746,7 @@ export default function App() {
           <Route path="/analytics" element={!canAccess("/analytics") ? forbidden : <AnalyticsPage />} />
           <Route path="/team" element={isWorker ? <Navigate to="/pos" replace /> : <EmployeeAnalyticsPage />} />
           <Route path="/finance" element={isWorker ? <Navigate to="/pos" replace /> : <FinanceReportPage />} />
-          <Route path="/shifts" element={<CashShiftsPage />} />
+          <Route path="/shifts" element={<Navigate to={isWorker ? "/pos" : "/home"} replace />} />
           <Route path="/employees" element={<Navigate to="/profile" replace />} />
           <Route path="/cards" element={<Navigate to="/profile" replace />} />
           <Route path="*" element={<Navigate to={isWorker ? "/pos" : "/home"} replace />} />
