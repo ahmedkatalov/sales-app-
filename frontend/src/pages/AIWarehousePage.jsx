@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { RefreshCw, X, Send } from "lucide-react";
+import { RefreshCw, X, Send, FileDown } from "lucide-react";
 import { get, getCurrentWorkspace, getSession, post } from "../api";
 import { formatMoney, num } from "../utils/format";
 
@@ -692,13 +692,135 @@ const shortQuestionForPending = (pending) => {
   return `Уточни данные по товару «${name}».`;
 };
 
-function Message({ msg }) {
+// ── Лёгкий markdown-рендер для ответов ассистента ──────────────────────
+// Разбирает **жирный**, *курсив*, `код`, заголовки #/##/###, списки -,*,•,1.
+// чтобы ответ выглядел красиво, а не «звёздочками».
+function renderInline(text, kp) {
+  const nodes = [];
+  const re = /(\*\*[^*\n]+\*\*|__[^_\n]+__|`[^`\n]+`|\*[^*\n]+\*|_[^_\n]+_)/g;
+  let last = 0, m, i = 0;
+  while ((m = re.exec(text))) {
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    const t = m[0];
+    if (t.startsWith("**") || t.startsWith("__"))
+      nodes.push(<strong key={`${kp}-${i}`} className="font-black text-white">{t.slice(2, -2)}</strong>);
+    else if (t.startsWith("`"))
+      nodes.push(<code key={`${kp}-${i}`} className="rounded-md bg-white/10 px-1.5 py-0.5 text-[12px] font-bold text-blue-200">{t.slice(1, -1)}</code>);
+    else
+      nodes.push(<em key={`${kp}-${i}`} className="text-white/90">{t.slice(1, -1)}</em>);
+    last = m.index + t.length;
+    i++;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
+}
+
+function RichText({ text }) {
+  const lines = String(text || "").split("\n");
+  const blocks = [];
+  let list = null;
+  const flush = () => { if (list) { blocks.push(list); list = null; } };
+  lines.forEach((raw) => {
+    const l = raw.trim();
+    if (!l) { flush(); return; }
+    const h = l.match(/^(#{1,3})\s+(.*)$/);
+    const b = l.match(/^[-*•]\s+(.*)$/);
+    const n = l.match(/^(\d+)[.)]\s+(.*)$/);
+    if (h) { flush(); blocks.push({ type: "h", level: h[1].length, text: h[2] }); }
+    else if (b) { if (!list || list.type !== "ul") { flush(); list = { type: "ul", items: [] }; } list.items.push(b[1]); }
+    else if (n) { if (!list || list.type !== "ol") { flush(); list = { type: "ol", items: [] }; } list.items.push(n[2]); }
+    else { flush(); blocks.push({ type: "p", text: l }); }
+  });
+  flush();
+
+  return (
+    <div className="space-y-1.5">
+      {blocks.map((blk, bi) => {
+        if (blk.type === "h") {
+          const cls = blk.level === 1 ? "text-[15px]" : blk.level === 2 ? "text-sm" : "text-[13px]";
+          return <p key={bi} className={`${cls} font-black text-white ${bi ? "mt-2.5" : ""}`}>{renderInline(blk.text, `h${bi}`)}</p>;
+        }
+        if (blk.type === "ul" || blk.type === "ol") {
+          return (
+            <ul key={bi} className="space-y-1">
+              {blk.items.map((it, ii) => (
+                <li key={ii} className="flex gap-2">
+                  {blk.type === "ol"
+                    ? <span className="shrink-0 font-black text-blue-300">{ii + 1}.</span>
+                    : <span className="mt-[8px] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />}
+                  <span className="min-w-0 leading-6">{renderInline(it, `li${bi}-${ii}`)}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+        return <p key={bi} className="leading-6">{renderInline(blk.text, `p${bi}`)}</p>;
+      })}
+    </div>
+  );
+}
+
+// Экспорт ответа ассистента в PDF: собираем чистый светлый документ и печатаем
+// (через окно печати браузера → «Сохранить как PDF»). Без внешних библиотек.
+function exportTextToPdf(text) {
+  const ws = getCurrentWorkspace?.() || {};
+  const business = ws.name || ws.companyName || ws.workspaceName || "NoorCoffe";
+  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  const inline = (s) => esc(s)
+    .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/__([^_\n]+)__/g, "<strong>$1</strong>")
+    .replace(/`([^`\n]+)`/g, "<code>$1</code>")
+    .replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
+  const lines = String(text || "").split("\n");
+  let body = "", list = null;
+  const closeList = () => { if (list) { body += list === "ul" ? "</ul>" : "</ol>"; list = null; } };
+  for (const raw of lines) {
+    const l = raw.trim();
+    if (!l) { closeList(); continue; }
+    const h = l.match(/^(#{1,3})\s+(.*)$/);
+    const b = l.match(/^[-*•]\s+(.*)$/);
+    const n = l.match(/^(\d+)[.)]\s+(.*)$/);
+    if (h) { closeList(); const lvl = Math.min(h[1].length + 1, 4); body += `<h${lvl}>${inline(h[2])}</h${lvl}>`; }
+    else if (b) { if (list !== "ul") { closeList(); body += "<ul>"; list = "ul"; } body += `<li>${inline(b[1])}</li>`; }
+    else if (n) { if (list !== "ol") { closeList(); body += "<ol>"; list = "ol"; } body += `<li>${inline(n[2])}</li>`; }
+    else { closeList(); body += `<p>${inline(l)}</p>`; }
+  }
+  closeList();
+  const firstH = lines.map((s) => s.trim()).find((s) => /^#{1,3}\s+/.test(s));
+  const title = firstH ? firstH.replace(/^#{1,3}\s+/, "").replace(/[*`]/g, "") : "Отчёт";
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" }) +
+    ", " + now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const html =
+    `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${esc(title)}</title><style>` +
+    `body{font-family:system-ui,-apple-system,Arial,sans-serif;color:#111;max-width:760px;margin:22px auto;padding:0 22px;line-height:1.55}` +
+    `.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:2px solid #ececec;padding-bottom:12px;margin-bottom:18px}` +
+    `.brand b{font-size:18px}.brand span{color:#888;font-size:12px;white-space:nowrap}` +
+    `h1{font-size:23px;margin:0 0 14px}h2{font-size:16px;margin:20px 0 6px}h3{font-size:14px;margin:16px 0 4px}h4{font-size:13px;margin:14px 0 4px;color:#333}` +
+    `p{margin:7px 0;font-size:14px}ul,ol{margin:7px 0;padding-left:22px}li{margin:4px 0;font-size:14px}` +
+    `strong{font-weight:800}em{font-style:italic}code{background:#f3f4f6;border-radius:5px;padding:1px 5px;font-size:13px}` +
+    `.foot{margin-top:30px;color:#aaa;font-size:11px;border-top:1px solid #eee;padding-top:10px}` +
+    `@media print{body{margin:8mm auto}}` +
+    `</style></head><body>` +
+    `<div class="brand"><b>${esc(business)}</b><span>${esc(dateStr)}</span></div>` +
+    `<h1>${esc(title)}</h1>` +
+    `<div class="content">${body}</div>` +
+    `<p class="foot">Сформировано в NoorCoffe · AI-ассистент</p></body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) { window.notify?.("Разрешите всплывающие окна, чтобы сохранить PDF", "error"); return; }
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); }, 350);
+}
+
+function Message({ msg, onPdf }) {
   const isUser = msg.role === "user";
   return (
     <div className={`flex gap-2 sm:gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-sm shadow-lg shadow-blue-600/30 sm:flex">🤖</div>}
       <div className={`max-w-[90%] rounded-3xl px-4 py-3 text-[13px] font-bold leading-6 shadow-lg sm:max-w-[78%] ${isUser ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white" : "border border-white/10 bg-white/[0.08] text-slate-100 backdrop-blur"}`}>
-        <p className="whitespace-pre-line">{msg.text}</p>
+        {isUser ? <p className="whitespace-pre-line">{msg.text}</p> : <RichText text={msg.text} />}
         {msg.cards?.length > 0 && (
           <div className="mt-3 space-y-2">
             {msg.cards.map((card, i) => (
@@ -712,6 +834,14 @@ function Message({ msg }) {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {onPdf && (
+          <div className="mt-2.5 flex justify-start border-t border-white/10 pt-2">
+            <button type="button" onClick={onPdf} aria-label="Скачать отчёт в PDF" title="Скачать в PDF"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-black text-slate-200 transition hover:bg-white/15 active:scale-[0.97]">
+              <FileDown size={13} strokeWidth={2.4} /> Скачать PDF
+            </button>
           </div>
         )}
       </div>
@@ -1315,7 +1445,13 @@ ${lines}${expense ? `
                 Сегодня
               </div>
               {messages.map((msg, i) => (
-                <Message key={i} msg={msg} />
+                <Message
+                  key={i}
+                  msg={msg}
+                  onPdf={msg.role === "bot" && msg.text && msg.text !== AI_WELCOME_MESSAGE.text && msg.text.length > 120
+                    ? () => exportTextToPdf(msg.text)
+                    : undefined}
+                />
               ))}
               {loading && <Message msg={{ role: "bot", text: "Думаю и проверяю данные..." }} />}
               <div ref={bottomRef} />
