@@ -681,7 +681,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                   <button
                     onClick={() => openDeleteExpense(e)}
                     aria-label="Удалить расход"
-                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/10 text-red-300 transition hover:bg-red-500/20"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-300 transition hover:bg-red-500/20"
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
                   </button>
@@ -753,6 +753,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
                 placeholder="Например: 1500"
                 type="number"
+                inputMode="decimal"
                 className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
               />
             </label>
@@ -868,6 +869,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 onChange={(e) => setOwnerForm((p) => ({ ...p, amount: e.target.value }))}
                 placeholder="Например: 5000"
                 type="number"
+                inputMode="decimal"
                 autoFocus
                 className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-amber-400/70 focus:ring-4 focus:ring-amber-500/10"
               />
@@ -917,7 +919,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               ].map(([key, label, hint]) => (
                 <label key={key}>
                   <span className="mb-2 block text-sm font-black text-slate-300">{label}</span>
-                  <input type="number" value={openingForm[key]} placeholder="0"
+                  <input type="number" inputMode="decimal" value={openingForm[key]} placeholder="0"
                     onChange={(e) => setOpeningForm((p) => ({ ...p, [key]: e.target.value }))} className={fieldCls} />
                   <span className="mt-1 block px-1 text-[11px] font-bold text-slate-500">{hint}</span>
                 </label>

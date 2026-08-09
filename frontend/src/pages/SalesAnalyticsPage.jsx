@@ -34,7 +34,7 @@ function StatCard({ title, value, subtitle, icon: Icon, tone = "blue", className
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 sm:text-xs">{title}</p>
-          <p className="mt-1.5 text-xl font-black text-white sm:mt-3 sm:text-4xl">{value}</p>
+          <p className="mt-1.5 truncate text-xl font-black text-white sm:mt-3 sm:text-4xl">{value}</p>
           {subtitle && <p className="mt-1 truncate text-[11px] font-bold text-slate-400 sm:mt-2 sm:text-xs">{subtitle}</p>}
         </div>
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-base shadow-inner shadow-white/10 sm:h-12 sm:w-12 sm:rounded-2xl sm:text-xl">

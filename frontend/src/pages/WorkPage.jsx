@@ -1129,7 +1129,8 @@ export default function WorkPage() {
 
       <button
         onClick={openProductModal}
-        className="fixed bottom-4 left-4 right-4 z-30 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-2xl shadow-blue-950/50 sm:hidden"
+        style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 10px)" }}
+        className="fixed left-4 right-4 z-30 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-2xl shadow-blue-950/50 sm:hidden"
       >
         + Товар
       </button>
@@ -1503,6 +1504,7 @@ export default function WorkPage() {
 
             <input
               type="number"
+              inputMode="decimal"
               value={productForm.cost}
               onChange={(e) =>
                 setProductForm((p) => ({ ...p, cost: e.target.value }))
@@ -1514,6 +1516,7 @@ export default function WorkPage() {
 
             <input
               type="number"
+              inputMode="decimal"
               value={productForm.price}
               onChange={(e) =>
                 setProductForm((p) => ({ ...p, price: e.target.value }))
@@ -1621,7 +1624,7 @@ export default function WorkPage() {
                         </select>
                       )}
 
-                      <input type="number" value={row.quantity}
+                      <input type="number" inputMode="decimal" value={row.quantity}
                         onChange={(e) => updateRecipeRow(index, "quantity", e.target.value)}
                         placeholder="Кол-во"
                         className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60"
@@ -1705,7 +1708,7 @@ export default function WorkPage() {
 
             <input value={editProduct.price}
               onChange={e => setEditProduct(p => ({...p, price: e.target.value}))}
-              placeholder="Цена продажи" type="number" className="input"/>
+              placeholder="Цена продажи" type="number" inputMode="decimal" className="input"/>
 
             {/* Переключатель себестоимости */}
             <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
@@ -1723,7 +1726,7 @@ export default function WorkPage() {
             {editCostMode === "manual" && (
               <input value={editProduct.cost}
                 onChange={e => setEditProduct(p => ({...p, cost: e.target.value}))}
-                placeholder="Себестоимость (вручную)" type="number" className="input sm:col-span-2"/>
+                placeholder="Себестоимость (вручную)" type="number" inputMode="decimal" className="input sm:col-span-2"/>
             )}
             {editCostMode === "auto" && (
               <div className="flex items-center gap-2 rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-bold text-blue-300 sm:col-span-2">
@@ -1778,7 +1781,7 @@ export default function WorkPage() {
                           ))}
                         </select>
                       )}
-                      <input type="number" value={row.quantity} onChange={e => updateEditRecipeRow(index, "quantity", e.target.value)}
+                      <input type="number" inputMode="decimal" value={row.quantity} onChange={e => updateEditRecipeRow(index, "quantity", e.target.value)}
                         placeholder="Кол-во"
                         className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none"/>
                       <select value={row.quantityUnit || selected?.unit || "g"}

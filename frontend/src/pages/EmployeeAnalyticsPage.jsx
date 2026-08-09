@@ -281,7 +281,7 @@ export default function EmployeeAnalyticsPage() {
             {/* Лидерборд */}
             <ChartCard title="Рейтинг продавцов" subtitle="Нажмите на продавца, чтобы раскрыть детали"
               right={
-                <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto rounded-xl border border-white/10 bg-white/[0.03] p-1">
+                <div className="no-scrollbar flex min-w-0 items-center gap-1.5 overflow-x-auto rounded-xl border border-white/10 bg-white/[0.03] p-1">
                   {[["revenue", "Выручка"], ["orders", "Чеки"], ["aov", "Ср. чек"], ["items", "Товары"]].map(([k, l]) => (
                     <button key={k} onClick={() => setSort(k)}
                       className={`flex min-h-[40px] shrink-0 items-center rounded-lg px-2.5 py-2 text-xs font-black transition ${sort === k ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white" : "text-slate-400 hover:text-white"}`}>{l}</button>

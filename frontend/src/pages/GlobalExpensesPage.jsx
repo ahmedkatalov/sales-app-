@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Wallet } from "lucide-react";
 import { apiDelete, apiGet, apiPost } from "../api";
 import { formatMoney } from "../utils/format";
 
@@ -89,12 +89,12 @@ export default function GlobalExpensesPage() {
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="rounded-[28px] border border-red-500/30 bg-red-500/10 p-5 shadow-2xl">
+        <div className="rounded-[28px] border border-red-500/30 bg-red-500/10 p-4 shadow-2xl sm:p-5">
           <p className="text-xs font-black uppercase tracking-wide text-red-200">
             Всего расходов
           </p>
 
-          <p className="mt-3 text-4xl font-black text-white">
+          <p className="mt-3 text-2xl font-black tabular-nums text-white sm:text-3xl lg:text-4xl">
             {formatMoney(total)}
           </p>
 
@@ -103,12 +103,12 @@ export default function GlobalExpensesPage() {
           </p>
         </div>
 
-        <div className="rounded-[28px] border border-blue-500/30 bg-blue-500/10 p-5 shadow-2xl">
+        <div className="rounded-[28px] border border-blue-500/30 bg-blue-500/10 p-4 shadow-2xl sm:p-5">
           <p className="text-xs font-black uppercase tracking-wide text-blue-200">
             Записей
           </p>
 
-          <p className="mt-3 text-4xl font-black text-white">
+          <p className="mt-3 text-2xl font-black tabular-nums text-white sm:text-3xl lg:text-4xl">
             {visibleExpenses.length}
           </p>
 
@@ -117,12 +117,12 @@ export default function GlobalExpensesPage() {
           </p>
         </div>
 
-        <div className="rounded-[28px] border border-violet-500/30 bg-violet-500/10 p-5 shadow-2xl">
+        <div className="rounded-[28px] border border-violet-500/30 bg-violet-500/10 p-4 shadow-2xl sm:p-5">
           <p className="text-xs font-black uppercase tracking-wide text-violet-200">
             Сотрудников
           </p>
 
-          <p className="mt-3 text-4xl font-black text-white">
+          <p className="mt-3 text-2xl font-black tabular-nums text-white sm:text-3xl lg:text-4xl">
             {safe_employees.length}
           </p>
 
@@ -133,7 +133,7 @@ export default function GlobalExpensesPage() {
       </div>
 
       <div className="mb-5 rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur sm:p-6">
-        <div className="grid gap-3 lg:grid-cols-[240px_1fr_180px_180px]">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[240px_1fr_180px_180px]">
           <select
             value={employeeId}
             onChange={(e) => setEmployeeId(e.target.value)}
@@ -232,14 +232,14 @@ export default function GlobalExpensesPage() {
           </div>
         ) : (
           <div className="p-10 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10 text-3xl">
-              ₽
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10 text-slate-300">
+              <Wallet size={28} strokeWidth={2} />
             </div>
 
             <p className="text-xl font-black text-white">Расходов пока нет</p>
 
             <p className="mt-2 text-sm text-slate-400">
-              Добавь первый расход, чтобы он появился здесь.
+              Добавьте первый расход, чтобы он появился здесь.
             </p>
           </div>
         )}

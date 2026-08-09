@@ -783,7 +783,7 @@ export default function WarehousePage() {
                     </td>
 
                     <td className="px-3 py-2 align-middle">
-                      <div className="grid grid-cols-[92px_40px_74px_68px_72px] items-center justify-end gap-1.5">
+                      <div className="flex flex-wrap items-center justify-end gap-1.5">
                         <button
                           type="button"
                           onClick={() => openPurchaseForItem(item)}
@@ -796,7 +796,7 @@ export default function WarehousePage() {
                         <button
                           type="button"
                           onClick={() => openHistory(item)}
-                          className="flex h-9 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-400/10 text-sm font-black text-blue-300 transition hover:bg-blue-400/20"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-400/10 text-sm font-black text-blue-300 transition hover:bg-blue-400/20"
                           title="История закупок"
                           aria-label="История закупок"
                         >
@@ -1314,6 +1314,7 @@ export default function WarehousePage() {
                 }
                 placeholder="Сколько купили"
                 type="number"
+                inputMode="decimal"
                 className="input"
               />
 
@@ -1353,6 +1354,7 @@ export default function WarehousePage() {
                     onChange={(e) => setForm((p) => ({ ...p, unitsPerPackage: e.target.value }))}
                     placeholder="Сколько шт внутри"
                     type="number"
+                    inputMode="numeric"
                     className="input"
                   />
 
@@ -1361,6 +1363,7 @@ export default function WarehousePage() {
                     onChange={(e) => setForm((p) => ({ ...p, basePerUnit: e.target.value, packagingQuantity: e.target.value }))}
                     placeholder={`Сколько ${unitLabel(form.unit)} в 1 штуке`}
                     type="number"
+                    inputMode="decimal"
                     className="input"
                   />
 
@@ -1381,6 +1384,7 @@ export default function WarehousePage() {
                 onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
                 placeholder="Общая цена закупки"
                 type="number"
+                inputMode="decimal"
                 className="input"
               />
 
@@ -1389,6 +1393,7 @@ export default function WarehousePage() {
                 onChange={(e) => setForm((p) => ({ ...p, minQuantity: e.target.value }))}
                 placeholder="Минимальный остаток"
                 type="number"
+                inputMode="decimal"
                 className="input"
               />
 
@@ -1488,6 +1493,7 @@ export default function WarehousePage() {
               }
               placeholder="Количество списания"
               type="number"
+              inputMode="decimal"
               className="input w-full"
             />
 
@@ -1559,7 +1565,7 @@ export default function WarehousePage() {
               value={inventoryForm.actual}
               onChange={(e) => setInventoryForm((p) => ({ ...p, actual: e.target.value }))}
               placeholder="Сколько реально на складе"
-              type="number" autoFocus
+              type="number" inputMode="decimal" autoFocus
               className="input w-full"
             />
           </label>

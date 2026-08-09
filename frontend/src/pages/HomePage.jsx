@@ -264,6 +264,8 @@ export default function HomePage() {
             </NavLink>
             <NavLink
               to="/sales-analytics"
+              aria-label="Отчёты"
+              title="Отчёты"
               className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 font-black text-slate-200 transition hover:bg-white/10 active:scale-[0.98]"
             >
               <BarChart3 size={18} strokeWidth={2.4} />

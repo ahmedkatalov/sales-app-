@@ -403,7 +403,7 @@ export default function FinanceReportPage() {
               ].map(([key, label]) => (
                 <label key={key}>
                   <span className="mb-1.5 block text-xs font-black text-slate-400">{label}</span>
-                  <input type="number" value={openingForm[key]} onChange={(e) => setOpeningForm((f) => ({ ...f, [key]: e.target.value }))} placeholder="0"
+                  <input type="number" inputMode="decimal" value={openingForm[key]} onChange={(e) => setOpeningForm((f) => ({ ...f, [key]: e.target.value }))} placeholder="0"
                     className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-600 focus:border-blue-400/70" />
                 </label>
               ))}

@@ -180,7 +180,7 @@ export default function EmployeesPage() {
 
                   <button
                     onClick={() => remove(e.id)}
-                    className="rounded-2xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm font-black text-red-300 transition hover:bg-red-500/15"
+                    className="shrink-0 rounded-2xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-sm font-black text-red-300 transition hover:bg-red-500/15"
                   >
                     Удалить
                   </button>
@@ -218,6 +218,9 @@ export default function EmployeesPage() {
           </div>
         )}
       </div>
+
+      {/* Резерв под плавающую кнопку, чтобы она не перекрывала последнюю карточку на телефоне */}
+      <div className="h-16 sm:hidden" aria-hidden="true" />
 
       <button
         onClick={createEmployee}

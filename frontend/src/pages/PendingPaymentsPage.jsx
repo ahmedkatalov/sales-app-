@@ -69,7 +69,7 @@ export default function PendingPaymentsPage() {
   );
 
   return (
-    <div className="pb-nav sm:pb-10">
+    <div className="mx-auto w-full max-w-[1200px] pb-nav sm:pb-10">
       <div className="mb-5 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-bold text-blue-400">Касса</p>
@@ -201,6 +201,7 @@ export default function PendingPaymentsPage() {
                 value={paidAmount}
                 onChange={(e) => setPaidAmount(e.target.value)}
                 type="number"
+                inputMode="decimal"
                 placeholder="Сумма, ₽"
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
               />

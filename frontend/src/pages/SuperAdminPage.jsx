@@ -179,8 +179,8 @@ export default function SuperAdminPage() {
       <div className="mx-auto max-w-5xl">
 
         {/* Header */}
-        <header className="mb-6 flex items-center justify-between">
-          <div>
+        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-widest text-violet-400">Super Admin</p>
             <h1 className="text-3xl font-black text-white">Компании</h1>
             <p className="mt-1 text-sm text-slate-400">
@@ -189,7 +189,7 @@ export default function SuperAdminPage() {
           </div>
           <button
             onClick={() => { sessionStorage.removeItem("super_token"); setAuthed(false); setToken(""); }}
-            className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-red-600 hover:text-white"
+            className="shrink-0 self-start rounded-2xl border border-white/10 bg-slate-900 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-red-600 hover:text-white sm:self-auto"
           >
             Выйти
           </button>

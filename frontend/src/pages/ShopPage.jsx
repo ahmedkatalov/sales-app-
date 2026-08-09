@@ -306,6 +306,7 @@ export default function ShopPage() {
             onChange={(e) => setCashGiven(e.target.value)}
             placeholder="Сумма от клиента"
             type="number"
+            inputMode="decimal"
             className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white placeholder:text-slate-500 outline-none focus:border-cyan-400"
           />
         )}
@@ -482,6 +483,9 @@ export default function ShopPage() {
                 </div>
               </div>
             )}
+
+            {/* Резерв под плавающую панель корзины, чтобы она не перекрывала последний товар */}
+            <div className="h-20 xl:hidden" aria-hidden="true" />
           </div>
         </main>
 

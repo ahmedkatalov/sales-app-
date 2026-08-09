@@ -801,7 +801,7 @@ export default function ProfilePage({
                 );
               })}
             </div>
-            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
               <span className="text-sm font-bold text-slate-400">Выбрано страниц: {editingPerms.pages.length} из {ALL_PAGES.length}</span>
               <button type="button" onClick={() => setEditingPerms(p => ({...p, pages: ALL_PAGES.map(x => x.path)}))}
                 className="ml-auto rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white hover:bg-white/15">Выбрать все</button>

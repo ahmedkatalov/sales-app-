@@ -652,11 +652,11 @@ export default function AnalyticsPage() {
             {safe_analytics.map((m) => (
               <div key={m.month} className="p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-lg font-black text-white">{m.label || m.month}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-black text-white">{m.label || m.month}</p>
                     <p className="text-sm font-bold text-slate-400">Кол-во: {m.qty}</p>
                   </div>
-                  <p className="text-lg font-black text-emerald-300">{formatMoney(m.afterExpenses)}</p>
+                  <p className="shrink-0 text-lg font-black text-emerald-300">{formatMoney(m.afterExpenses)}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-3"><p className="text-slate-400">Выручка</p><b className="text-white">{formatMoney(m.revenue)}</b></div>

@@ -1280,7 +1280,7 @@ ${lines}${expense ? `
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3 py-2.5">
               <div className="flex min-w-0 items-center gap-2">
                 <button onClick={goBack} aria-label="Назад" title="Назад"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15">
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm shadow-lg shadow-blue-600/30">
@@ -1379,8 +1379,8 @@ ${lines}${expense ? `
 
           {activeRightPanels > 0 && (
             <aside
-              className="hidden min-w-0 gap-4 overflow-hidden xl:grid xl:self-start" style={{height:"calc(100dvh - 245px)"}}
-              style={{ gridTemplateRows: rightPanelRows }}
+              className="hidden min-w-0 gap-4 overflow-hidden xl:grid xl:self-start"
+              style={{ height: "calc(100dvh - 245px)", gridTemplateRows: rightPanelRows }}
             >
               {sidePanels.recent && (
                 <div className="flex min-h-[220px] flex-col overflow-hidden rounded-[1.25rem] border border-white/10 bg-white/[0.06] p-4">

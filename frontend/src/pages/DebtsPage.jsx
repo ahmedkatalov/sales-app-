@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, History, ReceiptText } from "lucide-react";
 import { del, get, post } from "../api";
+import EmptyState from "../components/EmptyState";
 import { formatMoney } from "../utils/format";
 
 export default function DebtsPage() {
@@ -153,7 +154,7 @@ export default function DebtsPage() {
         <div className="absolute bottom-[-150px] right-[-120px] h-[380px] w-[380px] rounded-full bg-violet-600/20 blur-3xl" />
       </div>
 
-      <div className="relative z-10">
+      <div className="relative z-10 mx-auto w-full max-w-[1400px]">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="text-sm font-bold text-blue-400">Клиенты</p>
@@ -429,9 +430,16 @@ export default function DebtsPage() {
         </div>
 
         {!filtered.length && (
-          <div className="mt-4 rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-10 text-center text-slate-400 shadow-2xl backdrop-blur">
-            Клиентов с долгами пока нет
-          </div>
+          <EmptyState
+            className="mt-4"
+            icon={<ReceiptText size={26} />}
+            title={query.trim() ? "Клиент не найден" : "Долгов пока нет"}
+            text={
+              query.trim()
+                ? "По вашему запросу ничего не нашлось. Измените имя клиента."
+                : "Здесь появятся клиенты с открытыми и закрытыми долгами."
+            }
+          />
         )}
       </div>
     </div>

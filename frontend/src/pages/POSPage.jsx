@@ -1055,6 +1055,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 <input
                   value={discount}
                   onChange={(e) => setDiscount(e.target.value)}
+                  inputMode="decimal"
                   placeholder="Скидка %"
                   className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 font-bold text-white outline-none placeholder:text-slate-500"
                 />
@@ -1211,6 +1212,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               <input
                 value={paidAmount}
                 onChange={(e) => setPaidAmount(e.target.value)}
+                inputMode="decimal"
                 placeholder="Сколько дал клиент, необязательно"
                 className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
               />
@@ -1464,6 +1466,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               onChange={(e) =>
                 setNewProduct((p) => ({ ...p, cost: e.target.value }))
               }
+              inputMode="decimal"
               placeholder="Себестоимость"
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
               readOnly={safe_recipe.length > 0}
@@ -1474,6 +1477,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               onChange={(e) =>
                 setNewProduct((p) => ({ ...p, price: e.target.value }))
               }
+              inputMode="decimal"
               placeholder="Цена продажи"
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
             />
@@ -1508,7 +1512,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 return (
                   <div key={index} className="flex flex-col gap-2 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
                     {/* Переключатель режима */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button type="button"
                         onClick={() => updateRecipeRow(index, "mode", "warehouse")}
                         className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 min-h-[40px] text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>

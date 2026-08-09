@@ -101,7 +101,7 @@ export default function CardsPage() {
           </p>
         </div>
 
-        <div className="rounded-[28px] border border-violet-500/30 bg-violet-500/10 p-5 shadow-2xl">
+        <div className="col-span-2 rounded-[28px] border border-violet-500/30 bg-violet-500/10 p-5 shadow-2xl sm:col-span-1">
           <p className="text-xs font-black uppercase tracking-wide text-violet-200">
             Статус
           </p>
@@ -181,7 +181,7 @@ export default function CardsPage() {
 
                     <button
                       onClick={() => remove(card.id)}
-                      className="rounded-2xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm font-black text-red-300 transition hover:bg-red-500/15"
+                      className="shrink-0 rounded-2xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-sm font-black text-red-300 transition hover:bg-red-500/15"
                     >
                       Удалить
                     </button>

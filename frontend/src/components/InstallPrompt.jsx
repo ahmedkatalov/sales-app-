@@ -65,12 +65,12 @@ export default function InstallPrompt() {
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] p-3 sm:p-4"
       style={{ paddingBottom: "calc(var(--nav-h, 0px) + env(safe-area-inset-bottom, 0px) + 12px)" }}>
       <div className="animate-toast pointer-events-auto relative mx-auto max-w-sm rounded-2xl border border-white/12 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-xl">
-        <button onClick={dismiss} aria-label="Закрыть"
-          className="absolute right-2 top-2 rounded-lg p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white">
+        <button onClick={dismiss} aria-label="Закрыть" title="Закрыть"
+          className="absolute right-1.5 top-1.5 inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white">
           <X size={18} />
         </button>
 
-        <div className="flex items-start gap-3 pr-6">
+        <div className="flex items-start gap-3 pr-8">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-lg shadow-blue-600/30">
             <ShoppingCart size={24} strokeWidth={2.6} />
           </div>

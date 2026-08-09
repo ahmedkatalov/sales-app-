@@ -185,7 +185,7 @@ export default function AppearancePage() {
             <button type="button" onClick={() => setImportOpen((v) => !v)} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10">
               <Upload size={16} /> Импорт
             </button>
-            <button type="button" onClick={onReset} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10" title="Сбросить оформление">
+            <button type="button" onClick={onReset} aria-label="Сбросить оформление" className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10" title="Сбросить оформление">
               <RotateCcw size={16} />
             </button>
           </div>
@@ -366,8 +366,8 @@ export default function AppearancePage() {
                     <button type="button" onClick={() => applyCustom(t)} className="rounded-xl bg-blue-500/15 px-3 py-1.5 text-xs font-black text-blue-300 transition hover:bg-blue-500/25">
                       <Check size={14} className="inline" /> Применить
                     </button>
-                    <button type="button" onClick={() => duplicateTheme(t.id)} title="Дублировать" className="grid h-8 w-8 place-items-center rounded-xl bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"><Copy size={14} /></button>
-                    <button type="button" onClick={() => { if (confirm(`Удалить тему «${t.name}»?`)) deleteTheme(t.id); }} title="Удалить" className="grid h-8 w-8 place-items-center rounded-xl bg-red-500/10 text-red-300 transition hover:bg-red-500/20"><Trash2 size={14} /></button>
+                    <button type="button" onClick={() => duplicateTheme(t.id)} aria-label="Дублировать тему" title="Дублировать" className="grid h-8 w-8 place-items-center rounded-xl bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"><Copy size={14} /></button>
+                    <button type="button" onClick={() => { if (confirm(`Удалить тему «${t.name}»?`)) deleteTheme(t.id); }} aria-label="Удалить тему" title="Удалить" className="grid h-8 w-8 place-items-center rounded-xl bg-red-500/10 text-red-300 transition hover:bg-red-500/20"><Trash2 size={14} /></button>
                   </div>
                 );
               })}
