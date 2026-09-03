@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, Boxes, Check, Lightbulb, Package, Pencil, Settings, Trash2, TrendingUp, Wallet, X, Zap } from "lucide-react";
-import { del, get, post, put } from "../api";
+import { AlertTriangle, Boxes, Check, Copy, Lightbulb, Package, Pencil, Settings, Trash2, TrendingUp, Wallet, X, Zap } from "lucide-react";
+import { del, get, post, put, getSession } from "../api";
 import Modal from "../components/Modal";
+import MenuTransferModal from "../components/MenuTransferModal";
 import EmptyState from "../components/EmptyState";
 import { formatMoney, money, num } from "../utils/format";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
@@ -172,6 +173,8 @@ export default function WorkPage() {
   const [aiAdvisorEnabled, setAiAdvisorEnabled] = useState(true);
   const aiDebounceRef = useRef(null);
   const [importModal, setImportModal] = useState(false);
+  const [transferModal, setTransferModal] = useState(false);
+  const isOwner = (getSession()?.role || "") === "owner";
   const [editModal, setEditModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [editRecipe, setEditRecipe] = useState([]);
@@ -802,6 +805,16 @@ export default function WorkPage() {
               <Settings size={16} /> Типы и папки
             </button>
 
+            {isOwner && (
+              <button
+                onClick={() => setTransferModal(true)}
+                title="Скопировать меню в другую точку"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 backdrop-blur transition hover:bg-white/10 sm:rounded-2xl sm:px-4 sm:py-3 sm:font-black sm:text-base sm:text-slate-100"
+              >
+                <Copy size={16} /> Перенос в точку
+              </button>
+            )}
+
             <button
               onClick={() => setImportModal(true)}
               className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 backdrop-blur transition hover:bg-white/10 sm:rounded-2xl sm:px-4 sm:py-3 sm:font-black sm:text-base sm:text-slate-100"
@@ -1134,6 +1147,8 @@ export default function WorkPage() {
       >
         + Товар
       </button>
+
+      {transferModal && <MenuTransferModal onClose={() => setTransferModal(false)} />}
 
       {filterModal && (
         <Modal title="Фильтр товаров">

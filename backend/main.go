@@ -136,6 +136,10 @@ func main() {
 	auth.PUT("/menu-products/:id", updateMenuProduct)
 	auth.DELETE("/menu-products/:id", deleteMenuProduct)
 
+	// Перенос (копирование) меню между точками владельца
+	auth.GET("/menu/overview", getMenuOverview)
+	auth.POST("/menu/copy", copyMenuBetweenWorkspaces)
+
 	auth.POST("/sales", createSale)
 	auth.GET("/sales", getSales)
 	auth.GET("/sales/stats", getSalesStats)
