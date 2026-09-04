@@ -219,16 +219,6 @@ export default function EmployeesPage() {
         )}
       </div>
 
-      {/* Резерв под плавающую кнопку, чтобы она не перекрывала последнюю карточку на телефоне */}
-      <div className="h-16 sm:hidden" aria-hidden="true" />
-
-      <button
-        onClick={createEmployee}
-        style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 10px)" }}
-        className="fixed left-4 right-4 z-30 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-2xl sm:hidden"
-      >
-        + Добавить сотрудника
-      </button>
     </div>
   );
 }

@@ -1026,7 +1026,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     onClick={() => decreaseCartItem(i.productId)}
                     aria-label="Уменьшить количество"
                     title="Уменьшить количество"
-                    className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/8 font-black text-white transition active:scale-95 hover:bg-white/15"
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/8 font-black text-white transition active:scale-95 hover:bg-white/15"
                   >
                     <Minus size={18} strokeWidth={3}/>
                   </button>
@@ -1034,7 +1034,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     onClick={() => increaseCartItem(i.productId)}
                     aria-label="Увеличить количество"
                     title="Увеличить количество"
-                    className="flex h-10 w-10 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/12 font-black text-blue-300 transition active:scale-95 hover:bg-blue-500/20"
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/12 font-black text-blue-300 transition active:scale-95 hover:bg-blue-500/20"
                   >
                     <Plus size={18} strokeWidth={3}/>
                   </button>

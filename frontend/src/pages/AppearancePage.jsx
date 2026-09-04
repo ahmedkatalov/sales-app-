@@ -275,7 +275,7 @@ export default function AppearancePage() {
                 <div className="flex flex-wrap justify-end gap-1.5">
                   {ACCENTS.map((c) => (
                     <button key={c} type="button" onClick={() => update({ accent: c })} title={c}
-                      className={`h-7 w-7 rounded-full border-2 transition ${(ap.accent || "").toLowerCase() === c ? "scale-110 border-white" : "border-white/20 hover:scale-105"}`}
+                      className={`h-9 w-9 rounded-full border-2 transition ${(ap.accent || "").toLowerCase() === c ? "scale-110 border-white" : "border-white/20 hover:scale-105"}`}
                       style={{ background: c }} />
                   ))}
                 </div>
@@ -357,7 +357,7 @@ export default function AppearancePage() {
                 const a = t.appearance || {};
                 const dots = [a.accent || "#3b82f6", a.accent2 || "#8b5cf6", a.success || "#10b981"];
                 return (
-                  <div key={t.id} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
+                  <div key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2.5">
                     <span className="flex -space-x-1.5">
                       {dots.map((c, i) => <span key={i} className="h-6 w-6 rounded-full border-2 border-slate-900" style={{ background: c }} />)}
                     </span>
@@ -366,8 +366,8 @@ export default function AppearancePage() {
                     <button type="button" onClick={() => applyCustom(t)} className="rounded-xl bg-blue-500/15 px-3 py-1.5 text-xs font-black text-blue-300 transition hover:bg-blue-500/25">
                       <Check size={14} className="inline" /> Применить
                     </button>
-                    <button type="button" onClick={() => duplicateTheme(t.id)} aria-label="Дублировать тему" title="Дублировать" className="grid h-8 w-8 place-items-center rounded-xl bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"><Copy size={14} /></button>
-                    <button type="button" onClick={() => { if (confirm(`Удалить тему «${t.name}»?`)) deleteTheme(t.id); }} aria-label="Удалить тему" title="Удалить" className="grid h-8 w-8 place-items-center rounded-xl bg-red-500/10 text-red-300 transition hover:bg-red-500/20"><Trash2 size={14} /></button>
+                    <button type="button" onClick={() => duplicateTheme(t.id)} aria-label="Дублировать тему" title="Дублировать" className="grid h-10 w-10 place-items-center rounded-xl bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"><Copy size={14} /></button>
+                    <button type="button" onClick={() => { if (confirm(`Удалить тему «${t.name}»?`)) deleteTheme(t.id); }} aria-label="Удалить тему" title="Удалить" className="grid h-10 w-10 place-items-center rounded-xl bg-red-500/10 text-red-300 transition hover:bg-red-500/20"><Trash2 size={14} /></button>
                   </div>
                 );
               })}

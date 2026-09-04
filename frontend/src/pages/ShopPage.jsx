@@ -371,7 +371,7 @@ export default function ShopPage() {
       <div className="relative flex min-h-screen flex-col gap-4 p-3 pb-nav sm:p-5 xl:grid xl:grid-cols-[1fr_430px]">
         <main
           className="flex min-w-0 flex-col overflow-hidden rounded-4xl border border-white/10 bg-white/4 shadow-2xl shadow-black/20 backdrop-blur-2xl"
-          style={{ height: "calc(100vh - var(--nav-h) - env(safe-area-inset-bottom,0px) - 24px)" }}
+          style={{ height: "calc(100dvh - env(safe-area-inset-bottom,0px) - 24px)" }}
         >
           <div className="shrink-0 border-b border-white/10 p-4 sm:p-6">
             <div className="flex items-center justify-between gap-3">
@@ -498,7 +498,7 @@ export default function ShopPage() {
         type="button"
         onClick={() => setCartOpen(true)}
         className="fixed left-4 right-4 z-40 flex items-center justify-between rounded-3xl bg-linear-to-r from-cyan-400 to-blue-500 px-5 py-3.5 font-black text-slate-950 shadow-2xl shadow-cyan-500/30 xl:hidden"
-        style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 10px)" }}
+        style={{ bottom: "calc(env(safe-area-inset-bottom,0px) + 16px)" }}
       >
         <span className="flex items-center gap-2 text-sm"><ShoppingCart size={16} strokeWidth={2.4} /> Корзина · {safe_cart.reduce((s, i) => s + i.qty, 0)} шт</span>
         <span className="text-base">{formatMoney(total)}</span>
@@ -512,7 +512,7 @@ export default function ShopPage() {
           <div
             className="absolute inset-x-2 overflow-hidden rounded-t-3xl"
             style={{
-              bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom,0px))",
+              bottom: "calc(env(safe-area-inset-bottom,0px))",
               height: "86vh",
             }}
             onClick={(e) => e.stopPropagation()}

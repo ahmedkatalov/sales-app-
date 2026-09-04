@@ -1075,13 +1075,13 @@ export default function WorkPage() {
                     onClick={() => openEditProduct(p)}
                     aria-label="Изменить"
                     title="Изменить"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition hover:bg-blue-500/20"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition hover:bg-blue-500/20"
                   ><Pencil size={16} /></button>
                   <button
                     onClick={() => deleteProduct(p.id)}
                     aria-label="Удалить"
                     title="Удалить"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 font-black text-red-400 transition hover:bg-red-500/20"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-500/10 font-black text-red-400 transition hover:bg-red-500/20"
                   ><Trash2 size={16} /></button>
                 </div>
               </div>
@@ -1139,6 +1139,9 @@ export default function WorkPage() {
           </div>
         </div>
       </div>
+
+      {/* Резерв под плавающую кнопку, чтобы она не перекрывала итог/последнюю карточку на телефоне */}
+      <div className="h-24 sm:hidden" aria-hidden="true" />
 
       <button
         onClick={openProductModal}
@@ -1593,16 +1596,16 @@ export default function WorkPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <button type="button"
                         onClick={() => updateRecipeRow(index, "mode", "warehouse")}
-                        className={`inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
                         <Package size={14} /> Со склада
                       </button>
                       <button type="button"
                         onClick={() => { updateRecipeRow(index, "mode", "manual"); updateRecipeRow(index, "warehouseItemId", ""); }}
-                        className={`inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
                         ✨ Вручную (AI)
                       </button>
                       <button type="button" onClick={() => removeRecipeRow(index)}
-                        className="ml-auto inline-flex min-h-[40px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-400 hover:bg-red-500/20">
+                        className="ml-auto inline-flex min-h-[44px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-400 hover:bg-red-500/20">
                         удалить
                       </button>
                     </div>
@@ -1761,15 +1764,15 @@ export default function WorkPage() {
                   <div key={index} className="flex flex-col gap-2 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
                     <div className="flex items-center gap-2">
                       <button type="button" onClick={() => updateEditRecipeRow(index, "mode", "warehouse")}
-                        className={`inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
                         <Package size={14} /> Со склада
                       </button>
                       <button type="button" onClick={() => { updateEditRecipeRow(index, "mode", "manual"); updateEditRecipeRow(index, "warehouseItemId", ""); }}
-                        className={`inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
                         ✨ Вручную (AI)
                       </button>
                       <button type="button" onClick={() => removeEditRecipeRow(index)}
-                        className="ml-auto inline-flex min-h-[40px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-400">удалить</button>
+                        className="ml-auto inline-flex min-h-[44px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-400">удалить</button>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-[1fr_90px_72px]">
                       {isManual ? (

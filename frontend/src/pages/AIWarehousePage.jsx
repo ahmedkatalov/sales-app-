@@ -1410,7 +1410,7 @@ ${lines}${expense ? `
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3 py-2.5">
               <div className="flex min-w-0 items-center gap-2">
                 <button onClick={goBack} aria-label="Назад" title="Назад"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15">
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm shadow-lg shadow-blue-600/30">
@@ -1428,10 +1428,10 @@ ${lines}${expense ? `
                 <span className="hidden rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-black text-emerald-300 sm:inline">
                   AUTO SAVE
                 </span>
-                <button onClick={load} aria-label="Обновить" title="Обновить" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15"><RefreshCw size={16} strokeWidth={2.4} /></button>
+                <button onClick={load} aria-label="Обновить" title="Обновить" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15"><RefreshCw size={16} strokeWidth={2.4} /></button>
                 <Link to="/warehouse" className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white transition hover:bg-white/15">Склад →</Link>
                 <button onClick={exitChat} aria-label="Закрыть помощника" title="Закрыть (Esc)"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition hover:bg-red-500/20 hover:text-red-300">
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition hover:bg-red-500/20 hover:text-red-300">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
               </div>
