@@ -12,6 +12,9 @@ export const num = (value) => {
 
 export const money = (value) => Number(value || 0);
 
+// Безопасный массив: избавляет от повторяющегося `Array.isArray(x) ? x : []` перед .map/.reduce.
+export const asArray = (v) => (Array.isArray(v) ? v : []);
+
 // Целые числа показываем без копеек (300, а не 300,00),
 // дробные — до 2 знаков без хвостовых нулей (0,06; 120,5).
 export const formatMoney = (value) =>

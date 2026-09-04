@@ -3,10 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { RefreshCw, X, Send, FileDown } from "lucide-react";
 import { get, getCurrentWorkspace, getSession, post } from "../api";
 import { formatMoney, num } from "../utils/format";
-
-const UNIT_LABELS = { g: "г", kg: "кг", ml: "мл", l: "л", pcs: "шт", bottle: "бут", pack: "упак", box: "кор" };
-const CONTAINER_UNITS = ["box", "pack", "bottle"];
-const unitLabel = (unit) => UNIT_LABELS[unit] || unit || "";
+import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
+import { escHtml, printHtmlDocument } from "../utils/print";
 
 
 const normalizeText = (text) => String(text || "").replace(/ё/g, "е").replace(/,/g, ".").replace(/\s+/g, " ").trim();
@@ -765,7 +763,7 @@ function RichText({ text }) {
 function exportTextToPdf(text) {
   const ws = getCurrentWorkspace?.() || {};
   const business = ws.name || ws.companyName || ws.workspaceName || "NoorCoffe";
-  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  const esc = escHtml;
   const inline = (s) => esc(s)
     .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
     .replace(/__([^_\n]+)__/g, "<strong>$1</strong>")
@@ -806,12 +804,7 @@ function exportTextToPdf(text) {
     `<h1>${esc(title)}</h1>` +
     `<div class="content">${body}</div>` +
     `<p class="foot">Сформировано в NoorCoffe · AI-ассистент</p></body></html>`;
-  const w = window.open("", "_blank");
-  if (!w) { window.notify?.("Разрешите всплывающие окна, чтобы сохранить PDF", "error"); return; }
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  setTimeout(() => { w.print(); }, 350);
+  printHtmlDocument(html);
 }
 
 function Message({ msg, onPdf }) {

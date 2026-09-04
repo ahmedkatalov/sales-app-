@@ -3,19 +3,9 @@ import { createPortal } from "react-dom";
 import { get, getSession, post } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, money, num } from "../utils/format";
+import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
 import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb } from "lucide-react";
-
-const UNIT_LABELS = {
-  g: "г",
-  kg: "кг",
-  ml: "мл",
-  l: "л",
-  pcs: "шт",
-  bottle: "бут",
-  pack: "упак",
-  box: "кор",
-};
 
 const RECIPE_UNITS = [
   ["g", "г"],
@@ -370,25 +360,6 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     if (!q) return custs.slice(0, 5);
     return custs.filter((c) => String(c.name || "").toLowerCase().includes(q)).slice(0, 5);
   }, [debtCustomers, debtName]);
-
-  const getWarehouseUnitCost = (item) => {
-    const direct =
-      item?.unitCost ??
-      item?.unit_cost ??
-      item?.costPerUnit ??
-      item?.cost_per_unit;
-
-    if (direct !== undefined && direct !== null && Number(direct) > 0) {
-      return money(direct);
-    }
-
-    const totalPrice = money(item?.price || item?.purchasePrice || 0);
-    const quantity = num(item?.initialQuantity || item?.quantity || 0);
-
-    if (!quantity) return 0;
-
-    return totalPrice / quantity;
-  };
 
   const recipeCost = useMemo(() => {
     const rcp = Array.isArray(recipe) ? recipe : [];

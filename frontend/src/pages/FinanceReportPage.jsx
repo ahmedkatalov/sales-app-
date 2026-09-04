@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { get, put } from "../api";
 import { formatMoney, num } from "../utils/format";
+import { csvCell, downloadCsv } from "../utils/csv";
+import { escHtml, printHtmlDocument } from "../utils/print";
 import Modal from "../components/Modal";
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -143,11 +145,6 @@ export default function FinanceReportPage() {
 
   const exportCSV = () => {
     if (!rep) return;
-    const cell = (t) => {
-      let s = String(t ?? "");
-      if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; // защита от формульной инъекции
-      return `"${s.replaceAll('"', '""')}"`;
-    };
     const m = (v) => String(num(v)).replace(".", ","); // десятичная запятая для Excel-RU
     const rows = [
       ["Раздел", "Показатель", "Значение"],
@@ -178,21 +175,14 @@ export default function FinanceReportPage() {
       ["Позиция", "Должны владельцу", m(pos.owedToOwner)],
       ["Позиция", "Чистая позиция", m(pos.netPosition)],
     ];
-    const csv = rows.map((r) => r.map(cell).join(";")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `finance_${range.from || "all"}_${range.to || "all"}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`finance_${range.from || "all"}_${range.to || "all"}.csv`, rows.map((r) => r.map(csvCell)));
     window.notify?.("Отчёт выгружен в CSV", "success");
   };
 
   // Печать / PDF: собираем чистый светлый документ в новом окне (не воюем с тёмной темой).
   const printReport = () => {
     if (!rep) return;
-    const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    const esc = escHtml;
     const section = (title, items) =>
       `<h2>${esc(title)}</h2><table>` +
       items.map(([l, v, strong]) => `<tr class="${strong ? "t" : ""}"><td>${esc(l)}</td><td class="n">${esc(formatMoney(v))}</td></tr>`).join("") +
@@ -224,12 +214,7 @@ export default function FinanceReportPage() {
         ["Чистая позиция", pos.netPosition, true],
       ]) +
       `<p class="foot">Сформировано в NoorCoffe</p></body></html>`;
-    const w = window.open("", "_blank");
-    if (!w) { window.notify?.("Разрешите всплывающие окна, чтобы распечатать", "error"); return; }
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 350);
+    printHtmlDocument(html);
   };
 
   const PRESETS = [

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Calendar, Clock, CreditCard, Trophy } from "lucide-react";
+import { csvCell, csvNum, downloadCsv } from "../utils/csv";
 import {
   Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -152,21 +153,14 @@ export default function EmployeeAnalyticsPage() {
 
   const exportCsv = () => {
     // Текст: экранируем кавычки + гасим формульную инъекцию (=,+,-,@); числа: запятая-десятичная (русский Excel).
-    const cell = (v) => { let t = String(v ?? ""); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return `"${t.replaceAll('"', '""')}"`; };
-    const csvNum = (v) => `"${String(num(v)).replace(".", ",")}"`;
-    const head = ["Продавец", "Выручка", "Чеки", "Средний чек", "Наличные", "Переводы", "Долг", "Товаров", "Скидки", "Крупнейший чек", "Доля %"].map(cell);
+    const head = ["Продавец", "Выручка", "Чеки", "Средний чек", "Наличные", "Переводы", "Долг", "Товаров", "Скидки", "Крупнейший чек", "Доля %"].map(csvCell);
     const rows = employees.map((e) => [
-      cell(e.name),
+      csvCell(e.name),
       csvNum(e.revenue), csvNum(e.orders), csvNum(Math.round(num(e.aov))),
       csvNum(e.cash), csvNum(e.transfer), csvNum(e.debt),
       csvNum(e.itemsSold), csvNum(e.discounts), csvNum(e.biggestSale), csvNum(Math.round(num(e.share))),
     ]);
-    const csv = [head, ...rows].map((r) => r.join(";")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `sotrudniki_${from || "all"}_${to || "all"}.csv`; a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`sotrudniki_${from || "all"}_${to || "all"}.csv`, [head, ...rows]);
     window.notify?.("Отчёт выгружен в CSV", "success");
   };
 

@@ -5,17 +5,7 @@ import Modal from "../components/Modal";
 import EmptyState from "../components/EmptyState";
 import { formatMoney, money, num } from "../utils/format";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
-
-const UNIT_LABELS = {
-  g: "г",
-  kg: "кг",
-  ml: "мл",
-  l: "л",
-  pcs: "шт",
-  bottle: "бут",
-  pack: "упак",
-  box: "кор",
-};
+import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
 
 const SMART_UNIT_SETTINGS = {
   g: { controlMode: "approximate", lossPercent: "3", inventoryMethod: "average", packagingQuantity: "1", hint: "Для граммов система считает расход приблизительно и добавляет небольшой запас на потери." },
@@ -53,8 +43,6 @@ const getSmartModeLabel = (item) => {
 
 
 
-const CONTAINER_UNITS = ["box", "pack", "bottle"];
-
 
 const computeWarehouseAmount = (form) => {
   const purchaseQty = num(form.purchaseQuantity || form.quantity);
@@ -82,19 +70,17 @@ const computeWarehouseAmount = (form) => {
   } else if (purchaseUnit === "g" || purchaseUnit === "ml" || purchaseUnit === "pcs") {
     unit = purchaseUnit;
     total = purchaseQty;
-    detail = `${purchaseQty} ${unitLabelPlain(unit)}`;
+    detail = `${purchaseQty} ${unitLabel(unit)}`;
   } else if (CONTAINER_UNITS.includes(purchaseUnit)) {
     unit = storageUnit;
     total = purchaseQty * unitsPerPackage * basePerUnit;
-    detail = `${purchaseQty} ${unitLabelPlain(purchaseUnit)} × ${unitsPerPackage} шт внутри × ${basePerUnit} ${unitLabelPlain(unit)} = ${total} ${unitLabelPlain(unit)}`;
+    detail = `${purchaseQty} ${unitLabel(purchaseUnit)} × ${unitsPerPackage} шт внутри × ${basePerUnit} ${unitLabel(unit)} = ${total} ${unitLabel(unit)}`;
   }
 
   const unitCost = total > 0 ? num(form.price) / total : 0;
 
-  return { quantity: total, unit, unitCost, text: `На склад попадёт: ${total} ${unitLabelPlain(unit)}`, detail };
+  return { quantity: total, unit, unitCost, text: `На склад попадёт: ${total} ${unitLabel(unit)}`, detail };
 };
-
-const unitLabelPlain = (unit) => UNIT_LABELS[unit] || unit || "";
 
 const smartPieceSuggestion = (name, unit) => {
   const n = String(name || "").toLowerCase();
@@ -203,8 +189,6 @@ export default function WarehousePage() {
 
   const isHidden = (item) =>
     Boolean(item.hidden || item.isHidden || item.is_hidden);
-
-  const unitLabel = (unit) => UNIT_LABELS[unit] || unit || "";
 
   const minQty = (item) => num(item.minQuantity ?? item.min_quantity);
 

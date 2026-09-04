@@ -6,6 +6,8 @@ import Modal from "../components/Modal";
 import MenuTransferModal from "../components/MenuTransferModal";
 import EmptyState from "../components/EmptyState";
 import { formatMoney, money, num } from "../utils/format";
+import { getWarehouseUnitCost } from "../utils/menu";
+import { csvCell, csvNum, downloadCsv } from "../utils/csv";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
 
 
@@ -275,25 +277,6 @@ export default function WorkPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTypeId, folders, selectedFolderId]);
-
-  const getWarehouseUnitCost = (item) => {
-    const direct =
-      item?.unitCost ??
-      item?.unit_cost ??
-      item?.costPerUnit ??
-      item?.cost_per_unit;
-
-    if (direct !== undefined && direct !== null && Number(direct) > 0) {
-      return money(direct);
-    }
-
-    const totalPrice = money(item?.price || item?.purchasePrice || 0);
-    const quantity = num(item?.initialQuantity || item?.quantity || 0);
-
-    if (!quantity) return 0;
-
-    return totalPrice / quantity;
-  };
 
   // Считаем продажи по СТАБИЛЬНОМУ id товара и по ЗАПИСАННЫМ в чеке суммам
   // (price/cost/total на момент продажи), а не по текущей цене — иначе смена
@@ -691,14 +674,6 @@ export default function WorkPage() {
     setEditRecipe(rows => [...rows, { warehouseItemId: "", ingredientName: "", quantity: "", quantityUnit: "g", mode }]);
   };
 
-  const csvCell = (value) => {
-    let text = String(value ?? "");
-    if (/^[=+\-@\t\r]/.test(text)) text = "'" + text; // нейтрализуем формульную инъекцию (=,+,-,@)
-    return `"${text.replaceAll('"', '""')}"`;
-  };
-  // Числовая ячейка: запятая-десятичная без группировки — русский Excel читает как число.
-  const csvNum = (value) => `"${String(num(value)).replace(".", ",")}"`;
-
   const exportExcel = () => {
     const rows = [
       ["Название", "Тип", "Папка", "Себестоимость", "Цена продажи", "Кол-во", "Выручка", "Чистая прибыль"].map(csvCell),
@@ -714,19 +689,7 @@ export default function WorkPage() {
       ]),
     ];
 
-    const csv =
-      "\uFEFF" + rows.map((row) => row.join(";")).join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-
-    a.href = url;
-    a.download = `menu-products-${selectedType?.name || "all"}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadCsv(`menu-products-${selectedType?.name || "all"}.csv`, rows);
   };
 
   const findOrCreateType = async (name) => {
