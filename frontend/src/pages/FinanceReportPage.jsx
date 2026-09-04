@@ -213,7 +213,7 @@ export default function FinanceReportPage() {
         ["Клиенты должны нам", pos.receivables], ["Должны поставщикам", pos.payables], ["Должны владельцу", pos.owedToOwner],
         ["Чистая позиция", pos.netPosition, true],
       ]) +
-      `<p class="foot">Сформировано в NoorCoffe</p></body></html>`;
+      `<p class="foot">Сформировано в Okvion Sales</p></body></html>`;
     printHtmlDocument(html);
   };
 

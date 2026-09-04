@@ -181,7 +181,7 @@ export default function HomePage() {
       get(`/finance/opening`).catch(() => null), // для онбординга стартовых балансов
     ]);
     try {
-      const dismissed = localStorage.getItem("noorcoffe_opening_onboarding_dismissed");
+      const dismissed = localStorage.getItem("okvion_opening_onboarding_dismissed");
       setShowOnboarding(!dismissed && !!opening && opening.isSet === false);
     } catch { /* ignore */ }
     if (!todayS && !monthS) setError("Не удалось загрузить сводку. Попробуйте обновить.");
@@ -287,7 +287,7 @@ export default function HomePage() {
                 className="rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-2.5 text-sm font-black text-white shadow-lg transition hover:brightness-110">
                 Настроить
               </NavLink>
-              <button onClick={() => { try { localStorage.setItem("noorcoffe_opening_onboarding_dismissed", "1"); } catch { /* ignore */ } setShowOnboarding(false); }}
+              <button onClick={() => { try { localStorage.setItem("okvion_opening_onboarding_dismissed", "1"); } catch { /* ignore */ } setShowOnboarding(false); }}
                 className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-white/10">
                 Позже
               </button>

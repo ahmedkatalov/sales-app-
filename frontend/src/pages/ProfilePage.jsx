@@ -503,7 +503,7 @@ export default function ProfilePage({
               <div>
                 <h3 className="text-2xl font-black">Доступы к точкам</h3>
                 <p className="mt-1 text-sm text-slate-400">
-                  Дайте одному пользователю доступ к нескольким точкам. Например, сделайте Ахмеда администратором и «Noor Coffee», и «Ресторана Адол».
+                  Дайте одному пользователю доступ к нескольким точкам. Например, сделайте Ахмеда администратором и «Okvion Sales», и «Ресторана Адол».
                 </p>
               </div>
               <button type="button" onClick={() => setModal("grantAccess")} className="btn-blue shrink-0">
@@ -819,7 +819,7 @@ export default function ProfilePage({
           <Modal title="Добавить доступ к точке" wide>
             <div className="mb-4 flex items-start gap-2 rounded-2xl border border-violet-400/20 bg-violet-500/10 p-4 text-sm text-violet-200">
               <Lightbulb size={16} className="mt-0.5 shrink-0" />
-              <span>Например: Ахмед уже есть как аккаунт «Noor Coffee» — дай ему доступ ещё и к «Ресторану Адол».</span>
+              <span>Например: Ахмед уже есть как аккаунт «Okvion Sales» — дай ему доступ ещё и к «Ресторану Адол».</span>
             </div>
             <div className="grid gap-3">
               <label className="block">
@@ -944,7 +944,7 @@ export default function ProfilePage({
             <label className="block">
               <span className="mb-2 block text-sm font-black text-slate-400">Название точки</span>
               <input value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)}
-                placeholder="Например: Noor Coffee Центр" autoFocus
+                placeholder="Например: Okvion Sales Центр" autoFocus
                 className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
             </label>
             <div className="mt-6 flex gap-3">
@@ -981,7 +981,7 @@ export default function ProfilePage({
                 <span className="mb-2 block text-sm font-black text-slate-400">Логин</span>
                 <input value={accountForm.username}
                   onChange={(e) => setAccountForm((p) => ({ ...p, username: e.target.value }))}
-                  placeholder="Например: ahmed@noor.ru"
+                  placeholder="Например: ahmed@okvion.ru"
                   className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
               </label>
               <label className="block">

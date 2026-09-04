@@ -762,7 +762,7 @@ function RichText({ text }) {
 // (через окно печати браузера → «Сохранить как PDF»). Без внешних библиотек.
 function exportTextToPdf(text) {
   const ws = getCurrentWorkspace?.() || {};
-  const business = ws.name || ws.companyName || ws.workspaceName || "NoorCoffe";
+  const business = ws.name || ws.companyName || ws.workspaceName || "Okvion Sales";
   const esc = escHtml;
   const inline = (s) => esc(s)
     .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
@@ -803,7 +803,7 @@ function exportTextToPdf(text) {
     `<div class="brand"><b>${esc(business)}</b><span>${esc(dateStr)}</span></div>` +
     `<h1>${esc(title)}</h1>` +
     `<div class="content">${body}</div>` +
-    `<p class="foot">Сформировано в NoorCoffe · AI-ассистент</p></body></html>`;
+    `<p class="foot">Сформировано в Okvion Sales · AI-ассистент</p></body></html>`;
   printHtmlDocument(html);
 }
 
