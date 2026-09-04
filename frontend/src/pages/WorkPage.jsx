@@ -6,6 +6,8 @@ import Modal from "../components/Modal";
 import MenuTransferModal from "../components/MenuTransferModal";
 import EmptyState from "../components/EmptyState";
 import { formatMoney, money, num } from "../utils/format";
+import { getWarehouseUnitCost } from "../utils/menu";
+import { csvCell, csvNum, downloadCsv } from "../utils/csv";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
 
 
@@ -182,6 +184,10 @@ export default function WorkPage() {
 
   const [newTypeName, setNewTypeName] = useState("");
   const [newFolderName, setNewFolderName] = useState("");
+  // Быстрое создание тип/папки прямо в форме товара (не выходя из неё)
+  const [showNewType, setShowNewType] = useState(false);
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [quickName, setQuickName] = useState("");
   const [productForm, setProductForm] = useState({
     name: "",
     cost: "",
@@ -271,25 +277,6 @@ export default function WorkPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTypeId, folders, selectedFolderId]);
-
-  const getWarehouseUnitCost = (item) => {
-    const direct =
-      item?.unitCost ??
-      item?.unit_cost ??
-      item?.costPerUnit ??
-      item?.cost_per_unit;
-
-    if (direct !== undefined && direct !== null && Number(direct) > 0) {
-      return money(direct);
-    }
-
-    const totalPrice = money(item?.price || item?.purchasePrice || 0);
-    const quantity = num(item?.initialQuantity || item?.quantity || 0);
-
-    if (!quantity) return 0;
-
-    return totalPrice / quantity;
-  };
 
   // Считаем продажи по СТАБИЛЬНОМУ id товара и по ЗАПИСАННЫМ в чеке суммам
   // (price/cost/total на момент продажи), а не по текущей цене — иначе смена
@@ -494,6 +481,65 @@ export default function WorkPage() {
     setError("");
     setProductForm({ name: "", cost: "", price: "", isExtra: false });
     setRecipe([]);
+    setShowNewType(false);
+    setShowNewFolder(false);
+    setQuickName("");
+    setProductModal(true);
+  };
+
+  // Создать тип прямо в форме товара — без выхода в «Типы и папки»
+  const quickCreateType = async () => {
+    const name = quickName.trim();
+    if (!name) return;
+    try {
+      const created = await post("/product-types", { name });
+      await load();
+      setSelectedTypeId(String(created.id));
+      setSelectedFolderId("");
+      setShowNewType(false);
+      setQuickName("");
+      setError("");
+    } catch (e) { setError(e?.message || "Не удалось создать тип"); }
+  };
+
+  // Создать папку прямо в форме товара
+  const quickCreateFolder = async () => {
+    if (!selectedTypeId) { setError("Сначала выберите тип"); return; }
+    const name = quickName.trim();
+    if (!name) return;
+    try {
+      const created = await post("/product-categories", { name, typeId: Number(selectedTypeId) });
+      await load();
+      setSelectedFolderId(String(created.id));
+      setShowNewFolder(false);
+      setQuickName("");
+      setError("");
+    } catch (e) { setError(e?.message || "Не удалось создать папку"); }
+  };
+
+  // Дублировать товар: открыть форму создания, заполненную данными существующего
+  const duplicateProduct = (p) => {
+    setAiSuggestion(null);
+    setError("");
+    setShowNewType(false);
+    setShowNewFolder(false);
+    setQuickName("");
+    if (p.typeId) setSelectedTypeId(String(p.typeId));
+    if (p.categoryId) setSelectedFolderId(String(p.categoryId));
+    setProductForm({
+      name: p.name ? `${p.name} (копия)` : "",
+      cost: String(p.cost || ""),
+      price: String(p.price || ""),
+      isExtra: !!p.isExtra,
+    });
+    const rows = (Array.isArray(p.recipe) ? p.recipe : []).map((r) => ({
+      warehouseItemId: r.warehouseItemId || r.warehouse_item_id || "",
+      ingredientName: r.ingredientName || r.itemName || r.item_name || "",
+      quantity: String(r.quantity || ""),
+      quantityUnit: r.quantityUnit || r.quantity_unit || r.unit || "g",
+      mode: (r.warehouseItemId || r.warehouse_item_id) ? "warehouse" : "manual",
+    }));
+    setRecipe(rows);
     setProductModal(true);
   };
 
@@ -628,14 +674,6 @@ export default function WorkPage() {
     setEditRecipe(rows => [...rows, { warehouseItemId: "", ingredientName: "", quantity: "", quantityUnit: "g", mode }]);
   };
 
-  const csvCell = (value) => {
-    let text = String(value ?? "");
-    if (/^[=+\-@\t\r]/.test(text)) text = "'" + text; // нейтрализуем формульную инъекцию (=,+,-,@)
-    return `"${text.replaceAll('"', '""')}"`;
-  };
-  // Числовая ячейка: запятая-десятичная без группировки — русский Excel читает как число.
-  const csvNum = (value) => `"${String(num(value)).replace(".", ",")}"`;
-
   const exportExcel = () => {
     const rows = [
       ["Название", "Тип", "Папка", "Себестоимость", "Цена продажи", "Кол-во", "Выручка", "Чистая прибыль"].map(csvCell),
@@ -651,19 +689,7 @@ export default function WorkPage() {
       ]),
     ];
 
-    const csv =
-      "\uFEFF" + rows.map((row) => row.join(";")).join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-
-    a.href = url;
-    a.download = `menu-products-${selectedType?.name || "all"}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadCsv(`menu-products-${selectedType?.name || "all"}.csv`, rows);
   };
 
   const findOrCreateType = async (name) => {
@@ -1007,6 +1033,14 @@ export default function WorkPage() {
                         <Pencil size={14} /> Изменить
                       </button>
                       <button
+                        onClick={() => duplicateProduct(p)}
+                        aria-label="Дублировать"
+                        title="Дублировать"
+                        className="rounded-xl bg-white/5 px-3 py-2 font-black text-slate-300 transition hover:bg-white/10"
+                      >
+                        <Copy size={16} />
+                      </button>
+                      <button
                         onClick={() => deleteProduct(p.id)}
                         aria-label="Удалить"
                         title="Удалить"
@@ -1075,13 +1109,19 @@ export default function WorkPage() {
                     onClick={() => openEditProduct(p)}
                     aria-label="Изменить"
                     title="Изменить"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition hover:bg-blue-500/20"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition hover:bg-blue-500/20"
                   ><Pencil size={16} /></button>
+                  <button
+                    onClick={() => duplicateProduct(p)}
+                    aria-label="Дублировать"
+                    title="Дублировать"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 text-slate-300 transition hover:bg-white/10"
+                  ><Copy size={16} /></button>
                   <button
                     onClick={() => deleteProduct(p.id)}
                     aria-label="Удалить"
                     title="Удалить"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 font-black text-red-400 transition hover:bg-red-500/20"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-500/10 font-black text-red-400 transition hover:bg-red-500/20"
                   ><Trash2 size={16} /></button>
                 </div>
               </div>
@@ -1139,6 +1179,9 @@ export default function WorkPage() {
           </div>
         </div>
       </div>
+
+      {/* Резерв под плавающую кнопку, чтобы она не перекрывала итог/последнюю карточку на телефоне */}
+      <div className="h-24 sm:hidden" aria-hidden="true" />
 
       <button
         onClick={openProductModal}
@@ -1421,31 +1464,61 @@ export default function WorkPage() {
       {productModal && (
         <Modal title="Новая позиция меню" wide>
           <div className="grid gap-3 sm:grid-cols-2">
-            <select
-              value={selectedTypeId}
-              onChange={(e) => setSelectedTypeId(e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 sm:col-span-2"
-            >
-              <option value="">Выбери тип</option>
-              {safeTypes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <div className="sm:col-span-2">
+              <div className="flex gap-2">
+                <select
+                  value={selectedTypeId}
+                  onChange={(e) => { setSelectedTypeId(e.target.value); setSelectedFolderId(""); setShowNewType(false); }}
+                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
+                >
+                  <option value="">Выбери тип</option>
+                  {safeTypes.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
+                </select>
+                <button type="button"
+                  onClick={() => { setShowNewType((v) => !v); setShowNewFolder(false); setQuickName(""); }}
+                  className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.06] px-3.5 text-sm font-black text-blue-300 transition hover:bg-white/10">
+                  {showNewType ? "Отмена" : "+ Новый"}
+                </button>
+              </div>
+              {showNewType && (
+                <div className="mt-2 flex gap-2">
+                  <input autoFocus value={quickName} onChange={(e) => setQuickName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); quickCreateType(); } }}
+                    placeholder="Название типа (напр. Напитки)"
+                    className="min-w-0 flex-1 rounded-2xl border border-blue-400/40 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
+                  <button type="button" onClick={quickCreateType}
+                    className="shrink-0 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 font-black text-white transition hover:brightness-110">Создать</button>
+                </div>
+              )}
+            </div>
 
-            <select
-              value={selectedFolderId}
-              onChange={(e) => setSelectedFolderId(e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 sm:col-span-2"
-            >
-              <option value="">Выбери папку</option>
-              {typeFolders.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
+            <div className="sm:col-span-2">
+              <div className="flex gap-2">
+                <select
+                  value={selectedFolderId}
+                  onChange={(e) => { setSelectedFolderId(e.target.value); setShowNewFolder(false); }}
+                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
+                >
+                  <option value="">Выбери папку</option>
+                  {typeFolders.map((f) => (<option key={f.id} value={f.id}>{f.name}</option>))}
+                </select>
+                <button type="button"
+                  onClick={() => { if (!selectedTypeId) { setError("Сначала выберите тип"); return; } setShowNewFolder((v) => !v); setShowNewType(false); setQuickName(""); }}
+                  className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.06] px-3.5 text-sm font-black text-blue-300 transition hover:bg-white/10">
+                  {showNewFolder ? "Отмена" : "+ Новая"}
+                </button>
+              </div>
+              {showNewFolder && (
+                <div className="mt-2 flex gap-2">
+                  <input autoFocus value={quickName} onChange={(e) => setQuickName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); quickCreateFolder(); } }}
+                    placeholder="Название папки (напр. Кофе)"
+                    className="min-w-0 flex-1 rounded-2xl border border-blue-400/40 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
+                  <button type="button" onClick={quickCreateFolder}
+                    className="shrink-0 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 font-black text-white transition hover:brightness-110">Создать</button>
+                </div>
+              )}
+            </div>
 
             <div className="relative sm:col-span-2">
               <input
@@ -1593,16 +1666,16 @@ export default function WorkPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <button type="button"
                         onClick={() => updateRecipeRow(index, "mode", "warehouse")}
-                        className={`inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
                         <Package size={14} /> Со склада
                       </button>
                       <button type="button"
                         onClick={() => { updateRecipeRow(index, "mode", "manual"); updateRecipeRow(index, "warehouseItemId", ""); }}
-                        className={`inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
                         ✨ Вручную (AI)
                       </button>
                       <button type="button" onClick={() => removeRecipeRow(index)}
-                        className="ml-auto inline-flex min-h-[40px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-400 hover:bg-red-500/20">
+                        className="ml-auto inline-flex min-h-[44px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-400 hover:bg-red-500/20">
                         удалить
                       </button>
                     </div>
@@ -1761,15 +1834,15 @@ export default function WorkPage() {
                   <div key={index} className="flex flex-col gap-2 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
                     <div className="flex items-center gap-2">
                       <button type="button" onClick={() => updateEditRecipeRow(index, "mode", "warehouse")}
-                        className={`inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
                         <Package size={14} /> Со склада
                       </button>
                       <button type="button" onClick={() => { updateEditRecipeRow(index, "mode", "manual"); updateEditRecipeRow(index, "warehouseItemId", ""); }}
-                        className={`inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
                         ✨ Вручную (AI)
                       </button>
                       <button type="button" onClick={() => removeEditRecipeRow(index)}
-                        className="ml-auto inline-flex min-h-[40px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-400">удалить</button>
+                        className="ml-auto inline-flex min-h-[44px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-400">удалить</button>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-[1fr_90px_72px]">
                       {isManual ? (

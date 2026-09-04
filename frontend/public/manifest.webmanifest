@@ -1,7 +1,7 @@
 {
   "id": "/?source=pwa",
-  "name": "NoorCoffe — Касса и склад",
-  "short_name": "NoorCoffe",
+  "name": "Okvion Sales — Касса и склад",
+  "short_name": "Okvion Sales",
   "description": "Касса, склад, долги, расходы и аналитика кофейни — в одном приложении.",
   "start_url": "/?source=pwa",
   "scope": "/",

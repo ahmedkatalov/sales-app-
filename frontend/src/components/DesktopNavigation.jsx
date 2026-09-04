@@ -4,7 +4,6 @@ import ThemeToggle from "./ThemeToggle";
 
 export default function DesktopNavigation({
   links = [],
-  session,
   isOwner,
   isAdmin,
   isWorker,

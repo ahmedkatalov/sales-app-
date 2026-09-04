@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ShoppingCart, X } from "lucide-react";
 import { isStandalone, isIOSSafari, canPromptInstall, promptInstall } from "../pwa";
 
-const DISMISS_KEY = "noorcoffe_pwa_dismissed";
+const DISMISS_KEY = "okvion_pwa_dismissed";
 const COOLDOWN = 14 * 24 * 60 * 60 * 1000; // не надоедаем: 14 дней после закрытия
 
 function recentlyDismissed() {
@@ -77,7 +77,7 @@ export default function InstallPrompt() {
           <div className="min-w-0">
             {ios ? (
               <>
-                <p className="text-sm font-black text-white">Установить NoorCoffe</p>
+                <p className="text-sm font-black text-white">Установить Okvion Sales</p>
                 <p className="mt-1 text-xs leading-snug text-slate-400">
                   Нажмите <ShareGlyph /> «Поделиться», затем «На&nbsp;экран „Домой“».
                 </p>

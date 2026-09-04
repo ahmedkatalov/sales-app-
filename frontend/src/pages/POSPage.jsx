@@ -3,19 +3,9 @@ import { createPortal } from "react-dom";
 import { get, getSession, post } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, money, num } from "../utils/format";
+import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
 import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb } from "lucide-react";
-
-const UNIT_LABELS = {
-  g: "г",
-  kg: "кг",
-  ml: "мл",
-  l: "л",
-  pcs: "шт",
-  bottle: "бут",
-  pack: "упак",
-  box: "кор",
-};
 
 const RECIPE_UNITS = [
   ["g", "г"],
@@ -370,25 +360,6 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     if (!q) return custs.slice(0, 5);
     return custs.filter((c) => String(c.name || "").toLowerCase().includes(q)).slice(0, 5);
   }, [debtCustomers, debtName]);
-
-  const getWarehouseUnitCost = (item) => {
-    const direct =
-      item?.unitCost ??
-      item?.unit_cost ??
-      item?.costPerUnit ??
-      item?.cost_per_unit;
-
-    if (direct !== undefined && direct !== null && Number(direct) > 0) {
-      return money(direct);
-    }
-
-    const totalPrice = money(item?.price || item?.purchasePrice || 0);
-    const quantity = num(item?.initialQuantity || item?.quantity || 0);
-
-    if (!quantity) return 0;
-
-    return totalPrice / quantity;
-  };
 
   const recipeCost = useMemo(() => {
     const rcp = Array.isArray(recipe) ? recipe : [];
@@ -947,7 +918,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 md:min-h-0 md:w-[300px] md:shrink-0 lg:w-[360px] xl:w-[400px]">
+        <div className="flex flex-col gap-3 md:min-h-0 md:w-[270px] md:shrink-0 lg:w-[340px] xl:w-[400px]">
         {/* Денежная смена (касса) — панель активной смены. Открыть/закрыть смену — на странице «Смены». */}
         {cashShift && (
           <div className="rounded-4xl border border-emerald-400/25 bg-emerald-500/[0.06] p-4 sm:p-5">
@@ -1026,7 +997,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     onClick={() => decreaseCartItem(i.productId)}
                     aria-label="Уменьшить количество"
                     title="Уменьшить количество"
-                    className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/8 font-black text-white transition active:scale-95 hover:bg-white/15"
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/8 font-black text-white transition active:scale-95 hover:bg-white/15"
                   >
                     <Minus size={18} strokeWidth={3}/>
                   </button>
@@ -1034,7 +1005,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     onClick={() => increaseCartItem(i.productId)}
                     aria-label="Увеличить количество"
                     title="Увеличить количество"
-                    className="flex h-10 w-10 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/12 font-black text-blue-300 transition active:scale-95 hover:bg-blue-500/20"
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/12 font-black text-blue-300 transition active:scale-95 hover:bg-blue-500/20"
                   >
                     <Plus size={18} strokeWidth={3}/>
                   </button>

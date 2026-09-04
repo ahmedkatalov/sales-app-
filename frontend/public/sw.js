@@ -1,5 +1,5 @@
 /*
- * NoorCoffe service worker.
+ * Okvion Sales service worker.
  * Цели: сделать приложение устанавливаемым (PWA) и дать базовую офлайн-заглушку,
  * НЕ ломая продакшн, который отдаётся Vite dev-сервером (HMR, /src/, /@vite, /api/).
  *
@@ -12,7 +12,7 @@
  * Чтобы принудительно обновить кэш у всех — поднимите VERSION.
  */
 const VERSION = 'v1';
-const CACHE = `noorcoffe-${VERSION}`;
+const CACHE = `okvion-sales-${VERSION}`;
 const SHELL = ['/', '/manifest.webmanifest', '/pwa-192.png', '/pwa-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {

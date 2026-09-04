@@ -55,7 +55,7 @@ export function useIngredientSuggest(text, warehouseItems, { minLen = 2, debounc
 
     timer.current = setTimeout(async () => {
       setLoading(true);
-      let list = [];
+      let list;
       try {
         const r = await post("/ai/ingredient/suggest", {
           text: norm,

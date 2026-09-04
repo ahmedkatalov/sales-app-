@@ -507,7 +507,7 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
           {statCards.map((card, i) => (
             <StatBox key={card.title} card={card} className={i === statCards.length - 1 && statCards.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""} />
           ))}

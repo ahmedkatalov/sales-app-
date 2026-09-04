@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Calendar, Clock, CreditCard, Trophy } from "lucide-react";
+import { csvCell, csvNum, downloadCsv } from "../utils/csv";
 import {
   Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -9,7 +10,6 @@ import { formatMoney, localISO } from "../utils/format";
 
 const num = (v) => Number(v || 0);
 const money = (v) => formatMoney(num(v));
-const WEEKDAYS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 const WEEKDAYS_FULL = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 
 const monthBounds = () => {
@@ -72,7 +72,7 @@ function ChartCard({ title, subtitle, children, right }) {
 
 // ── страница ─────────────────────────────────────────────────────────
 export default function EmployeeAnalyticsPage() {
-  const [mStart, mEnd] = useMemo(monthBounds, []);
+  const [mStart, mEnd] = useMemo(() => monthBounds(), []);
   const [from, setFrom] = useState(mStart);
   const [to, setTo] = useState(mEnd);
   const [preset, setPreset] = useState("month");
@@ -152,21 +152,14 @@ export default function EmployeeAnalyticsPage() {
 
   const exportCsv = () => {
     // Текст: экранируем кавычки + гасим формульную инъекцию (=,+,-,@); числа: запятая-десятичная (русский Excel).
-    const cell = (v) => { let t = String(v ?? ""); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return `"${t.replaceAll('"', '""')}"`; };
-    const csvNum = (v) => `"${String(num(v)).replace(".", ",")}"`;
-    const head = ["Продавец", "Выручка", "Чеки", "Средний чек", "Наличные", "Переводы", "Долг", "Товаров", "Скидки", "Крупнейший чек", "Доля %"].map(cell);
+    const head = ["Продавец", "Выручка", "Чеки", "Средний чек", "Наличные", "Переводы", "Долг", "Товаров", "Скидки", "Крупнейший чек", "Доля %"].map(csvCell);
     const rows = employees.map((e) => [
-      cell(e.name),
+      csvCell(e.name),
       csvNum(e.revenue), csvNum(e.orders), csvNum(Math.round(num(e.aov))),
       csvNum(e.cash), csvNum(e.transfer), csvNum(e.debt),
       csvNum(e.itemsSold), csvNum(e.discounts), csvNum(e.biggestSale), csvNum(Math.round(num(e.share))),
     ]);
-    const csv = [head, ...rows].map((r) => r.join(";")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `sotrudniki_${from || "all"}_${to || "all"}.csv`; a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`sotrudniki_${from || "all"}_${to || "all"}.csv`, [head, ...rows]);
     window.notify?.("Отчёт выгружен в CSV", "success");
   };
 
@@ -243,11 +236,11 @@ export default function EmployeeAnalyticsPage() {
 
         {/* KPI */}
         {loading && !data ? (
-          <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+          <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
             {[0, 1, 2, 3, 4].map((i) => <Skel key={i} className="h-[92px]" />)}
           </div>
         ) : (
-          <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+          <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
             <KpiTile label="Выручка" value={money(totals.revenue)} sub="за период" tone="blue" />
             <KpiTile label="Чеки" value={num(totals.orders).toLocaleString("ru-RU")} sub={`${num(totals.activeEmployees)} продавцов`} tone="violet" />
             <KpiTile label="Средний чек" value={money(totals.aov)} sub="на один чек" tone="emerald" />

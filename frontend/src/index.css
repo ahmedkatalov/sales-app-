@@ -279,6 +279,21 @@ button, a, select, input, textarea, label, [role="button"] {
   touch-action: manipulation;
 }
 
+/* Ощущение нативного приложения:
+   • нет синей вспышки при тапе;
+   • нет «резинки»/pull-to-refresh при перетягивании страницы;
+   • нет системного меню по долгому нажатию на кнопки/навигацию;
+   • кнопки/нав не выделяются как текст (поля ввода и контент — выделяются как обычно). */
+html { -webkit-tap-highlight-color: transparent; }
+html, body { overscroll-behavior-y: none; }
+button, a, [role="button"], nav, label {
+  -webkit-touch-callout: none;
+}
+button, [role="button"], nav {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* dvh — динамическая высота вьюпорта */
 .h-screen-mobile { height: 100dvh; }
 
