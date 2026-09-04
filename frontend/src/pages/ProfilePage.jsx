@@ -13,6 +13,7 @@ import {
 } from "../api";
 import Modal from "../components/Modal";
 import ThemeToggle from "../components/ThemeToggle";
+import InstallAppCard from "../components/InstallAppCard";
 
 // Все доступные страницы для назначения прав
 const ALL_PAGES = [
@@ -415,6 +416,8 @@ export default function ProfilePage({
             </button>
           </div>
         </header>
+
+        <div className="mb-5"><InstallAppCard /></div>
 
         {error && (
           <div role="alert" className="mb-4 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 font-bold text-red-300">{error}</div>
