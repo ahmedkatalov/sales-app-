@@ -182,6 +182,10 @@ export default function WorkPage() {
 
   const [newTypeName, setNewTypeName] = useState("");
   const [newFolderName, setNewFolderName] = useState("");
+  // Быстрое создание тип/папки прямо в форме товара (не выходя из неё)
+  const [showNewType, setShowNewType] = useState(false);
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [quickName, setQuickName] = useState("");
   const [productForm, setProductForm] = useState({
     name: "",
     cost: "",
@@ -494,6 +498,65 @@ export default function WorkPage() {
     setError("");
     setProductForm({ name: "", cost: "", price: "", isExtra: false });
     setRecipe([]);
+    setShowNewType(false);
+    setShowNewFolder(false);
+    setQuickName("");
+    setProductModal(true);
+  };
+
+  // Создать тип прямо в форме товара — без выхода в «Типы и папки»
+  const quickCreateType = async () => {
+    const name = quickName.trim();
+    if (!name) return;
+    try {
+      const created = await post("/product-types", { name });
+      await load();
+      setSelectedTypeId(String(created.id));
+      setSelectedFolderId("");
+      setShowNewType(false);
+      setQuickName("");
+      setError("");
+    } catch (e) { setError(e?.message || "Не удалось создать тип"); }
+  };
+
+  // Создать папку прямо в форме товара
+  const quickCreateFolder = async () => {
+    if (!selectedTypeId) { setError("Сначала выберите тип"); return; }
+    const name = quickName.trim();
+    if (!name) return;
+    try {
+      const created = await post("/product-categories", { name, typeId: Number(selectedTypeId) });
+      await load();
+      setSelectedFolderId(String(created.id));
+      setShowNewFolder(false);
+      setQuickName("");
+      setError("");
+    } catch (e) { setError(e?.message || "Не удалось создать папку"); }
+  };
+
+  // Дублировать товар: открыть форму создания, заполненную данными существующего
+  const duplicateProduct = (p) => {
+    setAiSuggestion(null);
+    setError("");
+    setShowNewType(false);
+    setShowNewFolder(false);
+    setQuickName("");
+    if (p.typeId) setSelectedTypeId(String(p.typeId));
+    if (p.categoryId) setSelectedFolderId(String(p.categoryId));
+    setProductForm({
+      name: p.name ? `${p.name} (копия)` : "",
+      cost: String(p.cost || ""),
+      price: String(p.price || ""),
+      isExtra: !!p.isExtra,
+    });
+    const rows = (Array.isArray(p.recipe) ? p.recipe : []).map((r) => ({
+      warehouseItemId: r.warehouseItemId || r.warehouse_item_id || "",
+      ingredientName: r.ingredientName || r.itemName || r.item_name || "",
+      quantity: String(r.quantity || ""),
+      quantityUnit: r.quantityUnit || r.quantity_unit || r.unit || "g",
+      mode: (r.warehouseItemId || r.warehouse_item_id) ? "warehouse" : "manual",
+    }));
+    setRecipe(rows);
     setProductModal(true);
   };
 
@@ -1007,6 +1070,14 @@ export default function WorkPage() {
                         <Pencil size={14} /> Изменить
                       </button>
                       <button
+                        onClick={() => duplicateProduct(p)}
+                        aria-label="Дублировать"
+                        title="Дублировать"
+                        className="rounded-xl bg-white/5 px-3 py-2 font-black text-slate-300 transition hover:bg-white/10"
+                      >
+                        <Copy size={16} />
+                      </button>
+                      <button
                         onClick={() => deleteProduct(p.id)}
                         aria-label="Удалить"
                         title="Удалить"
@@ -1077,6 +1148,12 @@ export default function WorkPage() {
                     title="Изменить"
                     className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition hover:bg-blue-500/20"
                   ><Pencil size={16} /></button>
+                  <button
+                    onClick={() => duplicateProduct(p)}
+                    aria-label="Дублировать"
+                    title="Дублировать"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 text-slate-300 transition hover:bg-white/10"
+                  ><Copy size={16} /></button>
                   <button
                     onClick={() => deleteProduct(p.id)}
                     aria-label="Удалить"
@@ -1424,31 +1501,61 @@ export default function WorkPage() {
       {productModal && (
         <Modal title="Новая позиция меню" wide>
           <div className="grid gap-3 sm:grid-cols-2">
-            <select
-              value={selectedTypeId}
-              onChange={(e) => setSelectedTypeId(e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 sm:col-span-2"
-            >
-              <option value="">Выбери тип</option>
-              {safeTypes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <div className="sm:col-span-2">
+              <div className="flex gap-2">
+                <select
+                  value={selectedTypeId}
+                  onChange={(e) => { setSelectedTypeId(e.target.value); setSelectedFolderId(""); setShowNewType(false); }}
+                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
+                >
+                  <option value="">Выбери тип</option>
+                  {safeTypes.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
+                </select>
+                <button type="button"
+                  onClick={() => { setShowNewType((v) => !v); setShowNewFolder(false); setQuickName(""); }}
+                  className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.06] px-3.5 text-sm font-black text-blue-300 transition hover:bg-white/10">
+                  {showNewType ? "Отмена" : "+ Новый"}
+                </button>
+              </div>
+              {showNewType && (
+                <div className="mt-2 flex gap-2">
+                  <input autoFocus value={quickName} onChange={(e) => setQuickName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); quickCreateType(); } }}
+                    placeholder="Название типа (напр. Напитки)"
+                    className="min-w-0 flex-1 rounded-2xl border border-blue-400/40 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
+                  <button type="button" onClick={quickCreateType}
+                    className="shrink-0 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 font-black text-white transition hover:brightness-110">Создать</button>
+                </div>
+              )}
+            </div>
 
-            <select
-              value={selectedFolderId}
-              onChange={(e) => setSelectedFolderId(e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 sm:col-span-2"
-            >
-              <option value="">Выбери папку</option>
-              {typeFolders.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
+            <div className="sm:col-span-2">
+              <div className="flex gap-2">
+                <select
+                  value={selectedFolderId}
+                  onChange={(e) => { setSelectedFolderId(e.target.value); setShowNewFolder(false); }}
+                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
+                >
+                  <option value="">Выбери папку</option>
+                  {typeFolders.map((f) => (<option key={f.id} value={f.id}>{f.name}</option>))}
+                </select>
+                <button type="button"
+                  onClick={() => { if (!selectedTypeId) { setError("Сначала выберите тип"); return; } setShowNewFolder((v) => !v); setShowNewType(false); setQuickName(""); }}
+                  className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.06] px-3.5 text-sm font-black text-blue-300 transition hover:bg-white/10">
+                  {showNewFolder ? "Отмена" : "+ Новая"}
+                </button>
+              </div>
+              {showNewFolder && (
+                <div className="mt-2 flex gap-2">
+                  <input autoFocus value={quickName} onChange={(e) => setQuickName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); quickCreateFolder(); } }}
+                    placeholder="Название папки (напр. Кофе)"
+                    className="min-w-0 flex-1 rounded-2xl border border-blue-400/40 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
+                  <button type="button" onClick={quickCreateFolder}
+                    className="shrink-0 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 font-black text-white transition hover:brightness-110">Создать</button>
+                </div>
+              )}
+            </div>
 
             <div className="relative sm:col-span-2">
               <input
