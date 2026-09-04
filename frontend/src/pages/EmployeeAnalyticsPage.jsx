@@ -10,7 +10,6 @@ import { formatMoney, localISO } from "../utils/format";
 
 const num = (v) => Number(v || 0);
 const money = (v) => formatMoney(num(v));
-const WEEKDAYS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 const WEEKDAYS_FULL = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
 
 const monthBounds = () => {
@@ -73,7 +72,7 @@ function ChartCard({ title, subtitle, children, right }) {
 
 // ── страница ─────────────────────────────────────────────────────────
 export default function EmployeeAnalyticsPage() {
-  const [mStart, mEnd] = useMemo(monthBounds, []);
+  const [mStart, mEnd] = useMemo(() => monthBounds(), []);
   const [from, setFrom] = useState(mStart);
   const [to, setTo] = useState(mEnd);
   const [preset, setPreset] = useState("month");

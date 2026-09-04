@@ -150,11 +150,11 @@ export function buildCss(appearanceInput) {
   if (a.accent2) { root.push(`--brand-2:${a.accent2};`); }
 
   // Скругление (только при отличии от дефолта — иначе не трогаем токены Tailwind)
-  const rr = clamp(Number(a.radius) ?? 1, 0, 1.8);
+  const rr = clamp(Number(a.radius ?? 1), 0, 1.8);
   if (rr !== 1) for (const [k, v] of Object.entries(RADIUS_BASE)) root.push(`--radius-${k}:${(v * rr).toFixed(4)}rem;`);
 
   // Стекло (сила размытия)
-  const bl = clamp(Number(a.blur) ?? 1, 0.2, 1.8);
+  const bl = clamp(Number(a.blur ?? 1), 0.2, 1.8);
   if (bl !== 1) for (const [k, v] of Object.entries(BLUR_BASE)) root.push(`--blur-${k}:${Math.round(v * bl)}px;`);
 
   // Плотность (базовый шаг отступов Tailwind)
@@ -162,7 +162,7 @@ export function buildCss(appearanceInput) {
   if (dens !== 1) root.push(`--spacing:${(0.25 * dens).toFixed(4)}rem;`);
 
   // Масштаб шрифта (через корневой font-size → все rem)
-  const fs = clamp(Number(a.fontScale) ?? 1, 0.85, 1.2);
+  const fs = clamp(Number(a.fontScale ?? 1), 0.85, 1.2);
   if (fs !== 1) root.push(`font-size:${(fs * 100).toFixed(1)}%;`);
 
   // Селектор html:root специфичнее обычного :root (0,1,1 против 0,1,0),
