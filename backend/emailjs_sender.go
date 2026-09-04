@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -28,7 +29,19 @@ func initEmailJS() {
 		TemplateID: strings.TrimSpace(os.Getenv("EMAILJS_TEMPLATE_ID")),
 		PublicKey:  strings.TrimSpace(os.Getenv("EMAILJS_PUBLIC_KEY")),
 		PrivateKey: strings.TrimSpace(os.Getenv("EMAILJS_PRIVATE_KEY")),
-		httpClient: &http.Client{Timeout: 15 * time.Second},
+		// Прямое соединение, БЕЗ системного прокси: на сервере переменные
+		// HTTP(S)_PROXY/ALL_PROXY могут быть заданы криво (socks5h://127.0.0.1:…),
+		// и тогда исходящий запрос к EmailJS зависает/падает, а код на почту не уходит.
+		httpClient: &http.Client{
+			Timeout: 15 * time.Second,
+			Transport: &http.Transport{
+				Proxy:                 nil,
+				DialContext:           (&net.Dialer{Timeout: 8 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
+				TLSHandshakeTimeout:   8 * time.Second,
+				ForceAttemptHTTP2:     true,
+				ResponseHeaderTimeout: 10 * time.Second,
+			},
+		},
 	}
 }
 

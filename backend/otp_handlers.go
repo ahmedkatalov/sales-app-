@@ -111,11 +111,14 @@ func requestLoginOTP(c *gin.Context) {
 		return
 	}
 
-	// 5. Отправляем письмо
-	if err := emailJSClient.SendOTP(email, code); err != nil {
-		// Не блокируем вход если EmailJS не работает — логируем ошибку
-		fmt.Printf("EmailJS error: %v\n", err)
-	}
+	// 5. Отправляем письмо В ФОНЕ. Код уже сохранён в БД, поэтому ответ клиенту
+	//    не должен ждать почту: иначе медленный/битый EmailJS держит запрос дольше,
+	//    чем таймаут фронтенда (12с), и вход падает с ошибкой «сервер не ответил».
+	go func() {
+		if err := emailJSClient.SendOTP(email, code); err != nil {
+			fmt.Printf("EmailJS error: %v\n", err)
+		}
+	}()
 
 	// Маскируем email для ответа: li***@coffee.com
 	maskedEmail := maskEmail(email)
