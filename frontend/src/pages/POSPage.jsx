@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { get, getSession, post } from "../api";
 import Modal from "../components/Modal";
+import PendingPaymentsModal from "../components/PendingPaymentsModal";
 import { formatMoney, money, num } from "../utils/format";
 import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
-import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb } from "lucide-react";
+import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock } from "lucide-react";
 
 const RECIPE_UNITS = [
   ["g", "г"],
@@ -235,6 +236,22 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     } catch { /* ignore */ }
   };
   useEffect(() => { loadCashShift(); }, []);
+
+  // «К оплате» прямо из кассы: счётчик отложенных чеков + модалка приёма оплаты.
+  const [pendingModal, setPendingModal] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const refreshPendingCount = useCallback(async () => {
+    try {
+      const r = await get("/pending-sales");
+      setPendingCount(Array.isArray(r) ? r.length : 0);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    refreshPendingCount();
+    const onChange = () => refreshPendingCount();
+    window.addEventListener("sales-pending-change", onChange);
+    return () => window.removeEventListener("sales-pending-change", onChange);
+  }, [refreshPendingCount]);
 
   // Кассовые движения — защита от двойного тапа (ref синхронный) + показ ошибки.
   const [shiftBusy, setShiftBusy] = useState(false);
@@ -674,6 +691,17 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <p className="text-[11px] font-bold text-blue-400 sm:text-sm">Касса</p>
             <h2 className="truncate text-base font-black leading-none text-white sm:text-xl">Магазин</h2>
           </div>
+          <button type="button" onClick={() => setPendingModal(true)}
+            aria-label="К оплате — отложенные чеки" title="К оплате — отложенные чеки"
+            className="relative flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-amber-400/25 bg-amber-500/10 px-3 font-black text-amber-200 transition hover:bg-amber-500/20 active:scale-95">
+            <Clock size={18} strokeWidth={2.4} />
+            <span className="hidden sm:inline">К оплате</span>
+            {pendingCount > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
+                {pendingCount > 99 ? "99+" : pendingCount}
+              </span>
+            )}
+          </button>
         </div>
 
         {isWorker ? (
@@ -705,6 +733,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           {error}
         </div>
       )}
+
+      {pendingModal && <PendingPaymentsModal onClose={() => { setPendingModal(false); refreshPendingCount(); }} />}
 
       <div className="flex flex-col gap-4 md:min-h-0 md:flex-1 md:flex-row">
         <div className="flex flex-col gap-3 md:min-h-0 md:flex-1">

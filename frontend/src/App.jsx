@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import {
   BarChart3,
@@ -20,25 +20,29 @@ import {
 } from "lucide-react";
 
 import { hydrateAppearance } from "./theme/engine";
-import HomePage from "./pages/HomePage";
-import EmployeeAnalyticsPage from "./pages/EmployeeAnalyticsPage";
-import FinanceReportPage from "./pages/FinanceReportPage";
-import AppearancePage from "./pages/AppearancePage";
-import WorkPage from "./pages/WorkPage";
-import ExpensesPage from "./pages/ExpensesPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
-import POSPage from "./pages/POSPage";
-import SalesAnalyticsPage from "./pages/SalesAnalyticsPage";
-import ProfilePage from "./pages/ProfilePage";
 import DesktopNavigation from "./components/DesktopNavigation";
 import ThemeToggle from "./components/ThemeToggle";
 import Modal from "./components/Modal";
 import InstallPrompt from "./components/InstallPrompt";
-import WarehousePage from "./pages/WarehousePage";
-import AIWarehousePage from "./pages/AIWarehousePage";
-import PendingPaymentsPage from "./pages/PendingPaymentsPage";
-import DebtsPage from "./pages/DebtsPage";
 import WorkspaceSelectPage from "./pages/WorkspaceSelectPage";
+
+// Ленивая загрузка страниц: каждая грузится только при переходе на неё.
+// Начальная загрузка (вход/касса) намного легче, а тяжёлый recharts (страницы
+// аналитики) не тянется, пока их не откроют — критично для планшетов/медленной сети.
+const HomePage = lazy(() => import("./pages/HomePage"));
+const EmployeeAnalyticsPage = lazy(() => import("./pages/EmployeeAnalyticsPage"));
+const FinanceReportPage = lazy(() => import("./pages/FinanceReportPage"));
+const AppearancePage = lazy(() => import("./pages/AppearancePage"));
+const WorkPage = lazy(() => import("./pages/WorkPage"));
+const ExpensesPage = lazy(() => import("./pages/ExpensesPage"));
+const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
+const POSPage = lazy(() => import("./pages/POSPage"));
+const SalesAnalyticsPage = lazy(() => import("./pages/SalesAnalyticsPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const WarehousePage = lazy(() => import("./pages/WarehousePage"));
+const AIWarehousePage = lazy(() => import("./pages/AIWarehousePage"));
+const PendingPaymentsPage = lazy(() => import("./pages/PendingPaymentsPage"));
+const DebtsPage = lazy(() => import("./pages/DebtsPage"));
 
 import {
   clearSession,
@@ -730,6 +734,14 @@ export default function App() {
           </div>
         </div>
 
+        <Suspense fallback={
+          <div className="grid min-h-[60vh] place-items-center">
+            <div className="flex items-center gap-3 text-slate-400">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-blue-400" />
+              <span className="text-sm font-bold">Загрузка…</span>
+            </div>
+          </div>
+        }>
         <Routes>
           <Route path="/" element={<Navigate to={isWorker ? "/pos" : "/home"} replace />} />
           <Route path="/home" element={isWorker ? <Navigate to="/pos" replace /> : <HomePage />} />
@@ -751,6 +763,7 @@ export default function App() {
           <Route path="/cards" element={<Navigate to="/profile" replace />} />
           <Route path="*" element={<Navigate to={isWorker ? "/pos" : "/home"} replace />} />
         </Routes>
+        </Suspense>
       </main>
 
       {mobileMoreOpen && mobileMoreLinks.length > 0 && (
