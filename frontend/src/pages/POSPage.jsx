@@ -918,7 +918,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 md:min-h-0 md:w-[300px] md:shrink-0 lg:w-[360px] xl:w-[400px]">
+        <div className="flex flex-col gap-3 md:min-h-0 md:w-[270px] md:shrink-0 lg:w-[340px] xl:w-[400px]">
         {/* Денежная смена (касса) — панель активной смены. Открыть/закрыть смену — на странице «Смены». */}
         {cashShift && (
           <div className="rounded-4xl border border-emerald-400/25 bg-emerald-500/[0.06] p-4 sm:p-5">

@@ -48,6 +48,35 @@ func deleteWorkspaceDataTx(tx *sql.Tx, dataID int) error {
 	return nil
 }
 
+// PUT /account — переименование владельца/компании (accounts.name → ownerName в сессии).
+// Только владелец, только своего аккаунта.
+func updateAccountName(c *gin.Context) {
+	if !requireOwner(c) {
+		return
+	}
+	owner := ownerAccountID(c)
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат данных"})
+		return
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Введите имя владельца"})
+		return
+	}
+	if r := []rune(name); len(r) > 60 {
+		name = strings.TrimSpace(string(r[:60]))
+	}
+	if _, err := db.Exec(`UPDATE accounts SET name = ? WHERE id = ?`, name, owner); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "name": name})
+}
+
 func getWorkspaces(c *gin.Context) {
 	ownerID := ownerAccountID(c)
 

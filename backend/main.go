@@ -73,6 +73,7 @@ func main() {
 	auth.GET("/workspaces", getWorkspaces)
 	auth.POST("/workspaces", createWorkspace)
 	auth.DELETE("/workspaces/:id", deleteWorkspace)
+	auth.PUT("/account", updateAccountName) // переименование владельца/компании
 	auth.GET("/workspace-access", getWorkspaceAccess)
 	auth.POST("/workspace-access", grantWorkspaceAccess)
 	auth.DELETE("/workspace-access/:id", revokeWorkspaceAccess)

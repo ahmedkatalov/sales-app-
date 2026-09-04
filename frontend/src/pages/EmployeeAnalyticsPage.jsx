@@ -236,11 +236,11 @@ export default function EmployeeAnalyticsPage() {
 
         {/* KPI */}
         {loading && !data ? (
-          <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+          <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
             {[0, 1, 2, 3, 4].map((i) => <Skel key={i} className="h-[92px]" />)}
           </div>
         ) : (
-          <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+          <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
             <KpiTile label="Выручка" value={money(totals.revenue)} sub="за период" tone="blue" />
             <KpiTile label="Чеки" value={num(totals.orders).toLocaleString("ru-RU")} sub={`${num(totals.activeEmployees)} продавцов`} tone="violet" />
             <KpiTile label="Средний чек" value={money(totals.aov)} sub="на один чек" tone="emerald" />

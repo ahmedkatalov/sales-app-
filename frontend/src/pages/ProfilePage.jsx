@@ -11,6 +11,7 @@ import {
   setCurrentProfile,
   setCurrentWorkspace,
 } from "../api";
+import { getSession, setSession } from "../api";
 import Modal from "../components/Modal";
 import ThemeToggle from "../components/ThemeToggle";
 import InstallAppCard from "../components/InstallAppCard";
@@ -64,6 +65,9 @@ export default function ProfilePage({
   const tabs = isOwner ? ownerTabs : isBranchAdmin ? adminTabs : workerTabs;
 
   const [activeTab, setActiveTab] = useState("overview");
+  const [ownerName, setOwnerName] = useState(session?.ownerName || "");
+  const [ownerSaving, setOwnerSaving] = useState(false);
+  const [ownerSaved, setOwnerSaved] = useState(false);
   const [workspaces,      setWorkspaces]      = useState([]);
   const [workspaceUsers,  setWorkspaceUsers]  = useState([]);
   const [workspaceAccess, setWorkspaceAccess] = useState([]);
@@ -389,6 +393,23 @@ export default function ProfilePage({
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  const saveOwnerName = async () => {
+    const name = ownerName.trim();
+    if (!name || ownerSaving) return;
+    setOwnerSaving(true);
+    try {
+      await put("/account", { name });
+      try { const s = getSession(); if (s) { s.ownerName = name; setSession(s); } } catch { /* ignore */ }
+      setOwnerSaved(true);
+      window.notify?.("Имя владельца обновлено", "success");
+      setTimeout(() => setOwnerSaved(false), 2500);
+    } catch (e) {
+      window.notify?.(e?.message || "Не удалось сохранить имя", "error");
+    } finally {
+      setOwnerSaving(false);
+    }
+  };
+
   return (
     <div className="relative min-h-screen pb-nav text-white sm:pb-10" style={{ WebkitTapHighlightColor: "transparent" }}>
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -458,10 +479,35 @@ export default function ProfilePage({
                 </div>
                 <div className="rounded-3xl bg-blue-500/10 p-5">
                   <p className="text-sm font-bold text-slate-400">{isOwner ? "Владелец" : "Сейчас работает"}</p>
-                  <p className="mt-1 text-2xl font-black text-blue-300">{currentWorker}</p>
+                  <p className="mt-1 text-2xl font-black text-blue-300">{isOwner ? (ownerName || currentWorker) : currentWorker}</p>
                 </div>
               </div>
             </div>
+
+            {isOwner && (
+              <div className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
+                <p className="text-sm font-bold text-blue-400">Владелец</p>
+                <h3 className="mt-1 text-xl font-black text-white">Имя владельца</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-400">Показывается в приветствии и отчётах. Можно указать имя человека или название компании.</p>
+                <div className="mt-4 flex flex-col gap-2.5">
+                  <input
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                    maxLength={60}
+                    placeholder="Например: Ахмед или Okvion Sales"
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
+                  />
+                  <button
+                    type="button"
+                    onClick={saveOwnerName}
+                    disabled={ownerSaving || !ownerName.trim() || ownerName.trim() === (session?.ownerName || "")}
+                    className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {ownerSaving ? "Сохраняю…" : ownerSaved ? "Сохранено ✓" : "Сохранить имя"}
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
         )}
 

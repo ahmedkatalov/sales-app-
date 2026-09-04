@@ -455,7 +455,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         )}
       </div>
 
-      <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
         <div className="rounded-2xl border border-red-400/25 bg-red-500/[0.08] p-3 backdrop-blur-xl sm:p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-500/20 text-red-300 sm:h-9 sm:w-9 sm:rounded-xl">₽</span>
