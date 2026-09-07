@@ -649,8 +649,31 @@ func getSales(c *gin.Context) {
 	// открытый rows держит единственное соединение и вызвал бы дедлок.
 	rows.Close()
 
-	for i := range list {
-		list[i].Items = getSaleItems(list[i].ID)
+	// Батч позиций вместо N+1: одним запросом тянем позиции всех загруженных продаж
+	// (через подзапрос по тому же WHERE — без лимита на число плейсхолдеров) и
+	// группируем по sale_id. Индекс idx_sale_items_sale делает это точечным.
+	if len(list) > 0 {
+		itemsBySale := map[int][]SaleItem{}
+		irows, ierr := db.Query(`
+			SELECT si.sale_id, si.product_id, si.name, si.type, si.qty, si.price, IFNULL(si.cost,0), si.total, IFNULL(si.is_extra,0)
+			FROM sale_items si
+			WHERE si.sale_id IN (SELECT s.id FROM sales s WHERE `+strings.Join(where, " AND ")+`)
+			ORDER BY si.id
+		`, args...)
+		if ierr == nil {
+			for irows.Next() {
+				var sid, isExtra int
+				var item SaleItem
+				if irows.Scan(&sid, &item.ProductID, &item.Name, &item.Type, &item.Qty, &item.Price, &item.Cost, &item.Total, &isExtra) == nil {
+					item.IsExtra = isExtra == 1
+					itemsBySale[sid] = append(itemsBySale[sid], item)
+				}
+			}
+			irows.Close()
+		}
+		for i := range list {
+			list[i].Items = itemsBySale[list[i].ID]
+		}
 	}
 
 	c.JSON(http.StatusOK, list)

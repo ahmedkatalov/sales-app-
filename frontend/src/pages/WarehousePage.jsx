@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Package, Eye, AlertTriangle, ChevronDown, RefreshCw, Trash2, Ban, History, Wallet, Plus } from "lucide-react";
 import { del, get, post, getCurrentWorkspace } from "../api";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import Modal from "../components/Modal";
 import EmptyState from "../components/EmptyState";
 import { formatMoney, money, num } from "../utils/format";
@@ -106,6 +107,7 @@ const smartPieceSuggestion = (name, unit) => {
 };
 
 export default function WarehousePage() {
+  const isXl = useMediaQuery("(min-width: 1280px)"); // рендерим таблицу ЛИБО карточки, не обе
   const [items, setItems] = useState([]);
   const [movements, setMovements] = useState([]);
   const [submitting, setSubmitting] = useState(false); // защита от двойного запроса + показ ошибки
@@ -717,7 +719,7 @@ export default function WarehousePage() {
             </thead>
 
             <tbody>
-              {visibleItems.map((item) => {
+              {isXl && visibleItems.map((item) => {
                 const hidden = isHidden(item);
                 const min = minQty(item);
                 const qty = num(item.quantity);
@@ -861,7 +863,7 @@ export default function WarehousePage() {
         </div>
 
         <div className="divide-y divide-white/10 xl:hidden">
-          {visibleItems.map((item) => {
+          {!isXl && visibleItems.map((item) => {
             const hidden = isHidden(item);
             const min = minQty(item);
             const qty = num(item.quantity);

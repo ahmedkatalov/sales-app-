@@ -6,6 +6,7 @@ import Modal from "../components/Modal";
 import MenuTransferModal from "../components/MenuTransferModal";
 import MenuPdfImportModal from "../components/MenuPdfImportModal";
 import EmptyState from "../components/EmptyState";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { formatMoney, money, num } from "../utils/format";
 import { getWarehouseUnitCost } from "../utils/menu";
 import { csvCell, csvNum, downloadCsv } from "../utils/csv";
@@ -70,20 +71,27 @@ function SmartIngredientInput({ value, onChange, warehouseItems = [], onSelectIt
   useEffect(() => {
     if (!open) return;
     updateRect();
-    const reposition = () => updateRect();
+    // Коалесим reposition через один кадр rAF — иначе getBoundingClientRect+setState
+    // дёргаются на КАЖДЫЙ пиксель скролла (джанк). Слушатели passive.
+    let raf = 0;
+    const reposition = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; updateRect(); });
+    };
     const onDown = (e) => {
       if (wrapRef.current?.contains(e.target)) return;
       if (e.target.closest?.("[data-ingredient-dropdown]")) return;
       setOpen(false);
     };
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, { capture: true, passive: true });
+    window.addEventListener("resize", reposition, { passive: true });
     document.addEventListener("mousedown", onDown);
     if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", reposition);
-      window.visualViewport.addEventListener("scroll", reposition);
+      window.visualViewport.addEventListener("resize", reposition, { passive: true });
+      window.visualViewport.addEventListener("scroll", reposition, { passive: true });
     }
     return () => {
+      if (raf) cancelAnimationFrame(raf);
       window.removeEventListener("scroll", reposition, true);
       window.removeEventListener("resize", reposition);
       document.removeEventListener("mousedown", onDown);
@@ -194,18 +202,6 @@ const needsBackendGuess = (inputUnit, storageUnit, packagingQuantity = 0) => {
 // Активна ли ширина xl (≥1280px). По ней рендерим ТОЛЬКО одну ветку каталога —
 // таблицу ИЛИ карточки, а не обе сразу: вдвое меньше DOM-узлов и реконсиляции,
 // особенно заметно при 5-секундном поллинге на планшете.
-function useMediaQuery(query) {
-  const get = () => typeof window !== "undefined" && window.matchMedia(query).matches;
-  const [match, setMatch] = useState(get);
-  useEffect(() => {
-    const mql = window.matchMedia(query);
-    const on = () => setMatch(mql.matches);
-    on();
-    mql.addEventListener("change", on);
-    return () => mql.removeEventListener("change", on);
-  }, [query]);
-  return match;
-}
 
 export default function WorkPage() {
   const [types, setTypes] = useState([]);
@@ -260,7 +256,26 @@ export default function WorkPage() {
   const loadingRef = useRef(false); // идёт ли загрузка (чтобы не наслаивать тики)
   const loadSeqRef = useRef(0);     // защита от гонки: устаревший ответ не затирает свежий
   const modalOpenRef = useRef(false); // открыта ли модалка — тогда поллинг паузим (замыкание видит актуальное через ref)
+  const sigRef = useRef({}); // подписи слайсов: setState только если данные реально изменились
   const isXl = useMediaQuery("(min-width: 1280px)");
+
+  // Ставим состояние ТОЛЬКО когда данные реально поменялись. Иначе ссылка массива
+  // остаётся прежней → React бейлит рендер, а цепочка useMemo (salesStatsByProduct →
+  // productRows → totals) не пересчитывается. Это убирает периодический фриз тика.
+  const setIfChanged = (key, next, setter) => {
+    const arr = Array.isArray(next) ? next : [];
+    let sig;
+    if (key === "sales") {
+      const last = arr[0]; // /sales отсортирован по id DESC — хватает первого + длины
+      sig = arr.length + "|" + (last ? `${last.id}:${last.total}` : "");
+    } else {
+      sig = arr.length + "|" + arr.map((x) => `${x.id}:${x.price ?? ""}:${x.cost ?? ""}:${x.hidden ? 1 : 0}:${x.name ?? ""}`).join(",");
+    }
+    if (sigRef.current[key] !== sig) {
+      sigRef.current[key] = sig;
+      setter(arr);
+    }
+  };
 
   const load = async () => {
     const seq = ++loadSeqRef.current;
@@ -277,12 +292,25 @@ export default function WorkPage() {
 
       if (seq !== loadSeqRef.current) return; // пришёл более свежий запрос
 
-      setTypes(typeList || []);
-      setFolders(folderList || []);
-      setProducts(productList || []);
-      setSales(salesList || []);
-      setWarehouseItems(warehouseList || []);
-      // По умолчанию показываем «Все товары» (selectedTypeId = "") — как на макете.
+      setIfChanged("types", typeList, setTypes);
+      setIfChanged("folders", folderList, setFolders);
+      setIfChanged("products", productList, setProducts);
+      setIfChanged("sales", salesList, setSales);
+      setIfChanged("warehouse", warehouseList, setWarehouseItems);
+    } finally {
+      loadingRef.current = false;
+    }
+  };
+
+  // Лёгкий тик поллинга: обновляем ТОЛЬКО продажи (единственное, что часто меняется).
+  const loadSales = async () => {
+    if (loadingRef.current) return;
+    const seq = ++loadSeqRef.current;
+    loadingRef.current = true;
+    try {
+      const salesList = await get("/sales").catch(() => null);
+      if (salesList == null || seq !== loadSeqRef.current) return;
+      setIfChanged("sales", salesList, setSales);
     } finally {
       loadingRef.current = false;
     }
@@ -291,14 +319,25 @@ export default function WorkPage() {
   useEffect(() => {
     load().catch((e) => setError(e.message));
 
+    // Каждые 20с обновляем ТОЛЬКО продажи — меню/склад/категории меняются редко и
+    // уже перезагружаются после правок (createType/save/delete → load()). Это вместо
+    // прежнего 5-секундного перезапроса всех 5 эндпоинтов, который подвешивал планшет.
     const timer = setInterval(() => {
-      // Пропускаем тик, если уже грузим, вкладка в фоне или открыта модалка —
-      // иначе фон каждые 5с перетирает состояние и подвешивает планшет.
-      if (loadingRef.current || document.hidden || modalOpenRef.current) return;
-      load().catch(() => {});
-    }, 5000);
+      if (document.hidden || modalOpenRef.current) return;
+      loadSales().catch(() => {});
+    }, 20000);
 
-    return () => clearInterval(timer);
+    // Возврат на вкладку — разово подтягиваем всё (вдруг меняли с другого устройства).
+    const onVisible = () => {
+      if (!document.hidden && !modalOpenRef.current) load().catch(() => {});
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Держим modalOpenRef в актуальном состоянии — замыкание интервала читает его через ref.

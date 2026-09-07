@@ -129,16 +129,22 @@ function SmartIngredientInputPOS({ value, onChange, warehouseItems = [], onSelec
   useEffect(() => {
     if (!open) return;
     updateRect();
-    const reposition = () => updateRect();
+    // rAF-коалесинг: не дёргать getBoundingClientRect+setState на каждый пиксель скролла.
+    let raf = 0;
+    const reposition = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; updateRect(); });
+    };
     const onDown = (e) => {
       if (wrapRef.current?.contains(e.target)) return;
       if (e.target.closest?.("[data-pos-ingredient-dropdown]")) return;
       setOpen(false);
     };
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, { capture: true, passive: true });
+    window.addEventListener("resize", reposition, { passive: true });
     document.addEventListener("mousedown", onDown);
     return () => {
+      if (raf) cancelAnimationFrame(raf);
       window.removeEventListener("scroll", reposition, true);
       window.removeEventListener("resize", reposition);
       document.removeEventListener("mousedown", onDown);
@@ -360,6 +366,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     const cats = Array.isArray(categories) ? categories : [];
     return prods
       .filter((p) => !p.isExtra && !p.hidden && String(p.name || "").toLowerCase().includes(q))
+      .slice(0, 40) // не рендерим сотни тяжёлых карточек — кассир уточнит запрос
       .map((p) => ({
         ...p,
         _catName: (cats.find((c) => String(c.id) === String(p.categoryId)) || {}).name || "",
@@ -632,10 +639,11 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     setDebtName("");
     setPaymentType("cash");
     setPaymentModal(false);
-    // Продажа уже сохранена на сервере — сбой ФОНОВОЙ перезагрузки не должен показывать
-    // ложную ошибку «Не удалось провести продажу» и рушить успех.
-    await load().catch(() => {});
-    await loadCashShift().catch(() => {});
+    // Меню уже в состоянии и во время продажи не меняется — НЕ перезагружаем всё
+    // (раньше здесь был полный load() из ~6 эндпоинтов, включая N+1 /menu-products,
+    // после КАЖДОГО чека — он подвешивал кнопку оплаты). Обновляем только кассовую
+    // смену (ящик меняется на нал), fire-and-forget, + сигнал «ожидание оплаты».
+    loadCashShift().catch(() => {});
     window.dispatchEvent(new Event("sales-pending-change"));
   };
 

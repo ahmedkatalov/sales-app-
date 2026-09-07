@@ -455,6 +455,10 @@ func createTables() {
 		// (ретрай после таймаута / повторный тап), чтобы не создать дубль чека.
 		`ALTER TABLE sales ADD COLUMN client_ref TEXT DEFAULT ''`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_client_ref ON sales(account_id, client_ref) WHERE client_ref != ''`,
+		// Индексы под горячие пути (устраняют full-scan в N+1 списков и джойнах):
+		`CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_recipes_product ON product_recipes(product_id, account_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_sales_account_created ON sales(account_id, created_at)`,
 	}
 
 	for _, q := range migrations {

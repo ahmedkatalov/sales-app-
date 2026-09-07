@@ -247,14 +247,64 @@ func getMenuProducts(c *gin.Context) {
 	// calculateRecipeCost тоже идут в db — это вызвало бы вечную блокировку.
 	rows.Close()
 
+	// Батч вместо N+1: один запрос на все рецепты аккаунта + себестоимость считаем
+	// в Go из уже загруженных строк (item.Cost = storageQty * unit_cost). Раньше на
+	// КАЖДЫЙ товар шло по 2 запроса (loadProductRecipe + calculateRecipeCost), и при
+	// SetMaxOpenConns(1) всё сериализовалось — эндпоинт дёргается на каждой загрузке.
+	recipeMap := loadRecipesByProduct(accountID(c))
 	for i := range list {
-		list[i].Recipe = loadProductRecipe(list[i].ID, list[i].AccountID)
-		if len(list[i].Recipe) > 0 {
-			list[i].Cost = calculateRecipeCost(list[i].ID, list[i].AccountID)
+		rec := recipeMap[list[i].ID]
+		list[i].Recipe = rec
+		if len(rec) > 0 {
+			var cost float64
+			for _, it := range rec {
+				cost += it.Cost
+			}
+			list[i].Cost = cost
 		}
 	}
 
 	c.JSON(http.StatusOK, list)
+}
+
+// loadRecipesByProduct — все рецепты аккаунта одним запросом, сгруппированные по
+// product_id. Колонки/скан идентичны loadProductRecipe, но без фильтра по product_id.
+func loadRecipesByProduct(accID int) map[int][]ProductRecipe {
+	out := map[int][]ProductRecipe{}
+	rows, err := db.Query(`
+		SELECT r.id, r.product_id, r.warehouse_item_id, IFNULL(r.ingredient_name, ''),
+		       IFNULL(w.name, ''), IFNULL(w.unit, ''),
+		       IFNULL(NULLIF(r.input_quantity, 0), r.quantity), IFNULL(NULLIF(r.input_unit, ''), IFNULL(w.unit, 'г')),
+		       r.quantity, IFNULL(r.conversion_note, ''), IFNULL(w.unit_cost, 0)
+		FROM product_recipes r
+		LEFT JOIN warehouse_items w ON w.id = r.warehouse_item_id AND w.account_id = r.account_id
+		WHERE r.account_id = ?
+		ORDER BY r.product_id, r.id
+	`, accID)
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var item ProductRecipe
+		var ingredientName string
+		_ = rows.Scan(&item.ID, &item.ProductID, &item.WarehouseItemID, &ingredientName,
+			&item.ItemName, &item.Unit, &item.Quantity, &item.QuantityUnit,
+			&item.StorageQuantity, &item.ConversionNote, &item.UnitCost)
+		item.QuantityUnitSnake = item.QuantityUnit
+		item.Cost = item.StorageQuantity * item.UnitCost
+		if item.WarehouseItemID <= 0 {
+			item.Unlinked = true
+			item.IngredientName = ingredientName
+			if item.ItemName == "" {
+				item.ItemName = ingredientName
+			}
+		} else {
+			item.IngredientName = item.ItemName
+		}
+		out[item.ProductID] = append(out[item.ProductID], item)
+	}
+	return out
 }
 
 func createMenuProduct(c *gin.Context) {
