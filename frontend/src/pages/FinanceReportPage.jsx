@@ -279,33 +279,40 @@ export default function FinanceReportPage() {
         </p>
 
         {/* Период */}
-        <div className="mt-5 flex flex-wrap items-center gap-2">
-          {PRESETS.map(([key, label]) => (
-            <button key={key} onClick={() => setPreset(key)}
-              className={`rounded-2xl px-4 py-2.5 text-sm font-black transition ${
-                preset === key ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg" : "border border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10"
-              }`}>
-              {label}
-            </button>
-          ))}
-          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-2 py-1.5">
-            <input type="date" value={custom.from} onChange={(e) => { setCustom((c) => ({ ...c, from: e.target.value })); setPreset("custom"); }}
-              className="rounded-xl bg-slate-950/60 px-2 py-1.5 text-xs font-bold text-white outline-none" />
-            <span className="text-slate-500">—</span>
-            <input type="date" value={custom.to} onChange={(e) => { setCustom((c) => ({ ...c, to: e.target.value })); setPreset("custom"); }}
-              className="rounded-xl bg-slate-950/60 px-2 py-1.5 text-xs font-bold text-white outline-none" />
+        <div className="mt-5 space-y-2.5">
+          {/* Пресеты — на телефоне горизонтальный скролл, на десктопе перенос */}
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0" style={{ scrollbarWidth: "none" }}>
+            {PRESETS.map(([key, label]) => (
+              <button key={key} onClick={() => setPreset(key)}
+                className={`shrink-0 rounded-2xl px-4 py-2.5 text-sm font-black transition ${
+                  preset === key ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg" : "border border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10"
+                }`}>
+                {label}
+              </button>
+            ))}
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <button onClick={printReport} disabled={!rep}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" /></svg>
-              Печать / PDF
-            </button>
-            <button onClick={exportCSV} disabled={!rep}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
-              Экспорт CSV
-            </button>
+
+          {/* Диапазон дат + действия — на телефоне столбиком во всю ширину */}
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+            <div className="flex flex-1 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1.5">
+              <input type="date" value={custom.from} onChange={(e) => { setCustom((c) => ({ ...c, from: e.target.value })); setPreset("custom"); }}
+                className="min-w-0 flex-1 rounded-xl bg-slate-950/60 px-3 py-2 text-xs font-bold text-white outline-none [color-scheme:dark] focus:ring-2 focus:ring-blue-500/30" />
+              <span className="shrink-0 text-slate-500">—</span>
+              <input type="date" value={custom.to} onChange={(e) => { setCustom((c) => ({ ...c, to: e.target.value })); setPreset("custom"); }}
+                className="min-w-0 flex-1 rounded-xl bg-slate-950/60 px-3 py-2 text-xs font-bold text-white outline-none [color-scheme:dark] focus:ring-2 focus:ring-blue-500/30" />
+            </div>
+            <div className="flex gap-2 sm:ml-auto sm:shrink-0">
+              <button onClick={printReport} disabled={!rep}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-50 sm:flex-none">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" /></svg>
+                Печать / PDF
+              </button>
+              <button onClick={exportCSV} disabled={!rep}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-50 sm:flex-none">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
+                Экспорт CSV
+              </button>
+            </div>
           </div>
         </div>
 

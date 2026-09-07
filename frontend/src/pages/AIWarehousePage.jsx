@@ -789,21 +789,40 @@ function exportTextToPdf(text) {
   const now = new Date();
   const dateStr = now.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" }) +
     ", " + now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-  const html =
-    `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${esc(title)}</title><style>` +
-    `body{font-family:system-ui,-apple-system,Arial,sans-serif;color:#111;max-width:760px;margin:22px auto;padding:0 22px;line-height:1.55}` +
-    `.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:2px solid #ececec;padding-bottom:12px;margin-bottom:18px}` +
-    `.brand b{font-size:18px}.brand span{color:#888;font-size:12px;white-space:nowrap}` +
-    `h1{font-size:23px;margin:0 0 14px}h2{font-size:16px;margin:20px 0 6px}h3{font-size:14px;margin:16px 0 4px}h4{font-size:13px;margin:14px 0 4px;color:#333}` +
-    `p{margin:7px 0;font-size:14px}ul,ol{margin:7px 0;padding-left:22px}li{margin:4px 0;font-size:14px}` +
-    `strong{font-weight:800}em{font-style:italic}code{background:#f3f4f6;border-radius:5px;padding:1px 5px;font-size:13px}` +
-    `.foot{margin-top:30px;color:#aaa;font-size:11px;border-top:1px solid #eee;padding-top:10px}` +
-    `@media print{body{margin:8mm auto}}` +
-    `</style></head><body>` +
-    `<div class="brand"><b>${esc(business)}</b><span>${esc(dateStr)}</span></div>` +
-    `<h1>${esc(title)}</h1>` +
-    `<div class="content">${body}</div>` +
-    `<p class="foot">Сформировано в Okvion Sales · AI-ассистент</p></body></html>`;
+  const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+    :root{--ink:#0f172a;--muted:#64748b;--line:#e6e8ef;--accent:#4f46e5;--accent2:#7c3aed}
+    *{box-sizing:border-box}
+    html,body{background:#ffffff}
+    body{font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;color:var(--ink);max-width:780px;margin:0 auto;padding:30px 32px;line-height:1.62;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .head{padding-bottom:16px;margin-bottom:22px;border-bottom:1px solid var(--line)}
+    .head .row{display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .brand{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:800;letter-spacing:-.01em}
+    .brand .mark{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+    .meta{color:var(--muted);font-size:11.5px;text-align:right;white-space:nowrap;line-height:1.5}
+    .accent{height:3px;width:72px;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));margin-top:14px}
+    h1{font-size:25px;font-weight:800;letter-spacing:-.02em;margin:2px 0 18px}
+    h2{font-size:15.5px;font-weight:800;margin:24px 0 8px;padding-left:11px;border-left:3px solid var(--accent)}
+    h3{font-size:14px;font-weight:800;color:#1e293b;margin:18px 0 5px}
+    h4{font-size:13px;font-weight:700;color:#334155;margin:14px 0 4px}
+    p{margin:8px 0;font-size:13.5px}
+    ul,ol{margin:8px 0;padding-left:22px}
+    li{margin:5px 0;font-size:13.5px}
+    ul li::marker{color:var(--accent)}
+    strong{font-weight:800}
+    em{font-style:italic;color:#334155}
+    code{background:#f1f5f9;border:1px solid #e4e8f0;border-radius:5px;padding:1px 6px;font-size:12.5px;font-family:'SF Mono',ui-monospace,Menlo,monospace}
+    .foot{margin-top:34px;padding-top:12px;border-top:1px solid var(--line);color:#94a3b8;font-size:11px;display:flex;align-items:center;justify-content:space-between}
+    @page{margin:14mm}
+    @media print{body{padding:0}h2,h3{break-after:avoid}li,p{break-inside:avoid}}
+    </style></head><body>
+    <div class="head"><div class="row">
+      <div class="brand"><span class="mark"></span>${esc(business)}</div>
+      <div class="meta">Отчёт AI-ассистента<br>${esc(dateStr)}</div>
+    </div><div class="accent"></div></div>
+    <h1>${esc(title)}</h1>
+    <div class="content">${body}</div>
+    <div class="foot"><span>Сформировано в Okvion Sales · AI-ассистент</span><span>okvionsales.ru</span></div>
+    </body></html>`;
   printHtmlDocument(html);
 }
 
