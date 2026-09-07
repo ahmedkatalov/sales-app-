@@ -207,6 +207,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   const [paymentModal, setPaymentModal] = useState(false);
   const [submitting, setSubmitting] = useState(false); // защита от двойного проведения продажи
   const submittingRef = useRef(false); // синхронный ref-гвард: state обновляется асинхронно, между двумя быстрыми тапами disabled не успевает проставиться
+  const saleClientRef = useRef(""); // идемпотентность: стабильный ключ попытки продажи (тот же при ретрае после таймаута), сбрасывается после успеха
   const [paymentType, setPaymentType] = useState("cash");
   const [paidAmount, setPaidAmount] = useState("");
   const [cardId, setCardId] = useState("");
@@ -669,13 +670,18 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         return;
       }
 
+      if (!saleClientRef.current) {
+        saleClientRef.current = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      }
       await post("/sales", salePayload({
         cardId: mode === "transfer" ? Number(cardId) : 0,
         paymentType: mode,
         cashGiven: mode === "cash" ? num(paidAmount) : 0,
         customerName: mode === "debt" ? debtName.trim() : "",
+        clientRef: saleClientRef.current,
       }));
 
+      saleClientRef.current = ""; // успех — следующий чек получит новый ключ
       await resetSale();
       window.notify?.(mode === "debt" ? "Долг сохранён" : "Продажа сохранена", "success");
     } catch (e) {

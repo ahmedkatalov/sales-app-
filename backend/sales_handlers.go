@@ -160,7 +160,7 @@ func saveSale(req *Sale) error {
 }
 
 func saveSaleInTx(tx *sql.Tx, req *Sale, now string, reservedProductCosts map[int]float64) error {
-	res, err := tx.Exec(`INSERT INTO sales(account_id, employee_id, payment_type, card_id, subtotal, discount_percent, discount_amount, total, cash_given, change_amount, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, req.AccountID, req.EmployeeID, req.PaymentType, req.CardID, req.Subtotal, req.DiscountPercent, req.DiscountAmount, req.Total, req.CashGiven, req.ChangeAmount, now)
+	res, err := tx.Exec(`INSERT INTO sales(account_id, employee_id, payment_type, card_id, subtotal, discount_percent, discount_amount, total, cash_given, change_amount, client_ref, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, req.AccountID, req.EmployeeID, req.PaymentType, req.CardID, req.Subtotal, req.DiscountPercent, req.DiscountAmount, req.Total, req.CashGiven, req.ChangeAmount, req.ClientRef, now)
 	if err != nil {
 		return err
 	}
@@ -265,6 +265,16 @@ func createSale(c *gin.Context) {
 		return
 	}
 	req.AccountID = accountID(c)
+	// Идемпотентность: если фронт прислал client_ref и продажа с ним уже есть —
+	// возвращаем её, не создавая дубль (защита от ретрая после таймаута/двойного тапа).
+	if ref := strings.TrimSpace(req.ClientRef); ref != "" {
+		var existingID int
+		if err := db.QueryRow(`SELECT id FROM sales WHERE account_id = ? AND client_ref = ?`, req.AccountID, ref).Scan(&existingID); err == nil && existingID > 0 {
+			req.ID = existingID
+			c.JSON(http.StatusOK, req)
+			return
+		}
+	}
 	if req.PaymentType == "debt" && strings.TrimSpace(req.CustomerName) == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Введите имя клиента для долга"})
 		return

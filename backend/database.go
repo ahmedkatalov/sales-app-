@@ -169,6 +169,7 @@ func createTables() {
 		total REAL DEFAULT 0,
 		cash_given REAL DEFAULT 0,
 		change_amount REAL DEFAULT 0,
+		client_ref TEXT DEFAULT '',
 		created_at TEXT
 	);
 
@@ -450,6 +451,10 @@ func createTables() {
 		// Настройки аккаунта: оформление (appearance) — общее для всех сотрудников
 		`CREATE TABLE IF NOT EXISTS account_settings (account_id INTEGER PRIMARY KEY, appearance TEXT DEFAULT '')`,
 		`ALTER TABLE account_settings ADD COLUMN appearance TEXT DEFAULT ''`,
+		// Идемпотентность продажи: client_ref от фронта дедуплицирует повторную отправку
+		// (ретрай после таймаута / повторный тап), чтобы не создать дубль чека.
+		`ALTER TABLE sales ADD COLUMN client_ref TEXT DEFAULT ''`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_client_ref ON sales(account_id, client_ref) WHERE client_ref != ''`,
 	}
 
 	for _, q := range migrations {

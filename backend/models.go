@@ -193,6 +193,7 @@ type Sale struct {
 	ChangeAmount    float64    `json:"changeAmount"`
 	CreatedAt       string     `json:"createdAt"`
 	CustomerName    string     `json:"customerName"`
+	ClientRef       string     `json:"clientRef"` // идемпотентность: уникальный ключ попытки продажи от фронта
 	Items           []SaleItem `json:"items"`
 }
 

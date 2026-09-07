@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Minus, Plus, RefreshCw, Search, ShoppingCart, X } from "lucide-react";
 import { apiGet, apiPost } from "../api";
 import { formatMoney } from "../utils/format";
@@ -19,6 +19,7 @@ export default function ShopPage() {
   const [cartOpen, setCartOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const saleClientRef = useRef(""); // идемпотентность продажи: стабильный ключ попытки, сбрасывается после успеха
 
   // Safe array guards
   const safe_employees = Array.isArray(employees) ? employees : [];
@@ -168,15 +169,20 @@ export default function ShopPage() {
 
     setSubmitting(true);
     try {
+      if (!saleClientRef.current) {
+        saleClientRef.current = crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      }
       await apiPost("/sales", {
         employeeId: Number(employeeId),
         paymentType,
         cardId: paymentType === "transfer" ? Number(cardId) : 0,
         discountPercent: discount,
         cashGiven: Number(cashGiven || 0),
+        clientRef: saleClientRef.current,
         items: cart,
       });
 
+      saleClientRef.current = ""; // успех — следующий чек получит новый ключ
       alert("Продажа завершена");
 
       setCart([]);
