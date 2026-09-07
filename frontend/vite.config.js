@@ -29,6 +29,20 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, '')
       }
     }
+  },
+  // Прод: отдаём СОБРАННЫЙ бандл через `vite preview` (быстро, чанками), а не dev-сервер.
+  // Тот же прокси /api → backend и те же разрешённые хосты, что и в dev.
+  preview: {
+    allowedHosts: ['okvionsales.ru', 'www.okvionsales.ru'],
+    host: '0.0.0.0',
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://backend:3000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
   }
 })
  
