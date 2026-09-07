@@ -11,7 +11,26 @@
 - `OPENAI_API_KEY` — ключ ИИ (у тебя, судя по логам, задан).
 - Почта и остальной трафик идут напрямую и от прокси НЕ зависят.
 
-## Вариант 1. Релей (проще всего, без своего прокси)
+## Вариант 0 (рекомендую). Бесплатный релей через Cloudflare Worker
+Не нужен ни свой прокси, ни платный сервис. Готовый код и инструкция —
+[cloudflare-ai-relay.js](cloudflare-ai-relay.js). Коротко:
+1. Регистрируешься на dash.cloudflare.com → создаёшь Worker, вставляешь код, Deploy.
+2. Получаешь адрес `https://<имя>.workers.dev`.
+3. В `docker-compose.yml` у backend:
+   ```yaml
+       environment:
+         - OPENROUTER_BASE_URL=https://<имя>.workers.dev/api/v1
+         - OPENAI_API_KEY=<твой ключ OpenRouter, sk-or-...>
+   ```
+4. `docker compose up -d --build`.
+
+Условие: сервер должен доставать Cloudflare. Проверь:
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://workers.dev   # 200/301 = ок, релей подойдёт
+```
+Если и Cloudflare заблокирован — тогда только рабочий прокси/VPN (Вариант 2).
+
+## Вариант 1. Готовый OpenAI-совместимый релей (без своего прокси)
 Взять OpenAI-совместимый релей, который **доступен из региона сервера** и сам ходит к
 OpenAI/OpenRouter. Прописать его адрес и ключ в окружении сервиса **backend**
 (`docker-compose.yml` → `environment:` или `.env`):
