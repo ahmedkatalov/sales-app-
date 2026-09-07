@@ -141,6 +141,9 @@ func main() {
 	auth.GET("/menu/overview", getMenuOverview)
 	auth.POST("/menu/copy", copyMenuBetweenWorkspaces)
 
+	// Импорт меню кухни из PDF (структура парсится на фронте)
+	auth.POST("/menu/import", importMenu)
+
 	auth.POST("/sales", createSale)
 	auth.GET("/sales", getSales)
 	auth.GET("/sales/stats", getSalesStats)
