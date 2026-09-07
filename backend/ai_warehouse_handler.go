@@ -80,6 +80,23 @@ func directHTTPClient(timeout time.Duration) *http.Client {
 	return &http.Client{Timeout: timeout, Transport: aiDirectTransport}
 }
 
+// aiNetworkBlockMessage распознаёт ответ СЕТЕВОГО фильтра/файрвола (не самого
+// провайдера ИИ) — типично для регионов, где OpenRouter/OpenAI заблокированы, —
+// и возвращает понятное объяснение с тем, что делать. "" если это не похоже на блок.
+func aiNetworkBlockMessage(status int, body []byte) string {
+	low := strings.ToLower(string(body))
+	blocked := strings.Contains(low, "access denied by security policy") ||
+		strings.Contains(low, "security policy") ||
+		(status == 403 && strings.Contains(low, `"success":false`)) ||
+		(status == 403 && strings.Contains(low, "denied"))
+	if !blocked {
+		return ""
+	}
+	return "ИИ пока не подключён к этому серверу: сеть режет доступ к OpenRouter/OpenAI. " +
+		"Нужен рабочий прокси/VPN (переменная AI_PROXY_URL) или достижимый релей (OPENROUTER_BASE_URL). " +
+		"Как настроить — deploy/AI-SETUP.md. На работу кассы, склада и остального это не влияет."
+}
+
 type aiWarehouseItemRef struct {
 	ID                int     `json:"id"`
 	Name              string  `json:"name"`
@@ -273,6 +290,9 @@ func callOpenAIWarehouseParser(req aiWarehouseParseRequest) (aiWarehouseParseRes
 
 	data, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if msg := aiNetworkBlockMessage(resp.StatusCode, data); msg != "" {
+			return aiWarehouseParseResult{}, errors.New(msg)
+		}
 		var apiResp openAIResponse
 		_ = json.Unmarshal(data, &apiResp)
 		if apiResp.Error != nil && apiResp.Error.Message != "" {
@@ -926,6 +946,9 @@ func callAIJSON[T any](prompt, model, apiKey, title string) (T, error) {
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if msg := aiNetworkBlockMessage(resp.StatusCode, data); msg != "" {
+			return zero, errors.New(msg)
+		}
 		var apiResp openAIResponse
 		_ = json.Unmarshal(data, &apiResp)
 		if apiResp.Error != nil && apiResp.Error.Message != "" {
@@ -1390,6 +1413,9 @@ func callSmartAssistant(question string, ctx map[string]any, history []aiWarehou
 	data, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode >= 300 {
+		if msg := aiNetworkBlockMessage(resp.StatusCode, data); msg != "" {
+			return "", errors.New(msg)
+		}
 		lim := 300
 		if len(data) < lim {
 			lim = len(data)
@@ -1742,6 +1768,10 @@ INTENT варианты:
 	data, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode >= 300 {
+		if msg := aiNetworkBlockMessage(resp.StatusCode, data); msg != "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+			return
+		}
 		lim := 300
 		if len(data) < lim {
 			lim = len(data)
