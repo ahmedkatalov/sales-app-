@@ -849,6 +849,7 @@ export default function AIWarehousePage() {
   const [productCategories, setProductCategories] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const wsName = getCurrentWorkspace?.()?.name || "";
   const storageKey = useMemo(() => getAIChatStorageKey(), []);
   const restoredChat = useMemo(() => loadAIChatState(storageKey), [storageKey]);
   const [pendingItems, setPendingItems] = useState(restoredChat.pendingItems);
@@ -1411,9 +1412,12 @@ ${lines}${expense ? `
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-black">AI-ассистент</p>
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                    <p className="truncate text-[11px] text-emerald-300 font-bold">Онлайн</p>
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                    <p className="shrink-0 text-[11px] font-bold text-emerald-300">Онлайн</p>
+                    {wsName && (
+                      <span className="min-w-0 truncate text-[11px] font-bold text-slate-400">· 📍 {wsName}</span>
+                    )}
                   </div>
                 </div>
               </div>

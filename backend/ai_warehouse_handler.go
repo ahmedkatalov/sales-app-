@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"regexp"
@@ -18,6 +19,22 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+// AI ходит НАПРЯМУЮ, минуя системный прокси: на сервере переменные
+// HTTP(S)_PROXY/ALL_PROXY заданы криво (socks5/1080 → connection refused),
+// из-за чего ВСЕ запросы к OpenRouter/OpenAI падали с
+// "proxyconnect tcp ... connection refused". Proxy:nil = прямое соединение.
+var aiDirectTransport = &http.Transport{
+	Proxy:                 nil,
+	DialContext:           (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ForceAttemptHTTP2:     true,
+	ResponseHeaderTimeout: 60 * time.Second,
+}
+
+func directHTTPClient(timeout time.Duration) *http.Client {
+	return &http.Client{Timeout: timeout, Transport: aiDirectTransport}
+}
 
 type aiWarehouseItemRef struct {
 	ID                int     `json:"id"`
@@ -203,7 +220,7 @@ func callOpenAIWarehouseParser(req aiWarehouseParseRequest) (aiWarehouseParseRes
 		httpReq.Header.Set("X-Title", "Sales App Warehouse AI")
 	}
 
-	client := &http.Client{Timeout: 45 * time.Second}
+	client := directHTTPClient(45 * time.Second)
 	resp, err := client.Do(httpReq)
 	if err != nil {
 		return aiWarehouseParseResult{}, fmt.Errorf("нейронка не ответила: %w", err)
@@ -858,7 +875,7 @@ func callAIJSON[T any](prompt, model, apiKey, title string) (T, error) {
 		httpReq.Header.Set("HTTP-Referer", "http://localhost:5173")
 		httpReq.Header.Set("X-Title", title)
 	}
-	resp, err := (&http.Client{Timeout: 45 * time.Second}).Do(httpReq)
+	resp, err := (directHTTPClient(45 * time.Second)).Do(httpReq)
 	if err != nil {
 		return zero, fmt.Errorf("нейронка не ответила: %w", err)
 	}
@@ -1321,7 +1338,7 @@ func callSmartAssistant(question string, ctx map[string]any, history []aiWarehou
 	httpReq.Header.Set("HTTP-Referer", "https://sales-app.local")
 	httpReq.Header.Set("X-Title", "Sales App AI Assistant")
 
-	resp, err := (&http.Client{Timeout: 60 * time.Second}).Do(httpReq)
+	resp, err := (directHTTPClient(60 * time.Second)).Do(httpReq)
 	if err != nil {
 		return "", fmt.Errorf("AI не ответил: %w", err)
 	}
@@ -1672,7 +1689,7 @@ INTENT варианты:
 	httpReq.Header.Set("HTTP-Referer", "https://sales-app.local")
 	httpReq.Header.Set("X-Title", "Sales App Intent Router")
 
-	resp, err := (&http.Client{Timeout: 20 * time.Second}).Do(httpReq)
+	resp, err := (directHTTPClient(20 * time.Second)).Do(httpReq)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "AI не ответил: " + err.Error()})
 		return
@@ -1938,7 +1955,7 @@ func suggestMenuProduct(c *gin.Context) {
 	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := directHTTPClient(30 * time.Second)
 	resp, err := client.Do(httpReq)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

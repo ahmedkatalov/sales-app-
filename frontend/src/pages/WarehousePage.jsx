@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Package, Eye, AlertTriangle, ChevronDown, RefreshCw, Trash2, Ban, History, Wallet, Plus } from "lucide-react";
-import { del, get, post } from "../api";
+import { del, get, post, getCurrentWorkspace } from "../api";
 import Modal from "../components/Modal";
 import EmptyState from "../components/EmptyState";
 import { formatMoney, money, num } from "../utils/format";
@@ -1251,6 +1251,9 @@ export default function WarehousePage() {
 
       {addModal && (
         <Modal title={purchaseTargetItem ? `Новая закупка: ${purchaseTargetItem.name}` : "Добавить закупку вручную"} wide>
+          <div className="mb-3 flex items-center gap-2 rounded-2xl border border-blue-400/25 bg-blue-500/10 px-3.5 py-2.5 text-sm font-black text-blue-200">
+            📍 Склад точки: <span className="truncate text-white">{getCurrentWorkspace()?.name || "текущая"}</span>
+          </div>
           <div className="rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-5">
             <div className="mb-4 rounded-3xl bg-blue-50 p-4">
               <p className="text-sm font-black text-blue-700">Ручной режим склада</p>
