@@ -364,7 +364,7 @@ func createWarehouseItem(c *gin.Context) {
 		}
 	}
 
-	_, err := db.Exec(`
+	cbRes, err := db.Exec(`
 		INSERT INTO stock_batches(account_id, warehouse_item_id, quantity, remaining_quantity, purchase_price, unit_cost, supplier, expiry_date, note, purchase_ref, created_at)
 		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, item.AccountID, itemID, item.Quantity, item.Quantity, item.Price, item.UnitCost, item.Supplier, item.ExpiryDate, item.Note, strings.TrimSpace(item.PurchaseRef), now)
@@ -373,6 +373,7 @@ func createWarehouseItem(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	cbBatchID, _ := cbRes.LastInsertId()
 
 	_, _ = db.Exec(`
 		INSERT INTO warehouse_movements(account_id, warehouse_item_id, movement_type, quantity, reason, note, created_at)
@@ -389,6 +390,7 @@ func createWarehouseItem(c *gin.Context) {
 		WHERE id = ? AND account_id = ?
 	`, itemID, item.AccountID).Scan(&item.ID, &item.AccountID, &item.Name, &item.Unit, &item.Quantity, &item.Price, &item.UnitCost, &item.Supplier, &item.ExpiryDate, &item.MinQuantity, &item.Note, &hiddenInt, &item.CreatedAt, &item.ControlMode, &item.LossPercent, &item.InventoryMethod, &item.PackagingQuantity)
 	item.Hidden = hiddenInt == 1
+	item.LastBatchID = int(cbBatchID)
 
 	c.JSON(http.StatusOK, item)
 }
@@ -1076,13 +1078,13 @@ func cancelWarehousePurchase(c *gin.Context) {
 	batchID, _ := strconv.Atoi(c.Param("batchId"))
 	accID := accountID(c)
 
-	var qty, remaining float64
+	var qty, remaining, batchPrice float64
 	var purchaseRef, note string
 	if err := db.QueryRow(`
-		SELECT quantity, remaining_quantity, IFNULL(purchase_ref, ''), IFNULL(note, '')
+		SELECT quantity, remaining_quantity, IFNULL(purchase_price, 0), IFNULL(purchase_ref, ''), IFNULL(note, '')
 		FROM stock_batches
 		WHERE id = ? AND warehouse_item_id = ? AND account_id = ?
-	`, batchID, itemID, accID).Scan(&qty, &remaining, &purchaseRef, &note); err != nil {
+	`, batchID, itemID, accID).Scan(&qty, &remaining, &batchPrice, &purchaseRef, &note); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Закупка не найдена"})
 		return
 	}
@@ -1110,13 +1112,17 @@ func cancelWarehousePurchase(c *gin.Context) {
 	`, accID, itemID, qty, note, time.Now().Format(time.RFC3339))
 
 	expenseRemoved := 0.0
-	// Расход снимаем только когда ВСЕ партии этой закупки отменены.
 	if purchaseRef != "" {
 		var remainingBatches int
 		_ = db.QueryRow(`SELECT COUNT(*) FROM stock_batches WHERE account_id = ? AND purchase_ref = ?`, accID, purchaseRef).Scan(&remainingBatches)
 		if remainingBatches == 0 {
+			// Отменили последнюю позицию закупки — снимаем весь связанный расход.
 			_ = db.QueryRow(`SELECT IFNULL(SUM(amount), 0) FROM global_expenses WHERE account_id = ? AND purchase_ref = ?`, accID, purchaseRef).Scan(&expenseRemoved)
 			_, _ = db.Exec(`DELETE FROM global_expenses WHERE account_id = ? AND purchase_ref = ?`, accID, purchaseRef)
+		} else if batchPrice > 0 {
+			// Выборочная отмена одной позиции — уменьшаем общий расход закупки на её цену.
+			_, _ = db.Exec(`UPDATE global_expenses SET amount = MAX(amount - ?, 0) WHERE account_id = ? AND purchase_ref = ?`, batchPrice, accID, purchaseRef)
+			expenseRemoved = batchPrice
 		}
 	}
 
@@ -1544,7 +1550,7 @@ func purchaseWarehouseItem(c *gin.Context) {
 
 	now := time.Now().Format(time.RFC3339)
 
-	_, err := db.Exec(`
+	batchRes, err := db.Exec(`
 		INSERT INTO stock_batches(account_id, warehouse_item_id, quantity, remaining_quantity, purchase_price, unit_cost, supplier, expiry_date, note, purchase_ref, created_at)
 		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, accID, itemID, req.Quantity, req.Quantity, req.Price, unitCost, req.Supplier, req.ExpiryDate, req.Note, strings.TrimSpace(req.PurchaseRef), now)
@@ -1553,6 +1559,7 @@ func purchaseWarehouseItem(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	newBatchID, _ := batchRes.LastInsertId()
 
 	if req.MinQuantity > 0 || req.PackagingQuantity > 0 {
 		// loss_percent НЕ трогаем при закупке: он настраивается при создании/редактировании
@@ -1600,6 +1607,7 @@ func purchaseWarehouseItem(c *gin.Context) {
 		&item.PackagingQuantity,
 	)
 	item.Hidden = hiddenInt == 1
+	item.LastBatchID = int(newBatchID)
 
 	c.JSON(http.StatusOK, item)
 }

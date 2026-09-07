@@ -1,7 +1,7 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { RefreshCw, X, Send, FileDown } from "lucide-react";
-import { get, getCurrentWorkspace, getSession, post } from "../api";
+import { del, get, getCurrentWorkspace, getSession, post } from "../api";
 import { formatMoney, num } from "../utils/format";
 import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
 import { escHtml, printHtmlDocument } from "../utils/print";
@@ -826,7 +826,7 @@ function exportTextToPdf(text) {
   printHtmlDocument(html);
 }
 
-const Message = memo(function Message({ msg }) {
+const Message = memo(function Message({ msg, idx, onCancelCard }) {
   const isUser = msg.role === "user";
   const showPdf = msg.role === "bot" && msg.text && msg.text !== AI_WELCOME_MESSAGE.text && msg.text.length > 120;
   return (
@@ -837,14 +837,22 @@ const Message = memo(function Message({ msg }) {
         {msg.cards?.length > 0 && (
           <div className="mt-3 space-y-2">
             {msg.cards.map((card, i) => (
-              <div key={i} className="rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-slate-100">
+              <div key={i} className={`rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-slate-100 ${card.cancelled ? "opacity-50" : ""}`}>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate font-black">{card.name}</p>
+                    <p className={`truncate font-black ${card.cancelled ? "line-through text-slate-400" : ""}`}>{card.name}</p>
                     <p className="text-xs font-bold text-slate-400">{card.detail}</p>
                   </div>
                   <span className="shrink-0 rounded-2xl bg-emerald-500/15 px-3 py-2 text-xs font-black text-emerald-300">+{card.qty}</span>
                 </div>
+                {card.cancelled ? (
+                  <p className="mt-2 text-[11px] font-black text-red-300">✕ Отменено</p>
+                ) : (onCancelCard && card.itemId && card.batchId) ? (
+                  <button type="button" onClick={() => onCancelCard(idx, i, card)}
+                    className="mt-2 inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1.5 text-[11px] font-black text-red-300 transition hover:bg-red-500/20 active:scale-95">
+                    <X size={12} strokeWidth={2.6} /> Отменить
+                  </button>
+                ) : null}
               </div>
             ))}
           </div>
@@ -1032,9 +1040,16 @@ export default function AIWarehousePage() {
     const safeMatched = parsed.matched && !/(^|\s)(купил|купила|купили|купи|купить)(\s|$)/i.test(parsed.matched.name || "")
       ? parsed.matched
       : null;
-    let savedItem = safeMatched;
-    if (safeMatched) await post(`/warehouse/items/${safeMatched.id}/purchase`, safePayload);
-    else savedItem = await post("/warehouse/items", safePayload);
+    let savedItem;
+    let batchId;
+    if (safeMatched) {
+      const resp = await post(`/warehouse/items/${safeMatched.id}/purchase`, safePayload);
+      batchId = num(resp?.batchId) || 0;
+      savedItem = resp?.id ? resp : safeMatched;
+    } else {
+      savedItem = await post("/warehouse/items", safePayload);
+      batchId = num(savedItem?.batchId) || 0;
+    }
     if (savedItem?.id) setLastEntity({ type: "warehouse_item", id: savedItem.id, name: normalizeProductEntityName(savedItem.name || safePayload.name), item: savedItem });
     return {
       ...parsed,
@@ -1045,6 +1060,8 @@ export default function AIWarehousePage() {
         name: normalizeProductEntityName(safeMatched?.name || safePayload.name),
         detail: `${parsed.computed.detail}${num(safePayload.price) > 0 ? ` · ${formatMoney(safePayload.price)}` : ""}`,
         qty: `${parsed.computed.quantity} ${unitLabel(parsed.computed.unit)}`,
+        itemId: savedItem?.id || safeMatched?.id || 0,
+        batchId,
       },
     };
   };
@@ -1067,6 +1084,28 @@ export default function AIWarehousePage() {
     });
     return { total, comment };
   };
+
+  // Выборочная отмена одной позиции прямо из карточки ответа ИИ: снимает её со
+  // склада и уменьшает связанный расход (или снимает весь, если это была последняя).
+  const cancelPurchaseCard = useCallback(async (msgIdx, cardIdx, card) => {
+    if (!card?.itemId || !card?.batchId) {
+      window.notify?.("Эту позицию можно отменить в «Склад → История закупок»", "error");
+      return;
+    }
+    if (!window.confirm(`Отменить «${card.name}»? Позиция снимется со склада, расход уменьшится.`)) return;
+    try {
+      const res = await del(`/warehouse/items/${card.itemId}/batches/${card.batchId}`);
+      setMessages((prev) => prev.map((m, i) => (i !== msgIdx ? m : {
+        ...m,
+        cards: (m.cards || []).map((c, j) => (j === cardIdx ? { ...c, cancelled: true } : c)),
+      })));
+      await load();
+      const removed = num(res?.expenseRemoved);
+      window.notify?.(removed > 0 ? `Отменено · расход −${formatMoney(removed)}` : "Отменено", "success");
+    } catch (e) {
+      window.notify?.(e?.message || "Не удалось отменить", "error");
+    }
+  }, []);
 
   const updatePendingPurchases = async (replyText) => {
     const waiting = [...pendingItems];
@@ -1557,7 +1596,7 @@ export default function AIWarehousePage() {
                 Сегодня
               </div>
               {messages.map((msg, i) => (
-                <Message key={i} msg={msg} />
+                <Message key={i} idx={i} msg={msg} onCancelCard={cancelPurchaseCard} />
               ))}
               {loading && <Message msg={{ role: "bot", text: "Думаю и проверяю данные..." }} />}
               <div ref={bottomRef} />

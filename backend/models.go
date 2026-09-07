@@ -110,6 +110,7 @@ type WarehouseItem struct {
 	PurchaseUnitSnake string `json:"purchase_unit"`
 
 	PurchaseRef string `json:"purchaseRef"` // общий ключ закупки: связывает партию с расходом для отмены
+	LastBatchID int    `json:"batchId"`     // id созданной этой закупкой партии (для выборочной отмены из карточки ИИ)
 
 	PackagingQuantity float64 `json:"packagingQuantity"`
 
