@@ -947,11 +947,6 @@ export default function AIWarehousePage() {
   const recentAdded = useMemo(() => (Array.isArray(movements) ? movements : []).filter((m) => String(m.movementType || m.movement_type) === "in").slice(0, 5), [movements]);
   const topItems = useMemo(() => [...items].filter((x) => !(x.hidden || x.isHidden || x.is_hidden)).sort((a, b) => num(b.quantity) - num(a.quantity)).slice(0, 7), [items]);
   const activeRightPanels = useMemo(() => Object.values(sidePanels).filter(Boolean).length, [sidePanels]);
-  const rightPanelRows = useMemo(() => [
-    sidePanels.recent ? "minmax(0,1fr)" : null,
-    sidePanels.stocks ? "auto" : null,
-    sidePanels.suggestions ? "auto" : null,
-  ].filter(Boolean).join(" ") || "auto", [sidePanels]);
 
   const itemRefs = (list = items) => list.map((item) => ({
     id: item.id,
@@ -1457,12 +1452,14 @@ export default function AIWarehousePage() {
 
     } catch (e) {
       const cause = e?.cause?.name;
+      // Сеть/таймаут — мягкий текст. Ошибку от сервера (напр. «ключ не настроен»,
+      // «AI не ответил: …») показываем как есть — это реальная причина для диагностики.
       const friendly =
         cause === "AbortError"
           ? "Ответ занял слишком долго. Давай попробуем ещё раз через минуту."
           : cause === "TypeError" || e instanceof TypeError
           ? "Пропала связь. Проверь интернет и попробуй ещё раз."
-          : "Не получилось получить ответ. Попробуй ещё раз через минуту.";
+          : (e?.message || "Не получилось получить ответ. Попробуй ещё раз через минуту.");
       setMessages((p) => [...p, { role: "bot", text: friendly }]);
     } finally {
       setLoading(false);
@@ -1641,11 +1638,11 @@ export default function AIWarehousePage() {
 
           {activeRightPanels > 0 && (
             <aside
-              className="hidden min-w-0 gap-4 overflow-hidden xl:grid xl:self-start"
-              style={{ height: "calc(100dvh - 245px)", gridTemplateRows: rightPanelRows }}
+              className="hidden min-w-0 flex-col gap-4 overflow-y-auto xl:flex xl:self-start"
+              style={{ maxHeight: "calc(100dvh - 245px)" }}
             >
               {sidePanels.recent && (
-                <div className="flex min-h-[220px] flex-col overflow-hidden rounded-[1.25rem] border border-white/10 bg-white/[0.06] p-4">
+                <div className="flex min-h-0 shrink-0 flex-col overflow-hidden rounded-[1.25rem] border border-white/10 bg-white/[0.06] p-4">
                   <div className="mb-4 flex shrink-0 items-center justify-between">
                     <h3 className="text-lg font-black">Последние добавления</h3>
                     <span className="h-2 w-2 rounded-full bg-emerald-400" />
@@ -1678,7 +1675,7 @@ export default function AIWarehousePage() {
               )}
 
               {sidePanels.stocks && (
-                <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.06] p-4">
+                <div className="shrink-0 rounded-[1.25rem] border border-white/10 bg-white/[0.06] p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <h3 className="text-lg font-black">Остатки</h3>
                     <button
@@ -1710,7 +1707,7 @@ export default function AIWarehousePage() {
               )}
 
               {sidePanels.suggestions && (
-                <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.06] p-4">
+                <div className="shrink-0 rounded-[1.25rem] border border-white/10 bg-white/[0.06] p-4">
                   <p className="text-xs font-black uppercase text-slate-500">Можно спросить</p>
                   <div className="mt-3 space-y-2 text-sm font-bold text-slate-300">
                     <p>• что заканчивается?</p>
