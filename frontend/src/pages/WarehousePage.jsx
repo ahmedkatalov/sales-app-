@@ -546,6 +546,27 @@ export default function WarehousePage() {
     setHistoryBatches(list || []);
   };
 
+  // Отмена конкретной закупки: снимает товар со склада и связанный расход (ИИ-закупка).
+  const cancelPurchase = async (batch) => {
+    if (!historyItem) return;
+    const partial = num(batch.remainingQuantity) < num(batch.quantity) - 0.000001;
+    const msg = partial
+      ? "Из этой закупки уже часть продали или списали — отменить, скорее всего, не получится. Всё равно попробовать?"
+      : `Отменить закупку: ${fmtQty(batch.quantity)} ${unitLabel(historyItem.unit)} от ${String(batch.createdAt || "").slice(0, 10)}? Товар снимется со склада, а связанный расход тоже отменится.`;
+    if (!window.confirm(msg)) return;
+    try {
+      const res = await del(`/warehouse/items/${historyItem.id}/batches/${batch.id}`);
+      const list = await get(`/warehouse/items/${historyItem.id}/batches`).catch(() => []);
+      setHistoryBatches(list || []);
+      await load();
+      const removed = num(res?.expenseRemoved);
+      window.notify?.(removed > 0 ? `Закупка отменена · расход −${formatMoney(removed)} снят` : "Закупка отменена", "success");
+    } catch (e) {
+      window.notify?.(e?.message || "Не удалось отменить закупку", "error");
+      setError(e?.message || "Не удалось отменить закупку");
+    }
+  };
+
   return (
     <div className="relative -m-4 bg-[#050b1d] px-3 pb-nav pt-3 text-white sm:-m-6 sm:px-4 sm:pb-10 lg:px-5">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -1144,6 +1165,7 @@ export default function WarehousePage() {
                   <th className="px-3 py-2">Цена ед.</th>
                   <th className="px-3 py-2">Поставщик</th>
                   <th className="px-3 py-2">Комментарий</th>
+                  <th className="px-3 py-2 text-right">Действие</th>
                 </tr>
               </thead>
 
@@ -1170,12 +1192,18 @@ export default function WarehousePage() {
                       {b.supplier || "—"}
                     </td>
                     <td className="p-3 text-slate-600">{b.note || "—"}</td>
+                    <td className="p-3 text-right">
+                      <button type="button" onClick={() => cancelPurchase(b)} title="Отменить закупку"
+                        className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1.5 text-xs font-black text-red-300 transition hover:bg-red-500/20 active:scale-95">
+                        <Ban size={12} strokeWidth={2.4} /> Отменить
+                      </button>
+                    </td>
                   </tr>
                 ))}
 
                 {!safe_historyBatches.length && (
                   <tr>
-                    <td colSpan="7" className="p-8 text-center text-slate-500">
+                    <td colSpan="8" className="p-8 text-center text-slate-500">
                       Истории закупок пока нет
                     </td>
                   </tr>
@@ -1199,6 +1227,10 @@ export default function WarehousePage() {
                   <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Поставщик</p><b className="text-sm text-slate-200">{b.supplier || "—"}</b></div>
                 </div>
                 {b.note && <p className="mt-2 text-xs text-slate-400">{b.note}</p>}
+                <button type="button" onClick={() => cancelPurchase(b)}
+                  className="mt-2.5 flex min-h-[40px] w-full items-center justify-center gap-1.5 rounded-xl bg-red-500/10 px-3 font-black text-red-300 transition active:scale-95 hover:bg-red-500/20">
+                  <Ban size={14} strokeWidth={2.4} /> Отменить закупку
+                </button>
               </div>
             ))}
             {!safe_historyBatches.length && (

@@ -295,9 +295,9 @@ func createGlobalExpense(c *gin.Context) {
 	}
 
 	res, err := db.Exec(`
-		INSERT INTO global_expenses(account_id, employee_id, category, type, name, amount, comment, payment_source, created_at)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, e.AccountID, e.EmployeeID, e.Category, e.Type, e.Name, e.Amount, e.Comment, e.PaymentSource, time.Now().Format(time.RFC3339))
+		INSERT INTO global_expenses(account_id, employee_id, category, type, name, amount, comment, payment_source, purchase_ref, created_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, e.AccountID, e.EmployeeID, e.Category, e.Type, e.Name, e.Amount, e.Comment, e.PaymentSource, strings.TrimSpace(e.PurchaseRef), time.Now().Format(time.RFC3339))
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

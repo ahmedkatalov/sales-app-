@@ -126,6 +126,7 @@ func main() {
 	auth.PUT("/warehouse/items/:id", updateWarehouseItem)
 	auth.DELETE("/warehouse/items/:id", deleteWarehouseItem)
 	auth.DELETE("/warehouse/items/:id/last-purchase", deleteLastWarehousePurchase)
+	auth.DELETE("/warehouse/items/:id/batches/:batchId", cancelWarehousePurchase)
 	auth.GET("/warehouse/movements", getWarehouseMovements)
 	auth.GET("/warehouse/items/:id/batches", getWarehouseBatches)
 	auth.POST("/warehouse/items/:id/writeoff", writeOffWarehouseItem)

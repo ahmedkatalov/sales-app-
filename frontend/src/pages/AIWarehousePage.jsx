@@ -862,6 +862,15 @@ const Message = memo(function Message({ msg }) {
   );
 });
 
+// Общий ключ закупки: одна закупка = один ref на все её позиции + расход.
+// Позволяет отменить закупку (и связанный расход) одной кнопкой из истории.
+// Модульная область — вне компонента (иначе eslint ругается на Date.now/Math.random).
+function newPurchaseRef() {
+  return (typeof crypto !== "undefined" && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `p-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 export default function AIWarehousePage() {
   const [items, setItems] = useState([]);
   const [movements, setMovements] = useState([]);
@@ -1017,9 +1026,9 @@ export default function AIWarehousePage() {
     return true;
   };
 
-  const saveParsedPurchase = async (parsed) => {
+  const saveParsedPurchase = async (parsed, purchaseRef = "") => {
     const safeName = normalizeProductEntityName(parsed.payload?.name || parsed.form?.name || parsed.result?.name || "");
-    const safePayload = { ...(parsed.payload || {}), name: safeName };
+    const safePayload = { ...(parsed.payload || {}), name: safeName, purchaseRef };
     const safeMatched = parsed.matched && !/(^|\s)(купил|купила|купили|купи|купить)(\s|$)/i.test(parsed.matched.name || "")
       ? parsed.matched
       : null;
@@ -1040,7 +1049,7 @@ export default function AIWarehousePage() {
     };
   };
 
-  const savePurchaseExpense = async (savedPurchases) => {
+  const savePurchaseExpense = async (savedPurchases, purchaseRef = "") => {
     const priced = (savedPurchases || []).filter((x) => num(x?.payload?.price) > 0);
     if (!priced.length) return null;
     const total = priced.reduce((sum, x) => sum + num(x.payload.price), 0);
@@ -1054,6 +1063,7 @@ export default function AIWarehousePage() {
       name: priced.length === 1 ? `Закупка: ${normalizeProductEntityName(priced[0].matched?.name || priced[0].payload.name)}` : "Закупка сырья",
       amount: total,
       comment,
+      purchaseRef,
     });
     return { total, comment };
   };
@@ -1063,6 +1073,7 @@ export default function AIWarehousePage() {
     const saved = [];
     const stillWaiting = [];
     let workingItems = [...items];
+    const purchaseRef = newPurchaseRef();
 
     for (const pending of waiting) {
       const relevant = extractRelevantClarification(replyText, pending, waiting.length);
@@ -1088,7 +1099,7 @@ export default function AIWarehousePage() {
             result: { ...(pending.result || {}), questions: [] },
           };
           if (canSavePurchase(candidate)) {
-            const one = await saveParsedPurchase(candidate);
+            const one = await saveParsedPurchase(candidate, purchaseRef);
             saved.push(one);
             if (one.savedItem?.id) {
               const idx = workingItems.findIndex((w) => Number(w.id) === Number(one.savedItem.id));
@@ -1127,7 +1138,7 @@ export default function AIWarehousePage() {
       }
 
       if (canSavePurchase(candidate)) {
-        const one = await saveParsedPurchase(candidate);
+        const one = await saveParsedPurchase(candidate, purchaseRef);
         saved.push(one);
         if (one.savedItem?.id) {
           const idx = workingItems.findIndex((w) => Number(w.id) === Number(one.savedItem.id));
@@ -1153,7 +1164,7 @@ export default function AIWarehousePage() {
     }
 
     setPendingItems([]);
-    const expense = await savePurchaseExpense(saved);
+    const expense = await savePurchaseExpense(saved, purchaseRef);
     setMessages((p) => [...p, {
       role: "bot",
       text: `Готово, закрыла все уточнения${wsName ? ` на точке «${wsName}»` : ""}.\n${saved.map((x) => `• ${x.matched ? "прибавила к" : "создала"} “${x.matched?.name || x.payload.name}” — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n")}${expense ? `\n\nВ расходы записала закупку сырья: ${formatMoney(expense.total)}.` : ""}`,
@@ -1252,12 +1263,13 @@ export default function AIWarehousePage() {
     setPendingPurchaseConfirmation(null);
     setLoading(true);
     try {
+      const purchaseRef = newPurchaseRef();
       const saved = [];
       for (const candidate of pending.items) {
-        const one = await saveParsedPurchase(candidate);
+        const one = await saveParsedPurchase(candidate, purchaseRef);
         saved.push(one);
       }
-      const expense = await savePurchaseExpense(saved);
+      const expense = await savePurchaseExpense(saved, purchaseRef);
       const lines = saved.map((x) => `${x.matched ? "прибавила к" : "создала"} «${normalizeProductEntityName(x.matched?.name || x.payload.name)}» — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n");
       setMessages((prev) => [...prev, {
         role: "bot",

@@ -109,6 +109,8 @@ type WarehouseItem struct {
 	PurchaseUnit      string `json:"purchaseUnit"`
 	PurchaseUnitSnake string `json:"purchase_unit"`
 
+	PurchaseRef string `json:"purchaseRef"` // общий ключ закупки: связывает партию с расходом для отмены
+
 	PackagingQuantity float64 `json:"packagingQuantity"`
 
 	PackageItems      float64 `json:"packageItems"`
@@ -233,6 +235,7 @@ type GlobalExpense struct {
 	Amount        float64 `json:"amount"`
 	Comment       string  `json:"comment"`
 	PaymentSource string  `json:"paymentSource"` // cash | card | owner
+	PurchaseRef   string  `json:"purchaseRef"`   // ключ закупки: расход снимается при отмене закупки
 	CreatedAt     string  `json:"createdAt"`
 }
 

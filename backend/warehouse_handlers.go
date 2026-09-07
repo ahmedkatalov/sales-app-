@@ -365,9 +365,9 @@ func createWarehouseItem(c *gin.Context) {
 	}
 
 	_, err := db.Exec(`
-		INSERT INTO stock_batches(account_id, warehouse_item_id, quantity, remaining_quantity, purchase_price, unit_cost, supplier, expiry_date, note, created_at)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, item.AccountID, itemID, item.Quantity, item.Quantity, item.Price, item.UnitCost, item.Supplier, item.ExpiryDate, item.Note, now)
+		INSERT INTO stock_batches(account_id, warehouse_item_id, quantity, remaining_quantity, purchase_price, unit_cost, supplier, expiry_date, note, purchase_ref, created_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, item.AccountID, itemID, item.Quantity, item.Quantity, item.Price, item.UnitCost, item.Supplier, item.ExpiryDate, item.Note, strings.TrimSpace(item.PurchaseRef), now)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -1068,6 +1068,62 @@ func deleteLastWarehousePurchase(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
+// cancelWarehousePurchase — отмена КОНКРЕТНОЙ закупки (партии) из истории закупок:
+// снимает добавленный товар со склада и, если это была последняя партия своей
+// закупки (purchase_ref), снимает связанный расход ИИ-закупки.
+func cancelWarehousePurchase(c *gin.Context) {
+	itemID, _ := strconv.Atoi(c.Param("id"))
+	batchID, _ := strconv.Atoi(c.Param("batchId"))
+	accID := accountID(c)
+
+	var qty, remaining float64
+	var purchaseRef, note string
+	if err := db.QueryRow(`
+		SELECT quantity, remaining_quantity, IFNULL(purchase_ref, ''), IFNULL(note, '')
+		FROM stock_batches
+		WHERE id = ? AND warehouse_item_id = ? AND account_id = ?
+	`, batchID, itemID, accID).Scan(&qty, &remaining, &purchaseRef, &note); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Закупка не найдена"})
+		return
+	}
+
+	// Инвентаризационный излишек — не закупка.
+	if strings.Contains(note, "Инвентаризация") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Это корректировка инвентаризации, а не закупка."})
+		return
+	}
+	// Частично проданную/списанную закупку нельзя чисто отменить.
+	if remaining < qty-0.000001 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Из этой закупки уже часть продали или списали — отменить нельзя. Скорректируйте остаток через инвентаризацию."})
+		return
+	}
+
+	if _, err := db.Exec(`DELETE FROM stock_batches WHERE id = ? AND account_id = ?`, batchID, accID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Запись отмены в движения (аудит: видно, что закупку сняли).
+	_, _ = db.Exec(`
+		INSERT INTO warehouse_movements(account_id, warehouse_item_id, movement_type, quantity, reason, note, created_at)
+		VALUES(?, ?, 'out', ?, 'Отмена закупки', ?, ?)
+	`, accID, itemID, qty, note, time.Now().Format(time.RFC3339))
+
+	expenseRemoved := 0.0
+	// Расход снимаем только когда ВСЕ партии этой закупки отменены.
+	if purchaseRef != "" {
+		var remainingBatches int
+		_ = db.QueryRow(`SELECT COUNT(*) FROM stock_batches WHERE account_id = ? AND purchase_ref = ?`, accID, purchaseRef).Scan(&remainingBatches)
+		if remainingBatches == 0 {
+			_ = db.QueryRow(`SELECT IFNULL(SUM(amount), 0) FROM global_expenses WHERE account_id = ? AND purchase_ref = ?`, accID, purchaseRef).Scan(&expenseRemoved)
+			_, _ = db.Exec(`DELETE FROM global_expenses WHERE account_id = ? AND purchase_ref = ?`, accID, purchaseRef)
+		}
+	}
+
+	recalcWarehouseItem(itemID, accID)
+	c.JSON(http.StatusOK, gin.H{"success": true, "expenseRemoved": expenseRemoved})
+}
+
 func getDeletedWarehouseItems(c *gin.Context) {
 	rows, err := db.Query(`
 		SELECT id, account_id, name, unit, quantity, price, unit_cost,
@@ -1489,9 +1545,9 @@ func purchaseWarehouseItem(c *gin.Context) {
 	now := time.Now().Format(time.RFC3339)
 
 	_, err := db.Exec(`
-		INSERT INTO stock_batches(account_id, warehouse_item_id, quantity, remaining_quantity, purchase_price, unit_cost, supplier, expiry_date, note, created_at)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, accID, itemID, req.Quantity, req.Quantity, req.Price, unitCost, req.Supplier, req.ExpiryDate, req.Note, now)
+		INSERT INTO stock_batches(account_id, warehouse_item_id, quantity, remaining_quantity, purchase_price, unit_cost, supplier, expiry_date, note, purchase_ref, created_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, accID, itemID, req.Quantity, req.Quantity, req.Price, unitCost, req.Supplier, req.ExpiryDate, req.Note, strings.TrimSpace(req.PurchaseRef), now)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

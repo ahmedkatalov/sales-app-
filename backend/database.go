@@ -459,6 +459,11 @@ func createTables() {
 		`CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_recipes_product ON product_recipes(product_id, account_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_sales_account_created ON sales(account_id, created_at)`,
+		// Отмена закупки: общий ключ связывает партии склада с расходом ИИ-закупки,
+		// чтобы при отмене закупки списался и товар, и связанный расход.
+		`ALTER TABLE stock_batches ADD COLUMN purchase_ref TEXT DEFAULT ''`,
+		`ALTER TABLE global_expenses ADD COLUMN purchase_ref TEXT DEFAULT ''`,
+		`CREATE INDEX IF NOT EXISTS idx_batches_ref ON stock_batches(account_id, purchase_ref)`,
 	}
 
 	for _, q := range migrations {
