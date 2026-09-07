@@ -827,7 +827,7 @@ export default function ProfilePage({
         {/* ════ Модалки ════ */}
 
         {modal === "editPerms" && editingPerms && (
-          <Modal title={`Права: ${editingPerms.username}`} wide>
+          <Modal title={`Права: ${editingPerms.username}`} wide onClose={() => setModal(null)}>
             <p className="mb-4 text-sm text-slate-400">
               Выберите страницы, к которым у этого пользователя будет доступ.
             </p>
@@ -865,7 +865,7 @@ export default function ProfilePage({
         )}
 
         {modal === "grantAccess" && (
-          <Modal title="Добавить доступ к точке" wide>
+          <Modal title="Добавить доступ к точке" wide onClose={() => setModal(null)}>
             <div className="mb-4 flex items-start gap-2 rounded-2xl border border-violet-400/20 bg-violet-500/10 p-4 text-sm text-violet-200">
               <Lightbulb size={16} className="mt-0.5 shrink-0" />
               <span>Например: Ахмед уже есть как аккаунт «Okvion Sales» — дай ему доступ ещё и к «Ресторану Адол».</span>
@@ -908,7 +908,7 @@ export default function ProfilePage({
         )}
 
         {modal === "manageProfiles" && (
-          <Modal title="Продавцы под логином" wide>
+          <Modal title="Продавцы под логином" wide onClose={() => setModal(null)}>
             <div className="mb-4 rounded-3xl bg-gradient-to-r from-blue-600 to-violet-600 p-4 text-white">
               <p className="text-sm text-blue-100">Логин для входа</p>
               <p className="break-words text-2xl font-black">{managedAccount?.username}</p>
@@ -950,7 +950,7 @@ export default function ProfilePage({
         )}
 
         {modal === "employee" && (
-          <Modal title="Новый продавец">
+          <Modal title="Новый продавец" onClose={() => setModal(null)}>
             <label className="block">
               <span className="mb-2 block text-sm font-black text-slate-400">Имя продавца</span>
               <input value={employeeName} onChange={(e) => setEmployeeName(e.target.value)}
@@ -971,7 +971,7 @@ export default function ProfilePage({
         )}
 
         {pwPrompt && (
-          <Modal title="Пароль продавца">
+          <Modal title="Пароль продавца" onClose={() => { setPwPrompt(null); setPwInput(""); setError(""); }}>
             <p className="mb-4 text-sm text-slate-400">
               Введите пароль продавца <b className="text-white">{pwPrompt.employee?.name}</b>, чтобы встать за кассу.
             </p>
@@ -989,7 +989,7 @@ export default function ProfilePage({
         )}
 
         {modal === "workspace" && (
-          <Modal title="Новая точка">
+          <Modal title="Новая точка" onClose={() => setModal(null)}>
             <label className="block">
               <span className="mb-2 block text-sm font-black text-slate-400">Название точки</span>
               <input value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)}
@@ -1004,7 +1004,7 @@ export default function ProfilePage({
         )}
 
         {modal === "workerAccount" && (
-          <Modal title="Новый логин для входа" wide>
+          <Modal title="Новый логин для входа" wide onClose={() => setModal(null)}>
             <div className="space-y-3">
               {isOwner && (
                 <label className="block">

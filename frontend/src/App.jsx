@@ -841,7 +841,7 @@ export default function App() {
       </nav>
 
       {pwPrompt && (
-        <Modal title="Пароль продавца">
+        <Modal title="Пароль продавца" onClose={() => { setPwPrompt(null); setPwInput(""); setPwError(""); }}>
           <p className="mb-4 text-sm text-slate-400">
             Введите пароль продавца <b className="text-white">{pwPrompt.name}</b>, чтобы встать за кассу.
           </p>

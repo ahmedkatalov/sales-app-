@@ -718,7 +718,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
       </button>
 
       {expenseModal && (
-        <Modal title="Новый расход" wide>
+        <Modal title="Новый расход" wide onClose={() => setExpenseModal(false)}>
           <div className="grid gap-3">
             <label>
               <span className="mb-2 block text-sm font-black text-slate-300">Категория расхода</span>
@@ -830,7 +830,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
       )}
 
       {expenseToDelete && (
-        <Modal title="Удаление расхода">
+        <Modal title="Удаление расхода" onClose={() => setExpenseToDelete(null)}>
           <div className="space-y-5">
             <div className="rounded-3xl border border-red-400/20 bg-red-500/10 p-4">
               <p className="text-sm font-bold text-red-200">
@@ -867,7 +867,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
       )}
 
       {ownerModal && (
-        <Modal title={OWNER_KIND[ownerModal]?.cta || "Расчёт с владельцем"}>
+        <Modal title={OWNER_KIND[ownerModal]?.cta || "Расчёт с владельцем"} onClose={() => setOwnerModal(null)}>
           <div className="grid gap-3">
             <p className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold leading-snug text-slate-300">
               {OWNER_KIND[ownerModal]?.hint}
@@ -908,7 +908,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
       )}
 
       {openingModal && (
-        <Modal title="Стартовые балансы" wide>
+        <Modal title="Стартовые балансы" wide onClose={() => setOpeningModal(false)}>
           <div className="grid gap-3">
             <p className="rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-bold leading-snug text-blue-100">
               Начальное состояние при переходе с другой системы. Это <b>не</b> транзакции — это точка отсчёта. Заполните то, что знаете на дату старта; остальное можно оставить нулём и уточнить позже.

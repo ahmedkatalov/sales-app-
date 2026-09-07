@@ -1141,7 +1141,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       </div>
 
       {(shiftModal === "in" || shiftModal === "out") && (
-        <Modal title={shiftModal === "in" ? "Внести в кассу" : "Изъять из кассы"}>
+        <Modal title={shiftModal === "in" ? "Внести в кассу" : "Изъять из кассы"} onClose={() => setShiftModal(null)}>
           <p className="mb-4 text-sm text-slate-400">
             {shiftModal === "in" ? "Деньги, которые кладёшь в кассу (не продажа)." : "Деньги, которые забираешь из кассы (выплата, инкассация, такси и т.п.)."}
           </p>
@@ -1157,7 +1157,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       )}
 
       {shiftModal === "close" && cashShift && (
-        <Modal title="Закрыть смену">
+        <Modal title="Закрыть смену" onClose={() => setShiftModal(null)}>
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <div className="flex items-baseline justify-between">
               <span className="text-sm text-slate-400">По программе должно быть</span>
@@ -1181,7 +1181,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       )}
 
       {shiftResult && (
-        <Modal title="Смена закрыта">
+        <Modal title="Смена закрыта" onClose={() => setShiftResult(null)}>
           <div className="space-y-2">
             <div className="flex justify-between text-slate-300"><span>Размен</span><b className="text-white">{formatMoney(shiftResult.openingCash)}</b></div>
             <div className="flex justify-between text-slate-300"><span>Продажи налом</span><b className="text-white">{formatMoney(shiftResult.cashSales)}</b></div>
@@ -1201,7 +1201,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       )}
 
       {paymentModal && (
-        <Modal title="Способ оплаты" wide>
+        <Modal title="Способ оплаты" wide onClose={() => setPaymentModal(false)}>
           <div className="rounded-3xl border border-white/10 bg-white/4 p-4">
             <div className="flex justify-between text-lg">
               <span>К оплате</span>
@@ -1324,7 +1324,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       )}
 
       {productModal && (
-        <Modal title="Новая позиция меню" wide>
+        <Modal title="Новая позиция меню" wide onClose={() => { setProductModal(false); setRecipe([]); }}>
           <div className="grid gap-3 sm:grid-cols-2">
             <select
               value={newProduct.categoryId}

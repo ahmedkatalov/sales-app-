@@ -121,7 +121,7 @@ export default function MenuTransferModal({ onClose }) {
   const selectClass = "w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70";
 
   return (
-    <Modal title="Перенос меню между точками" section="Точки" wide>
+    <Modal title="Перенос меню между точками" section="Точки" wide onClose={onClose}>
       {loadingWs ? (
         <div className="flex items-center justify-center gap-2 py-12 text-slate-400">
           <RefreshCw size={18} className="animate-spin" /> Загрузка точек…

@@ -84,7 +84,7 @@ export default function PendingPaymentsModal({ onClose }) {
   const totalWaiting = safe_list.reduce((s, x) => s + num(x.total), 0);
 
   return (
-    <Modal title="Ожидают оплаты" section="Касса" wide>
+    <Modal title="Ожидают оплаты" section="Касса" wide onClose={onClose}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <p className="text-sm font-bold text-slate-400">
           <b className="text-white">{safe_list.length}</b> чеков · <b className="text-emerald-300">{formatMoney(totalWaiting)}</b> к оплате

@@ -1016,7 +1016,7 @@ export default function WarehousePage() {
       </div>
 
       {deleteModal && (
-        <Modal title={`Удалить товар: ${deleteTargetItem?.name || "сырьё"}`} wide>
+        <Modal title={`Удалить товар: ${deleteTargetItem?.name || "сырьё"}`} wide onClose={() => setDeleteModal(false)}>
           <div className="rounded-3xl bg-red-50 p-4 text-red-800">
             <p className="font-black">Товар уйдёт из активного склада, но останется в истории удалений.</p>
             <p className="mt-1 text-sm font-bold">
@@ -1057,7 +1057,7 @@ export default function WarehousePage() {
       )}
 
       {deletedModal && (
-        <Modal title="История удалённых товаров" wide>
+        <Modal title="История удалённых товаров" wide onClose={() => setDeletedModal(false)}>
           <div className="rounded-3xl bg-slate-50 p-4 text-sm font-bold text-slate-600">
             Здесь видно, что удалили, когда, какой был остаток и почему. Это не смешивается со скрытыми товарами.
           </div>
@@ -1122,7 +1122,7 @@ export default function WarehousePage() {
       )}
 
       {historyModal && (
-        <Modal title={`История закупок: ${historyItem?.name || "сырьё"}`} wide>
+        <Modal title={`История закупок: ${historyItem?.name || "сырьё"}`} wide onClose={() => setHistoryModal(false)}>
           <div className="mb-4 rounded-3xl bg-slate-50 p-4">
             <p className="text-sm font-bold text-slate-500">Текущий остаток</p>
             <p className="mt-1 text-2xl font-black text-slate-950">
@@ -1217,7 +1217,7 @@ export default function WarehousePage() {
       )}
 
       {duplicateModal && (
-        <Modal title="Похожий товар уже есть" wide>
+        <Modal title="Похожий товар уже есть" wide onClose={() => setDuplicateModal(false)}>
           <div className="rounded-3xl bg-yellow-50 p-4 text-yellow-800">
             <p className="font-black">Защита от дублей</p>
             <p className="mt-1 text-sm font-bold">
@@ -1275,7 +1275,7 @@ export default function WarehousePage() {
       )}
 
       {addModal && (
-        <Modal title={purchaseTargetItem ? `Новая закупка: ${purchaseTargetItem.name}` : "Добавить закупку вручную"} wide>
+        <Modal title={purchaseTargetItem ? `Новая закупка: ${purchaseTargetItem.name}` : "Добавить закупку вручную"} wide onClose={() => { setAddModal(false); resetForm(); }}>
           <div className="mb-3 flex items-center gap-2 rounded-2xl border border-blue-400/25 bg-blue-500/10 px-3.5 py-2.5 text-sm font-black text-blue-200">
             📍 Склад точки: <span className="truncate text-white">{getCurrentWorkspace()?.name || "текущая"}</span>
           </div>
@@ -1481,7 +1481,7 @@ export default function WarehousePage() {
         // Выбранное сырьё — чтобы показать единицу у поля количества и предпросмотр «останется».
         const woSelected = items.find((i) => String(i.id) === String(writeOffForm.warehouseItemId));
         return (
-        <Modal title="Утиль / списание">
+        <Modal title="Утиль / списание" onClose={() => setWriteOffModal(false)}>
           <div className="space-y-3">
             <select
               value={writeOffForm.warehouseItemId}
@@ -1582,7 +1582,7 @@ export default function WarehousePage() {
       })()}
 
       {inventoryModal && inventoryForm.item && (
-        <Modal title="Фактический остаток" section="Инвентаризация">
+        <Modal title="Фактический остаток" section="Инвентаризация" onClose={() => setInventoryModal(false)}>
           <p className="mb-4 text-sm text-slate-400">
             Пересчитали по факту? Укажите, сколько реально на складе — система сама проведёт недостачу или излишек.
           </p>

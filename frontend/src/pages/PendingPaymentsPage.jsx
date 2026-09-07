@@ -177,7 +177,7 @@ export default function PendingPaymentsPage() {
       </div>
 
       {selected && (
-        <Modal title="Принять оплату">
+        <Modal title="Принять оплату" onClose={() => { setSelected(null); setModalError(""); }}>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-sm font-bold text-slate-400">Итого к оплате</p>
             <p className="mt-1 text-3xl font-black tabular-nums text-white">{formatMoney(selected.total)}</p>

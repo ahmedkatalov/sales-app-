@@ -1295,7 +1295,7 @@ export default function WorkPage() {
       {transferModal && <MenuTransferModal onClose={() => setTransferModal(false)} />}
 
       {filterModal && (
-        <Modal title="Фильтр товаров">
+        <Modal title="Фильтр товаров" onClose={() => setFilterModal(false)}>
           <div className="space-y-3">
             <label className="block">
               <span className="mb-2 block text-sm font-black text-slate-400">
@@ -1357,7 +1357,7 @@ export default function WorkPage() {
       )}
 
       {structureModal && (
-        <Modal title="Типы и папки" wide>
+        <Modal title="Типы и папки" wide onClose={() => setStructureModal(false)}>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-3xl border border-white/10 p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
@@ -1464,7 +1464,7 @@ export default function WorkPage() {
       )}
 
       {importModal && (
-        <Modal title="Импорт Excel">
+        <Modal title="Импорт Excel" onClose={() => setImportModal(false)}>
           <div className="space-y-4">
             <p className="text-sm text-slate-400">
               Загрузи CSV-файл, который открывается в Excel. Колонки:
@@ -1496,7 +1496,7 @@ export default function WorkPage() {
       )}
 
       {typeModal && (
-        <Modal title="Новый тип">
+        <Modal title="Новый тип" onClose={() => { setTypeModal(false); setStructureModal(true); }}>
           <input
             value={newTypeName}
             onChange={(e) => setNewTypeName(e.target.value)}
@@ -1523,7 +1523,7 @@ export default function WorkPage() {
       )}
 
       {folderModal && (
-        <Modal title="Новая папка / раздел">
+        <Modal title="Новая папка / раздел" onClose={() => { setFolderModal(false); setStructureModal(true); }}>
           <select
             value={selectedTypeId}
             onChange={(e) => setSelectedTypeId(e.target.value)}
@@ -1563,7 +1563,7 @@ export default function WorkPage() {
       )}
 
       {productModal && (
-        <Modal title="Новая позиция меню" wide>
+        <Modal title="Новая позиция меню" wide onClose={() => { setProductModal(false); setRecipe([]); setProductForm({ name: "", cost: "", price: "", isExtra: false, hidden: false }); }}>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <div className="flex gap-2">
@@ -1913,7 +1913,7 @@ export default function WorkPage() {
       )}
 
       {editModal && editProduct && (
-        <Modal title={`Редактировать: ${editProduct.name}`} wide>
+        <Modal title={`Редактировать: ${editProduct.name}`} wide onClose={() => setEditModal(false)}>
           <div className="grid gap-3 sm:grid-cols-2">
             <input value={editProduct.name}
               onChange={e => setEditProduct(p => ({...p, name: e.target.value}))}
