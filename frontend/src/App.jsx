@@ -1,5 +1,5 @@
 import { useEffect, useState, lazy, Suspense } from "react";
-import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import {
   BarChart3,
   Bot,
@@ -361,6 +361,7 @@ export default function App() {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [desktopNavMode, setDesktopNavMode] = useState(() => localStorage.getItem("sales_app_desktop_nav_mode") || "header");
   const location = useLocation();
+  const navigate = useNavigate();
   const isAIWarehouseRoute = location.pathname === "/ai-warehouse";
   const isPosRoute = location.pathname === "/pos";
   // Полноэкранные («иммерсивные») экраны без общей навигации — как чат с ИИ.
@@ -532,6 +533,7 @@ export default function App() {
   const mobileMainPaths = isWorker ? ["/pos", "/pending-payments", "/expenses"] : ["/home", "/pos", "/pending-payments"];
   const mobileMainLinks = links.filter(([to]) => mobileMainPaths.includes(to));
   const mobileMoreLinks = links.filter(([to]) => !mobileMainPaths.includes(to));
+  const moreActive = mobileMoreLinks.some(([to]) => to === location.pathname);
 
   const currentWorkspace = workspace || session.workspace || {
     id: session.defaultWorkspaceId || session.workspaceId,
@@ -746,7 +748,7 @@ export default function App() {
           <Route path="/" element={<Navigate to={isWorker ? "/pos" : "/home"} replace />} />
           <Route path="/home" element={isWorker ? <Navigate to="/pos" replace /> : <HomePage />} />
           <Route path="/appearance" element={isWorker ? <Navigate to="/pos" replace /> : <AppearancePage />} />
-          <Route path="/pos" element={<POSPage currentProfile={profile} ownerName={isWorker ? profile?.name : session.ownerName || session.username} openProfile={() => { if (!isWorker) window.location.href = "/profile"; }} isWorker={isWorker} employees={employees} onProfileChange={handleProfileChange} onExit={() => { window.location.href = isWorker ? "/pending-payments" : "/home"; }} />} />
+          <Route path="/pos" element={<POSPage currentProfile={profile} ownerName={isWorker ? profile?.name : session.ownerName || session.username} openProfile={() => { if (!isWorker) navigate("/profile"); }} isWorker={isWorker} employees={employees} onProfileChange={handleProfileChange} onExit={() => navigate(isWorker ? "/pending-payments" : "/home")} />} />
           <Route path="/expenses" element={<ExpensesPage currentProfile={profile} workerMode={isWorker} />} />
           <Route path="/pending-payments" element={<PendingPaymentsPage />} />
           <Route path="/debts" element={<DebtsPage />} />
@@ -830,10 +832,10 @@ export default function App() {
         {mobileMoreLinks.length > 0 && (
           <button type="button" onClick={() => setMobileMoreOpen((open) => !open)}
             className="relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-[1.2rem] px-1 py-2">
-            <span className={`flex h-10 w-full items-center justify-center rounded-2xl transition-all duration-200 ${mobileMoreOpen ? "bg-blue-500/16 text-blue-400" : "text-slate-500"}`}>
-              <Menu size={22} strokeWidth={mobileMoreOpen ? 2.6 : 2} />
+            <span className={`flex h-10 w-full items-center justify-center rounded-2xl transition-all duration-200 ${mobileMoreOpen || moreActive ? "bg-blue-500/16 text-blue-400" : "text-slate-500"}`}>
+              <Menu size={22} strokeWidth={mobileMoreOpen || moreActive ? 2.6 : 2} />
             </span>
-            <span className={`w-full truncate text-center text-[10px] font-black leading-none tracking-tight transition-colors ${mobileMoreOpen ? "text-blue-400" : "text-slate-500"}`}>Ещё</span>
+            <span className={`w-full truncate text-center text-[10px] font-black leading-none tracking-tight transition-colors ${mobileMoreOpen || moreActive ? "text-blue-400" : "text-slate-500"}`}>Ещё</span>
           </button>
         )}
       </nav>

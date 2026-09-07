@@ -7,6 +7,11 @@ import { formatMoney, money, num } from "../utils/format";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
 import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
 
+// Форматирование количеств: округляет и убирает хвостовые нули + артефакты float
+// (981.4599999999999 → «981,46», 966.6666666 → «966,667», целые → «981»).
+const fmtQty = (value) =>
+  num(value).toLocaleString("ru-RU", { maximumFractionDigits: 3 });
+
 const SMART_UNIT_SETTINGS = {
   g: { controlMode: "approximate", lossPercent: "3", inventoryMethod: "average", packagingQuantity: "1", hint: "Для граммов система считает расход приблизительно и добавляет небольшой запас на потери." },
   kg: { controlMode: "approximate", lossPercent: "3", inventoryMethod: "average", packagingQuantity: "1000", hint: "1 кг = 1000 г. Удобно закупать килограммами, а списывать по граммам." },
@@ -286,6 +291,15 @@ export default function WarehousePage() {
       return false;
     }
 
+    const price = num(form.price);
+    if (price < 0) {
+      fail("Цена закупки не может быть отрицательной");
+      return false;
+    }
+    if (price === 0 && !window.confirm("Цена закупки не указана — себестоимость будет 0. Сохранить?")) {
+      return false;
+    }
+
     return true;
   };
 
@@ -370,6 +384,13 @@ export default function WarehousePage() {
     }
   };
 
+  // Ошибка до guarded(): баннер в теле страницы прячется за оверлеем модалки,
+  // поэтому дублируем её тостом поверх модалки, чтобы она была видна.
+  const fail = (m) => {
+    setError(m);
+    window.notify?.(m, "error");
+  };
+
   const createNewItemAnyway = async () => {
     setError("");
     if (!validateForm()) return;
@@ -433,11 +454,11 @@ export default function WarehousePage() {
     setError("");
 
     if (!writeOffForm.warehouseItemId) {
-      return setError("Выберите сырьё для списания");
+      return fail("Выберите сырьё для списания");
     }
 
     if (num(writeOffForm.quantity) <= 0) {
-      return setError("Введите количество списания");
+      return fail("Введите количество списания");
     }
 
     await guarded(async () => {
@@ -461,7 +482,7 @@ export default function WarehousePage() {
     setError("");
     if (!inventoryForm.item) return;
     if (inventoryForm.actual === "" || num(inventoryForm.actual) < 0) {
-      return setError("Введите фактический остаток");
+      return fail("Введите фактический остаток");
     }
     await guarded(async () => {
       await post(`/warehouse/items/${inventoryForm.item.id}/inventory`, {
@@ -475,34 +496,34 @@ export default function WarehousePage() {
 
   const toggleHidden = async (item) => {
     setError("");
-
-    await post(`/warehouse/items/${item.id}/hide`, {
-      hidden: !isHidden(item),
+    await guarded(async () => {
+      await post(`/warehouse/items/${item.id}/hide`, {
+        hidden: !isHidden(item),
+      });
+      await load();
     });
-
-    await load();
   };
 
   const openDeleteModal = (item) => {
     setError("");
     setDeleteTargetItem(item);
     setDeleteReason("Дубль / ошибочно добавили");
-    setDeleteNote(`Удаляю ${item.name || "сырьё"}. Остаток на момент удаления: ${num(item.quantity)} ${unitLabel(item.unit)}.`);
+    setDeleteNote(`Удаляю ${item.name || "сырьё"}. Остаток на момент удаления: ${fmtQty(item.quantity)} ${unitLabel(item.unit)}.`);
     setDeleteModal(true);
   };
 
   const deleteItem = async () => {
     if (!deleteTargetItem) return;
-
     setError("");
-    await del(`/warehouse/items/${deleteTargetItem.id}`, {
-      reason: deleteReason,
-      note: deleteNote,
+    await guarded(async () => {
+      await del(`/warehouse/items/${deleteTargetItem.id}`, {
+        reason: deleteReason,
+        note: deleteNote,
+      });
+      setDeleteModal(false);
+      setDeleteTargetItem(null);
+      await load();
     });
-
-    setDeleteModal(false);
-    setDeleteTargetItem(null);
-    await load();
   };
 
   const openDeletedHistory = async () => {
@@ -705,6 +726,7 @@ export default function WarehousePage() {
                 const totalValue = qty * unitCost;
                 const low = min > 0 && qty <= min;
                 const neg = qty < -0.000001; // продано в минус — нужно пополнить/сверить
+                const out = !neg && qty <= 0.000001; // закончилось (нет в наличии)
 
                 return (
                   <tr
@@ -745,11 +767,12 @@ export default function WarehousePage() {
 
                     <td
                       className={`px-3 py-2 align-middle font-black ${
-                        neg || low ? "text-red-400" : "text-emerald-400"
+                        neg ? "text-red-400" : out ? "text-slate-300" : low ? "text-amber-400" : "text-emerald-400"
                       }`}
                     >
-                      {qty} {unit}
+                      {fmtQty(qty)} {unit}
                       {neg && <span className="ml-1 rounded bg-red-500/20 px-1.5 py-0.5 align-middle text-[10px] font-black text-red-300">в минусе</span>}
+                      {out && <span className="ml-1 rounded bg-slate-500/20 px-1.5 py-0.5 align-middle text-[10px] font-black text-slate-300">нет в наличии</span>}
                     </td>
 
                     <td className="px-3 py-2 align-middle font-bold text-slate-300">
@@ -845,13 +868,14 @@ export default function WarehousePage() {
             const unit = unitLabel(item.unit);
             const low = min > 0 && qty <= min;
             const neg = qty < -0.000001;
+            const out = !neg && qty <= 0.000001; // закончилось (нет в наличии)
 
             const open = expandedId === item.id;
 
             return (
               <div
                 key={item.id}
-                className={`relative ${hidden ? "opacity-55" : ""} ${low || neg ? "before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:bg-red-500" : ""}`}
+                className={`relative ${hidden ? "opacity-55" : ""} ${neg || low ? "before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:bg-red-500" : out ? "before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:bg-slate-500" : ""}`}
               >
                 {/* Свёрнутая строка — тап разворачивает действия */}
                 <button
@@ -865,14 +889,14 @@ export default function WarehousePage() {
                     <div className="min-w-0">
                       <p className="truncate text-base font-black text-white">{item.name}</p>
                       <p className={`truncate text-xs ${neg ? "font-black text-red-300" : "text-slate-400"}`}>
-                        {neg ? "В минусе — пополните" : low ? "Ниже минимума" : "В наличии"}{item.supplier ? ` · ${item.supplier}` : ""}
+                        {neg ? "В минусе — пополните" : out ? "Нет в наличии" : low ? "Ниже минимума" : "В наличии"}{item.supplier ? ` · ${item.supplier}` : ""}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className={`rounded-xl px-2.5 py-1 text-sm font-black tabular-nums ${low || neg ? "bg-red-500/15 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}>
-                      {qty} {unit}
+                    <span className={`rounded-xl px-2.5 py-1 text-sm font-black tabular-nums ${neg || low ? "bg-red-500/15 text-red-300" : out ? "bg-slate-600/30 text-slate-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+                      {fmtQty(qty)} {unit}
                     </span>
                     <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`} strokeWidth={2.4} />
                   </div>
@@ -883,7 +907,7 @@ export default function WarehousePage() {
                     <div className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-xs">
                       <div>
                         <span className="text-slate-500">Минимум: </span>
-                        <span className={`font-black ${low ? "text-red-300" : "text-slate-200"}`}>{min} {unit}</span>
+                        <span className={`font-black ${low ? "text-red-300" : "text-slate-200"}`}>{fmtQty(min)} {unit}</span>
                       </div>
                       <div className="text-right">
                         <span className="text-slate-500">Единица: </span>
@@ -908,15 +932,12 @@ export default function WarehousePage() {
                       </button>
                     </div>
 
-                    <div className="mt-2 flex items-center gap-1 text-xs">
-                      <button type="button" onClick={() => openHistory(item)} className="flex min-h-[40px] flex-1 items-center justify-center gap-1 rounded-lg px-2 py-2.5 font-black text-slate-300 transition hover:bg-white/5"><History size={13} strokeWidth={2.2} />История</button>
-                      <span className="text-white/10">·</span>
-                      <button type="button" onClick={() => openWriteOff(item.id)} className="min-h-[40px] flex-1 rounded-lg px-2 py-2.5 font-black text-slate-300 transition hover:bg-white/5">Списать</button>
-                      <span className="text-white/10">·</span>
-                      <button type="button" onClick={() => toggleHidden(item)} className="min-h-[40px] flex-1 rounded-lg px-2 py-2.5 font-black text-slate-300 transition hover:bg-white/5">{hidden ? "Показать" : "Скрыть"}</button>
-                      <span className="text-white/10">·</span>
-                      <button type="button" onClick={() => openDeleteModal(item)} className="min-h-[40px] flex-1 rounded-lg px-2 py-2.5 font-black text-red-400/90 transition hover:bg-red-500/10">Удалить</button>
+                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                      <button type="button" onClick={() => openHistory(item)} className="flex min-h-[44px] items-center justify-center gap-1 rounded-lg bg-white/[0.04] px-2 font-black text-slate-300 transition active:scale-95 hover:bg-white/10"><History size={13} strokeWidth={2.2} />История</button>
+                      <button type="button" onClick={() => openWriteOff(item.id)} className="min-h-[44px] rounded-lg bg-white/[0.04] px-2 font-black text-slate-300 transition active:scale-95 hover:bg-white/10">Списать</button>
+                      <button type="button" onClick={() => toggleHidden(item)} className="min-h-[44px] rounded-lg bg-white/[0.04] px-2 font-black text-slate-300 transition active:scale-95 hover:bg-white/10">{hidden ? "Показать" : "Скрыть"}</button>
                     </div>
+                    <button type="button" onClick={() => openDeleteModal(item)} className="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 px-2 text-xs font-black text-red-400/90 transition active:scale-95 hover:bg-red-500/20">Удалить</button>
                   </div>
                 )}
               </div>
@@ -959,6 +980,10 @@ export default function WarehousePage() {
             {safe_movements.slice(0, 8).map((m) => {
               const type = String(m.movementType || m.movement_type || "");
               const unit = unitLabel(m.unit);
+              // Направление нельзя брать по type==='in' или знаку количества:
+              // бэкенд пишет и излишек, и недостачу инвентаризации как положительное число.
+              const reason = String(m.reason || m.movement_type || "");
+              const isIncome = type === "in" || (type === "inventory" && /излиш/i.test(reason));
 
               return (
                 <div
@@ -976,10 +1001,10 @@ export default function WarehousePage() {
 
                   <p
                     className={`shrink-0 whitespace-nowrap text-sm font-black tabular-nums sm:text-base ${
-                      type === "in" ? "text-emerald-400" : "text-red-400"
+                      isIncome ? "text-emerald-400" : "text-red-400"
                     }`}
                   >
-                    {type === "in" ? "+" : "−"}{num(m.quantity)} {unit}
+                    {isIncome ? "+" : "−"}{fmtQty(m.quantity)} {unit}
                   </p>
                 </div>
               );
@@ -995,7 +1020,7 @@ export default function WarehousePage() {
           <div className="rounded-3xl bg-red-50 p-4 text-red-800">
             <p className="font-black">Товар уйдёт из активного склада, но останется в истории удалений.</p>
             <p className="mt-1 text-sm font-bold">
-              Остаток на момент удаления: {num(deleteTargetItem?.quantity)} {unitLabel(deleteTargetItem?.unit)} · сумма {formatMoney(num(deleteTargetItem?.quantity) * getUnitCost(deleteTargetItem || {}))}
+              Остаток на момент удаления: {fmtQty(deleteTargetItem?.quantity)} {unitLabel(deleteTargetItem?.unit)} · сумма {formatMoney(num(deleteTargetItem?.quantity) * getUnitCost(deleteTargetItem || {}))}
             </p>
           </div>
 
@@ -1024,8 +1049,8 @@ export default function WarehousePage() {
             <button type="button" onClick={() => setDeleteModal(false)} className="btn-white flex-1">
               Отмена
             </button>
-            <button type="button" onClick={deleteItem} className="flex-1 rounded-2xl bg-red-600 px-5 py-3 font-black text-white shadow-sm transition hover:bg-red-700">
-              Удалить и записать в историю
+            <button type="button" onClick={deleteItem} disabled={submitting} className="flex-1 rounded-2xl bg-red-600 px-5 py-3 font-black text-white shadow-sm transition hover:bg-red-700 disabled:opacity-60">
+              {submitting ? "Удаляю…" : "Удалить и записать в историю"}
             </button>
           </div>
         </Modal>
@@ -1054,7 +1079,7 @@ export default function WarehousePage() {
                   <tr key={item.id} className="border-t border-slate-100">
                     <td className="p-3 font-bold text-slate-700">{String(item.deletedAt || "").slice(0, 16).replace("T", " ") || "—"}</td>
                     <td className="p-3 font-black text-slate-950">{item.name}</td>
-                    <td className="p-3 font-black text-red-600">{num(item.quantity)} {unitLabel(item.unit)}</td>
+                    <td className="p-3 font-black text-red-600">{fmtQty(item.quantity)} {unitLabel(item.unit)}</td>
                     <td className="p-3 font-black">{formatMoney(item.totalValue || num(item.quantity) * num(item.unitCost))}</td>
                     <td className="p-3 font-bold text-slate-700">{item.deleteReason || "—"}</td>
                     <td className="p-3 text-slate-600">{item.deleteNote || item.note || "—"}</td>
@@ -1075,7 +1100,7 @@ export default function WarehousePage() {
               <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
                 <div className="flex items-start justify-between gap-3">
                   <p className="min-w-0 break-words font-black text-white">{item.name}</p>
-                  <span className="shrink-0 text-sm font-black text-red-300">{num(item.quantity)} {unitLabel(item.unit)}</span>
+                  <span className="shrink-0 text-sm font-black text-red-300">{fmtQty(item.quantity)} {unitLabel(item.unit)}</span>
                 </div>
                 <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
                   <span className="text-slate-400">Дата</span><span className="text-right font-bold text-slate-200">{String(item.deletedAt || "").slice(0, 16).replace("T", " ") || "—"}</span>
@@ -1127,10 +1152,10 @@ export default function WarehousePage() {
                       {String(b.createdAt || "").slice(0, 10) || "—"}
                     </td>
                     <td className="p-3 font-black">
-                      {num(b.quantity)} {unitLabel(historyItem?.unit)}
+                      {fmtQty(b.quantity)} {unitLabel(historyItem?.unit)}
                     </td>
                     <td className="p-3 font-black text-emerald-600">
-                      {num(b.remainingQuantity)}{" "}
+                      {fmtQty(b.remainingQuantity)}{" "}
                       {unitLabel(historyItem?.unit)}
                     </td>
                     <td className="p-3 font-black">
@@ -1163,10 +1188,10 @@ export default function WarehousePage() {
               <div key={b.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm font-black text-white">{String(b.createdAt || "").slice(0, 10) || "—"}</span>
-                  <span className="text-sm font-black text-slate-200">{num(b.quantity)} {unitLabel(historyItem?.unit)}</span>
+                  <span className="text-sm font-black text-slate-200">{fmtQty(b.quantity)} {unitLabel(historyItem?.unit)}</span>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
-                  <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Осталось</p><b className="text-sm text-emerald-300">{num(b.remainingQuantity)} {unitLabel(historyItem?.unit)}</b></div>
+                  <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Осталось</p><b className="text-sm text-emerald-300">{fmtQty(b.remainingQuantity)} {unitLabel(historyItem?.unit)}</b></div>
                   <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Цена закупки</p><b className="text-sm text-white">{formatMoney(b.purchasePrice)}</b></div>
                   <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Цена ед.</p><b className="text-sm text-white">{formatMoney(b.unitCost)}</b></div>
                   <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Поставщик</p><b className="text-sm text-slate-200">{b.supplier || "—"}</b></div>
@@ -1371,18 +1396,24 @@ export default function WarehousePage() {
                 onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
                 placeholder="Общая цена закупки"
                 type="number"
+                min="0"
                 inputMode="decimal"
                 className="input"
               />
 
-              <input
-                value={form.minQuantity}
-                onChange={(e) => setForm((p) => ({ ...p, minQuantity: e.target.value }))}
-                placeholder="Минимальный остаток"
-                type="number"
-                inputMode="decimal"
-                className="input"
-              />
+              <div className="sm:col-span-2">
+                <input
+                  value={form.minQuantity}
+                  onChange={(e) => setForm((p) => ({ ...p, minQuantity: e.target.value }))}
+                  placeholder={`Мин. остаток, ${unitLabel(form.unit)}`}
+                  type="number"
+                  inputMode="decimal"
+                  className="input w-full"
+                />
+                <p className="mt-1 text-xs font-bold text-slate-500">
+                  В единицах хранения — {unitLabel(form.unit) || "г/мл"}. Ниже этого остатка сырьё пометится как «Низкий остаток».
+                </p>
+              </div>
 
               <input
                 value={form.supplier}
@@ -1446,7 +1477,10 @@ export default function WarehousePage() {
       )}
 
       
-{writeOffModal && (
+{writeOffModal && (() => {
+        // Выбранное сырьё — чтобы показать единицу у поля количества и предпросмотр «останется».
+        const woSelected = items.find((i) => String(i.id) === String(writeOffForm.warehouseItemId));
+        return (
         <Modal title="Утиль / списание">
           <div className="space-y-3">
             <select
@@ -1478,11 +1512,22 @@ export default function WarehousePage() {
                   quantity: e.target.value,
                 }))
               }
-              placeholder="Количество списания"
+              placeholder={woSelected ? `Сколько списать, ${unitLabel(woSelected.unit)}` : "Количество списания"}
               type="number"
               inputMode="decimal"
               className="input w-full"
             />
+
+            {woSelected && writeOffForm.quantity !== "" && (() => {
+              const left = num(woSelected.quantity) - num(writeOffForm.quantity);
+              return (
+                <p className={`text-sm font-bold ${left < 0 ? "text-red-300" : "text-slate-400"}`}>
+                  {left < 0
+                    ? `Недостаточно: не хватает ${fmtQty(Math.abs(left))} ${unitLabel(woSelected.unit)}`
+                    : `Останется: ${fmtQty(left)} ${unitLabel(woSelected.unit)}`}
+                </p>
+              );
+            })()}
 
             <select
               value={writeOffForm.reason}
@@ -1533,7 +1578,8 @@ export default function WarehousePage() {
             </button>
           </div>
         </Modal>
-      )}
+        );
+      })()}
 
       {inventoryModal && inventoryForm.item && (
         <Modal title="Фактический остаток" section="Инвентаризация">
@@ -1564,7 +1610,7 @@ export default function WarehousePage() {
               {(() => {
                 const d = num(inventoryForm.actual) - num(inventoryForm.item.quantity);
                 if (Math.abs(d) < 0.001) return "Совпадает с учётом";
-                return d < 0 ? `Недостача: ${Math.abs(d)} ${unitLabel(inventoryForm.item.unit)} (спишется)` : `Излишек: +${d} ${unitLabel(inventoryForm.item.unit)} (оприходуется)`;
+                return d < 0 ? `Недостача: ${fmtQty(Math.abs(d))} ${unitLabel(inventoryForm.item.unit)} (спишется)` : `Излишек: +${fmtQty(d)} ${unitLabel(inventoryForm.item.unit)} (оприходуется)`;
               })()}
             </p>
           )}

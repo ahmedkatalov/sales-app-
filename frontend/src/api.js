@@ -185,8 +185,11 @@ function withBody(url, body) {
 }
 
 async function request(url, options = {}) {
+  const { timeoutMs, ...fetchOptions } = options;
+  // Запросы к ИИ (/ai/*) генерируются дольше — даём им до 90с, остальным 12с.
+  const limitMs = timeoutMs ?? (url.startsWith("/ai/") ? 90000 : 12000);
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 12000);
+  const timeout = window.setTimeout(() => controller.abort(), limitMs);
 
   try {
     const res = await fetch(API + withParams(url), {
@@ -194,7 +197,7 @@ async function request(url, options = {}) {
         "Content-Type": "application/json",
         ...authHeaders(),
       },
-      ...options,
+      ...fetchOptions,
       signal: controller.signal,
     });
 
@@ -230,14 +233,14 @@ async function request(url, options = {}) {
   } catch (error) {
     if (error?.name === "AbortError") {
       throw new Error(
-        "Сервер не ответил за 12 секунд. Проверь backend, Docker и Nginx.",
+        "Сервер долго не отвечает. Проверьте интернет и попробуйте ещё раз.",
         { cause: error }
       );
     }
 
     if (error instanceof TypeError) {
       throw new Error(
-        "Нет соединения с backend. Проверь, что сервер работает и Nginx проксирует /api.",
+        "Нет связи с сервером. Проверьте интернет и попробуйте снова.",
         { cause: error }
       );
     }

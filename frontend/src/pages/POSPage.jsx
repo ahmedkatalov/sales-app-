@@ -206,15 +206,16 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   const [discount, setDiscount] = useState("");
   const [paymentModal, setPaymentModal] = useState(false);
   const [submitting, setSubmitting] = useState(false); // защита от двойного проведения продажи
+  const submittingRef = useRef(false); // синхронный ref-гвард: state обновляется асинхронно, между двумя быстрыми тапами disabled не успевает проставиться
   const [paymentType, setPaymentType] = useState("cash");
   const [paidAmount, setPaidAmount] = useState("");
   const [cardId, setCardId] = useState("");
   const [debtName, setDebtName] = useState("");
   const [debtCustomers, setDebtCustomers] = useState([]);
 
-  const [sectionModal, setSectionModal] = useState(false);
-  const [categoryModal, setCategoryModal] = useState(false);
   const [productModal, setProductModal] = useState(false);
+  const savingProductRef = useRef(false); // синхронный ref-гвард против дубля позиции при двойном тапе
+  const [savingProduct, setSavingProduct] = useState(false);
   const [inlineSection, setInlineSection] = useState(false);
   const [inlineCategory, setInlineCategory] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState(null);
@@ -263,13 +264,6 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     try { await fn(); }
     catch (e) { setError(e.message); }
     finally { shiftBusyRef.current = false; setShiftBusy(false); }
-  };
-  const openShift = async () => {
-    await runShift(async () => {
-      const r = await post("/cash/shift/open", { openingCash: num(shiftInput), openedBy: currentProfile?.name || "" });
-      setCashShift(r?.shift || null);
-      setShiftModal(null); setShiftInput(""); setShiftNote("");
-    });
   };
   const addShiftMovement = async (type) => {
     await runShift(async () => {
@@ -350,15 +344,30 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     const q = search.trim().toLowerCase();
     return prods.filter((p) => {
       if (p.isExtra) return false; // доп. товары — в отдельной секции
+      if (p.hidden) return false; // стоп-лист — не показываем в кассе
       const okCategory = String(p.categoryId) === String(openedCategory.id);
       const okSearch = !q || String(p.name || "").toLowerCase().includes(q);
       return okCategory && okSearch;
     });
   }, [products, openedCategory, search]);
 
+  // Глобальный поиск по всему меню — работает с экрана категорий (без открытой категории).
+  const globalSearchResults = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (openedCategory || !q) return [];
+    const prods = Array.isArray(products) ? products : [];
+    const cats = Array.isArray(categories) ? categories : [];
+    return prods
+      .filter((p) => !p.isExtra && !p.hidden && String(p.name || "").toLowerCase().includes(q))
+      .map((p) => ({
+        ...p,
+        _catName: (cats.find((c) => String(c.id) === String(p.categoryId)) || {}).name || "",
+      }));
+  }, [products, categories, openedCategory, search]);
+
   // Доп. товары (стаканчик, лёд и т.п.) — быстрая отдельная секция
   const extraProducts = useMemo(
-    () => (Array.isArray(products) ? products : []).filter((p) => p.isExtra),
+    () => (Array.isArray(products) ? products : []).filter((p) => p.isExtra && !p.hidden),
     [products]
   );
 
@@ -504,7 +513,6 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       const created = await post("/product-types", {
         name: newSectionName.trim(),
       });
-      setSectionModal(false);
       setNewSectionName("");
       setSelectedSectionId(String(created.id));
       setOpenedCategory(null);
@@ -525,7 +533,6 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         name: newCategory.name.trim(),
         typeId: Number(newCategory.sectionId),
       });
-      setCategoryModal(false);
       setNewCategory({ name: "", sectionId: "" });
       setSelectedSectionId(String(created.typeId));
       setOpenedCategory(created);
@@ -553,6 +560,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     if (!newProduct.categoryId) return setError("Выбери категорию");
     if (!newProduct.name.trim()) return setError("Введите название позиции");
 
+    if (savingProductRef.current) return; // не даём двойным тапом создать дубль позиции
+    savingProductRef.current = true;
+    setSavingProduct(true);
+
     const wItems = Array.isArray(warehouseItems) ? warehouseItems : [];
     const cleanRecipe = recipe
       .filter((row) => (row.warehouseItemId || row.ingredientName) && num(row.quantity) > 0)
@@ -579,6 +590,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         recipe: cleanRecipe,
       });
       setProductModal(false);
+      window.notify?.("Позиция добавлена", "success");
       setRecipe([]);
       setNewProduct({
         categoryId: openedCategory?.id ? String(openedCategory.id) : "",
@@ -589,6 +601,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       await load();
     } catch (e) {
       setError(e?.message || "Не удалось сохранить позицию. Попробуйте снова.");
+    } finally {
+      savingProductRef.current = false;
+      setSavingProduct(false);
     }
   };
 
@@ -638,12 +653,13 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   };
 
   const submitSale = async (mode) => {
-    if (submitting) return; // не даём двойной тап отправить продажу дважды
     setError("");
 
     if (mode === "transfer" && !cardId) return setError("Выберите карту");
     if (mode === "debt" && !debtName.trim()) return setError("Введите имя клиента");
 
+    if (submittingRef.current) return; // синхронный гвард против двойного тапа (после валидаций, чтобы ранний return не оставил ref навсегда true)
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       if (mode === "pending") {
@@ -665,6 +681,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     } catch (e) {
       setError(e?.message || "Не удалось провести продажу. Попробуйте снова.");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -757,24 +774,20 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   {openedCategory ? openedCategory.name : "Категории"}
                 </h3>
               </div>
-              {openedCategory && (
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Найти позицию"
-                  className="hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 lg:block lg:w-72"
-                />
-              )}
-            </div>
-
-            {openedCategory && (
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Найти позицию"
-                className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 lg:hidden"
+                placeholder={openedCategory ? "Найти позицию" : "Найти товар по всему меню"}
+                className="hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 lg:block lg:w-72"
               />
-            )}
+            </div>
+
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={openedCategory ? "Найти позицию" : "Найти товар по всему меню"}
+              className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 lg:hidden"
+            />
 
             {!openedCategory && (
               <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-0.5">
@@ -887,6 +900,32 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
           <div className="no-scrollbar md:-mr-1 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1 md:pb-1 md:pt-1">
           {!openedCategory ? (
+            search.trim() ? (
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+              {globalSearchResults.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => addToCart(p)}
+                  className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-3.5 text-left shadow-lg transition hover:border-blue-500/50 hover:bg-[#151d30] hover:shadow-xl hover:shadow-blue-950/30 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-blue-500/30 sm:p-4"
+                >
+                  <div className="text-sm font-black leading-tight text-white sm:text-base">
+                    {p.name}
+                  </div>
+                  <p className="mt-1 truncate text-[11px] font-bold text-slate-400">{p._catName}</p>
+                  <div className="mt-3 inline-flex w-fit items-baseline gap-1 rounded-lg bg-blue-500/15 px-2.5 py-1 text-sm font-black text-blue-200 tabular-nums">
+                    {formatMoney(p.price)} <span className="text-xs font-bold text-blue-300/70">₽</span>
+                  </div>
+                </button>
+              ))}
+
+              {!globalSearchResults.length && (
+                <div className="col-span-full rounded-4xl border border-white/10 bg-[#0f172a]/80 p-10 text-center shadow-2xl backdrop-blur">
+                  <p className="text-xl font-black text-white">Ничего не найдено</p>
+                  <p className="mt-2 text-slate-400">Попробуйте другое название товара.</p>
+                </div>
+              )}
+            </div>
+            ) : (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {visibleCategories.map((cat) => (
                 <button
@@ -916,6 +955,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 </div>
               )}
             </div>
+            )
           ) : (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {productsInsideCategory.map((p) => (
@@ -1001,7 +1041,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
             {safe_cart.length > 0 && (
               <button
-                onClick={() => setCart([])}
+                onClick={() => { if (!window.confirm(`Очистить всю корзину (${safe_cart.length} поз.)?`)) return; setCart([]); }}
                 className="rounded-2xl bg-red-500/10 px-3 py-2 text-sm font-black text-red-300"
               >
                 Очистить
@@ -1093,18 +1133,6 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         </div>
         </div>
       </div>
-
-      {shiftModal === "open" && (
-        <Modal title="Открыть смену">
-          <p className="mb-4 text-sm text-slate-400">Сколько наличных в кассе сейчас (размен на сдачу)?</p>
-          <input type="number" value={shiftInput} autoFocus onChange={(e) => setShiftInput(e.target.value)}
-            placeholder="Размен, ₽" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
-          <div className="mt-6 flex gap-3">
-            <button type="button" onClick={() => setShiftModal(null)} className="btn-white flex-1">Отмена</button>
-            <button type="button" onClick={openShift} disabled={shiftBusy} className="btn-blue flex-1 disabled:cursor-not-allowed disabled:opacity-60">{shiftBusy ? "…" : "Открыть"}</button>
-          </div>
-        </Modal>
-      )}
 
       {(shiftModal === "in" || shiftModal === "out") && (
         <Modal title={shiftModal === "in" ? "Внести в кассу" : "Изъять из кассы"}>
@@ -1218,9 +1246,15 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
               />
               {paidAmount !== "" && (
-                <div className="rounded-2xl bg-blue-500/10 px-4 py-3 font-black text-blue-300">
-                  Сдача: {formatMoney(change)}
-                </div>
+                change < 0 ? (
+                  <div className="rounded-2xl bg-red-500/10 px-4 py-3 font-black text-red-300">
+                    Не хватает {formatMoney(-change)} ₽
+                  </div>
+                ) : (
+                  <div className="rounded-2xl bg-blue-500/10 px-4 py-3 font-black text-blue-300">
+                    Сдача: {formatMoney(change)} ₽
+                  </div>
+                )
               )}
             </div>
           )}
@@ -1278,71 +1312,6 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <button onClick={() => submitSale(paymentType)} disabled={submitting}
               className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60">
               {submitting ? "Проводим…" : paymentType === "pending" ? "В ожидание" : "Подтвердить"}
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {sectionModal && (
-        <Modal title="Новый раздел меню">
-          <input
-            value={newSectionName}
-            onChange={(e) => setNewSectionName(e.target.value)}
-            placeholder="Например: Напитки, Еда, Десерты"
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
-          />
-
-          <div className="mt-6 flex gap-3">
-            <button
-              onClick={() => setSectionModal(false)}
-              className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-slate-200 transition hover:bg-white/10"
-            >
-              Отмена
-            </button>
-
-            <button onClick={createSection} className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30">
-              Создать
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {categoryModal && (
-        <Modal title="Новая категория">
-          <select
-            value={newCategory.sectionId}
-            onChange={(e) =>
-              setNewCategory((p) => ({ ...p, sectionId: e.target.value }))
-            }
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
-          >
-            <option value="">Выбери раздел меню</option>
-            {safe_sections.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-
-          <input
-            value={newCategory.name}
-            onChange={(e) =>
-              setNewCategory((p) => ({ ...p, name: e.target.value }))
-            }
-            placeholder="Например: Холодные напитки"
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 mt-3 w-full"
-          />
-
-          <div className="mt-6 flex gap-3">
-            <button
-              onClick={() => setCategoryModal(false)}
-              className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-slate-200 transition hover:bg-white/10"
-            >
-              Отмена
-            </button>
-
-            <button onClick={createCategory} className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30">
-              Создать
             </button>
           </div>
         </Modal>
@@ -1631,8 +1600,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               Отмена
             </button>
 
-            <button onClick={createProduct} className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30">
-              Создать
+            <button onClick={createProduct} disabled={savingProduct} className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30 disabled:cursor-not-allowed disabled:opacity-60">
+              {savingProduct ? "Сохраняю…" : "Создать"}
             </button>
           </div>
         </Modal>

@@ -1,4 +1,5 @@
-import { NavLink } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { LogOut, Menu, ShoppingCart } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
@@ -15,6 +16,14 @@ export default function DesktopNavigation({
   onToggleMode,
   onLogout,
 }) {
+  const navRef = useRef(null);
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const el = navRef.current?.querySelector('[aria-current="page"]');
+    el?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [pathname]);
+
   const accountLabel = isOwner
     ? "Главный аккаунт"
     : isAdmin
@@ -49,7 +58,9 @@ export default function DesktopNavigation({
           </div>
         </div>
 
+        <div className="relative min-w-0">
         <nav
+          ref={navRef}
           className="no-scrollbar flex min-w-0 items-center gap-1.5 overflow-x-auto overflow-y-hidden px-1"
           aria-label="Верхнее меню"
         >
@@ -82,10 +93,12 @@ export default function DesktopNavigation({
                 )}
               </span>
 
-              <span className="hidden whitespace-nowrap lg:inline">{label}</span>
+              <span className="hidden whitespace-nowrap md:inline">{label}</span>
             </NavLink>
           ))}
         </nav>
+          <span className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-slate-950/80 to-transparent lg:hidden" />
+        </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
           <ThemeToggle />

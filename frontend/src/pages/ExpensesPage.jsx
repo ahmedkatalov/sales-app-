@@ -95,9 +95,14 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   };
 
   const saveOpening = async () => {
+    const asOf = (openingForm.asOfDate || "").trim();
+    if (!asOf) return setError("Укажите дату старта учёта");
+    const keys = ["cash", "bank", "owedToOwner", "inventoryValue", "customerDebts", "supplierDebts"];
+    if (keys.some((k) => num(openingForm[k]) < 0))
+      return setError("Суммы не могут быть отрицательными");
     await guarded(async () => {
       const res = await put("/finance/opening", {
-        asOfDate: openingForm.asOfDate,
+        asOfDate: asOf,
         cash: num(openingForm.cash), bank: num(openingForm.bank),
         owedToOwner: num(openingForm.owedToOwner), inventoryValue: num(openingForm.inventoryValue),
         customerDebts: num(openingForm.customerDebts), supplierDebts: num(openingForm.supplierDebts),
@@ -112,7 +117,10 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   // Записать движение по расчётам с владельцем (вклад/возврат/изъятие).
   const submitOwnerEntry = async () => {
     if (!ownerModal) return;
-    if (num(ownerForm.amount) <= 0) return setError("Укажите сумму");
+    const amt = num(ownerForm.amount);
+    if (amt <= 0) return setError("Укажите сумму");
+    if (ownerModal === "reimbursement" && amt > owedOwner)
+      return setError(`Возврат больше долга перед владельцем (${formatMoney(owedOwner)})`);
     await guarded(async () => {
       const res = await post("/finance/owner", {
         kind: ownerModal,
@@ -517,19 +525,19 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
         {/* Разбивка расходов по источнику оплаты (за период) */}
         <div className="mb-4 grid grid-cols-3 gap-2.5 sm:gap-3">
-          <div className="rounded-2xl border border-emerald-400/15 bg-emerald-500/[0.07] px-4 py-3">
-            <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-emerald-300/80"><Banknote size={14} strokeWidth={2.4} /> Из кассы</p>
-            <p className="mt-1 text-lg font-black text-white sm:text-xl">{formatMoney(bySource.cash)}</p>
+          <div className="min-w-0 rounded-2xl border border-emerald-400/15 bg-emerald-500/[0.07] px-4 py-3">
+            <p className="flex min-w-0 items-center gap-1.5 truncate text-[11px] font-black uppercase tracking-wide text-emerald-300/80"><Banknote size={14} strokeWidth={2.4} /> Из кассы</p>
+            <p className="mt-1 truncate text-base font-black tabular-nums text-white sm:text-xl">{formatMoney(bySource.cash)}</p>
             <p className="hidden text-[11px] font-bold text-slate-500 sm:block">уменьшили наличные</p>
           </div>
-          <div className="rounded-2xl border border-blue-400/15 bg-blue-500/[0.07] px-4 py-3">
-            <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-blue-300/80"><CreditCard size={14} strokeWidth={2.4} /> С карты</p>
-            <p className="mt-1 text-lg font-black text-white sm:text-xl">{formatMoney(bySource.card)}</p>
+          <div className="min-w-0 rounded-2xl border border-blue-400/15 bg-blue-500/[0.07] px-4 py-3">
+            <p className="flex min-w-0 items-center gap-1.5 truncate text-[11px] font-black uppercase tracking-wide text-blue-300/80"><CreditCard size={14} strokeWidth={2.4} /> С карты</p>
+            <p className="mt-1 truncate text-base font-black tabular-nums text-white sm:text-xl">{formatMoney(bySource.card)}</p>
             <p className="hidden text-[11px] font-bold text-slate-500 sm:block">перевод/карта</p>
           </div>
-          <div className="rounded-2xl border border-amber-400/15 bg-amber-500/[0.07] px-4 py-3">
-            <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-amber-300/80"><User size={14} strokeWidth={2.4} /> Личные владельца</p>
-            <p className="mt-1 text-lg font-black text-white sm:text-xl">{formatMoney(bySource.owner)}</p>
+          <div className="min-w-0 rounded-2xl border border-amber-400/15 bg-amber-500/[0.07] px-4 py-3">
+            <p className="flex min-w-0 items-center gap-1.5 truncate text-[11px] font-black uppercase tracking-wide text-amber-300/80"><User size={14} strokeWidth={2.4} /> Личные владельца</p>
+            <p className="mt-1 truncate text-base font-black tabular-nums text-white sm:text-xl">{formatMoney(bySource.owner)}</p>
             <p className="hidden text-[11px] font-bold text-slate-500 sm:block">за период · кассу не трогали</p>
           </div>
         </div>
@@ -699,6 +707,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         </div>
       </div>
 
+      <div className="h-24 sm:hidden" aria-hidden="true" />
+
       <button
         onClick={() => setExpenseModal(true)}
         className="fixed left-4 right-4 z-30 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_55px_rgba(37,99,235,.45)] transition active:scale-[0.98] sm:hidden"
@@ -752,7 +762,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 value={form.amount}
                 onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
                 placeholder="Например: 1500"
-                type="number"
+                type="text"
                 inputMode="decimal"
                 className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
               />
@@ -868,7 +878,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 value={ownerForm.amount}
                 onChange={(e) => setOwnerForm((p) => ({ ...p, amount: e.target.value }))}
                 placeholder="Например: 5000"
-                type="number"
+                type="text"
                 inputMode="decimal"
                 autoFocus
                 className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-amber-400/70 focus:ring-4 focus:ring-amber-500/10"
@@ -919,7 +929,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               ].map(([key, label, hint]) => (
                 <label key={key}>
                   <span className="mb-2 block text-sm font-black text-slate-300">{label}</span>
-                  <input type="number" inputMode="decimal" value={openingForm[key]} placeholder="0"
+                  <input type="text" inputMode="decimal" min="0" value={openingForm[key]} placeholder="0"
                     onChange={(e) => setOpeningForm((p) => ({ ...p, [key]: e.target.value }))} className={fieldCls} />
                   <span className="mt-1 block px-1 text-[11px] font-bold text-slate-500">{hint}</span>
                 </label>

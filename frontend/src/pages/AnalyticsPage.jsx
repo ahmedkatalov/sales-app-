@@ -351,7 +351,7 @@ export default function AnalyticsPage() {
       <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
           <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400 sm:text-[11px] sm:tracking-[0.18em]">{card.title}</p>
-          <p className="mt-1.5 truncate text-xl font-black text-white sm:mt-3 sm:text-3xl">{card.value}</p>
+          <p title={card.value} className="mt-1.5 break-words text-lg font-black leading-tight tabular-nums text-white sm:mt-3 sm:text-3xl">{card.value}</p>
         </div>
         <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-base font-black sm:h-11 sm:w-11 sm:rounded-2xl sm:text-xl ${card.text}`}>
           {typeof card.icon === "string" ? card.icon : <card.icon size={20} strokeWidth={2.4} />}
@@ -366,7 +366,7 @@ export default function AnalyticsPage() {
         <h3 className="text-xl font-black text-white sm:text-2xl">{title}</h3>
         {subtitle && <p className="mt-1 text-sm font-bold text-slate-400">{subtitle}</p>}
       </div>
-      <div className="h-[280px] min-w-0 sm:h-[320px]">{children}</div>
+      <div className="relative h-[280px] min-w-0 sm:h-[320px]">{children}</div>
     </div>
   );
 
@@ -507,6 +507,26 @@ export default function AnalyticsPage() {
           )}
         </div>
 
+        {loading && !analytics.length ? (
+          <>
+            <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-24 animate-pulse rounded-2xl border border-white/10 bg-white/[0.05]" />
+              ))}
+            </div>
+            <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-24 animate-pulse rounded-2xl border border-white/10 bg-white/[0.05]" />
+              ))}
+            </div>
+            <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="h-72 animate-pulse rounded-[1.8rem] border border-white/10 bg-white/[0.05]" />
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
         <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
           {statCards.map((card, i) => (
             <StatBox key={card.title} card={card} className={i === statCards.length - 1 && statCards.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""} />
@@ -534,22 +554,30 @@ export default function AnalyticsPage() {
                 <Line type="monotone" dataKey="afterExpenses" name="После расходов" stroke="#8b5cf6" strokeWidth={3} dot={false} />
               </LineChart>
             </ResponsiveContainer>
+            {!loading && !analytics.length && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-[1.5rem] bg-slate-950/40 text-center font-bold text-slate-400">Данных пока нет.</div>
+            )}
           </DarkChartCard>
 
           <DarkChartCard title="ТОП товаров по выручке" subtitle="Самые сильные позиции по продажам">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topProducts} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
-                <XAxis dataKey="name" tick={{ fill: chartAxisColor, fontSize: 11 }} axisLine={{ stroke: chartGridColor }} tickLine={false} />
-                <YAxis tick={{ fill: chartAxisColor, fontSize: 12 }} axisLine={{ stroke: chartGridColor }} tickLine={false} />
+              <BarChart data={topProducts} layout="vertical" margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} horizontal={false} />
+                <XAxis type="number" tick={{ fill: chartAxisColor, fontSize: 11 }} axisLine={{ stroke: chartGridColor }} tickLine={false} />
+                <YAxis type="category" dataKey="name" width={110} interval={0} tick={{ fill: chartAxisColor, fontSize: 11 }} tickFormatter={(v) => (v.length > 14 ? v.slice(0, 13) + "…" : v)} axisLine={{ stroke: chartGridColor }} tickLine={false} />
                 <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 18, color: "#fff" }} />
                 <Legend wrapperStyle={{ color: chartAxisColor }} />
-                <Bar dataKey="revenue" name="Выручка" fill="#3b82f6" radius={[10, 10, 0, 0]} />
-                <Bar dataKey="profit" name="Прибыль" fill="#10b981" radius={[10, 10, 0, 0]} />
+                <Bar dataKey="revenue" name="Выручка" fill="#3b82f6" radius={[0, 8, 8, 0]} />
+                <Bar dataKey="profit" name="Прибыль" fill="#10b981" radius={[0, 8, 8, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            {!loading && !topProducts.length && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-[1.5rem] bg-slate-950/40 text-center font-bold text-slate-400">Данных пока нет.</div>
+            )}
           </DarkChartCard>
         </div>
+          </>
+        )}
 
         <div className="mb-5 rounded-[1.8rem] border border-white/10 bg-white/[0.06] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.25)] backdrop-blur sm:p-5">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

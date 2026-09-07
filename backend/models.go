@@ -154,6 +154,7 @@ type MenuProduct struct {
 	Cost            float64         `json:"cost"`
 	CostMode        string          `json:"costMode"`
 	IsExtra         bool            `json:"isExtra"` // доп. товар (стаканчик, лёд и т.п.) — отдельно в доходах
+	Hidden          bool            `json:"hidden"`  // стоп-лист: скрыт из витрины кассы, но остаётся в меню с рецептом и историей
 	Recipe          []ProductRecipe `json:"recipe"`
 
 	Calories float64 `json:"calories"`

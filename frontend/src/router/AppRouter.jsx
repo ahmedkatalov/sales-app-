@@ -6,8 +6,6 @@ import App from "../App";
 // Standalone-страницы (киоск/админка) грузятся лениво — не тянутся в общий бандл.
 const ShopPage = lazy(() => import("../pages/ShopPage"));
 const MenuPage = lazy(() => import("../pages/MenuPage"));
-const EmployeesPage = lazy(() => import("../pages/EmployeesPage"));
-const CardsPage = lazy(() => import("../pages/CardsPage"));
 const SuperAdminPage = lazy(() => import("../pages/SuperAdminPage"));
 
 const Fallback = (
@@ -27,8 +25,6 @@ export default function AppRouter() {
           {/* Публичные standalone страницы (TV/киоск) — без навигации App */}
           <Route path="/shop" element={<ShopPage />} />
           <Route path="/menu" element={<MenuPage />} />
-          <Route path="/employees" element={<EmployeesPage />} />
-          <Route path="/cards" element={<CardsPage />} />
 
           {/* Основное приложение — все остальные роуты включая /expenses, /work, /pos и т.д. */}
           <Route path="/*" element={<App />} />

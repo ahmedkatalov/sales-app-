@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -65,7 +66,10 @@ func prepareSale(req *Sale, checkStock bool) (map[int]float64, error) {
 	subtotal := 0.0
 	for i := range req.Items {
 		if req.Items[i].Qty <= 0 {
-			req.Items[i].Qty = 1
+			return nil, errors.New("Количество позиции должно быть больше нуля")
+		}
+		if req.Items[i].Price < 0 {
+			return nil, errors.New("Цена позиции не может быть отрицательной")
 		}
 		req.Items[i] = resolveSaleItemProduct(req.Items[i], req.AccountID)
 		req.Items[i].Total = req.Items[i].Qty * req.Items[i].Price
@@ -263,6 +267,10 @@ func createSale(c *gin.Context) {
 	req.AccountID = accountID(c)
 	if req.PaymentType == "debt" && strings.TrimSpace(req.CustomerName) == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Введите имя клиента для долга"})
+		return
+	}
+	if req.PaymentType == "transfer" && req.CardID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Выбери карту"})
 		return
 	}
 	// checkStock=false: продажу НЕ блокируем из-за нехватки склада — она пробивается всегда,

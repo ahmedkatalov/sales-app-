@@ -18,6 +18,7 @@ export default function ShopPage() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [cartOpen, setCartOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Safe array guards
   const safe_employees = Array.isArray(employees) ? employees : [];
@@ -96,7 +97,9 @@ export default function ShopPage() {
 
   const discountAmount = (subtotal * discount) / 100;
   const total = subtotal - discountAmount;
-  const changeAmount = Number(cashGiven || 0) - total;
+  const cashNum = Number(cashGiven || 0);
+  const hasCash = String(cashGiven).trim() !== "";
+  const changeAmount = cashNum - total;
 
   const categories = useMemo(() => {
     return [
@@ -113,6 +116,7 @@ export default function ShopPage() {
     const q = search.trim().toLowerCase();
 
     return (Array.isArray(products) ? products : []).filter((p) => {
+      if (p.hidden) return false; // стоп-лист — скрыт из витрины кассы
       const category = String(p.category || p.type || "Без категории").trim();
       const okCategory = activeCategory === "all" || category === activeCategory;
       const okSearch =
@@ -136,6 +140,8 @@ export default function ShopPage() {
   const currentEmployee = safe_employees.find((e) => String(e.id) === String(employeeId));
 
   const confirmSale = async () => {
+    if (submitting) return;
+
     if (!employeeId) {
       alert("Выберите сотрудника");
       return;
@@ -151,22 +157,38 @@ export default function ShopPage() {
       return;
     }
 
-    await apiPost("/sales", {
-      employeeId: Number(employeeId),
-      paymentType,
-      cardId: paymentType === "transfer" ? Number(cardId) : 0,
-      discountPercent: discount,
-      cashGiven: Number(cashGiven || 0),
-      items: cart,
-    });
+    if (
+      paymentType === "cash" &&
+      String(cashGiven).trim() !== "" &&
+      Number(cashGiven) < total
+    ) {
+      alert("Клиент дал меньше суммы к оплате");
+      return;
+    }
 
-    alert("Продажа завершена");
+    setSubmitting(true);
+    try {
+      await apiPost("/sales", {
+        employeeId: Number(employeeId),
+        paymentType,
+        cardId: paymentType === "transfer" ? Number(cardId) : 0,
+        discountPercent: discount,
+        cashGiven: Number(cashGiven || 0),
+        items: cart,
+      });
 
-    setCart([]);
-    setCashGiven("");
-    setDiscount(0);
-    setCardId("");
-    setCartOpen(false);
+      alert("Продажа завершена");
+
+      setCart([]);
+      setCashGiven("");
+      setDiscount(0);
+      setCardId("");
+      setCartOpen(false);
+    } catch (e) {
+      alert(e?.message || "Не удалось провести продажу");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
 
@@ -340,10 +362,17 @@ export default function ShopPage() {
             </span>
           </div>
 
-          {paymentType === "cash" && (
+          {paymentType === "cash" && hasCash && cashNum >= total && (
             <div className="mt-3 flex justify-between rounded-2xl bg-emerald-500/10 px-3 py-2 font-black text-emerald-300">
               <span>Сдача</span>
-              <span>{formatMoney(changeAmount)}</span>
+              <span>{formatMoney(Math.max(0, changeAmount))}</span>
+            </div>
+          )}
+
+          {paymentType === "cash" && hasCash && cashNum < total && (
+            <div className="mt-3 flex justify-between rounded-2xl bg-red-500/10 px-3 py-2 font-black text-red-300">
+              <span>Не хватает</span>
+              <span>{formatMoney(total - cashNum)}</span>
             </div>
           )}
         </div>
@@ -351,10 +380,10 @@ export default function ShopPage() {
         <button
           type="button"
           onClick={confirmSale}
-          disabled={!safe_cart.length}
+          disabled={submitting || !safe_cart.length}
           className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-4 text-lg font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Подтвердить покупку
+          {submitting ? "Провожу…" : "Подтвердить покупку"}
         </button>
       </div>
     </aside>

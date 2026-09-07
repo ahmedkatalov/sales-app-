@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { RefreshCw, X, Send, FileDown } from "lucide-react";
 import { get, getCurrentWorkspace, getSession, post } from "../api";
@@ -713,7 +713,7 @@ function renderInline(text, kp) {
   return nodes;
 }
 
-function RichText({ text }) {
+const RichText = memo(function RichText({ text }) {
   const lines = String(text || "").split("\n");
   const blocks = [];
   let list = null;
@@ -756,7 +756,7 @@ function RichText({ text }) {
       })}
     </div>
   );
-}
+});
 
 // Экспорт ответа ассистента в PDF: собираем чистый светлый документ и печатаем
 // (через окно печати браузера → «Сохранить как PDF»). Без внешних библиотек.
@@ -807,8 +807,9 @@ function exportTextToPdf(text) {
   printHtmlDocument(html);
 }
 
-function Message({ msg, onPdf }) {
+const Message = memo(function Message({ msg }) {
   const isUser = msg.role === "user";
+  const showPdf = msg.role === "bot" && msg.text && msg.text !== AI_WELCOME_MESSAGE.text && msg.text.length > 120;
   return (
     <div className={`flex gap-2 sm:gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-sm shadow-lg shadow-blue-600/30 sm:flex">🤖</div>}
@@ -829,9 +830,9 @@ function Message({ msg, onPdf }) {
             ))}
           </div>
         )}
-        {onPdf && (
+        {showPdf && (
           <div className="mt-2.5 flex justify-start border-t border-white/10 pt-2">
-            <button type="button" onClick={onPdf} aria-label="Скачать отчёт в PDF" title="Скачать в PDF"
+            <button type="button" onClick={() => exportTextToPdf(msg.text)} aria-label="Скачать отчёт в PDF" title="Скачать в PDF"
               className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-black text-slate-200 transition hover:bg-white/15 active:scale-[0.97]">
               <FileDown size={13} strokeWidth={2.4} /> Скачать PDF
             </button>
@@ -840,7 +841,7 @@ function Message({ msg, onPdf }) {
       </div>
     </div>
   );
-}
+});
 
 export default function AIWarehousePage() {
   const [items, setItems] = useState([]);
@@ -1016,6 +1017,7 @@ export default function AIWarehousePage() {
       ...parsed,
       payload: safePayload,
       matched: safeMatched,
+      savedItem,
       card: {
         name: normalizeProductEntityName(safeMatched?.name || safePayload.name),
         detail: `${parsed.computed.detail}${num(safePayload.price) > 0 ? ` · ${formatMoney(safePayload.price)}` : ""}`,
@@ -1074,7 +1076,10 @@ export default function AIWarehousePage() {
           if (canSavePurchase(candidate)) {
             const one = await saveParsedPurchase(candidate);
             saved.push(one);
-            workingItems = await get("/warehouse/items").catch(() => workingItems) || workingItems;
+            if (one.savedItem?.id) {
+              const idx = workingItems.findIndex((w) => Number(w.id) === Number(one.savedItem.id));
+              workingItems = idx >= 0 ? workingItems.map((w, i) => (i === idx ? one.savedItem : w)) : [...workingItems, one.savedItem];
+            }
           } else {
             stillWaiting.push(candidate);
           }
@@ -1110,7 +1115,10 @@ export default function AIWarehousePage() {
       if (canSavePurchase(candidate)) {
         const one = await saveParsedPurchase(candidate);
         saved.push(one);
-        workingItems = await get("/warehouse/items").catch(() => workingItems) || workingItems;
+        if (one.savedItem?.id) {
+          const idx = workingItems.findIndex((w) => Number(w.id) === Number(one.savedItem.id));
+          workingItems = idx >= 0 ? workingItems.map((w, i) => (i === idx ? one.savedItem : w)) : [...workingItems, one.savedItem];
+        }
       } else {
         stillWaiting.push(candidate);
       }
@@ -1134,7 +1142,7 @@ export default function AIWarehousePage() {
     const expense = await savePurchaseExpense(saved);
     setMessages((p) => [...p, {
       role: "bot",
-      text: `Готово, закрыла все уточнения.\n${saved.map((x) => `• ${x.matched ? "прибавила к" : "создала"} “${x.matched?.name || x.payload.name}” — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n")}${expense ? `\n\nВ расходы записала закупку сырья: ${formatMoney(expense.total)}.` : ""}`,
+      text: `Готово, закрыла все уточнения${wsName ? ` на точке «${wsName}»` : ""}.\n${saved.map((x) => `• ${x.matched ? "прибавила к" : "создала"} “${x.matched?.name || x.payload.name}” — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n")}${expense ? `\n\nВ расходы записала закупку сырья: ${formatMoney(expense.total)}.` : ""}`,
       cards: saved.map((x) => x.card),
     }]);
     await load();
@@ -1223,11 +1231,47 @@ export default function AIWarehousePage() {
     return { created, existed, all: types };
   };
 
+  // Реальная запись отложенной закупки — только после явного «Да» пользователя.
+  const confirmPendingPurchase = async () => {
+    const pending = pendingPurchaseConfirmation;
+    if (!pending?.items?.length) { setPendingPurchaseConfirmation(null); return; }
+    setPendingPurchaseConfirmation(null);
+    setLoading(true);
+    try {
+      const saved = [];
+      for (const candidate of pending.items) {
+        const one = await saveParsedPurchase(candidate);
+        saved.push(one);
+      }
+      const expense = await savePurchaseExpense(saved);
+      const lines = saved.map((x) => `${x.matched ? "прибавила к" : "создала"} «${normalizeProductEntityName(x.matched?.name || x.payload.name)}» — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n");
+      setMessages((prev) => [...prev, {
+        role: "bot",
+        text: `Готово, записала${pending.wsName || wsName ? ` на точке «${pending.wsName || wsName}»` : ""}.\n${lines}${expense ? `\n\nЗакупка записана в расходы: ${formatMoney(expense.total)}.` : ""}`,
+        cards: saved.map((x) => x.card),
+      }]);
+      await load();
+    } catch (e) {
+      const cause = e?.cause?.name;
+      const friendly = cause === "AbortError"
+        ? "Ответ занял слишком долго. Давай попробуем ещё раз через минуту."
+        : "Не получилось записать закупку. Попробуй ещё раз.";
+      setMessages((prev) => [...prev, { role: "bot", text: friendly }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelPendingPurchase = () => {
+    setPendingPurchaseConfirmation(null);
+    setMessages((prev) => [...prev, { role: "bot", text: "Ок, отменила закупку — ничего не записала." }]);
+  };
+
   // ─────────────────────────────────────────────────────────────────────────
   // send() — Claude определяет намерение, фронт выполняет действие
   // ─────────────────────────────────────────────────────────────────────────
-  const send = async () => {
-    const rawText = input.trim();
+  const send = async (overrideText) => {
+    const rawText = (typeof overrideText === "string" ? overrideText : input).trim();
     if (!rawText || loading) return;
 
     setInput("");
@@ -1242,8 +1286,25 @@ export default function AIWarehousePage() {
         return;
       }
 
+      // 1b. Ждём подтверждения закупки — «да»/«нет» текстом трактуем как кнопки.
+      if (pendingPurchaseConfirmation?.items?.length) {
+        if (/^(да|ага|верно|подтвержда\w*|записывай|запиши|ок|окей|сохрани|сохраняй|давай)\b/i.test(lower(rawText))) {
+          await confirmPendingPurchase();
+          return;
+        }
+        if (/^(нет|отмена|отмени|не\s+надо|не\s+нужно|не\s+записывай|стоп)\b/i.test(lower(rawText))) {
+          cancelPendingPurchase();
+          return;
+        }
+      }
+
       // 2. Уточнение к незакрытым закупкам
+      const looksLikeClarification = /\d/.test(rawText) || /(кг|г|л|мл|шт|руб|р\b|₽|за\s)/i.test(rawText);
       if (pendingItems.length > 0) {
+        if (!looksLikeClarification && /\?|^(а\s|сколько|что|как|какие|кто|почему|где|когда)\b/i.test(rawText)) {
+          setMessages((p) => [...p, { role: "bot", text: `Сейчас жду ответ по закупке (${pendingItems.map((x) => normalizeProductEntityName(x.result?.name || x.payload?.name || x.form?.name || "товар")).join(", ")}). Это ответ по закупке — или новый вопрос? Чтобы задать новый вопрос, нажмите «Отменить уточнения».` }]);
+          return;
+        }
         await updatePendingPurchases(rawText);
         return;
       }
@@ -1263,6 +1324,9 @@ export default function AIWarehousePage() {
         hasPending: pendingItems.length > 0 || !!pendingVisibility || pendingMenuTypeCreation,
       });
 
+      // На 401 request() возвращает undefined и уже диспатчит "sales-session-expired".
+      if (!intentRes) return;
+
       switch (intentRes.intent) {
 
         case "purchase": {
@@ -1273,17 +1337,24 @@ export default function AIWarehousePage() {
           }
           const waiting = parsedItems.filter((p) => (p.questions || []).length > 0);
           const ready = parsedItems.filter((p) => !(p.questions || []).length && p.name && num(p.price) > 0);
-          const saved = [];
-          for (const p of ready) {
+
+          // Готовые позиции НЕ коммитим сразу — собираем превью и ждём явного «Да».
+          const prepared = ready.map((p) => {
             const form = formFromAIResult(p);
-            const payload = payloadFromForm(form);
-            const computed = computeWarehouseAmount(form);
             const matched = p.matchedItemId
               ? safe_items.find((i) => Number(i.id) === Number(p.matchedItemId))
               : safe_items.find((i) => normalizeProductEntityName(i.name || "") === normalizeProductEntityName(p.name || ""));
-            const one = await saveParsedPurchase({ originalText: rawText, result: p, form, payload, computed, matched, questions: [] });
-            saved.push(one);
-          }
+            return {
+              originalText: rawText,
+              result: p,
+              form,
+              payload: payloadFromForm(form),
+              computed: computeWarehouseAmount(form),
+              matched: matched || null,
+              questions: [],
+            };
+          });
+
           if (waiting.length > 0) {
             setPendingItems(waiting.map((p) => ({
               originalText: rawText, result: p,
@@ -1291,25 +1362,24 @@ export default function AIWarehousePage() {
               computed: computeWarehouseAmount(formFromAIResult(p)),
               matched: null, questions: p.questions || [],
             })));
-            const savedText = saved.length ? `Сохранила:
-${saved.map((x) => `• ${normalizeProductEntityName(x.matched?.name || x.payload.name)} — ${x.computed.quantity} ${unitLabel(x.computed.unit)} за ${formatMoney(x.payload.price)}`).join("\n")}
-
-` : "";
             const qs = waiting.map((p, i) => `${i + 1}) ${(p.questions || []).join("; ")}`).join("\n");
-            setMessages((prev) => [...prev, { role: "bot", text: `${savedText}Нужно уточнить:\n${qs}` }]);
-          } else if (saved.length > 0) {
-            const expense = await savePurchaseExpense(saved);
-            const lines = saved.map((x) => `${x.matched ? "прибавила к" : "создала"} «${normalizeProductEntityName(x.matched?.name || x.payload.name)}» — ${x.computed.quantity} ${unitLabel(x.computed.unit)} за ${formatMoney(x.payload.price)}`).join("\n");
+            setMessages((prev) => [...prev, { role: "bot", text: `Нужно уточнить:\n${qs}` }]);
+          }
+
+          if (prepared.length > 0) {
+            setPendingPurchaseConfirmation({ items: prepared, wsName });
+            const lines = prepared.map((x) => {
+              const nm = normalizeProductEntityName(x.form?.name || x.payload?.name || x.result?.name || "товар");
+              const tgt = x.matched ? `прибавить к «${normalizeProductEntityName(x.matched.name)}»` : "создать новый";
+              return `• ${nm} — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""} (${tgt})`;
+            }).join("\n");
             setMessages((prev) => [...prev, {
               role: "bot",
-              text: `Готово.
-${lines}${expense ? `
-
-Закупка записана в расходы: ${formatMoney(expense.total)}.` : ""}`,
-              cards: saved.map((x) => x.card),
+              text: `Проверь закупку перед записью${wsName ? ` на точку «${wsName}»` : ""}:\n${lines}\n\nЗаписать? Нажми «Да, записать» или «Отмена».`,
             }]);
+          } else if (waiting.length === 0) {
+            setMessages((prev) => [...prev, { role: "bot", text: "Не понял что купили. Напиши например: «апельсин 3кг за 400р»" }]);
           }
-          await load();
           break;
         }
 
@@ -1386,7 +1456,14 @@ ${lines}${expense ? `
       }
 
     } catch (e) {
-      setMessages((p) => [...p, { role: "bot", text: e?.message || "Произошла ошибка. Попробуй ещё раз." }]);
+      const cause = e?.cause?.name;
+      const friendly =
+        cause === "AbortError"
+          ? "Ответ занял слишком долго. Давай попробуем ещё раз через минуту."
+          : cause === "TypeError" || e instanceof TypeError
+          ? "Пропала связь. Проверь интернет и попробуй ещё раз."
+          : "Не получилось получить ответ. Попробуй ещё раз через минуту.";
+      setMessages((p) => [...p, { role: "bot", text: friendly }]);
     } finally {
       setLoading(false);
     }
@@ -1422,6 +1499,16 @@ ${lines}${expense ? `
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {lastUIPanel && !sidePanels[lastUIPanel] && (
+                  <button
+                    type="button"
+                    onClick={() => { setSidePanels((prev) => ({ ...prev, [lastUIPanel]: true })); setLastUIPanel(""); }}
+                    title="Вернуть скрытую панель"
+                    className="hidden shrink-0 items-center rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white transition hover:bg-white/15 xl:inline-flex"
+                  >
+                    {lastUIPanel === "stocks" ? "Вернуть остатки" : lastUIPanel === "recent" ? "Вернуть последние" : lastUIPanel === "suggestions" ? "Вернуть подсказки" : "Вернуть панель"}
+                  </button>
+                )}
                 <span className="hidden rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-black text-emerald-300 sm:inline">
                   AUTO SAVE
                 </span>
@@ -1442,13 +1529,7 @@ ${lines}${expense ? `
                 Сегодня
               </div>
               {messages.map((msg, i) => (
-                <Message
-                  key={i}
-                  msg={msg}
-                  onPdf={msg.role === "bot" && msg.text && msg.text !== AI_WELCOME_MESSAGE.text && msg.text.length > 120
-                    ? () => exportTextToPdf(msg.text)
-                    : undefined}
-                />
+                <Message key={i} msg={msg} />
               ))}
               {loading && <Message msg={{ role: "bot", text: "Думаю и проверяю данные..." }} />}
               <div ref={bottomRef} />
@@ -1460,6 +1541,54 @@ ${lines}${expense ? `
                   <X size={13} strokeWidth={2.4} /> Завершить чат
                 </Link>
               </div>
+              {pendingPurchaseConfirmation?.items?.length > 0 && (
+                <div className="mb-2 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-3">
+                  <p className="mb-2 text-xs font-black text-blue-200">
+                    Проверь закупку{pendingPurchaseConfirmation.wsName || wsName ? ` — запишу на точку «${pendingPurchaseConfirmation.wsName || wsName}»` : ""}
+                  </p>
+                  <div className="space-y-1.5">
+                    {pendingPurchaseConfirmation.items.map((x, i) => {
+                      const nm = normalizeProductEntityName(x.form?.name || x.payload?.name || x.result?.name || "товар");
+                      const tgt = x.matched ? `прибавить к «${normalizeProductEntityName(x.matched.name)}»` : "создать новый";
+                      return (
+                        <div key={i} className="rounded-xl bg-white/5 px-3 py-2">
+                          <p className="text-[13px] font-black text-white">{nm} — {x.computed.quantity} {unitLabel(x.computed.unit)}</p>
+                          <p className="text-[11px] font-bold text-slate-400">{num(x.payload?.price) > 0 ? `${formatMoney(x.payload.price)} · ` : ""}{tgt}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={confirmPendingPurchase}
+                      disabled={loading}
+                      className="flex-1 rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 px-3 py-2 text-xs font-black text-white shadow-lg transition active:scale-95 disabled:opacity-50"
+                    >
+                      Да, записать
+                    </button>
+                    <button
+                      onClick={cancelPendingPurchase}
+                      disabled={loading}
+                      className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-slate-200 transition active:scale-95 hover:bg-white/10 disabled:opacity-50"
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                </div>
+              )}
+              {pendingItems.length > 0 && (
+                <div className="mb-2 flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2">
+                  <span className="text-xs font-bold text-amber-200">
+                    Жду ответ по закупке: {pendingItems.map((x) => normalizeProductEntityName(x.result?.name || x.payload?.name || x.form?.name || "товар")).join(", ")}
+                  </span>
+                  <button
+                    onClick={() => { clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation }); setMessages((p) => [...p, { role: "bot", text: "Ок, закрыла уточнения. Что дальше?" }]); }}
+                    className="ml-auto shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-200 transition active:scale-95 hover:bg-white/10"
+                  >
+                    Отменить уточнения
+                  </button>
+                </div>
+              )}
               <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none" style={{scrollbarWidth:"none"}}>
                 {[
                   "что заканчивается?",
@@ -1471,7 +1600,7 @@ ${lines}${expense ? `
                 ].map((x) => (
                   <button
                     key={x}
-                    onClick={() => setInput(x)}
+                    onClick={() => send(x)}
                     className="flex min-h-[40px] shrink-0 items-center rounded-full border border-white/10 bg-white/5 px-3.5 py-2.5 text-xs font-bold text-slate-300 transition active:scale-95 active:bg-white/15 hover:bg-white/10"
                   >
                     {x}

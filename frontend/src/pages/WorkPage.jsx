@@ -49,7 +49,21 @@ function SmartIngredientInput({ value, onChange, warehouseItems = [], onSelectIt
     const el = inputRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    setRect({ left: r.left, top: r.bottom + 6, width: r.width });
+    const vv = window.visualViewport;
+    const vh = vv ? vv.height : window.innerHeight;
+    const offsetTop = vv ? vv.offsetTop : 0;
+    const spaceBelow = (offsetTop + vh) - r.bottom - 8;
+    const spaceAbove = r.top - offsetTop - 8;
+    const dropUp = spaceBelow < 220 && spaceAbove > spaceBelow;
+    const maxH = Math.max(140, Math.min(320, dropUp ? spaceAbove : spaceBelow));
+    setRect({
+      left: r.left,
+      width: r.width,
+      dropUp,
+      maxHeight: maxH,
+      top: dropUp ? undefined : r.bottom + 6,
+      bottom: dropUp ? (offsetTop + vh - r.top + 6) : undefined,
+    });
   }, []);
 
   useEffect(() => {
@@ -64,10 +78,18 @@ function SmartIngredientInput({ value, onChange, warehouseItems = [], onSelectIt
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
     document.addEventListener("mousedown", onDown);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", reposition);
+      window.visualViewport.addEventListener("scroll", reposition);
+    }
     return () => {
       window.removeEventListener("scroll", reposition, true);
       window.removeEventListener("resize", reposition);
       document.removeEventListener("mousedown", onDown);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", reposition);
+        window.visualViewport.removeEventListener("scroll", reposition);
+      }
     };
   }, [open, updateRect]);
 
@@ -91,7 +113,7 @@ function SmartIngredientInput({ value, onChange, warehouseItems = [], onSelectIt
       {open && merged.length > 0 && rect && createPortal(
         <div
           data-ingredient-dropdown
-          style={{ position: "fixed", left: rect.left, top: rect.top, width: rect.width, zIndex: 80 }}
+          style={{ position: "fixed", left: rect.left, width: rect.width, zIndex: 80, maxHeight: rect.maxHeight, overflowY: "auto", ...(rect.dropUp ? { bottom: rect.bottom } : { top: rect.top }) }}
           className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/50"
         >
           {merged.map((s) => (
@@ -152,7 +174,37 @@ const toStorageQty = (qty, inputUnit, storageUnit, packagingQuantity = 0, lossPe
   if (loss > 0) converted = converted * (1 + loss / 100); // запас на потери
   return converted;
 };
+
+// Штучная конвертация (шт↔г/мл) без заданной упаковки: фронт точно посчитать не может —
+// бэкенд угадывает грамм/мл по имени (guessOnePieceToBase). В таких строках не показываем
+// числовое превью себестоимости и не подставляем заниженное авто-значение в поле cost.
+const needsBackendGuess = (inputUnit, storageUnit, packagingQuantity = 0) => {
+  const piece = ["pcs", "bottle", "pack", "box"];
+  const pack = Number(packagingQuantity) || 0;
+  let from = inputUnit || storageUnit;
+  if (from === "kg") from = "g";
+  else if (from === "l") from = "ml";
+  const su = storageUnit === "kg" ? "g" : storageUnit === "l" ? "ml" : storageUnit;
+  const cross = (piece.includes(from) && (su === "g" || su === "ml")) || (piece.includes(su) && (from === "g" || from === "ml"));
+  return cross && pack <= 1;
+};
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Активна ли ширина xl (≥1280px). По ней рендерим ТОЛЬКО одну ветку каталога —
+// таблицу ИЛИ карточки, а не обе сразу: вдвое меньше DOM-узлов и реконсиляции,
+// особенно заметно при 5-секундном поллинге на планшете.
+function useMediaQuery(query) {
+  const get = () => typeof window !== "undefined" && window.matchMedia(query).matches;
+  const [match, setMatch] = useState(get);
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const on = () => setMatch(mql.matches);
+    on();
+    mql.addEventListener("change", on);
+    return () => mql.removeEventListener("change", on);
+  }, [query]);
+  return match;
+}
 
 export default function WorkPage() {
   const [types, setTypes] = useState([]);
@@ -193,6 +245,7 @@ export default function WorkPage() {
     cost: "",
     price: "",
     isExtra: false,
+    hidden: false,
   });
   const [recipe, setRecipe] = useState([]);
   const [error, setError] = useState("");
@@ -204,6 +257,8 @@ export default function WorkPage() {
 
   const loadingRef = useRef(false); // идёт ли загрузка (чтобы не наслаивать тики)
   const loadSeqRef = useRef(0);     // защита от гонки: устаревший ответ не затирает свежий
+  const modalOpenRef = useRef(false); // открыта ли модалка — тогда поллинг паузим (замыкание видит актуальное через ref)
+  const isXl = useMediaQuery("(min-width: 1280px)");
 
   const load = async () => {
     const seq = ++loadSeqRef.current;
@@ -235,13 +290,19 @@ export default function WorkPage() {
     load().catch((e) => setError(e.message));
 
     const timer = setInterval(() => {
-      if (loadingRef.current) return; // не запускаем новый опрос поверх незавершённого
+      // Пропускаем тик, если уже грузим, вкладка в фоне или открыта модалка —
+      // иначе фон каждые 5с перетирает состояние и подвешивает планшет.
+      if (loadingRef.current || document.hidden || modalOpenRef.current) return;
       load().catch(() => {});
     }, 5000);
 
     return () => clearInterval(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Держим modalOpenRef в актуальном состоянии — замыкание интервала читает его через ref.
+  useEffect(() => {
+    modalOpenRef.current = productModal || editModal;
+  }, [productModal, editModal]);
 
   const safeTypes = Array.isArray(types) ? types : [];
   const safeFolders = Array.isArray(folders) ? folders : [];
@@ -421,20 +482,25 @@ export default function WorkPage() {
         (item) => String(item.id) === String(row.warehouseItemId)
       );
       if (!warehouseItem) return sum;
+      // Штучную конвертацию без упаковки фронт точно не посчитает — не занижаем авто-cost,
+      // бэкенд досчитает после сохранения (превью строки покажет пометку).
+      if (needsBackendGuess(row.quantityUnit || warehouseItem.unit, warehouseItem.unit, num(warehouseItem.packagingQuantity))) return sum;
       const storageQty = toStorageQty(num(row.quantity), row.quantityUnit || warehouseItem.unit, warehouseItem.unit, num(warehouseItem.packagingQuantity), num(warehouseItem.lossPercent));
       return sum + storageQty * getWarehouseUnitCost(warehouseItem);
     }, 0);
   }, [recipe, warehouseItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (safe_recipe.length) {
-
+    // Перезаписываем cost только когда есть реальная посчитанная себестоимость (>0).
+    // Иначе состав, целиком набранный вручную (AI, ещё не на складе), даёт recipeCost=0 —
+    // и обнулять/блокировать ручной ввод нельзя.
+    if (recipeCost > 0) {
       setProductForm((p) => ({
         ...p,
-        cost: recipeCost ? String(recipeCost.toFixed(2)) : "",
+        cost: String(recipeCost.toFixed(2)),
       }));
     }
-  }, [recipeCost, safe_recipe.length]);
+  }, [recipeCost]);
 
   const analyzeProductNameWork = useCallback(async (name) => {
     if (!name || name.trim().length < 3) { setAiSuggestion(null); return; }
@@ -479,7 +545,7 @@ export default function WorkPage() {
     setAiSuggestion(null);
     setAiSuggestionLoading(false);
     setError("");
-    setProductForm({ name: "", cost: "", price: "", isExtra: false });
+    setProductForm({ name: "", cost: "", price: "", isExtra: false, hidden: false });
     setRecipe([]);
     setShowNewType(false);
     setShowNewFolder(false);
@@ -531,6 +597,7 @@ export default function WorkPage() {
       cost: String(p.cost || ""),
       price: String(p.price || ""),
       isExtra: !!p.isExtra,
+      hidden: false,
     });
     const rows = (Array.isArray(p.recipe) ? p.recipe : []).map((r) => ({
       warehouseItemId: r.warehouseItemId || r.warehouse_item_id || "",
@@ -578,6 +645,14 @@ export default function WorkPage() {
     if (!selectedFolderId && !productForm.isExtra) return setError("Сначала выбери папку/раздел");
     if (!productForm.name.trim()) return setError("Введите название товара");
 
+    // Строка с выбранным ингредиентом, но без валидного количества, тихо выпадала при
+    // фильтрации ниже — блокируем сохранение с адресным сообщением.
+    const badRows = recipe.filter((row) => (row.warehouseItemId || row.ingredientName) && num(row.quantity) <= 0);
+    if (badRows.length) {
+      const nm = badRows[0].ingredientName || safeWarehouseItems.find(w => String(w.id) === String(badRows[0].warehouseItemId))?.name || "ингредиент";
+      return setError(`У «${nm}» не указано количество (или ≤ 0) — заполните или удалите строку`);
+    }
+
     const cleanRecipe = recipe
       .filter((row) => (row.warehouseItemId || row.ingredientName) && num(row.quantity) > 0)
       .map((row) => {
@@ -598,13 +673,14 @@ export default function WorkPage() {
       await post("/menu-products", {
         categoryId: Number(selectedFolderId) || 0,
         name: productForm.name.trim(),
-        cost: cleanRecipe.length ? recipeCost : num(productForm.cost),
+        cost: recipeCost > 0 ? recipeCost : num(productForm.cost),
         price: num(productForm.price),
         isExtra: !!productForm.isExtra,
+        hidden: !!productForm.hidden,
         recipe: cleanRecipe,
       });
       setProductModal(false);
-      setProductForm({ name: "", cost: "", price: "", isExtra: false });
+      setProductForm({ name: "", cost: "", price: "", isExtra: false, hidden: false });
       setRecipe([]);
       await load();
     });
@@ -612,8 +688,14 @@ export default function WorkPage() {
 
   const deleteProduct = async (id) => {
     if (!confirm("Удалить товар?")) return;
-    await del(`/menu-products/${id}`);
-    await load();
+    // Через guardedSave — как остальные мутации: ловим ошибку del/load в баннер и
+    // блокируем повторные тапы. Иначе провал удаления был молчаливым, а 5-секундный
+    // поллинг возвращал «удалённый» товар обратно.
+    await guardedSave(async () => {
+      await del(`/menu-products/${id}`);
+      await load();
+      window.notify?.("Товар удалён");
+    });
   };
 
   const openEditProduct = (p) => {
@@ -632,6 +714,15 @@ export default function WorkPage() {
 
   const saveEditProduct = async () => {
     if (!editProduct) return;
+    setError("");
+    // Строка с ингредиентом, но без валидного количества, тихо выпадала при фильтрации —
+    // тогда сырьё не списывалось со склада, а себестоимость занижалась. Блокируем сохранение.
+    const badRows = editRecipe.filter(r => (r.warehouseItemId || r.ingredientName) && num(r.quantity) <= 0);
+    if (badRows.length) {
+      const nm = badRows[0].ingredientName || safeWarehouseItems.find(w => String(w.id) === String(badRows[0].warehouseItemId))?.name || "ингредиент";
+      setError(`У «${nm}» не указано количество (или ≤ 0) — заполните или удалите строку`);
+      return;
+    }
     const cleanRecipe = editRecipe
       .filter(r => (r.warehouseItemId || r.ingredientName) && num(r.quantity) > 0)
       .map(r => ({
@@ -648,7 +739,7 @@ export default function WorkPage() {
           const item = safeWarehouseItems.find(w => String(w.id) === String(r.warehouseItemId));
           if (!item) return sum;
           const storageQty = toStorageQty(num(r.quantity), r.quantityUnit || item.unit, item.unit, num(item.packagingQuantity), num(item.lossPercent));
-          return sum + storageQty * num(item.unitCost ?? item.unit_cost ?? 0);
+          return sum + storageQty * getWarehouseUnitCost(item);
         }, 0)
       : null;
     await guardedSave(async () => {
@@ -974,7 +1065,8 @@ export default function WorkPage() {
           </div>
         </div>
 
-        <div className="hidden overflow-x-auto xl:block">
+        {isXl && (
+        <div className="overflow-x-auto">
           <table className="w-full min-w-[1050px] text-left">
             <thead className="bg-white/5 text-slate-300">
               <tr>
@@ -997,7 +1089,10 @@ export default function WorkPage() {
                 return (
                 <tr key={p.id} className="border-t border-white/10">
                   <td className="p-4">
-                    <p className="font-black">{p.name}</p>
+                    <p className="font-black">
+                      {p.name}
+                      {p.hidden && <span className="ml-2 inline-flex items-center gap-1 rounded-lg bg-slate-500/20 px-2 py-0.5 align-middle text-[10px] font-black text-slate-300">Скрыт в кассе</span>}
+                    </p>
                     {hasRecipe ? (
                       <span className={`mt-0.5 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-black ${hasUnlinked ? "bg-yellow-500/15 text-yellow-300" : "bg-emerald-500/15 text-emerald-300"}`}>
                         {hasUnlinked ? (
@@ -1069,7 +1164,7 @@ export default function WorkPage() {
                   ИТОГО
                 </td>
                 <td className="p-4">{formatMoney(totals.cost)}</td>
-                <td className="p-4">{formatMoney(totals.revenue)}</td>
+                <td className="p-4 text-slate-500">—</td>
                 <td className="p-4">{totals.quantity}</td>
                 <td className="p-4">{formatMoney(totals.revenue)}</td>
                 <td className="p-4">{formatMoney(totals.cleanProfit)}</td>
@@ -1078,8 +1173,10 @@ export default function WorkPage() {
             </tfoot>
           </table>
         </div>
+        )}
 
-        <div className="divide-y divide-white/10 xl:hidden">
+        {!isXl && (
+        <div className="divide-y divide-white/10">
           {productRows.map((p) => {
             const hasRecipe = Array.isArray(p.recipe) && p.recipe.length > 0;
             const hasUnlinked = hasRecipe && p.recipe.some(r => r.unlinked);
@@ -1087,7 +1184,10 @@ export default function WorkPage() {
             <div key={p.id} className="p-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-base font-black text-white">{p.name}</p>
+                  <p className="truncate text-base font-black text-white">
+                    {p.name}
+                    {p.hidden && <span className="ml-2 inline-flex items-center gap-1 rounded-lg bg-slate-500/20 px-2 py-0.5 align-middle text-[10px] font-black text-slate-300">Скрыт</span>}
+                  </p>
                   <p className="truncate text-xs text-slate-400">
                     {p.typeName || p.type} · {p.category}
                   </p>
@@ -1178,6 +1278,7 @@ export default function WorkPage() {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Резерв под плавающую кнопку, чтобы она не перекрывала итог/последнюю карточку на телефоне */}
@@ -1630,6 +1731,24 @@ export default function WorkPage() {
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${productForm.isExtra ? "left-[22px]" : "left-0.5"}`} />
               </span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setProductForm((p) => ({ ...p, hidden: !p.hidden }))}
+              className={`col-span-2 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                productForm.hidden
+                  ? "border-white/10 bg-white/5 hover:bg-white/10"
+                  : "border-emerald-400/40 bg-emerald-500/10"
+              }`}
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-black text-white">Доступен в кассе</span>
+                <span className="block text-xs text-slate-400">{productForm.hidden ? "Скрыт из витрины кассы (стоп-лист) — остаётся в меню" : "Показывается в кассе для продажи"}</span>
+              </span>
+              <span className={`relative h-6 w-11 shrink-0 rounded-full transition ${productForm.hidden ? "bg-white/15" : "bg-emerald-500"}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${productForm.hidden ? "left-0.5" : "left-[22px]"}`} />
+              </span>
+            </button>
           </div>
 
           <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-[#0f172a]/90 p-4">
@@ -1712,10 +1831,10 @@ export default function WorkPage() {
                         </select>
                       )}
 
-                      <input type="number" inputMode="decimal" value={row.quantity}
+                      <input type="number" inputMode="decimal" min="0" step="any" value={row.quantity}
                         onChange={(e) => updateRecipeRow(index, "quantity", e.target.value)}
                         placeholder="Кол-во"
-                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60"
+                        className={`rounded-2xl border bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60 ${num(row.quantity) <= 0 && (row.warehouseItemId || row.ingredientName) ? "border-red-500/60" : "border-white/10"}`}
                       />
 
                       <select
@@ -1733,9 +1852,15 @@ export default function WorkPage() {
                       </p>
                     )}
                     {!isUnlinked && selected && (
-                      <p className="flex items-start gap-1 text-xs text-emerald-400">
-                        <Check size={12} className="mt-0.5 shrink-0" /> {selected.name} · себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit, num(selected.packagingQuantity), num(selected.lossPercent)) * getWarehouseUnitCost(selected))}
-                      </p>
+                      needsBackendGuess(row.quantityUnit || selected.unit, selected.unit, num(selected.packagingQuantity)) ? (
+                        <p className="flex items-start gap-1 text-xs text-slate-400">
+                          <Check size={12} className="mt-0.5 shrink-0" /> {selected.name} · себестоимость посчитается после сохранения
+                        </p>
+                      ) : (
+                        <p className="flex items-start gap-1 text-xs text-emerald-400">
+                          <Check size={12} className="mt-0.5 shrink-0" /> {selected.name} · себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit, num(selected.packagingQuantity), num(selected.lossPercent)) * getWarehouseUnitCost(selected))}
+                        </p>
+                      )
                     )}
                   </div>
                 );
@@ -1773,7 +1898,7 @@ export default function WorkPage() {
               onClick={() => {
                 setProductModal(false);
                 setRecipe([]);
-                setProductForm({ name: "", cost: "", price: "", isExtra: false });
+                setProductForm({ name: "", cost: "", price: "", isExtra: false, hidden: false });
               }}
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 flex-1"
             >
@@ -1816,6 +1941,24 @@ export default function WorkPage() {
                 onChange={e => setEditProduct(p => ({...p, cost: e.target.value}))}
                 placeholder="Себестоимость (вручную)" type="number" inputMode="decimal" className="input sm:col-span-2"/>
             )}
+
+            <button
+              type="button"
+              onClick={() => setEditProduct(p => ({ ...p, hidden: !p.hidden }))}
+              className={`sm:col-span-2 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                editProduct.hidden
+                  ? "border-white/10 bg-white/5 hover:bg-white/10"
+                  : "border-emerald-400/40 bg-emerald-500/10"
+              }`}
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-black text-white">Доступен в кассе</span>
+                <span className="block text-xs text-slate-400">{editProduct.hidden ? "Скрыт из витрины кассы (стоп-лист) — остаётся в меню и истории" : "Показывается в кассе для продажи"}</span>
+              </span>
+              <span className={`relative h-6 w-11 shrink-0 rounded-full transition ${editProduct.hidden ? "bg-white/15" : "bg-emerald-500"}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${editProduct.hidden ? "left-0.5" : "left-[22px]"}`} />
+              </span>
+            </button>
             {editCostMode === "auto" && (
               <div className="flex items-center gap-2 rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-bold text-blue-300 sm:col-span-2">
                 <Zap size={14} className="shrink-0" /> Авто-себестоимость считается из состава ниже
@@ -1869,9 +2012,9 @@ export default function WorkPage() {
                           ))}
                         </select>
                       )}
-                      <input type="number" inputMode="decimal" value={row.quantity} onChange={e => updateEditRecipeRow(index, "quantity", e.target.value)}
+                      <input type="number" inputMode="decimal" min="0" step="any" value={row.quantity} onChange={e => updateEditRecipeRow(index, "quantity", e.target.value)}
                         placeholder="Кол-во"
-                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none"/>
+                        className={`rounded-2xl border bg-white/5 px-4 py-3 font-bold text-white outline-none ${num(row.quantity) <= 0 && (row.warehouseItemId || row.ingredientName) ? "border-red-500/60" : "border-white/10"}`}/>
                       <select value={row.quantityUnit || selected?.unit || "g"}
                         onChange={e => updateEditRecipeRow(index, "quantityUnit", e.target.value)}
                         className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 font-bold text-white outline-none">
@@ -1882,9 +2025,15 @@ export default function WorkPage() {
                       <p className="flex items-center gap-1 text-xs font-bold text-yellow-500"><AlertTriangle size={12} strokeWidth={2.4} /> Добавьте на склад — привяжется автоматически</p>
                     )}
                     {selected && !isManual && (
-                      <p className="flex items-center gap-1 text-xs text-emerald-400">
-                        <Check size={12} strokeWidth={2.4} /> себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit, num(selected.packagingQuantity), num(selected.lossPercent)) * getWarehouseUnitCost(selected))}
-                      </p>
+                      needsBackendGuess(row.quantityUnit || selected.unit, selected.unit, num(selected.packagingQuantity)) ? (
+                        <p className="flex items-center gap-1 text-xs text-slate-400">
+                          <Check size={12} strokeWidth={2.4} /> себестоимость посчитается после сохранения
+                        </p>
+                      ) : (
+                        <p className="flex items-center gap-1 text-xs text-emerald-400">
+                          <Check size={12} strokeWidth={2.4} /> себест. {formatMoney(toStorageQty(num(row.quantity), row.quantityUnit || selected.unit, selected.unit, num(selected.packagingQuantity), num(selected.lossPercent)) * getWarehouseUnitCost(selected))}
+                        </p>
+                      )
                     )}
                   </div>
                 );

@@ -332,7 +332,7 @@ export default function EmployeeAnalyticsPage() {
                       <XAxis dataKey="label" tick={{ fill: CHART_AXIS, fontSize: 11 }} tickLine={false} axisLine={{ stroke: CHART_GRID }} />
                       <YAxis tick={{ fill: CHART_AXIS, fontSize: 11 }} tickLine={false} axisLine={false} width={44} />
                       <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14, color: "#fff" }} formatter={(v) => money(v)} />
-                      <Line type="monotone" dataKey="revenue" name="Выручка" stroke="#60a5fa" strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="revenue" name="Выручка" stroke="#60a5fa" strokeWidth={3} dot={trend.length < 2 ? { r: 4, fill: "#60a5fa", stroke: "none" } : false} activeDot={{ r: 5 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>

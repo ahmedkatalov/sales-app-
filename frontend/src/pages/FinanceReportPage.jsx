@@ -23,21 +23,35 @@ function periodBounds(preset) {
 
 // Строка бухгалтерской «выписки».
 function Row({ label, value, hint, tone = "", strong = false, indent = false, prefix = "" }) {
+  const [open, setOpen] = useState(false);
   const toneCls =
     tone === "plus" ? "text-emerald-300" : tone === "minus" ? "text-red-300" : "text-white";
   return (
-    <div
-      className={`flex items-baseline justify-between gap-3 py-2 ${strong ? "border-t border-white/10 pt-3" : ""}`}
-      title={hint || undefined}
-    >
-      <span className={`${indent ? "pl-4 text-slate-400" : "text-slate-300"} ${strong ? "font-black text-white" : "font-bold"} text-sm`}>
-        {label}
-        {hint ? <span className="ml-1 text-[10px] text-slate-500">ⓘ</span> : null}
-      </span>
-      <span className={`shrink-0 tabular-nums ${strong ? "text-lg font-black" : "font-black"} ${toneCls}`}>
-        {prefix}{formatMoney(value)}
-      </span>
-    </div>
+    <>
+      <div
+        className={`flex items-baseline justify-between gap-3 py-2 ${strong ? "border-t border-white/10 pt-3" : ""}`}
+      >
+        <span className={`${indent ? "pl-4 text-slate-400" : "text-slate-300"} ${strong ? "font-black text-white" : "font-bold"} text-sm`}>
+          {label}
+          {hint ? (
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              aria-expanded={open}
+              className="ml-1 align-middle text-[11px] text-slate-500 hover:text-slate-300"
+            >
+              ⓘ
+            </button>
+          ) : null}
+        </span>
+        <span className={`shrink-0 tabular-nums ${strong ? "text-lg font-black" : "font-black"} ${toneCls}`}>
+          {prefix}{formatMoney(value)}
+        </span>
+      </div>
+      {open && hint ? (
+        <p className="pb-2 pl-4 text-xs font-medium leading-snug text-slate-500">{hint}</p>
+      ) : null}
+    </>
   );
 }
 
@@ -47,6 +61,33 @@ function Card({ title, subtitle, children }) {
       <p className="text-sm font-black text-white">{title}</p>
       {subtitle ? <p className="mb-1 mt-0.5 text-xs font-bold text-slate-500">{subtitle}</p> : null}
       <div className="mt-2 divide-y divide-white/5">{children}</div>
+    </div>
+  );
+}
+
+// KPI-плитка: пояснение раскрывается по тапу на ⓘ (mobile-first, hover не нужен).
+function Kpi({ label, value, note, hint, cardClass = "border-white/10 bg-white/[0.05]", labelClass = "text-slate-300/80", valueClass = "text-white" }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`relative rounded-2xl border px-4 py-3 ${cardClass}`}>
+      {hint ? (
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-label="Пояснение"
+          className="absolute right-2 top-2 text-[11px] text-slate-500 hover:text-slate-300"
+        >
+          ⓘ
+        </button>
+      ) : null}
+      <p className={`text-[11px] font-black uppercase tracking-wide ${labelClass}`}>{label}</p>
+      <p className={`mt-1 text-2xl font-black ${valueClass}`}>{value}</p>
+      {open && hint ? (
+        <p className="mt-1 text-[11px] font-medium leading-snug text-slate-500">{hint}</p>
+      ) : note ? (
+        <p className="text-[11px] font-bold text-slate-500">{note}</p>
+      ) : null}
     </div>
   );
 }
@@ -135,7 +176,6 @@ export default function FinanceReportPage() {
     if (new URLSearchParams(window.location.search).get("setup") === "1") {
       openOpeningEditor();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const p = rep?.pnl || {};
@@ -235,7 +275,7 @@ export default function FinanceReportPage() {
         </div>
         <h1 className="text-3xl font-black tracking-tight sm:text-5xl">Финансовый отчёт</h1>
         <p className="mt-2 max-w-2xl text-sm font-medium text-slate-400">
-          Откуда пришли деньги, куда ушли, и почему касса не равна прибыли. Наведите на строку с ⓘ — там пояснение.
+          Откуда пришли деньги, куда ушли, и почему касса не равна прибыли. Нажмите ⓘ рядом со строкой — там пояснение.
         </p>
 
         {/* Период */}
@@ -279,26 +319,40 @@ export default function FinanceReportPage() {
           <>
             {/* KPI */}
             <div className="mt-5 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.08] px-4 py-3" title="Выручка минус себестоимость минус все расходы за период. Не зависит от того, чем платили.">
-                <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">Чистая прибыль</p>
-                <p className={`mt-1 text-2xl font-black ${p.netProfit < 0 ? "text-red-300" : "text-white"}`}>{formatMoney(p.netProfit)}</p>
-                <p className="text-[11px] font-bold text-slate-500">за период</p>
-              </div>
-              <div className="rounded-2xl border border-blue-400/20 bg-blue-500/[0.08] px-4 py-3" title="Все продажи за период (наличные + карта + в долг), уже за вычетом скидок.">
-                <p className="text-[11px] font-black uppercase tracking-wide text-blue-300/80">Выручка</p>
-                <p className="mt-1 text-2xl font-black text-white">{formatMoney(p.revenue)}</p>
-                <p className="text-[11px] font-bold text-slate-500">за период</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3" title="Расчётный остаток наличных: стартовые + приходы налом − расходы налом. Фактический остаток сверяется в смене.">
-                <p className="text-[11px] font-black uppercase tracking-wide text-slate-300/80">Остаток кассы</p>
-                <p className="mt-1 text-2xl font-black text-white">{formatMoney(pos.cashNow)}</p>
-                <p className="text-[11px] font-bold text-slate-500">расчётный</p>
-              </div>
-              <div className="rounded-2xl border border-amber-400/25 bg-amber-500/[0.08] px-4 py-3" title="Сколько бизнес должен вернуть владельцу за его личные вложения (расходы + вклады − возвраты, с учётом стартового).">
-                <p className="text-[11px] font-black uppercase tracking-wide text-amber-300/80">Должны владельцу</p>
-                <p className="mt-1 text-2xl font-black text-amber-100">{formatMoney(pos.owedToOwner)}</p>
-                <p className="text-[11px] font-bold text-slate-500">всего</p>
-              </div>
+              <Kpi
+                label="Чистая прибыль"
+                value={formatMoney(p.netProfit)}
+                note="за период"
+                hint="Выручка минус себестоимость минус все расходы за период. Не зависит от того, чем платили."
+                cardClass="border-emerald-400/20 bg-emerald-500/[0.08]"
+                labelClass="text-emerald-300/80"
+                valueClass={p.netProfit < 0 ? "text-red-300" : "text-white"}
+              />
+              <Kpi
+                label="Выручка"
+                value={formatMoney(p.revenue)}
+                note="за период"
+                hint="Все продажи за период (наличные + карта + в долг), уже за вычетом скидок."
+                cardClass="border-blue-400/20 bg-blue-500/[0.08]"
+                labelClass="text-blue-300/80"
+              />
+              <Kpi
+                label="Остаток кассы"
+                value={formatMoney(pos.cashNow)}
+                note="расчётный"
+                hint="Расчётный остаток наличных: стартовые + приходы налом − расходы налом. Фактический остаток сверяется в смене."
+                cardClass="border-white/10 bg-white/[0.05]"
+                labelClass="text-slate-300/80"
+              />
+              <Kpi
+                label="Должны владельцу"
+                value={formatMoney(pos.owedToOwner)}
+                note="всего"
+                hint="Сколько бизнес должен вернуть владельцу за его личные вложения (расходы + вклады − возвраты, с учётом стартового)."
+                cardClass="border-amber-400/25 bg-amber-500/[0.08]"
+                labelClass="text-amber-300/80"
+                valueClass="text-amber-100"
+              />
             </div>
 
             <div className="mt-4 grid gap-3 lg:grid-cols-2">

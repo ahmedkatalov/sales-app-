@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, RefreshCw } from "lucide-react";
 import { del, get, post } from "../api";
 import Modal from "./Modal";
@@ -16,6 +16,7 @@ export default function PendingPaymentsModal({ onClose }) {
   const [paidAmount, setPaidAmount] = useState("");
   const [rowError, setRowError] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const confirmingRef = useRef(false); // синхронный ref-гвард против двойного тапа
 
   const safe_list = Array.isArray(list) ? list : [];
   const safe_cards = Array.isArray(cards) ? cards : [];
@@ -51,8 +52,9 @@ export default function PendingPaymentsModal({ onClose }) {
   };
 
   const confirmPayment = async (s) => {
-    if (confirming) return;
     if (paymentType === "transfer" && !cardId) { setRowError("Выберите карту"); return; }
+    if (confirmingRef.current) return; // синхронный гвард после валидации, чтобы ранний return не оставил ref навсегда true
+    confirmingRef.current = true;
     setConfirming(true);
     try {
       await post(`/pending-sales/${s.id}/confirm`, {
@@ -68,6 +70,7 @@ export default function PendingPaymentsModal({ onClose }) {
       setRowError(e?.message || "Не удалось подтвердить чек");
       await load().catch(() => {});
     } finally {
+      confirmingRef.current = false;
       setConfirming(false);
     }
   };

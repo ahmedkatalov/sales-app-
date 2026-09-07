@@ -82,11 +82,11 @@ func linkUnlinkedRecipes(accID int, warehouseItemID int, itemName string) {
 	}
 
 	for _, c := range candidates {
-		// Нечёткое совпадение: нормализация (ё/е, окончания, пунктуация) +
-		// расстояние Левенштейна. Ловит опечатки и варианты (огурец/угурец,
-		// «Мороженое Синнабон»/«мороженое синобан»), а не только точное/«содержит».
-		// Порог 0.82 — консервативный, чтобы авто-связывание не путало разные продукты.
-		if similarityScore(itemName, c.name) < 0.82 {
+		// Тихое авто-связывание при добавлении сырья: принимаем только строгое
+		// совпадение (autoLinkMatch) — точное имя или опечатка с тем же числом
+		// слов. Подстрока-надмножество (молоко ⊂ молоко кокосовое, similarityScore
+		// 0.88) больше НЕ линкуется автоматически, чтобы не списывать чужое сырьё.
+		if !autoLinkMatch(itemName, c.name) {
 			continue
 		}
 		// Пересчитываем quantity в единицы хранения нового склада по сохранённым
@@ -137,6 +137,57 @@ func fuzzyFindWarehouseItemTx(tx *sql.Tx, accID int, name string) int {
 	return 0
 }
 
+// autoLinkMatch — строгий предикат ТОЛЬКО для «тихого» авто-связывания рецепта
+// со складом. Разрешает связь лишь при точном совпадении нормализованных имён
+// ИЛИ при опечаточном совпадении (Левенштейн) с ОДИНАКОВЫМ числом слов. Это
+// отсекает случай «подстрока-надмножество» (молоко ⊂ молоко кокосовое), из-за
+// которого similarityScore=0.88 молча привязывал ингредиент к чужому сырью.
+func autoLinkMatch(a, b string) bool {
+	na, nb := normalizeWarehouseName(a), normalizeWarehouseName(b)
+	if na == "" || nb == "" {
+		return false
+	}
+	if na == nb {
+		return true
+	}
+	if len(strings.Fields(na)) != len(strings.Fields(nb)) {
+		return false // разное число слов → блокируем sub/superset
+	}
+	maxLen := maxInt(len([]rune(na)), len([]rune(nb)))
+	if maxLen == 0 {
+		return false
+	}
+	score := 1 - float64(levenshteinDistance(na, nb))/float64(maxLen)
+	return score >= 0.9 // строже 0.82, без бонуса за подстроку
+}
+
+// autoLinkWarehouseItemTx — подбирает складскую позицию для ТИХОГО авто-связывания
+// рецепта. Кандидатов ищем по LIKE и нечётким поиском, но ПРИНИМАЕМ только тех,
+// кто проходит строгий autoLinkMatch. Иначе возвращаем 0 — владелец свяжет
+// вручную (запись остаётся pending_link, склад молча не списывается).
+func autoLinkWarehouseItemTx(tx *sql.Tx, accID int, name string) int {
+	// LIKE-кандидат по подстроке — принимаем лишь при строгом совпадении.
+	var candID int
+	var candName string
+	_ = tx.QueryRow(`
+		SELECT id, name FROM warehouse_items
+		WHERE account_id = ? AND LOWER(TRIM(name)) LIKE LOWER(TRIM(?)) AND (hidden IS NULL OR hidden = 0)
+		LIMIT 1
+	`, accID, "%"+strings.ToLower(strings.TrimSpace(name))+"%").Scan(&candID, &candName)
+	if candID > 0 && autoLinkMatch(name, candName) {
+		return candID
+	}
+	// Нечёткий кандидат (опечатки/варианты) — тоже под строгой проверкой.
+	if fuzzyID := fuzzyFindWarehouseItemTx(tx, accID, name); fuzzyID > 0 {
+		var fuzzyName string
+		_ = tx.QueryRow(`SELECT name FROM warehouse_items WHERE id = ? AND account_id = ?`, fuzzyID, accID).Scan(&fuzzyName)
+		if autoLinkMatch(name, fuzzyName) {
+			return fuzzyID
+		}
+	}
+	return 0
+}
+
 func calculateRecipeCost(productID int, accID int) float64 {
 	var total float64
 	_ = db.QueryRow(`
@@ -161,7 +212,8 @@ func getMenuProducts(c *gin.Context) {
 			p.type,
 			p.price,
 			IFNULL(p.cost, 0),
-			IFNULL(p.is_extra, 0)
+			IFNULL(p.is_extra, 0),
+			IFNULL(p.hidden, 0)
 		FROM menu_products p
 		LEFT JOIN product_categories c ON c.id = p.category_id AND c.account_id = p.account_id
 		LEFT JOIN product_types t ON t.id = c.type_id AND t.account_id = p.account_id
@@ -178,12 +230,13 @@ func getMenuProducts(c *gin.Context) {
 
 	for rows.Next() {
 		var p MenuProduct
-		var isExtra int
-		if err := rows.Scan(&p.ID, &p.AccountID, &p.CategoryID, &p.TypeID, &p.Name, &p.Category, &p.TypeName, &p.Type, &p.Price, &p.Cost, &isExtra); err != nil {
+		var isExtra, hidden int
+		if err := rows.Scan(&p.ID, &p.AccountID, &p.CategoryID, &p.TypeID, &p.Name, &p.Category, &p.TypeName, &p.Type, &p.Price, &p.Cost, &isExtra, &hidden); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		p.IsExtra = isExtra == 1
+		p.Hidden = hidden == 1
 		if p.Type == "" {
 			p.Type = p.TypeName
 		}
@@ -242,9 +295,9 @@ func createMenuProduct(c *gin.Context) {
 	defer tx.Rollback()
 
 	res, err := tx.Exec(`
-		INSERT INTO menu_products(account_id, category_id, name, category, type, price, cost, is_extra, created_at)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, p.AccountID, p.CategoryID, p.Name, p.Category, p.Type, p.Price, p.Cost, boolToInt(p.IsExtra), time.Now().Format(time.RFC3339))
+		INSERT INTO menu_products(account_id, category_id, name, category, type, price, cost, is_extra, hidden, created_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, p.AccountID, p.CategoryID, p.Name, p.Category, p.Type, p.Price, p.Cost, boolToInt(p.IsExtra), boolToInt(p.Hidden), time.Now().Format(time.RFC3339))
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -294,17 +347,11 @@ func createMenuProduct(c *gin.Context) {
 			// Виртуальный ингредиент — сохраняем как есть, конвертация позже
 			storageQty = recipeItem.Quantity
 			conversionNote = "pending_link"
-			// Пробуем найти на складе по имени
-			var foundID int
-			_ = tx.QueryRow(`
-				SELECT id FROM warehouse_items
-				WHERE account_id = ? AND LOWER(TRIM(name)) LIKE LOWER(TRIM(?)) AND (hidden IS NULL OR hidden = 0)
-				LIMIT 1
-			`, p.AccountID, "%"+strings.ToLower(strings.TrimSpace(ingredientName))+"%").Scan(&foundID)
-			if foundID == 0 {
-				// LIKE не нашёл — пробуем нечёткое совпадение (опечатки/варианты)
-				foundID = fuzzyFindWarehouseItemTx(tx, p.AccountID, ingredientName)
-			}
+			// Пробуем найти на складе по имени. Связываем ТОЛЬКО при строгом
+			// совпадении (autoLinkMatch) — иначе оставляем pending_link, чтобы не
+			// привязать, напр., «молоко» к «молоко кокосовое» и не списывать молча
+			// чужое сырьё с искажением COGS.
+			foundID := autoLinkWarehouseItemTx(tx, p.AccountID, ingredientName)
 			if foundID > 0 {
 				warehouseItemID = foundID
 				var convErr error
@@ -381,6 +428,21 @@ func updateMenuProduct(c *gin.Context) {
 	_ = json.Unmarshal(body, &rawFields)
 	_, recipeProvided := rawFields["recipe"]
 
+	// Скаляры защищаем так же, как recipe: частичный PUT без ключа НЕ должен
+	// обнулять name/price/cost/category/is_extra. Иначе быстрая правка (или
+	// старый фронт), приславшая только часть полей, запишет Go-нули: пустое имя
+	// ломает витрину кассы и resolveSaleItemProduct по имени, price=0 — товар
+	// продаётся бесплатно, cost=0 — заниженная себестоимость → завышенная прибыль.
+	_, nameProvided := rawFields["name"]
+	_, priceProvided := rawFields["price"]
+	_, costProvided := rawFields["cost"]
+	_, extraProvided := rawFields["isExtra"]
+	_, hiddenProvided := rawFields["hidden"]
+	_, catProvided := rawFields["categoryId"]
+	if !catProvided {
+		_, catProvided = rawFields["category_id"]
+	}
+
 	var p MenuProduct
 	if err := json.Unmarshal(body, &p); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -401,16 +463,54 @@ func updateMenuProduct(c *gin.Context) {
 	}
 	defer tx.Rollback()
 
-	// Update main product fields
+	// Читаем текущие значения строки (внутри tx — SetMaxOpenConns(1)), чтобы
+	// отсутствующие в PUT поля сохраняли своё значение, а не обнулялись.
+	var curName, curCategory, curType string
+	var curPrice, curCost float64
+	var curCategoryID, curIsExtra, curHidden int
+	_ = tx.QueryRow(`
+		SELECT name, price, IFNULL(cost, 0), IFNULL(category_id, 0),
+		       IFNULL(is_extra, 0), IFNULL(category, ''), IFNULL(type, ''), IFNULL(hidden, 0)
+		FROM menu_products WHERE id = ? AND account_id = ?
+	`, productID, accID).Scan(&curName, &curPrice, &curCost, &curCategoryID, &curIsExtra, &curCategory, &curType, &curHidden)
+
+	newName := curName
+	if nameProvided {
+		newName = p.Name
+	}
+	newPrice := curPrice
+	if priceProvided {
+		newPrice = p.Price
+	}
+	newCost := curCost
+	if costProvided {
+		newCost = p.Cost
+	}
+	newIsExtra := curIsExtra
+	if extraProvided {
+		newIsExtra = boolToInt(p.IsExtra)
+	}
+	newCategoryID := curCategoryID
+	if catProvided {
+		newCategoryID = catID
+	}
+	newHidden := curHidden
+	if hiddenProvided {
+		newHidden = boolToInt(p.Hidden)
+	}
+
+	// Update main product fields. category/type пересчитываются из category_id;
+	// при отсутствии categoryId (COALESCE не нашёл категорию) берём ТЕКУЩИЕ
+	// значения — иначе смена только цены обнулила бы отображаемую категорию/тип.
 	if _, err := tx.Exec(`
 		UPDATE menu_products SET
-			name = ?, price = ?, cost = ?, category_id = ?, is_extra = ?,
+			name = ?, price = ?, cost = ?, category_id = ?, is_extra = ?, hidden = ?,
 			category = COALESCE((SELECT name FROM product_categories WHERE id = ? AND account_id = ?), ?),
 			type = COALESCE((SELECT pt.name FROM product_types pt JOIN product_categories pc ON pc.type_id = pt.id WHERE pc.id = ? AND pc.account_id = ?), ?)
 		WHERE id = ? AND account_id = ?
-	`, p.Name, p.Price, p.Cost, catID, boolToInt(p.IsExtra),
-		catID, accID, p.Category,
-		catID, accID, p.Type,
+	`, newName, newPrice, newCost, newCategoryID, newIsExtra, newHidden,
+		newCategoryID, accID, curCategory,
+		newCategoryID, accID, curType,
 		productID, accID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -458,15 +558,9 @@ func updateMenuProduct(c *gin.Context) {
 			} else {
 				storageQty = recipeItem.Quantity
 				conversionNote = "pending_link"
-				var foundID int
-				_ = tx.QueryRow(`
-				SELECT id FROM warehouse_items
-				WHERE account_id = ? AND LOWER(TRIM(name)) LIKE LOWER(TRIM(?)) AND (hidden IS NULL OR hidden = 0)
-				LIMIT 1
-			`, accID, "%"+strings.ToLower(strings.TrimSpace(ingredientName))+"%").Scan(&foundID)
-				if foundID == 0 {
-					foundID = fuzzyFindWarehouseItemTx(tx, accID, ingredientName)
-				}
+				// Связываем ТОЛЬКО при строгом совпадении (autoLinkMatch) — иначе
+				// оставляем pending_link для ручной привязки владельцем.
+				foundID := autoLinkWarehouseItemTx(tx, accID, ingredientName)
 				if foundID > 0 {
 					warehouseItemID = foundID
 					var convErr error
@@ -511,9 +605,9 @@ func updateMenuProduct(c *gin.Context) {
 
 	var result MenuProduct
 	var hiddenInt int
-	_ = db.QueryRow(`SELECT id, account_id, name, IFNULL(category,''), IFNULL(type,''), price, cost, IFNULL(category_id,0) FROM menu_products WHERE id = ? AND account_id = ?`, productID, accID).
-		Scan(&result.ID, &result.AccountID, &result.Name, &result.Category, &result.Type, &result.Price, &result.Cost, &result.CategoryID)
-	_ = hiddenInt
+	_ = db.QueryRow(`SELECT id, account_id, name, IFNULL(category,''), IFNULL(type,''), price, cost, IFNULL(category_id,0), IFNULL(hidden,0) FROM menu_products WHERE id = ? AND account_id = ?`, productID, accID).
+		Scan(&result.ID, &result.AccountID, &result.Name, &result.Category, &result.Type, &result.Price, &result.Cost, &result.CategoryID, &hiddenInt)
+	result.Hidden = hiddenInt == 1
 	result.Recipe = loadProductRecipe(result.ID, result.AccountID)
 
 	c.JSON(http.StatusOK, result)

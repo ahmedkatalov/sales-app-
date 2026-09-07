@@ -91,6 +91,7 @@ func createTables() {
 		type TEXT DEFAULT '',
 		price REAL DEFAULT 0,
 		cost REAL DEFAULT 0,
+		hidden INTEGER DEFAULT 0,
 		created_at TEXT
 	);
 
@@ -343,6 +344,7 @@ func createTables() {
 		`ALTER TABLE menu_products ADD COLUMN account_id INTEGER DEFAULT 1`,
 		`ALTER TABLE menu_products ADD COLUMN category_id INTEGER DEFAULT 0`,
 		`ALTER TABLE menu_products ADD COLUMN cost REAL DEFAULT 0`,
+		`ALTER TABLE menu_products ADD COLUMN hidden INTEGER DEFAULT 0`,
 		`ALTER TABLE product_categories ADD COLUMN account_id INTEGER DEFAULT 1`,
 		`ALTER TABLE product_categories ADD COLUMN type_id INTEGER DEFAULT 0`,
 		`ALTER TABLE product_categories ADD COLUMN type TEXT DEFAULT ''`,
