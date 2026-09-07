@@ -2,12 +2,15 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"sort"
@@ -18,18 +21,59 @@ import (
 	"unicode"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/net/proxy"
 )
 
 // AI ходит НАПРЯМУЮ, минуя системный прокси: на сервере переменные
 // HTTP(S)_PROXY/ALL_PROXY заданы криво (socks5/1080 → connection refused),
 // из-за чего ВСЕ запросы к OpenRouter/OpenAI падали с
 // "proxyconnect tcp ... connection refused". Proxy:nil = прямое соединение.
-var aiDirectTransport = &http.Transport{
-	Proxy:                 nil,
-	DialContext:           (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
-	TLSHandshakeTimeout:   10 * time.Second,
-	ForceAttemptHTTP2:     true,
-	ResponseHeaderTimeout: 60 * time.Second,
+// Транспорт для ИИ. По умолчанию — НАПРЯМУЮ, минуя системный (часто сломанный)
+// прокси. Но если задан AI_PROXY_URL — весь трафик к OpenRouter/OpenAI идёт через
+// него. Это нужно там, где провайдеры ИИ заблокированы и до них можно достучаться
+// только через рабочий прокси/VPN (почта при этом остаётся напрямую и не ломается).
+// Поддержка: http://, https://, socks5:// (можно с логином:пароль@хост:порт).
+var aiDirectTransport = buildAITransport()
+
+func buildAITransport() *http.Transport {
+	t := &http.Transport{
+		Proxy:                 nil,
+		DialContext:           (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ForceAttemptHTTP2:     true,
+		ResponseHeaderTimeout: 60 * time.Second,
+	}
+	raw := strings.TrimSpace(os.Getenv("AI_PROXY_URL"))
+	if raw == "" {
+		return t // напрямую
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		log.Printf("AI_PROXY_URL некорректен (%q): %v — идём напрямую", raw, err)
+		return t
+	}
+	switch u.Scheme {
+	case "http", "https":
+		t.Proxy = http.ProxyURL(u)
+		log.Printf("AI: трафик через HTTP-прокси %s", u.Host)
+	case "socks5", "socks5h":
+		d, err := proxy.FromURL(u, proxy.Direct)
+		if err != nil {
+			log.Printf("AI_PROXY_URL socks5 ошибка: %v — идём напрямую", err)
+			return t
+		}
+		if cd, ok := d.(proxy.ContextDialer); ok {
+			t.DialContext = cd.DialContext
+		} else {
+			t.DialContext = func(_ context.Context, network, addr string) (net.Conn, error) {
+				return d.Dial(network, addr)
+			}
+		}
+		log.Printf("AI: трафик через SOCKS5-прокси %s", u.Host)
+	default:
+		log.Printf("AI_PROXY_URL: неизвестная схема %q — идём напрямую", u.Scheme)
+	}
+	return t
 }
 
 func directHTTPClient(timeout time.Duration) *http.Client {
