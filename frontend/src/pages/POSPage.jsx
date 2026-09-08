@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { get, getSession, post } from "../api";
+import { del, get, getSession, post } from "../api";
 import Modal from "../components/Modal";
 import PendingPaymentsModal from "../components/PendingPaymentsModal";
 import { formatMoney, money, num } from "../utils/format";
 import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
-import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet } from "lucide-react";
+import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2 } from "lucide-react";
 
 const RECIPE_UNITS = [
   ["g", "г"],
@@ -240,6 +240,43 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   const [shiftResult, setShiftResult] = useState(null); // итог закрытия
   const [cashCheckModal, setCashCheckModal] = useState(false); // «Проверить кассу» — просмотр текущей наличности
   const [cashCheckLoading, setCashCheckLoading] = useState(false);
+
+  // Карты (счета для оплаты переводом): добавление прямо из кассы.
+  const [cardModal, setCardModal] = useState(false);
+  const [cardForm, setCardForm] = useState({ name: "", owner: "" });
+  const [cardBusy, setCardBusy] = useState(false);
+  const cardBusyRef = useRef(false);
+  const refreshCards = async () => {
+    try { setCards((await get("/cards")) || []); } catch { /* оставляем прежние */ }
+  };
+  const runCardOp = async (fn) => {
+    if (cardBusyRef.current) return;
+    cardBusyRef.current = true;
+    setCardBusy(true);
+    try { await fn(); }
+    catch (e) { setError(e.message); }
+    finally { cardBusyRef.current = false; setCardBusy(false); }
+  };
+  const addCard = async () => {
+    const name = cardForm.name.trim();
+    if (!name) { setError("Введите название карты"); return; }
+    await runCardOp(async () => {
+      const saved = await post("/cards", { name, owner: cardForm.owner.trim() });
+      setCardForm({ name: "", owner: "" });
+      await refreshCards();
+      // Сразу выбираем новую карту — удобно, если добавили в момент оплаты переводом.
+      if (saved?.id) setCardId(String(saved.id));
+      window.notify?.("Карта добавлена", "success");
+    });
+  };
+  const removeCard = async (id) => {
+    if (!window.confirm("Удалить эту карту? Прошлые продажи по ней сохранятся.")) return;
+    await runCardOp(async () => {
+      await del(`/cards/${id}`);
+      if (String(cardId) === String(id)) setCardId("");
+      await refreshCards();
+    });
+  };
 
   const loadCashShift = async () => {
     try {
@@ -770,6 +807,13 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <Wallet size={18} strokeWidth={2.4} />
             <span className="hidden sm:inline">Наличные</span>
           </button>
+          <button type="button" onClick={() => setCardModal(true)}
+            aria-label="Карты для оплаты переводом — добавить или удалить"
+            title="Карты для оплаты переводом — добавить или удалить"
+            className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3 font-black text-sky-200 transition hover:bg-sky-500/20 active:scale-95">
+            <CreditCard size={18} strokeWidth={2.4} />
+            <span className="hidden sm:inline">Карты</span>
+          </button>
         </div>
 
         {isWorker ? (
@@ -1273,6 +1317,78 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         </Modal>
       )}
 
+      {cardModal && (
+        <Modal title="Карты" section="Оплата переводом" onClose={() => setCardModal(false)} legacyLight={false}>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-400">Карты и счета, на которые принимаете переводы. Новую можно добавить прямо здесь — она сразу появится при оплате переводом.</p>
+
+            <div className="grid gap-2.5 rounded-2xl border border-white/10 bg-slate-950/50 p-3">
+              <input
+                value={cardForm.name}
+                onChange={(e) => setCardForm((p) => ({ ...p, name: e.target.value }))}
+                autoFocus
+                placeholder="Название (напр. Сбер, Kaspi)"
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCard(); } }}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-sky-400/70 focus:ring-4 focus:ring-sky-500/10"
+              />
+              <input
+                value={cardForm.owner}
+                onChange={(e) => setCardForm((p) => ({ ...p, owner: e.target.value }))}
+                placeholder="Владелец / примечание (необязательно)"
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCard(); } }}
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-sky-400/70"
+              />
+              <button
+                type="button"
+                onClick={addCard}
+                disabled={cardBusy}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-600 to-blue-600 px-4 py-3 font-black text-white shadow-lg transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Plus size={18} strokeWidth={2.6} /> {cardBusy ? "Добавляю…" : "Добавить карту"}
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {safe_cards.length === 0 ? (
+                <div className="flex flex-col items-center py-6 text-center">
+                  <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-slate-500">
+                    <CreditCard size={26} strokeWidth={1.8} />
+                  </div>
+                  <p className="font-black text-white">Пока нет карт</p>
+                  <p className="mt-1 text-sm font-bold text-slate-400">Добавьте первую карту выше.</p>
+                </div>
+              ) : (
+                safe_cards.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-black text-white">{c.name}</p>
+                      {c.owner && <p className="truncate text-xs font-bold text-slate-400">{c.owner}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeCard(c.id)}
+                      disabled={cardBusy}
+                      aria-label="Удалить карту"
+                      className="flex shrink-0 items-center gap-1.5 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs font-black text-red-300 transition hover:bg-red-500/20 active:scale-95 disabled:opacity-60"
+                    >
+                      <Trash2 size={14} strokeWidth={2.4} /> Удалить
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCardModal(false)}
+              className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10"
+            >
+              Готово
+            </button>
+          </div>
+        </Modal>
+      )}
+
       {(shiftModal === "in" || shiftModal === "out") && (
         <Modal title={shiftModal === "in" ? "Внести в кассу" : "Изъять из кассы"} onClose={() => setShiftModal(null)}>
           <p className="mb-4 text-sm text-slate-400">
@@ -1437,19 +1553,41 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           )}
 
           {paymentType === "transfer" && (
-            <select
-              value={cardId}
-              onChange={(e) => setCardId(e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 mt-4 w-full"
-            >
-              <option value="">Выбери карту</option>
-              {safe_cards.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {c.owner ? ` · ${c.owner}` : ""}
-                </option>
-              ))}
-            </select>
+            <div className="mt-4">
+              {safe_cards.length > 0 ? (
+                <div className="flex gap-2">
+                  <select
+                    value={cardId}
+                    onChange={(e) => setCardId(e.target.value)}
+                    className="w-full flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
+                  >
+                    <option value="">Выбери карту</option>
+                    {safe_cards.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                        {c.owner ? ` · ${c.owner}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setCardModal(true)}
+                    title="Добавить новую карту"
+                    className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3.5 font-black text-sky-200 transition hover:bg-sky-500/20 active:scale-95"
+                  >
+                    <Plus size={18} strokeWidth={2.6} /> Карта
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setCardModal(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-400/30 bg-sky-500/10 px-4 py-3.5 font-black text-sky-200 transition hover:bg-sky-500/20 active:scale-95"
+                >
+                  <Plus size={18} strokeWidth={2.6} /> Добавить карту для перевода
+                </button>
+              )}
+            </div>
           )}
 
           {paymentType === "debt" && (
