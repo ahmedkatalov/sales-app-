@@ -1098,8 +1098,12 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             ))}
 
             {!safe_cart.length && (
-              <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-center text-slate-400">
-                Корзина пустая
+              <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[0.02] px-5 py-10 text-center">
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-slate-500">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                </div>
+                <p className="text-sm font-black text-slate-300">Корзина пустая</p>
+                <p className="mt-1 text-xs font-bold text-slate-500">Нажимайте товары в меню, чтобы добавить в чек</p>
               </div>
             )}
           </div>
