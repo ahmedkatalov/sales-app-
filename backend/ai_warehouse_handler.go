@@ -1187,8 +1187,9 @@ func queryProductCategories(accID int) []map[string]any {
 func queryTodayStats(accID int) map[string]any {
 	var revenue, cost float64
 	var count int
-	_ = db.QueryRow(`SELECT IFNULL(SUM(total),0), COUNT(*) FROM sales WHERE account_id=? AND date(created_at,'localtime')=date('now','localtime')`, accID).Scan(&revenue, &count)
-	_ = db.QueryRow(`SELECT IFNULL(SUM(IFNULL(si.cost,0)*si.qty),0) FROM sale_items si JOIN sales s ON s.id=si.sale_id WHERE s.account_id=? AND date(s.created_at,'localtime')=date('now','localtime')`, accID).Scan(&cost)
+	off := dayOffset(accID) // рабочий день точки (сдвиг «сегодня» под ночную работу)
+	_ = db.QueryRow(`SELECT IFNULL(SUM(total),0), COUNT(*) FROM sales WHERE account_id=? AND date(created_at,'localtime'`+off+`)=date('now','localtime'`+off+`)`, accID).Scan(&revenue, &count)
+	_ = db.QueryRow(`SELECT IFNULL(SUM(IFNULL(si.cost,0)*si.qty),0) FROM sale_items si JOIN sales s ON s.id=si.sale_id WHERE s.account_id=? AND date(s.created_at,'localtime'`+off+`)=date('now','localtime'`+off+`)`, accID).Scan(&cost)
 	return map[string]any{"revenue": revenue, "cost": cost, "profit": revenue - cost, "salesCount": count}
 }
 

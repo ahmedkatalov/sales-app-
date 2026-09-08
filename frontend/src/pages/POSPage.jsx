@@ -330,6 +330,13 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       setShiftModal(null); setShiftInput(""); setShiftNote("");
     });
   };
+  const openShift = async () => {
+    await runShift(async () => {
+      const r = await post("/cash/shift/open", { openingCash: num(shiftInput), openedBy: currentProfile?.name || activeWorkerName || "" });
+      setCashShift(r?.shift || null);
+      setShiftModal(null); setShiftInput(""); setShiftNote("");
+    });
+  };
   const closeShift = async () => {
     await runShift(async () => {
       const r = await post("/cash/shift/close", { countedCash: num(shiftInput), closedBy: currentProfile?.name || "", note: shiftNote });
@@ -1307,15 +1314,43 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               <p className="text-lg font-black text-white">{cashCheckLoading ? "Проверяю кассу…" : "Смена не открыта"}</p>
               {!cashCheckLoading && (
                 <p className="mt-1.5 max-w-xs text-sm font-bold text-slate-400">
-                  Пока смена закрыта, касса не считается. Откройте смену на странице «Смены» — и здесь будет видно, сколько наличных должно быть.
+                  Откройте смену с разменом — и касса начнёт считать наличные: продажи налом, внесения, погашения долгов.
                 </p>
               )}
+              {!cashCheckLoading && (
+                <button type="button"
+                  onClick={() => { setCashCheckModal(false); setShiftInput(""); setShiftNote(""); setShiftModal("open"); }}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-3.5 font-black text-white shadow-lg shadow-emerald-950/30 transition hover:brightness-110 active:scale-95">
+                  <Wallet size={18} strokeWidth={2.4} /> Открыть смену
+                </button>
+              )}
               <button type="button" onClick={() => setCashCheckModal(false)}
-                className="mt-5 w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">
                 Закрыть
               </button>
             </div>
           )}
+        </Modal>
+      )}
+
+      {shiftModal === "open" && (
+        <Modal title="Открыть смену" section="Касса" onClose={() => setShiftModal(null)} legacyLight={false}>
+          <p className="mb-4 text-sm text-slate-400">
+            Введите размен — наличные, которые уже лежат в кассе на начало смены. Дальше система прибавит продажи налом и внесения.
+          </p>
+          <input type="number" value={shiftInput} autoFocus inputMode="decimal" onChange={(e) => setShiftInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); openShift(); } }}
+            placeholder="Размен, сумма"
+            className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-4 focus:ring-emerald-500/10" />
+          <p className="mt-2 text-[11px] font-bold text-slate-500">Открывает: {currentProfile?.name || activeWorkerName}</p>
+          <div className="mt-6 flex gap-3">
+            <button type="button" onClick={() => setShiftModal(null)}
+              className="flex-1 rounded-2xl border border-white/10 bg-white/10 px-5 py-3.5 font-black text-white transition hover:bg-white/15">Отмена</button>
+            <button type="button" onClick={openShift} disabled={shiftBusy}
+              className="flex-1 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-5 py-3.5 font-black text-white shadow-lg shadow-emerald-950/30 transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
+              {shiftBusy ? "Открываю…" : "Открыть смену"}
+            </button>
+          </div>
         </Modal>
       )}
 

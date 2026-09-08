@@ -99,6 +99,8 @@ func main() {
 	// Оформление — общее на аккаунт (владелец задаёт, у всех применяется)
 	auth.GET("/settings/appearance", getAppearanceSettings)
 	auth.PUT("/settings/appearance", setAppearanceSettings)
+	auth.GET("/settings/business-day", getBusinessDaySettings)
+	auth.PUT("/settings/business-day", setBusinessDaySettings)
 
 	// BI-аналитика по продавцам (управленческий отчёт)
 	auth.GET("/analytics/employees", getEmployeeAnalytics)

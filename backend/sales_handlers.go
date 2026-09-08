@@ -575,6 +575,7 @@ func deletePendingSale(c *gin.Context) {
 }
 func getSales(c *gin.Context) {
 	accountID := accountID(c)
+	off := dayOffset(accountID) // рабочий день точки (ночные продажи → верный день)
 	from := c.Query("from")
 	to := c.Query("to")
 
@@ -582,12 +583,12 @@ func getSales(c *gin.Context) {
 	args := []any{accountID}
 
 	if from != "" {
-		where = append(where, "date(s.created_at, 'localtime') >= date(?)")
+		where = append(where, "date(s.created_at, 'localtime'"+off+") >= date(?)")
 		args = append(args, from)
 	}
 
 	if to != "" {
-		where = append(where, "date(s.created_at, 'localtime') <= date(?)")
+		where = append(where, "date(s.created_at, 'localtime'"+off+") <= date(?)")
 		args = append(args, to)
 	}
 
@@ -681,6 +682,7 @@ func getSales(c *gin.Context) {
 
 func getSalesStats(c *gin.Context) {
 	accountID := accountID(c)
+	off := dayOffset(accountID) // рабочий день точки (ночные продажи → верный день)
 	from := c.Query("from")
 	to := c.Query("to")
 
@@ -688,12 +690,12 @@ func getSalesStats(c *gin.Context) {
 	args := []any{accountID}
 
 	if from != "" {
-		where = append(where, "date(created_at, 'localtime') >= date(?)")
+		where = append(where, "date(created_at, 'localtime'"+off+") >= date(?)")
 		args = append(args, from)
 	}
 
 	if to != "" {
-		where = append(where, "date(created_at, 'localtime') <= date(?)")
+		where = append(where, "date(created_at, 'localtime'"+off+") <= date(?)")
 		args = append(args, to)
 	}
 
@@ -735,11 +737,11 @@ func getSalesStats(c *gin.Context) {
 	costWhere := []string{"s.account_id = ?"}
 	costArgs := []any{accountID}
 	if from != "" {
-		costWhere = append(costWhere, "date(s.created_at, 'localtime') >= date(?)")
+		costWhere = append(costWhere, "date(s.created_at, 'localtime'"+off+") >= date(?)")
 		costArgs = append(costArgs, from)
 	}
 	if to != "" {
-		costWhere = append(costWhere, "date(s.created_at, 'localtime') <= date(?)")
+		costWhere = append(costWhere, "date(s.created_at, 'localtime'"+off+") <= date(?)")
 		costArgs = append(costArgs, to)
 	}
 
@@ -758,12 +760,12 @@ func getSalesStats(c *gin.Context) {
 	itemArgs := []any{accountID}
 
 	if from != "" {
-		itemWhere = append(itemWhere, "date(s.created_at, 'localtime') >= date(?)")
+		itemWhere = append(itemWhere, "date(s.created_at, 'localtime'"+off+") >= date(?)")
 		itemArgs = append(itemArgs, from)
 	}
 
 	if to != "" {
-		itemWhere = append(itemWhere, "date(s.created_at, 'localtime') <= date(?)")
+		itemWhere = append(itemWhere, "date(s.created_at, 'localtime'"+off+") <= date(?)")
 		itemArgs = append(itemArgs, to)
 	}
 

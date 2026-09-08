@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { get, put } from "../api";
-import { formatMoney, num } from "../utils/format";
+import { formatMoney, num, businessISO } from "../utils/format";
 import { csvCell, downloadCsv } from "../utils/csv";
 import { escHtml, printHtmlDocument } from "../utils/print";
 import Modal from "../components/Modal";
@@ -12,13 +12,14 @@ const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate(
 function periodBounds(preset) {
   const now = new Date();
   const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  if (preset === "this") return { from: iso(mStart), to: iso(now) };
+  // Верхняя граница «по сегодня» — рабочий день точки (учёт ночной работы).
+  if (preset === "this") return { from: iso(mStart), to: businessISO(now) };
   if (preset === "prev") {
     const pStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const pEnd = new Date(now.getFullYear(), now.getMonth(), 0);
     return { from: iso(pStart), to: iso(pEnd) };
   }
-  if (preset === "today") return { from: iso(now), to: iso(now) };
+  if (preset === "today") return { from: businessISO(now), to: businessISO(now) };
   return { from: "", to: "" }; // all
 }
 

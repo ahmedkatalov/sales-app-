@@ -19,7 +19,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { get, getCurrentWorkspace, getSession } from "../api";
-import { formatMoney } from "../utils/format";
+import { formatMoney, businessISO } from "../utils/format";
 
 // ── helpers ──────────────────────────────────────────────────────────
 const num = (v) => Number(v || 0);
@@ -170,7 +170,7 @@ export default function HomePage() {
   const load = async () => {
     setLoading(true);
     setError("");
-    const today = localISO();
+    const today = businessISO(); // рабочий день точки (учёт ночной работы)
     const [mStart, mEnd] = monthBounds();
     const [todayS, monthS, pend, debts, wh, opening] = await Promise.all([
       get(`/sales/stats?from=${today}&to=${today}`).catch(() => null),

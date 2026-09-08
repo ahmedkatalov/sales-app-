@@ -2,11 +2,70 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
+
+// ── Рабочий день точки ───────────────────────────────────────────────────────
+// day_start_hour — час, с которого начинается «день» точки (во сколько открывается
+// кофейня). Настройка ПОТОЧЕЧНАЯ (accountID(c) = data account), т.к. точки могут
+// работать по-разному. Используется, чтобы отчёты «за сегодня» и разбивка по дням
+// учитывали ночную работу (продажа в 00:30 → вчерашний рабочий день).
+
+// dayStartHour читает настройку точки (0..23; вне диапазона → 0 = календарный день).
+func dayStartHour(accID int) int {
+	var h int
+	_ = db.QueryRow(`SELECT IFNULL(day_start_hour,0) FROM account_settings WHERE account_id=?`, accID).Scan(&h)
+	if h < 0 || h > 23 {
+		h = 0
+	}
+	return h
+}
+
+// dayOffset возвращает SQLite-модификатор смещения дня, например ",'-9 hours'".
+// Пустая строка при 0 (обычный день). Значение — доверенный литерал из
+// провалидированного целого, поэтому конкатенация в SQL безопасна.
+func dayOffset(accID int) string {
+	h := dayStartHour(accID)
+	if h == 0 {
+		return ""
+	}
+	return fmt.Sprintf(",'-%d hours'", h)
+}
+
+// GET /settings/business-day — час начала дня точки (читают все роли).
+func getBusinessDaySettings(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"dayStartHour": dayStartHour(accountID(c))})
+}
+
+// PUT /settings/business-day — менять может владелец/админ точки (requireManager).
+func setBusinessDaySettings(c *gin.Context) {
+	if !requireManager(c) {
+		return
+	}
+	var body struct {
+		DayStartHour int `json:"dayStartHour"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверные данные"})
+		return
+	}
+	if body.DayStartHour < 0 || body.DayStartHour > 23 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Час должен быть от 0 до 23"})
+		return
+	}
+	if _, err := db.Exec(`
+		INSERT INTO account_settings(account_id, day_start_hour) VALUES(?, ?)
+		ON CONFLICT(account_id) DO UPDATE SET day_start_hour = excluded.day_start_hour
+	`, accountID(c), body.DayStartHour); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "dayStartHour": body.DayStartHour})
+}
 
 // Оформление (appearance) — ОБЩЕЕ на весь аккаунт. Профиль (акцент, скругление,
 // стекло, шрифт и т.д.) выбирает владелец, и он применяется у всех сотрудников.

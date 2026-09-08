@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeftRight, Banknote, Percent, Plus, Receipt, Trophy } from "lucide-react";
 import { get } from "../api";
-import { formatMoney, localISO } from "../utils/format";
+import { formatMoney, localISO, businessISO } from "../utils/format";
 
 function saleDateParts(createdAt) {
   if (!createdAt) return { date: "", time: "" };
@@ -46,7 +46,7 @@ function StatCard({ title, value, subtitle, icon: Icon, tone = "blue", className
 }
 
 export default function SalesAnalyticsPage() {
-  const todayStr = localISO();
+  const todayStr = businessISO(); // «Сегодня» = рабочий день точки (учёт ночной работы)
   const monthStartStr = (() => { const d = new Date(); return localISO(new Date(d.getFullYear(), d.getMonth(), 1)); })();
   const monthEndStr = (() => { const d = new Date(); return localISO(new Date(d.getFullYear(), d.getMonth() + 1, 0)); })();
   const formatDateRu = (s) => { if (!s) return ""; const [y,m,d] = s.split("-"); return `${d}.${m}.${y}`; };

@@ -88,16 +88,19 @@ func getFinanceReport(c *gin.Context) {
 		FROM opening_balances WHERE account_id=?`, accID).Scan(
 		&op.asOf, &op.cash, &op.bank, &op.owedOwner, &op.inventory, &op.custDebts, &op.supDebts, &op.rev, &op.exp)
 
+	// Рабочий день точки: сдвигаем «день» так, чтобы ночные продажи (после полуночи)
+	// относились к правильному дню отчёта. off — доверенный литерал (см. dayOffset).
+	off := dayOffset(accID)
 	// Сумма за период [from..to] по колонке даты (date(...,'localtime')).
 	periodSum := func(base, dateCol string) float64 {
 		q := base
 		args := []any{accID}
 		if from != "" {
-			q += " AND date(" + dateCol + ",'localtime') >= date(?)"
+			q += " AND date(" + dateCol + ",'localtime'" + off + ") >= date(?)"
 			args = append(args, from)
 		}
 		if to != "" {
-			q += " AND date(" + dateCol + ",'localtime') <= date(?)"
+			q += " AND date(" + dateCol + ",'localtime'" + off + ") <= date(?)"
 			args = append(args, to)
 		}
 		var v float64
@@ -111,11 +114,11 @@ func getFinanceReport(c *gin.Context) {
 		args := []any{accID}
 		if op.asOf != "" {
 			// >= : стартовые балансы — состояние на НАЧАЛО даты старта, операции этой даты и позже уже новые.
-			q += " AND date(" + dateCol + ",'localtime') >= date(?)"
+			q += " AND date(" + dateCol + ",'localtime'" + off + ") >= date(?)"
 			args = append(args, op.asOf)
 		}
 		if to != "" {
-			q += " AND date(" + dateCol + ",'localtime') <= date(?)"
+			q += " AND date(" + dateCol + ",'localtime'" + off + ") <= date(?)"
 			args = append(args, to)
 		}
 		var v float64

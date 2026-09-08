@@ -6,7 +6,7 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { get } from "../api";
-import { formatMoney, localISO } from "../utils/format";
+import { formatMoney, localISO, businessISO } from "../utils/format";
 
 const num = (v) => Number(v || 0);
 const money = (v) => formatMoney(num(v));
@@ -16,7 +16,7 @@ const monthBounds = () => {
   const d = new Date();
   return [localISO(new Date(d.getFullYear(), d.getMonth(), 1)), localISO(new Date(d.getFullYear(), d.getMonth() + 1, 0))];
 };
-const daysAgo = (n) => localISO(new Date(Date.now() - n * 86400000));
+const daysAgo = (n) => businessISO(new Date(Date.now() - n * 86400000));
 
 const CHART_GRID = "rgba(148,163,184,0.14)";
 const CHART_AXIS = "#94a3b8";
@@ -87,7 +87,7 @@ export default function EmployeeAnalyticsPage() {
 
   const applyPreset = (key) => {
     setPreset(key);
-    const today = localISO();
+    const today = businessISO();
     if (key === "today") { setFrom(today); setTo(today); }
     else if (key === "yesterday") { const y = daysAgo(1); setFrom(y); setTo(y); }
     else if (key === "week") { setFrom(daysAgo(6)); setTo(today); }

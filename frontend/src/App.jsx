@@ -55,6 +55,7 @@ import {
   setCurrentWorkspace,
   setSession,
 } from "./api";
+import { setDayStartHour } from "./utils/format";
 
 const ownerLinks = [
   ["/home", "Сводка", LayoutDashboard],
@@ -444,6 +445,16 @@ export default function App() {
       .then((r) => { if (r && r.appearance) hydrateAppearance(r.appearance); })
       .catch(() => {});
   }, [session]);
+
+  // Начало рабочего дня точки (во сколько открывается кофейня): держим в модульной
+  // переменной, чтобы все пресеты «сегодня/этот месяц» считали день как бэкенд.
+  // Поточечно — перечитываем при смене точки.
+  useEffect(() => {
+    if (!session) { setDayStartHour(0); return; }
+    get("/settings/business-day")
+      .then((r) => setDayStartHour(r?.dayStartHour || 0))
+      .catch(() => setDayStartHour(0));
+  }, [session, workspace]);
 
   useEffect(() => {
     if (!session) return;

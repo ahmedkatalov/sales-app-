@@ -12,6 +12,7 @@ import {
   setCurrentWorkspace,
 } from "../api";
 import { getSession, setSession } from "../api";
+import { setDayStartHour as applyDayStartHour } from "../utils/format";
 import Modal from "../components/Modal";
 import ThemeToggle from "../components/ThemeToggle";
 import InstallAppCard from "../components/InstallAppCard";
@@ -68,6 +69,9 @@ export default function ProfilePage({
   const [ownerName, setOwnerName] = useState(session?.ownerName || "");
   const [ownerSaving, setOwnerSaving] = useState(false);
   const [ownerSaved, setOwnerSaved] = useState(false);
+  // Начало рабочего дня точки (во сколько открывается кофейня) — влияет на отчёты «за сегодня».
+  const [dayStart, setDayStart] = useState(0);
+  const [dayStartSaving, setDayStartSaving] = useState(false);
   const [workspaces,      setWorkspaces]      = useState([]);
   const [workspaceUsers,  setWorkspaceUsers]  = useState([]);
   const [workspaceAccess, setWorkspaceAccess] = useState([]);
@@ -172,6 +176,27 @@ export default function ProfilePage({
     if (!isOwner && workspace?.id)
       setAccountForm((p) => ({ ...p, workspaceId: String(workspace.id) }));
   }, [isOwner, workspace?.id]);
+
+  // Час начала рабочего дня точки — читаем при смене точки (настройка поточечная).
+  useEffect(() => {
+    get("/settings/business-day")
+      .then((r) => setDayStart(Number(r?.dayStartHour) || 0))
+      .catch(() => setDayStart(0));
+  }, [workspace?.dataAccountId]);
+
+  const saveDayStart = async (hour) => {
+    setDayStartSaving(true);
+    try {
+      await put("/settings/business-day", { dayStartHour: hour });
+      setDayStart(hour);
+      applyDayStartHour(hour); // сразу применяем к пресетам дат без перезагрузки
+      window.notify?.("Начало рабочего дня сохранено", "success");
+    } catch (e) {
+      window.notify?.(e?.message || "Не удалось сохранить", "error");
+    } finally {
+      setDayStartSaving(false);
+    }
+  };
 
   const usersByWorkspace = useMemo(() =>
     (Array.isArray(workspaceUsers) ? workspaceUsers : []).reduce((acc, u) => {
@@ -505,6 +530,37 @@ export default function ProfilePage({
                   >
                     {ownerSaving ? "Сохраняю…" : ownerSaved ? "Сохранено ✓" : "Сохранить имя"}
                   </button>
+                </div>
+              </div>
+            )}
+
+            {(isOwner || isBranchAdmin) && (
+              <div className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
+                <div className="flex items-center gap-2 text-blue-400">
+                  <Clock size={16} strokeWidth={2.4} />
+                  <p className="text-sm font-bold">Рабочий день точки</p>
+                </div>
+                <h3 className="mt-1 text-xl font-black text-white">Во сколько открываетесь</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-400">
+                  Если работаете ночью (например, с 09:00 до 01:00), продажи после полуночи будут считаться за тот же день. Влияет на «выручку за сегодня» и отчёты.
+                </p>
+                <div className="mt-4">
+                  <label className="mb-2 block text-sm font-black text-slate-300">Начало дня</label>
+                  <select
+                    value={dayStart}
+                    disabled={dayStartSaving}
+                    onChange={(e) => saveDayStart(Number(e.target.value))}
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none [color-scheme:dark] focus:border-blue-400/60 disabled:opacity-60"
+                  >
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>
+                        {String(h).padStart(2, "0")}:00{h === 0 ? " — обычный день (по календарю)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-2 text-[11px] font-bold text-slate-500">
+                    {dayStartSaving ? "Сохраняю…" : dayStart === 0 ? "День считается с полуночи." : `День точки: с ${String(dayStart).padStart(2, "0")}:00 до ${String(dayStart).padStart(2, "0")}:00 следующего дня.`}
+                  </p>
                 </div>
               </div>
             )}

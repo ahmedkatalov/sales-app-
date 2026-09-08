@@ -20,14 +20,15 @@ func getEmployeeAnalytics(c *gin.Context) {
 	from := c.Query("from")
 	to := c.Query("to")
 
+	off := dayOffset(accID) // рабочий день точки (ночные продажи → верный день)
 	where := []string{"s.account_id = ?"}
 	args := []any{accID}
 	if from != "" {
-		where = append(where, "date(s.created_at,'localtime') >= date(?)")
+		where = append(where, "date(s.created_at,'localtime'"+off+") >= date(?)")
 		args = append(args, from)
 	}
 	if to != "" {
-		where = append(where, "date(s.created_at,'localtime') <= date(?)")
+		where = append(where, "date(s.created_at,'localtime'"+off+") <= date(?)")
 		args = append(args, to)
 	}
 	cond := strings.Join(where, " AND ")
@@ -110,7 +111,7 @@ func getEmployeeAnalytics(c *gin.Context) {
 
 	// ── Тренд по дням ──
 	trend := []gin.H{}
-	if rows, err := db.Query(`SELECT date(s.created_at,'localtime') d, IFNULL(SUM(total),0), COUNT(*) FROM sales s WHERE `+cond+` GROUP BY d ORDER BY d`, args...); err == nil {
+	if rows, err := db.Query(`SELECT date(s.created_at,'localtime'`+off+`) d, IFNULL(SUM(total),0), COUNT(*) FROM sales s WHERE `+cond+` GROUP BY d ORDER BY d`, args...); err == nil {
 		for rows.Next() {
 			var d string
 			var rev float64
@@ -143,7 +144,7 @@ func getEmployeeAnalytics(c *gin.Context) {
 
 	// ── По дням недели (0=Вс..6=Сб, как strftime('%w')) ──
 	weekday := make([]float64, 7)
-	if rows, err := db.Query(`SELECT CAST(strftime('%w', s.created_at, 'localtime') AS INTEGER) w, IFNULL(SUM(total),0) FROM sales s WHERE `+cond+` GROUP BY w`, args...); err == nil {
+	if rows, err := db.Query(`SELECT CAST(strftime('%w', s.created_at, 'localtime'`+off+`) AS INTEGER) w, IFNULL(SUM(total),0) FROM sales s WHERE `+cond+` GROUP BY w`, args...); err == nil {
 		for rows.Next() {
 			var w int
 			var rev float64
