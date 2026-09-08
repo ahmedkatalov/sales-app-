@@ -14,13 +14,24 @@ export default function Modal({ title, section, children, wide, onClose, legacyL
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // Пока открыта модалка — прячем нижнюю панель и install-баннер (иначе их кнопки
+  // перекрывают кнопки модалки снизу). Счётчик — на случай вложенных модалок.
+  useEffect(() => {
+    window.__modalOpenCount = (window.__modalOpenCount || 0) + 1;
+    document.body.classList.add("modal-open");
+    return () => {
+      window.__modalOpenCount = Math.max(0, (window.__modalOpenCount || 1) - 1);
+      if (window.__modalOpenCount === 0) document.body.classList.remove("modal-open");
+    };
+  }, []);
+
   const handleBackdrop = (e) => {
     if (onClose && e.target === e.currentTarget) onClose();
   };
 
   return (
     <div
-      className="animate-overlay fixed inset-0 z-50 overflow-y-auto bg-[#030816]/80 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-8"
+      className="animate-overlay fixed inset-0 z-50 overflow-y-auto bg-[#030816]/80 px-3 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:px-6 sm:py-8"
       onClick={handleBackdrop}
     >
       <style>{`
@@ -137,7 +148,7 @@ export default function Modal({ title, section, children, wide, onClose, legacyL
         onClick={handleBackdrop}
       >
         <div
-          className={`animate-sheet smart-modal-panel ${legacyLight ? "legacy-light" : ""} flex max-h-[calc(100dvh-1.5rem)] w-full flex-col overflow-hidden rounded-[1.75rem] sm:rounded-4xl ${
+          className={`animate-sheet smart-modal-panel ${legacyLight ? "legacy-light" : ""} flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-[1.75rem] sm:rounded-4xl ${
             wide ? "max-w-[920px]" : "max-w-[520px]"
           }`}
         >

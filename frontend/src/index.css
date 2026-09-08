@@ -457,3 +457,7 @@ button:disabled, [aria-disabled="true"] { cursor: not-allowed; }
 
 /* Чуть мягче авто-перенос длинных слов, чтобы не было горизонтального скролла */
 body { overflow-wrap: anywhere; }
+
+/* Пока открыта модалка — прячем фикс-элементы снизу (нижняя навигация, install-баннер),
+   чтобы их кнопки не перекрывали кнопки модалки. */
+body.modal-open .hide-on-modal { display: none !important; }

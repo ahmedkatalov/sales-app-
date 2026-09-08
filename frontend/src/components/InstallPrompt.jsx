@@ -62,7 +62,7 @@ export default function InstallPrompt() {
   };
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] p-3 sm:p-4"
+    <div className="hide-on-modal pointer-events-none fixed inset-x-0 bottom-0 z-[60] p-3 sm:p-4"
       style={{ paddingBottom: "calc(var(--nav-h, 0px) + env(safe-area-inset-bottom, 0px) + 12px)" }}>
       <div className="animate-toast pointer-events-auto relative mx-auto max-w-sm rounded-2xl border border-white/12 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-xl">
         <button onClick={dismiss} aria-label="Закрыть" title="Закрыть"

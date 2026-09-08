@@ -811,7 +811,7 @@ export default function App() {
         </div>
       )}
 
-      <nav className={`fixed inset-x-0 bottom-0 z-40 grid grid-flow-col auto-cols-fr rounded-t-2xl border-t border-white/10 bg-slate-950/96 px-1.5 pt-1.5 text-white shadow-[0_-10px_30px_-14px_rgba(2,6,23,0.6)] backdrop-blur-xl ${useHeaderNav ? "md:hidden" : "lg:hidden"} transition-transform duration-300 ease-out ${keyboardVisible || isImmersive ? "translate-y-full pointer-events-none" : "translate-y-0"}`}
+      <nav className={`hide-on-modal fixed inset-x-0 bottom-0 z-40 grid grid-flow-col auto-cols-fr rounded-t-2xl border-t border-white/10 bg-slate-950/96 px-1.5 pt-1.5 text-white shadow-[0_-10px_30px_-14px_rgba(2,6,23,0.6)] backdrop-blur-xl ${useHeaderNav ? "md:hidden" : "lg:hidden"} transition-transform duration-300 ease-out ${keyboardVisible || isImmersive ? "translate-y-full pointer-events-none" : "translate-y-0"}`}
         style={{ paddingBottom: "max(6px, env(safe-area-inset-bottom, 0px))" }}
         aria-label="Нижняя навигация">
         {mobileMainLinks.map(([to, label, Icon, badge]) => (
