@@ -1460,6 +1460,22 @@ export default function AIWarehousePage() {
           break;
         }
 
+        case "cash_deposit": {
+          const cash = intentRes.cash;
+          if (!cash) { setMessages((p) => [...p, { role: "bot", text: "Не понял, сколько внести в кассу." }]); break; }
+          const qs = (cash.questions || []).join("\n");
+          if (qs) { setMessages((p) => [...p, { role: "bot", text: qs }]); break; }
+          if (num(cash.amount) <= 0) { setMessages((p) => [...p, { role: "bot", text: "Не понял сумму. Напиши, например: «пополни кассу на 5000»." }]); break; }
+          try {
+            await post("/finance/owner", { kind: "contribution", amount: num(cash.amount), note: cash.note || "Пополнение кассы (ИИ)" });
+            setMessages((p) => [...p, { role: "bot", text: `Готово — пополнила кассу на ${formatMoney(cash.amount)}${cash.note ? ` (${cash.note})` : ""}. Видно в «Расходы → Расчёты с владельцем» и в финотчёте.` }]);
+            await load();
+          } catch (e) {
+            setMessages((p) => [...p, { role: "bot", text: e?.message || "Не получилось пополнить кассу." }]);
+          }
+          break;
+        }
+
         case "menu_create": {
           const menu = intentRes.menu;
           if (!menu) { setMessages((p) => [...p, { role: "bot", text: "Не понял что добавить в меню." }]); break; }

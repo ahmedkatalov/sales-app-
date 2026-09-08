@@ -1651,11 +1651,18 @@ type intentRequest struct {
 	HasPending bool                 `json:"hasPending"`
 }
 
+type aiCashDeposit struct {
+	Amount    float64  `json:"amount"`
+	Note      string   `json:"note"`
+	Questions []string `json:"questions"`
+}
+
 type intentResponse struct {
 	Intent   string                   `json:"intent"`
 	Items    []aiWarehouseParseResult `json:"items,omitempty"`
 	Expense  *aiExpenseParseResult    `json:"expense,omitempty"`
 	Menu     *aiMenuParseResult       `json:"menu,omitempty"`
+	Cash     *aiCashDeposit           `json:"cash,omitempty"`
 	Names    []string                 `json:"names,omitempty"`
 	TypeName string                   `json:"typeName,omitempty"`
 	CatName  string                   `json:"catName,omitempty"`
@@ -1698,6 +1705,7 @@ func detectIntent(c *gin.Context) {
 INTENT варианты:
 - "purchase" — купили товар(ы) для склада. Поле items[] с товарами.
 - "expense" — оплатили расход (аренда, такси, зарплата). Поле expense{}.
+- "cash_deposit" — ПОПОЛНИТЬ КАССУ / внести наличные в кассу ("пополни кассу на 5000", "занеси в кассу 5к", "касса на 5000, добавь", "внеси наличку 3000"). Поле cash{"amount":число,"note":"текст или пусто","questions":[]}. Если сумма непонятна — задай вопрос в questions[].
 - "menu_create" — создать блюдо/напиток. Поле menu{}.
 - "menu_type_create" — создать тип/раздел меню. Поле names[].
 - "menu_cat_create" — создать папку меню. Поля catName, typeName.

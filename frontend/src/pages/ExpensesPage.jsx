@@ -55,7 +55,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   // Расчёты с владельцем (леджер)
   const [ownerFin, setOwnerFin] = useState(null);
   const [ownerModal, setOwnerModal] = useState(null); // 'contribution' | 'reimbursement' | 'withdrawal'
-  const [ownerForm, setOwnerForm] = useState({ amount: "", note: "" });
+  const [ownerForm, setOwnerForm] = useState({ amount: "", note: "", date: "" });
 
   // Стартовые балансы (миграция с другой системы)
   const [opening, setOpening] = useState(null);
@@ -127,11 +127,12 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         kind: ownerModal,
         amount: num(ownerForm.amount),
         note: ownerForm.note.trim(),
+        date: ownerForm.date || "",
         employeeId: currentProfile?.id || 0,
       });
       if (res) setOwnerFin(res); // эндпоинт возвращает свежий баланс
       setOwnerModal(null);
-      setOwnerForm({ amount: "", note: "" });
+      setOwnerForm({ amount: "", note: "", date: "" });
       await load();
     });
   };
@@ -870,6 +871,10 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 autoFocus
                 className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-amber-400/70 focus:ring-4 focus:ring-amber-500/10"
               />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-black text-slate-300">Дата <span className="font-bold text-slate-500">— необязательно, по умолчанию сегодня</span></span>
+              <DatePicker value={ownerForm.date} onChange={(v) => setOwnerForm((p) => ({ ...p, date: v }))} placeholder="Сегодня" />
             </label>
             <label>
               <span className="mb-2 block text-sm font-black text-slate-300">Примечание</span>

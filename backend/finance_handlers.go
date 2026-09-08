@@ -272,6 +272,7 @@ func createOwnerEntry(c *gin.Context) {
 		Amount     float64 `json:"amount"`
 		Note       string  `json:"note"`
 		EmployeeID int     `json:"employeeId"`
+		Date       string  `json:"date"` // необязательная дата пополнения (YYYY-MM-DD); иначе сейчас
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -285,10 +286,15 @@ func createOwnerEntry(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Сумма должна быть больше нуля"})
 		return
 	}
+	createdAt := time.Now().Format(time.RFC3339)
+	if d := strings.TrimSpace(req.Date); len(d) == 10 {
+		// дата выбрана вручную — ставим полдень, чтобы не «уехать» в соседний день по TZ
+		createdAt = d + "T12:00:00Z"
+	}
 	if _, err := db.Exec(`
 		INSERT INTO owner_ledger(account_id, kind, amount, note, employee_id, created_at)
 		VALUES(?, ?, ?, ?, ?, ?)
-	`, accID, req.Kind, req.Amount, strings.TrimSpace(req.Note), req.EmployeeID, time.Now().Format(time.RFC3339)); err != nil {
+	`, accID, req.Kind, req.Amount, strings.TrimSpace(req.Note), req.EmployeeID, createdAt); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
