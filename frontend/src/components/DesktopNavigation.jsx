@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { LogOut, Menu, ShoppingCart } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
+import WorkspaceSwitcher from "./WorkspaceSwitcher";
 
 export default function DesktopNavigation({
   links = [],
@@ -38,25 +39,12 @@ export default function DesktopNavigation({
   return (
     <header className="sticky top-0 z-30 mb-5 hidden rounded-[1.4rem] border border-white/10 bg-slate-950/80 p-2 text-white shadow-xl shadow-slate-950/25 backdrop-blur-xl md:block">
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
-        <div className="flex min-w-[210px] items-center gap-2 px-1">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-600/25">
-            <ShoppingCart size={22} strokeWidth={2.6} />
-          </div>
-
-          <div className="min-w-0">
-            <p className="truncate text-sm font-black text-white">{accountName}</p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
-              <p className="truncate text-xs font-bold text-slate-400">{accountLabel}</p>
-              {showWorkspaceChip && (
-                <>
-                  <span className="text-slate-600">·</span>
-                  <span className="truncate text-xs font-black text-blue-400">{workspaceName}</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+        <WorkspaceSwitcher
+          accountName={accountName}
+          accountLabel={accountLabel}
+          workspaceName={workspaceName}
+          showWorkspaceChip={showWorkspaceChip}
+        />
 
         <div className="relative min-w-0">
         <nav
