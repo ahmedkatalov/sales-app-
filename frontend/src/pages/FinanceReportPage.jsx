@@ -4,6 +4,7 @@ import { formatMoney, num } from "../utils/format";
 import { csvCell, downloadCsv } from "../utils/csv";
 import { escHtml, printHtmlDocument } from "../utils/print";
 import Modal from "../components/Modal";
+import DatePicker from "../components/DatePicker";
 
 const pad = (n) => String(n).padStart(2, "0");
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -295,11 +296,9 @@ export default function FinanceReportPage() {
           {/* Диапазон дат + действия — на телефоне столбиком во всю ширину */}
           <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
             <div className="flex flex-1 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1.5">
-              <input type="date" value={custom.from} onChange={(e) => { setCustom((c) => ({ ...c, from: e.target.value })); setPreset("custom"); }}
-                className="min-w-0 flex-1 rounded-xl bg-slate-950/60 px-3 py-2 text-xs font-bold text-white outline-none [color-scheme:dark] focus:ring-2 focus:ring-blue-500/30" />
+              <DatePicker value={custom.from} onChange={(v) => { setCustom((c) => ({ ...c, from: v })); setPreset("custom"); }} placeholder="Дата с" className="min-w-0 flex-1" />
               <span className="shrink-0 text-slate-500">—</span>
-              <input type="date" value={custom.to} onChange={(e) => { setCustom((c) => ({ ...c, to: e.target.value })); setPreset("custom"); }}
-                className="min-w-0 flex-1 rounded-xl bg-slate-950/60 px-3 py-2 text-xs font-bold text-white outline-none [color-scheme:dark] focus:ring-2 focus:ring-blue-500/30" />
+              <DatePicker value={custom.to} onChange={(v) => { setCustom((c) => ({ ...c, to: v })); setPreset("custom"); }} placeholder="Дата по" align="right" className="min-w-0 flex-1" />
             </div>
             <div className="flex gap-2 sm:ml-auto sm:shrink-0">
               <button onClick={printReport} disabled={!rep}
@@ -433,10 +432,9 @@ export default function FinanceReportPage() {
             <p className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold leading-snug text-slate-300">
               Введите состояние бизнеса на дату, с которой начинаете вести учёт в приложении. Это точка отсчёта, а не транзакции — в отчёте они не появятся как операции.
             </p>
-            <label>
+            <label className="block">
               <span className="mb-1.5 block text-xs font-black text-slate-400">Дата старта</span>
-              <input type="date" value={openingForm.asOfDate} onChange={(e) => setOpeningForm((f) => ({ ...f, asOfDate: e.target.value }))}
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70" />
+              <DatePicker value={openingForm.asOfDate} onChange={(v) => setOpeningForm((f) => ({ ...f, asOfDate: v }))} placeholder="Выберите дату" />
             </label>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {[
