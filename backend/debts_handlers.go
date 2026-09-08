@@ -24,6 +24,8 @@ func ensureDebtCustomer(accountID int, name string) (int, error) {
 	var id int
 	err := db.QueryRow(`SELECT id FROM debt_customers WHERE account_id = ? AND lower(name) = lower(?) ORDER BY id DESC LIMIT 1`, accountID, clean).Scan(&id)
 	if err == nil {
+		// Новый долг возвращает клиента в список, даже если его раньше «убрали».
+		db.Exec(`UPDATE debt_customers SET archived=0 WHERE id=? AND account_id=?`, id, accountID)
 		return id, nil
 	}
 	res, err := db.Exec(`INSERT INTO debt_customers(account_id, name, created_at) VALUES(?, ?, ?)`, accountID, clean, time.Now().Format(time.RFC3339))
@@ -39,6 +41,8 @@ func ensureDebtCustomerTx(tx *sql.Tx, accountID int, name string, now string) (i
 	var id int
 	err := tx.QueryRow(`SELECT id FROM debt_customers WHERE account_id = ? AND lower(name) = lower(?) ORDER BY id DESC LIMIT 1`, accountID, clean).Scan(&id)
 	if err == nil {
+		// Новый долг возвращает клиента в список, даже если его раньше «убрали».
+		tx.Exec(`UPDATE debt_customers SET archived=0 WHERE id=? AND account_id=?`, id, accountID)
 		return id, nil
 	}
 	if err != sql.ErrNoRows {
@@ -58,7 +62,8 @@ func getDebtCustomers(c *gin.Context) {
 	// LEFT JOIN обеих таблиц — иначе строки размножатся и суммы задвоятся.
 	rows, err := db.Query(`SELECT dc.id, dc.account_id, dc.name, dc.created_at,
 		IFNULL((SELECT SUM(d.amount) FROM debts d WHERE d.customer_id=dc.id AND d.account_id=dc.account_id AND d.status='open'),0)
-		- IFNULL((SELECT SUM(p.amount) FROM debt_payments p WHERE p.customer_id=dc.id AND p.account_id=dc.account_id),0)
+		- IFNULL((SELECT SUM(p.amount) FROM debt_payments p WHERE p.customer_id=dc.id AND p.account_id=dc.account_id),0),
+		IFNULL(dc.archived,0)
 		FROM debt_customers dc WHERE dc.account_id = ? ORDER BY dc.name`, accountID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -68,7 +73,12 @@ func getDebtCustomers(c *gin.Context) {
 	list := []DebtCustomer{}
 	for rows.Next() {
 		var x DebtCustomer
-		rows.Scan(&x.ID, &x.AccountID, &x.Name, &x.CreatedAt, &x.DebtTotal)
+		var archived int
+		rows.Scan(&x.ID, &x.AccountID, &x.Name, &x.CreatedAt, &x.DebtTotal, &archived)
+		// «Убранного» клиента показываем только если у него снова есть долг.
+		if archived == 1 && x.DebtTotal <= 0 {
+			continue
+		}
 		if x.DebtTotal < 0 {
 			x.DebtTotal = 0
 		}
@@ -80,7 +90,7 @@ func getDebtCustomers(c *gin.Context) {
 // GET /debt-payments — журнал погашений долгов (для истории и отмены).
 func getDebtPayments(c *gin.Context) {
 	accID := accountID(c)
-	rows, err := db.Query(`SELECT id, account_id, customer_id, amount, IFNULL(method,'cash'), IFNULL(note,''), IFNULL(created_by,''), IFNULL(created_at,'') FROM debt_payments WHERE account_id=? ORDER BY id DESC`, accID)
+	rows, err := db.Query(`SELECT id, account_id, customer_id, amount, IFNULL(method,'cash'), IFNULL(note,''), IFNULL(created_by,''), IFNULL(created_at,'') FROM debt_payments WHERE account_id=? AND customer_id NOT IN (SELECT id FROM debt_customers WHERE account_id=? AND IFNULL(archived,0)=1) ORDER BY id DESC`, accID, accID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -123,25 +133,44 @@ func createDebtPayment(c *gin.Context) {
 	if method != "transfer" {
 		method = "cash"
 	}
-	outstanding := customerOutstanding(accID, req.CustomerID)
+	// Дата: строго YYYY-MM-DD. Явная дата → полдень того дня (для финотчёта по
+	// датам). Без даты или при неверном формате — текущий момент, чтобы платёж
+	// попал в открытую смену «здесь и сейчас» (а не потерялся в отчётах).
+	createdAt := time.Now().Format(time.RFC3339)
+	if d := strings.TrimSpace(req.Date); d != "" {
+		if _, e := time.Parse("2006-01-02", d); e == nil {
+			createdAt = d + "T12:00:00Z"
+		}
+	}
+	// Чтение остатка и вставка платежа — в одной транзакции, иначе два
+	// одновременных погашения оба пройдут проверку и переплатят долг (TOCTOU).
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	var open, paid float64
+	_ = tx.QueryRow(`SELECT IFNULL(SUM(amount),0) FROM debts WHERE account_id=? AND customer_id=? AND status='open'`, accID, req.CustomerID).Scan(&open)
+	_ = tx.QueryRow(`SELECT IFNULL(SUM(amount),0) FROM debt_payments WHERE account_id=? AND customer_id=?`, accID, req.CustomerID).Scan(&paid)
+	outstanding := open - paid
 	if outstanding <= 0 {
+		tx.Rollback()
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Долг уже погашен"})
 		return
 	}
-	// Защита от переплаты (копеечный допуск на округления).
-	if req.Amount > outstanding+0.5 {
+	if req.Amount > outstanding+0.5 { // копеечный допуск на округления
+		tx.Rollback()
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Сумма больше остатка долга (%.0f)", outstanding)})
 		return
 	}
-	// Явная прошедшая дата → полдень того дня (для финотчёта по датам). Без даты —
-	// текущий момент, чтобы платёж попал в открытую смену «здесь и сейчас».
-	createdAt := time.Now().Format(time.RFC3339)
-	if d := strings.TrimSpace(req.Date); len(d) == 10 {
-		createdAt = d + "T12:00:00Z"
-	}
-	res, err := db.Exec(`INSERT INTO debt_payments(account_id, customer_id, amount, method, note, created_by, created_at) VALUES(?, ?, ?, ?, ?, ?, ?)`,
+	res, err := tx.Exec(`INSERT INTO debt_payments(account_id, customer_id, amount, method, note, created_by, created_at) VALUES(?, ?, ?, ?, ?, ?, ?)`,
 		accID, req.CustomerID, req.Amount, method, strings.TrimSpace(req.Note), strings.TrimSpace(req.By), createdAt)
 	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if err := tx.Commit(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -153,8 +182,13 @@ func createDebtPayment(c *gin.Context) {
 // платежа, долг снова становится открытым на эту сумму, касса откатывается).
 func deleteDebtPayment(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	if _, err := db.Exec(`DELETE FROM debt_payments WHERE id=? AND account_id=?`, id, accountID(c)); err != nil {
+	res, err := db.Exec(`DELETE FROM debt_payments WHERE id=? AND account_id=?`, id, accountID(c))
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Погашение не найдено"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
@@ -162,7 +196,7 @@ func deleteDebtPayment(c *gin.Context) {
 
 func getDebts(c *gin.Context) {
 	accountID := accountID(c)
-	rows, err := db.Query(`SELECT d.id, d.account_id, d.customer_id, dc.name, d.sale_id, d.amount, d.status, d.created_at, IFNULL(d.paid_at,'') FROM debts d LEFT JOIN debt_customers dc ON dc.id = d.customer_id WHERE d.account_id = ? ORDER BY d.id DESC`, accountID)
+	rows, err := db.Query(`SELECT d.id, d.account_id, d.customer_id, dc.name, d.sale_id, d.amount, d.status, d.created_at, IFNULL(d.paid_at,'') FROM debts d LEFT JOIN debt_customers dc ON dc.id = d.customer_id WHERE d.account_id = ? AND IFNULL(dc.archived,0)=0 ORDER BY d.id DESC`, accountID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -210,27 +244,17 @@ func closeDebt(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
-// DELETE /debts/history — очистить погашенную историю: удаляем долги и платежи
-// клиентов, чей долг полностью закрыт (остаток ≤ 0). Открытые долги остаются.
+// DELETE /debts/history — «убрать погашенных»: прячем полностью закрытых клиентов
+// (остаток ≤ 0) из списка долгов. НЕ удаляем платежи/долги — иначе из кассы и
+// финотчёта пропали бы реальные приходы наличных. Новый долг вернёт клиента (см.
+// ensureDebtCustomer, снимает archived). Одним UPDATE — без вложенных Exec.
 func clearDebtHistory(c *gin.Context) {
 	accID := accountID(c)
-	rows, err := db.Query(`SELECT dc.id FROM debt_customers dc WHERE dc.account_id=? AND
-		IFNULL((SELECT SUM(d.amount) FROM debts d WHERE d.customer_id=dc.id AND d.account_id=dc.account_id AND d.status='open'),0)
-		- IFNULL((SELECT SUM(p.amount) FROM debt_payments p WHERE p.customer_id=dc.id AND p.account_id=dc.account_id),0) <= 0`, accID)
-	if err != nil {
+	if _, err := db.Exec(`UPDATE debt_customers SET archived=1 WHERE account_id=? AND
+		IFNULL((SELECT SUM(d.amount) FROM debts d WHERE d.customer_id=debt_customers.id AND d.account_id=debt_customers.account_id AND d.status='open'),0)
+		- IFNULL((SELECT SUM(p.amount) FROM debt_payments p WHERE p.customer_id=debt_customers.id AND p.account_id=debt_customers.account_id),0) <= 0`, accID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
-	}
-	ids := []int{}
-	for rows.Next() {
-		var id int
-		rows.Scan(&id)
-		ids = append(ids, id)
-	}
-	rows.Close() // закрываем до Exec: при SetMaxOpenConns(1) вложенная запись = дедлок
-	for _, cid := range ids {
-		db.Exec(`DELETE FROM debts WHERE account_id=? AND customer_id=?`, accID, cid)
-		db.Exec(`DELETE FROM debt_payments WHERE account_id=? AND customer_id=?`, accID, cid)
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

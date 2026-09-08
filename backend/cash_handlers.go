@@ -15,45 +15,32 @@ import (
 // computeShiftCash считает движение наличных за смену:
 // продажи налом + ручные внесения − изъятия − расходы, оплаченные из кассы.
 func computeShiftCash(accID, shiftID int, openedAt, closedAt string) (cashSales, cashIn, cashOut, cashExpenses, ownerCash, debtCash float64) {
-	salesQuery := `SELECT IFNULL(SUM(total),0) FROM sales WHERE account_id=? AND payment_type='cash' AND created_at >= ?`
-	args := []any{accID, openedAt}
-	if strings.TrimSpace(closedAt) != "" {
-		salesQuery += ` AND created_at <= ?`
-		args = append(args, closedAt)
+	// Верхняя граница окна: закрытая смена — момент закрытия; открытая — «сейчас»
+	// (иначе задатированные будущей датой платежи попали бы в текущую кассу).
+	upper := strings.TrimSpace(closedAt)
+	if upper == "" {
+		upper = time.Now().Format(time.RFC3339)
 	}
-	_ = db.QueryRow(salesQuery, args...).Scan(&cashSales)
+	// Сравниваем через datetime(): строки RFC3339 c разными смещениями (например
+	// «…Z» у задатированных платежей и «…+03:00» у time.Now()) лексикографически
+	// НЕ упорядочены по моменту времени — datetime() приводит их к единому UTC.
+	inWindow := "datetime(created_at) >= datetime(?) AND datetime(created_at) <= datetime(?)"
+
+	_ = db.QueryRow(`SELECT IFNULL(SUM(total),0) FROM sales WHERE account_id=? AND payment_type='cash' AND `+inWindow, accID, openedAt, upper).Scan(&cashSales)
 
 	_ = db.QueryRow(`SELECT IFNULL(SUM(amount),0) FROM cash_movements WHERE account_id=? AND shift_id=? AND type='in'`, accID, shiftID).Scan(&cashIn)
 	_ = db.QueryRow(`SELECT IFNULL(SUM(amount),0) FROM cash_movements WHERE account_id=? AND shift_id=? AND type='out'`, accID, shiftID).Scan(&cashOut)
 
 	// Расходы, оплаченные ИЗ КАССЫ за период смены — тоже уменьшают ожидаемую наличность.
 	// (Расходы 'owner'/'card' кассу не трогают.)
-	expQuery := `SELECT IFNULL(SUM(amount),0) FROM global_expenses WHERE account_id=? AND IFNULL(payment_source,'cash')='cash' AND created_at >= ?`
-	expArgs := []any{accID, openedAt}
-	if strings.TrimSpace(closedAt) != "" {
-		expQuery += ` AND created_at <= ?`
-		expArgs = append(expArgs, closedAt)
-	}
-	_ = db.QueryRow(expQuery, expArgs...).Scan(&cashExpenses)
+	_ = db.QueryRow(`SELECT IFNULL(SUM(amount),0) FROM global_expenses WHERE account_id=? AND IFNULL(payment_source,'cash')='cash' AND `+inWindow, accID, openedAt, upper).Scan(&cashExpenses)
 
 	// Расчёты с владельцем за период смены: вклад +нал, возврат/изъятие −нал.
-	ownerQuery := `SELECT IFNULL(SUM(CASE WHEN kind='contribution' THEN amount ELSE -amount END),0) FROM owner_ledger WHERE account_id=? AND created_at >= ?`
-	ownerArgs := []any{accID, openedAt}
-	if strings.TrimSpace(closedAt) != "" {
-		ownerQuery += ` AND created_at <= ?`
-		ownerArgs = append(ownerArgs, closedAt)
-	}
-	_ = db.QueryRow(ownerQuery, ownerArgs...).Scan(&ownerCash)
+	_ = db.QueryRow(`SELECT IFNULL(SUM(CASE WHEN kind='contribution' THEN amount ELSE -amount END),0) FROM owner_ledger WHERE account_id=? AND `+inWindow, accID, openedAt, upper).Scan(&ownerCash)
 
 	// Погашения долгов наличными за период смены — физически кладутся в кассу.
 	// (У debt_payments нет shift_id, поэтому фильтруем по окну дат, как расходы.)
-	debtQuery := `SELECT IFNULL(SUM(amount),0) FROM debt_payments WHERE account_id=? AND method='cash' AND created_at >= ?`
-	debtArgs := []any{accID, openedAt}
-	if strings.TrimSpace(closedAt) != "" {
-		debtQuery += ` AND created_at <= ?`
-		debtArgs = append(debtArgs, closedAt)
-	}
-	_ = db.QueryRow(debtQuery, debtArgs...).Scan(&debtCash)
+	_ = db.QueryRow(`SELECT IFNULL(SUM(amount),0) FROM debt_payments WHERE account_id=? AND method='cash' AND `+inWindow, accID, openedAt, upper).Scan(&debtCash)
 	return
 }
 

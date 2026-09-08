@@ -253,13 +253,15 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     if (cardBusyRef.current) return;
     cardBusyRef.current = true;
     setCardBusy(true);
+    // Ошибки показываем тостом: баннер setError скрыт за оверлеем модалки.
     try { await fn(); }
-    catch (e) { setError(e.message); }
+    catch (e) { window.notify?.(e?.message || "Не удалось выполнить операцию", "error"); }
     finally { cardBusyRef.current = false; setCardBusy(false); }
   };
+  const openCardModal = () => { setCardForm({ name: "", owner: "" }); setCardModal(true); };
   const addCard = async () => {
     const name = cardForm.name.trim();
-    if (!name) { setError("Введите название карты"); return; }
+    if (!name) { window.notify?.("Введите название карты", "error"); return; }
     await runCardOp(async () => {
       const saved = await post("/cards", { name, owner: cardForm.owner.trim() });
       setCardForm({ name: "", owner: "" });
@@ -807,7 +809,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <Wallet size={18} strokeWidth={2.4} />
             <span className="hidden sm:inline">Наличные</span>
           </button>
-          <button type="button" onClick={() => setCardModal(true)}
+          <button type="button" onClick={openCardModal}
             aria-label="Карты для оплаты переводом — добавить или удалить"
             title="Карты для оплаты переводом — добавить или удалить"
             className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3 font-black text-sky-200 transition hover:bg-sky-500/20 active:scale-95">
@@ -1144,7 +1146,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               </button>
             {safe_cart.length > 0 && (
               <button
-                onClick={() => { if (!window.confirm(`Очистить всю корзину (${safe_cart.length} поз.)?`)) return; setCart([]); }}
+                onClick={() => { if (!window.confirm(`Очистить всю корзину (${safe_cart.length} поз.)?`)) return; setCart([]); setDiscount(""); setPaidAmount(""); setCardId(""); }}
                 className="rounded-2xl bg-red-500/10 px-3 py-2 text-sm font-black text-red-300"
               >
                 Очистить
@@ -1318,7 +1320,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       )}
 
       {cardModal && (
-        <Modal title="Карты" section="Оплата переводом" onClose={() => setCardModal(false)} legacyLight={false}>
+        <Modal title="Карты" section="Оплата переводом" onClose={() => setCardModal(false)} legacyLight={false} zIndex={60}>
           <div className="space-y-4">
             <p className="text-sm text-slate-400">Карты и счета, на которые принимаете переводы. Новую можно добавить прямо здесь — она сразу появится при оплате переводом.</p>
 
@@ -1571,7 +1573,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   </select>
                   <button
                     type="button"
-                    onClick={() => setCardModal(true)}
+                    onClick={openCardModal}
                     title="Добавить новую карту"
                     className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3.5 font-black text-sky-200 transition hover:bg-sky-500/20 active:scale-95"
                   >
@@ -1581,7 +1583,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               ) : (
                 <button
                   type="button"
-                  onClick={() => setCardModal(true)}
+                  onClick={openCardModal}
                   className="flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-400/30 bg-sky-500/10 px-4 py-3.5 font-black text-sky-200 transition hover:bg-sky-500/20 active:scale-95"
                 >
                   <Plus size={18} strokeWidth={2.6} /> Добавить карту для перевода

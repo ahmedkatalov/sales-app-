@@ -162,15 +162,15 @@ func getFinanceReport(c *gin.Context) {
 	cashNow := op.cash + cashSalesUpto + debtPaidCashUpto + contribUpto - cashExpUpto - reimbUpto - withdrawUpto
 
 	// Текущие живые значения: остаток долгов клиентов и стоимость склада.
-	// Остаток долгов = открытые долги − все погашения (частичные тоже).
-	var receivables, debtsPaidAll, inventoryLive float64
+	// Остаток считаем ПО КАЖДОМУ клиенту с отсечкой снизу нулём и суммируем —
+	// так переплата одного клиента не «съедает» долг другого (совпадает с экраном
+	// «Долги» и getDebtCustomers).
+	var receivables, inventoryLive float64
 	var invCount int
-	_ = db.QueryRow(`SELECT IFNULL(SUM(amount),0) FROM debts WHERE account_id=? AND status='open'`, accID).Scan(&receivables)
-	_ = db.QueryRow(`SELECT IFNULL(SUM(amount),0) FROM debt_payments WHERE account_id=?`, accID).Scan(&debtsPaidAll)
-	receivables -= debtsPaidAll
-	if receivables < 0 {
-		receivables = 0
-	}
+	_ = db.QueryRow(`SELECT IFNULL(SUM(MAX(oc,0)),0) FROM (
+		SELECT IFNULL((SELECT SUM(d.amount) FROM debts d WHERE d.customer_id=dc.id AND d.account_id=dc.account_id AND d.status='open'),0)
+		     - IFNULL((SELECT SUM(p.amount) FROM debt_payments p WHERE p.customer_id=dc.id AND p.account_id=dc.account_id),0) AS oc
+		FROM debt_customers dc WHERE dc.account_id=?)`, accID).Scan(&receivables)
 	_ = db.QueryRow(`SELECT COUNT(*), IFNULL(SUM(quantity*unit_cost),0) FROM warehouse_items WHERE account_id=? AND IFNULL(hidden,0)=0`, accID).Scan(&invCount, &inventoryLive)
 	// Склад вообще не заведён в приложении → берём стартовую оценку. Если товары есть, но
 	// остаток честно равен 0 — оставляем 0 (не подменяем стартовым значением).
@@ -298,9 +298,13 @@ func createOwnerEntry(c *gin.Context) {
 		return
 	}
 	createdAt := time.Now().Format(time.RFC3339)
-	if d := strings.TrimSpace(req.Date); len(d) == 10 {
-		// дата выбрана вручную — ставим полдень, чтобы не «уехать» в соседний день по TZ
-		createdAt = d + "T12:00:00Z"
+	if d := strings.TrimSpace(req.Date); d != "" {
+		// дата выбрана вручную — строго YYYY-MM-DD, ставим полдень, чтобы не «уехать»
+		// в соседний день по TZ. Неверный формат игнорируем (останется time.Now()),
+		// иначе created_at стал бы непарсимым и запись выпала бы из отчётов по датам.
+		if _, e := time.Parse("2006-01-02", d); e == nil {
+			createdAt = d + "T12:00:00Z"
+		}
 	}
 	if _, err := db.Exec(`
 		INSERT INTO owner_ledger(account_id, kind, amount, note, employee_id, created_at)

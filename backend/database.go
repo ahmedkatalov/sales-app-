@@ -480,6 +480,12 @@ func createTables() {
 		`CREATE INDEX IF NOT EXISTS idx_debt_payments_acc ON debt_payments(account_id, customer_id)`,
 		// Наличные погашения долгов в открытой смене увеличивают ожидаемую наличность.
 		`ALTER TABLE cash_shifts ADD COLUMN debt_cash REAL DEFAULT 0`,
+		// «Убрать погашенных» прячет клиента из списка долгов, НЕ удаляя платежи
+		// (иначе из кассы/финотчёта пропали бы реальные приходы наличных).
+		`ALTER TABLE debt_customers ADD COLUMN archived INTEGER DEFAULT 0`,
+		// Мягкое удаление карт: скрываем из выбора, но прошлые продажи по карте
+		// сохраняют её название (JOIN по card_id продолжает находить строку).
+		`ALTER TABLE cards ADD COLUMN archived INTEGER DEFAULT 0`,
 	}
 
 	for _, q := range migrations {

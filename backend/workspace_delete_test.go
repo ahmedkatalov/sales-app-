@@ -35,6 +35,7 @@ func TestDeleteWorkspaceDataTxScoping(t *testing.T) {
 		"warehouse_movements", "product_recipes", "warehouse_items", "menu_products",
 		"product_categories", "product_types", "debts", "debt_customers", "debt_payments",
 		"cash_movements", "cash_shifts", "global_expenses", "employees", "cards",
+		"owner_ledger", "opening_balances",
 	}
 	for _, tb := range acctTables {
 		wsExec(t, tdb, "CREATE TABLE "+tb+" (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id INTEGER)")

@@ -936,7 +936,6 @@ export default function AIWarehousePage() {
     () => (targetIdRef.current ? { dataAccountId: targetIdRef.current } : undefined),
     []
   );
-  const gGet = useCallback((url) => get(url, targetOpts()), [targetOpts]);
   const gPost = useCallback((url, body) => post(url, body, targetOpts()), [targetOpts]);
   const gDel = useCallback((url, body) => del(url, body, targetOpts()), [targetOpts]);
 
@@ -973,17 +972,23 @@ export default function AIWarehousePage() {
     targetIdRef.current = ws.dataAccountId || ws.id || null;
     setTargetWs(ws);
     if (!sameId) {
-      setMessages((p) => [...p, { role: "bot", text: `Точка переключена на «${ws.name}». Теперь читаю остатки и записываю продукты, расходы и кассу сюда.` }]);
+      // Сбрасываем незакрытые операции — иначе подтверждение/уточнение, начатое на
+      // прошлой точке (с её товарами/ценами), записалось бы в новую точку не туда.
+      clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation });
+      setLastEntity(null);
+      setMessages((p) => [...p, { role: "bot", text: `Точка переключена на «${ws.name}». Теперь читаю остатки и записываю продукты, расходы и кассу сюда. Незаконченные закупки/уточнения сбросила.` }]);
     }
   }, []);
 
   const load = async () => {
-    // Не запускаем 5 запросов к SQLite одновременно.
-    // В dev/docker режиме это иногда давало net::ERR_CONNECTION_RESET,
-    // потому что backend закрывал соединение при резком параллельном чтении.
+    // Фиксируем точку на весь заход: все 4 запроса идут в неё, и если за время
+    // загрузки точку переключили — результат этого захода отбрасываем (иначе
+    // получили бы товары из одной точки, а движения/типы из другой).
+    const acc = targetIdRef.current;
+    const opts = acc ? { dataAccountId: acc } : undefined;
     const safeGet = async (url) => {
       try {
-        const result = await gGet(url);
+        const result = await get(url, opts);
         return Array.isArray(result) ? result : [];
       } catch {
         return [];
@@ -995,6 +1000,8 @@ export default function AIWarehousePage() {
     const types = await safeGet("/product-types");
     const categories = await safeGet("/product-categories");
 
+    if (acc !== targetIdRef.current) return; // точку успели переключить — заход устарел
+
     setItems(warehouseList);
     setMovements(movementList);
     setProductTypes(types);
@@ -1003,7 +1010,6 @@ export default function AIWarehousePage() {
 
   // Перечитываем контекст (склад/движения/типы) при смене выбранной точки —
   // сопоставление товаров и все записи ИИ идут по данным именно этой точки.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [targetWs]);
 
   // Выход из полноэкранного помощника: назад / на главную / по Esc — чтобы не «застрять».
@@ -1685,8 +1691,9 @@ export default function AIWarehousePage() {
                         type="button"
                         onClick={() => switchTargetPoint(p)}
                         aria-pressed={active}
+                        disabled={loading}
                         title={`Записывать в точку «${p.name}»`}
-                        className={`flex shrink-0 items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-black transition active:scale-95 ${
+                        className={`flex shrink-0 items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-black transition active:scale-95 disabled:opacity-50 ${
                           active
                             ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-600/30"
                             : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"

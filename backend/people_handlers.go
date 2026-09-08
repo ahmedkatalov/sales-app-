@@ -159,7 +159,7 @@ func getCards(c *gin.Context) {
 	rows, err := db.Query(`
 		SELECT id, account_id, name, owner
 		FROM cards
-		WHERE account_id = ?
+		WHERE account_id = ? AND IFNULL(archived,0) = 0
 		ORDER BY id DESC
 	`, accountID(c))
 	if err != nil {
@@ -196,9 +196,9 @@ func createCard(c *gin.Context) {
 		return
 	}
 
-	if card.AccountID == 0 {
-		card.AccountID = accountID(c)
-	}
+	// Всегда берём точку из сессии — не доверяем accountId из тела запроса
+	// (иначе можно было бы создать карту в чужой точке).
+	card.AccountID = accountID(c)
 
 	res, err := db.Exec(`
 		INSERT INTO cards(account_id, name, owner, created_at)
@@ -217,7 +217,9 @@ func createCard(c *gin.Context) {
 }
 
 func deleteCard(c *gin.Context) {
-	_, err := db.Exec(`DELETE FROM cards WHERE id = ? AND account_id = ?`, c.Param("id"), accountID(c))
+	// Мягкое удаление: прячем карту из выбора, но строка остаётся — прошлые
+	// продажи по ней (JOIN по card_id) сохраняют название карты в отчётах.
+	_, err := db.Exec(`UPDATE cards SET archived = 1 WHERE id = ? AND account_id = ?`, c.Param("id"), accountID(c))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

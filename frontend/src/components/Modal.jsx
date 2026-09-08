@@ -4,7 +4,9 @@ import { X } from "lucide-react";
 // legacyLight по умолчанию true: почти все модалки написаны светлыми классами
 // (bg-white/text-slate-900/…) и полагаются на этот тёмный оверрайд. Новые модалки,
 // целиком собранные на тёмных классах дизайн-системы, могут отключить его legacyLight={false}.
-export default function Modal({ title, section, children, wide, onClose, legacyLight = true }) {
+// zIndex — для случая «модалка над модалкой» (напр. добавление карты поверх
+// окна оплаты). По умолчанию 50; вложенной передаём больше, чтобы она была сверху.
+export default function Modal({ title, section, children, wide, onClose, legacyLight = true, zIndex }) {
   useEffect(() => {
     if (!onClose) return;
     const onKey = (e) => {
@@ -32,6 +34,7 @@ export default function Modal({ title, section, children, wide, onClose, legacyL
   return (
     <div
       className="animate-overlay fixed inset-0 z-50 overflow-y-auto bg-[#030816]/80 px-3 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:px-6 sm:py-8"
+      style={zIndex ? { zIndex } : undefined}
       onClick={handleBackdrop}
     >
       <style>{`

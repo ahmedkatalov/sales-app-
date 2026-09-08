@@ -73,15 +73,18 @@ export default function DebtsPage() {
 
     return Array.from(byId.values())
       .map((customer) => {
-        // «Открытые» долги (строки не переводятся в paid — источник правды платежи).
+        // Открытые долги = status==='open' (совпадает с бэкендом; строки не
+        // переводятся в paid — источник правды по оплате это журнал платежей).
         const borrowed = customer.records
-          .filter((r) => r.status !== "paid")
+          .filter((r) => r.status === "open")
           .reduce((s, r) => s + Number(r.amount || 0), 0);
         const paid = customer.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
         const remaining = Math.max(0, borrowed - paid);
         return { ...customer, borrowed, paid, remaining };
       })
-      .filter((customer) => customer.records.length > 0 || customer.payments.length > 0)
+      // Прячем «пустых» клиентов (только старые закрытые строки, без сумм) — они лишь
+      // засоряют список и счётчик.
+      .filter((customer) => customer.borrowed > 0 || customer.paid > 0)
       .sort(
         (a, b) =>
           Number(b.remaining || 0) - Number(a.remaining || 0) ||

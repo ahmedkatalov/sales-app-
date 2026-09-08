@@ -34,6 +34,8 @@ func deleteWorkspaceDataTx(tx *sql.Tx, dataID int) error {
 		`DELETE FROM debts WHERE account_id = ?`,
 		`DELETE FROM debt_customers WHERE account_id = ?`,
 		`DELETE FROM debt_payments WHERE account_id = ?`,
+		`DELETE FROM owner_ledger WHERE account_id = ?`,
+		`DELETE FROM opening_balances WHERE account_id = ?`,
 		`DELETE FROM cash_movements WHERE account_id = ?`,
 		`DELETE FROM cash_shifts WHERE account_id = ?`,
 		`DELETE FROM global_expenses WHERE account_id = ?`,
