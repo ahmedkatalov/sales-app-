@@ -211,6 +211,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   const [cart, setCart] = useState([]);
   const [discount, setDiscount] = useState("");
   const [paymentModal, setPaymentModal] = useState(false);
+  const [customModal, setCustomModal] = useState(false); // «доп. позиция»: свободная продажа по названию+цене
+  const [customForm, setCustomForm] = useState({ name: "", price: "", qty: "1" });
   const [submitting, setSubmitting] = useState(false); // защита от двойного проведения продажи
   const submittingRef = useRef(false); // синхронный ref-гвард: state обновляется асинхронно, между двумя быстрыми тапами disabled не успевает проставиться
   const saleClientRef = useRef(""); // идемпотентность: стабильный ключ попытки продажи (тот же при ретрае после таймаута), сбрасывается после успеха
@@ -496,6 +498,23 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     });
   };
 
+  // Доп. позиция: свободная продажа по названию + цене (нет в меню). productId<0 —
+  // уникальный локальный ключ; на бэк уйдёт как productId 0 (без списания склада).
+  const addCustomItem = () => {
+    const name = customForm.name.trim();
+    const price = num(customForm.price);
+    const qty = Math.max(1, Math.floor(num(customForm.qty) || 1));
+    if (!name) return setError("Введите название позиции");
+    if (price <= 0) return setError("Введите цену больше нуля");
+    setCart((prev) => [
+      ...prev,
+      { productId: -(Date.now() + Math.floor(Math.random() * 1000)), name, type: "Доп. позиция", qty, price, cost: 0, custom: true },
+    ]);
+    setCustomModal(false);
+    setCustomForm({ name: "", price: "", qty: "1" });
+    setError("");
+  };
+
   const decreaseCartItem = (id) => {
     setCart((prev) =>
       prev
@@ -621,7 +640,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     sellerName: activeWorkerName,
     discountPercent: discountPct,
     items: safe_cart.map((item) => ({
-      productId: Number(item.productId || item.id || 0),
+      productId: Math.max(0, Number(item.productId || item.id || 0)), // доп. позиция (productId<0) уходит как 0
+
       name: item.name,
       type: item.type,
       qty: num(item.qty),
@@ -1050,9 +1070,17 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         )}
 
         <div className="flex flex-col rounded-3xl border border-white/10 bg-[#0f172a]/90 p-3.5 shadow-2xl backdrop-blur sm:p-4 md:min-h-0 md:flex-1">
-          <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
+          <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
             <h3 className="text-base font-black sm:text-lg">Корзина</h3>
 
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setCustomForm({ name: "", price: "", qty: "1" }); setError(""); setCustomModal(true); }}
+                title="Свободная продажа: название и цена"
+                className="inline-flex items-center gap-1 rounded-2xl bg-blue-500/15 px-3 py-2 text-sm font-black text-blue-200 transition hover:bg-blue-500/25 active:scale-95"
+              >
+                <span className="text-base leading-none">＋</span> Доп. позиция
+              </button>
             {safe_cart.length > 0 && (
               <button
                 onClick={() => { if (!window.confirm(`Очистить всю корзину (${safe_cart.length} поз.)?`)) return; setCart([]); }}
@@ -1061,6 +1089,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 Очистить
               </button>
             )}
+            </div>
           </div>
 
           <div className="no-scrollbar max-h-72 space-y-2 overflow-auto lg:max-h-none lg:min-h-[96px] lg:flex-1">
@@ -1209,6 +1238,44 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             {Math.abs(shiftResult.difference) < 0.005 ? <><Check size={14} className="inline"/> Касса сошлась</> : shiftResult.difference < 0 ? `Недостача ${formatMoney(-shiftResult.difference)}` : `Излишек ${formatMoney(shiftResult.difference)}`}
           </div>
           <button type="button" onClick={() => setShiftResult(null)} className="btn-blue mt-6 w-full">Готово</button>
+        </Modal>
+      )}
+
+      {customModal && (
+        <Modal title="Доп. позиция" section="Касса" onClose={() => setCustomModal(false)}>
+          <div className="space-y-3">
+            <p className="text-sm font-bold text-slate-400">Свободная продажа — впишите название и цену. Позиция не привязана к меню и не списывает склад.</p>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-black text-slate-400">Название</span>
+              <input autoFocus value={customForm.name} onChange={(e) => setCustomForm((f) => ({ ...f, name: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === "Enter") addCustomItem(); }}
+                placeholder="Напр. Пакет, Разное, Печенье"
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70" />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-black text-slate-400">Цена, ₽</span>
+                <input type="number" inputMode="decimal" value={customForm.price} onChange={(e) => setCustomForm((f) => ({ ...f, price: e.target.value }))}
+                  onKeyDown={(e) => { if (e.key === "Enter") addCustomItem(); }}
+                  placeholder="0" className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70" />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-black text-slate-400">Кол-во</span>
+                <input type="number" inputMode="numeric" value={customForm.qty} onChange={(e) => setCustomForm((f) => ({ ...f, qty: e.target.value }))}
+                  onKeyDown={(e) => { if (e.key === "Enter") addCustomItem(); }}
+                  placeholder="1" className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70" />
+              </label>
+            </div>
+            {num(customForm.price) > 0 && (
+              <div className="rounded-2xl bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-200">
+                В чек: {customForm.name.trim() || "позиция"} · {Math.max(1, Math.floor(num(customForm.qty) || 1))} шт · {formatMoney(num(customForm.price) * Math.max(1, Math.floor(num(customForm.qty) || 1)))}
+              </div>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={() => setCustomModal(false)} className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-200 transition hover:bg-white/10">Отмена</button>
+              <button type="button" onClick={addCustomItem} className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-lg transition active:scale-95">Добавить в чек</button>
+            </div>
+          </div>
         </Modal>
       )}
 
