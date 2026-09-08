@@ -6,7 +6,7 @@ import PendingPaymentsModal from "../components/PendingPaymentsModal";
 import { formatMoney, money, num } from "../utils/format";
 import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
-import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock } from "lucide-react";
+import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet } from "lucide-react";
 
 const RECIPE_UNITS = [
   ["g", "г"],
@@ -238,6 +238,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   const [shiftInput, setShiftInput] = useState("");
   const [shiftNote, setShiftNote] = useState("");
   const [shiftResult, setShiftResult] = useState(null); // итог закрытия
+  const [cashCheckModal, setCashCheckModal] = useState(false); // «Проверить кассу» — просмотр текущей наличности
+  const [cashCheckLoading, setCashCheckLoading] = useState(false);
 
   const loadCashShift = async () => {
     try {
@@ -246,6 +248,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     } catch { /* ignore */ }
   };
   useEffect(() => { loadCashShift(); }, []);
+
+  // «Проверить кассу»: обновляем цифры и открываем окно (актуально даже если
+  // продажи шли на другом устройстве — не доверяем устаревшему состоянию).
+  const openCashCheck = async () => {
+    setCashCheckModal(true);
+    setCashCheckLoading(true);
+    try { await loadCashShift(); } finally { setCashCheckLoading(false); }
+  };
 
   // «К оплате» прямо из кассы: счётчик отложенных чеков + модалка приёма оплаты.
   const [pendingModal, setPendingModal] = useState(false);
@@ -753,6 +763,13 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               </span>
             )}
           </button>
+          <button type="button" onClick={openCashCheck}
+            aria-label="Проверить кассу — сколько наличных должно быть сейчас"
+            title="Проверить кассу — сколько наличных должно быть сейчас"
+            className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-3 font-black text-emerald-200 transition hover:bg-emerald-500/20 active:scale-95">
+            <Wallet size={18} strokeWidth={2.4} />
+            <span className="hidden sm:inline">Наличные</span>
+          </button>
         </div>
 
         {isWorker ? (
@@ -1180,6 +1197,74 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         </div>
         </div>
       </div>
+
+      {cashCheckModal && (
+        <Modal title="Проверить кассу" section="Наличные" onClose={() => setCashCheckModal(false)} legacyLight={false}>
+          {cashShift ? (
+            <div className="space-y-4">
+              {/* Главное число: сколько наличных должно быть в кассе прямо сейчас */}
+              <div className="rounded-3xl border border-emerald-400/25 bg-emerald-500/[0.08] p-5 text-center sm:p-6">
+                <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">В кассе сейчас должно быть</p>
+                <p className={`mt-1 text-4xl font-black tabular-nums sm:text-5xl ${num(cashShift.expectedCash) < 0 ? "text-red-300" : "text-white"}`}>
+                  {formatMoney(cashShift.expectedCash)}
+                </p>
+                <p className="mt-2 text-xs font-bold text-slate-400">
+                  Смена открыта{cashShift.openedBy ? ` · ${cashShift.openedBy}` : ""}
+                </p>
+              </div>
+
+              {/* Из чего складывается — чисто касса, без прибыли и безнала */}
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-300/80">Размен</p>
+                  <p className="mt-1 text-2xl font-black tabular-nums text-white">{formatMoney(cashShift.openingCash)}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-300/80">Продажи налом</p>
+                  <p className="mt-1 text-2xl font-black tabular-nums text-emerald-300">{formatMoney(cashShift.cashSales)}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-300/80">Внесено</p>
+                  <p className="mt-1 text-2xl font-black tabular-nums text-white">{formatMoney(cashShift.cashIn)}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-300/80">Изъято</p>
+                  <p className="mt-1 text-2xl font-black tabular-nums text-red-300">{num(cashShift.cashOut) > 0 ? "−" : ""}{formatMoney(cashShift.cashOut)}</p>
+                </div>
+              </div>
+
+              {(num(cashShift.cashExpenses) > 0 || num(cashShift.ownerCash) !== 0) && (
+                <p className="text-center text-[11px] font-bold text-slate-500">
+                  {num(cashShift.cashExpenses) > 0 ? `Учтены расходы из кассы −${formatMoney(cashShift.cashExpenses)}` : ""}
+                  {num(cashShift.cashExpenses) > 0 && num(cashShift.ownerCash) !== 0 ? " · " : ""}
+                  {num(cashShift.ownerCash) > 0 ? `внёс владелец +${formatMoney(cashShift.ownerCash)}` : num(cashShift.ownerCash) < 0 ? `выдано владельцу −${formatMoney(Math.abs(num(cashShift.ownerCash)))}` : ""}
+                </p>
+              )}
+
+              <button type="button" onClick={() => setCashCheckModal(false)}
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">
+                Понятно
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 text-slate-500">
+                <Wallet size={30} strokeWidth={1.8} />
+              </div>
+              <p className="text-lg font-black text-white">{cashCheckLoading ? "Проверяю кассу…" : "Смена не открыта"}</p>
+              {!cashCheckLoading && (
+                <p className="mt-1.5 max-w-xs text-sm font-bold text-slate-400">
+                  Пока смена закрыта, касса не считается. Откройте смену на странице «Смены» — и здесь будет видно, сколько наличных должно быть.
+                </p>
+              )}
+              <button type="button" onClick={() => setCashCheckModal(false)}
+                className="mt-5 w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">
+                Закрыть
+              </button>
+            </div>
+          )}
+        </Modal>
+      )}
 
       {(shiftModal === "in" || shiftModal === "out") && (
         <Modal title={shiftModal === "in" ? "Внести в кассу" : "Изъять из кассы"} onClose={() => setShiftModal(null)}>
