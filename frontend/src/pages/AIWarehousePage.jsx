@@ -1674,7 +1674,7 @@ export default function AIWarehousePage() {
                   </button>
                 ))}
               </div>
-              <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900 px-3 py-2">
+              <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900 px-3 py-2 transition focus-within:border-blue-400/50 focus-within:ring-4 focus-within:ring-blue-500/10">
                 <textarea
                   value={input}
                   onChange={(e) => {
@@ -1690,7 +1690,7 @@ export default function AIWarehousePage() {
                   }}
                   placeholder="Напиши закупку, расход или вопрос..."
                   rows={1}
-                  className="flex-1 resize-none bg-transparent text-sm font-medium leading-5 text-white outline-none placeholder:text-slate-500"
+                  className="flex-1 resize-none bg-transparent text-sm font-medium leading-5 text-white outline-none placeholder:text-slate-500 focus:outline-none focus-visible:outline-none"
                   style={{minHeight: "24px", maxHeight: "120px"}}
                 />
                 <button
