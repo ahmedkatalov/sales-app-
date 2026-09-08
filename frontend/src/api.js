@@ -126,7 +126,7 @@ function ownerAccountId() {
   return session?.ownerAccountId || session?.accountId || null;
 }
 
-function withParams(url) {
+function withParams(url, overrideDataId) {
   if (url.startsWith("/auth/")) return url;
 
   let id;
@@ -136,7 +136,9 @@ function withParams(url) {
     id = ownerAccountId();
     key = "ownerAccountId";
   } else {
-    id = workspaceAccountId();
+    // overrideDataId — точечное переопределение точки для одного запроса
+    // (например, AI-чат пишет в выбранную точку, а не в текущую активную).
+    id = overrideDataId || workspaceAccountId();
   }
 
   if (!id) return url;
@@ -162,7 +164,7 @@ function authHeaders() {
   return headers;
 }
 
-function withBody(url, body) {
+function withBody(url, body, overrideDataId) {
   if (url.startsWith("/auth/")) return body || {};
 
   if (url.startsWith("/workspaces") || url.startsWith("/workspace-users")) {
@@ -173,7 +175,7 @@ function withBody(url, body) {
     };
   }
 
-  const id = workspaceAccountId();
+  const id = overrideDataId || workspaceAccountId();
   const cleanBody = body || {};
 
   return id
@@ -185,18 +187,24 @@ function withBody(url, body) {
 }
 
 async function request(url, options = {}) {
-  const { timeoutMs, ...fetchOptions } = options;
+  const { timeoutMs, dataAccountId, ...fetchOptions } = options;
   // Запросы к ИИ (/ai/*) генерируются дольше — даём им до 90с, остальным 12с.
   const limitMs = timeoutMs ?? (url.startsWith("/ai/") ? 90000 : 12000);
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), limitMs);
 
   try {
-    const res = await fetch(API + withParams(url), {
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeaders(),
-      },
+    const headers = {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    };
+    // Точечное переопределение точки для конкретного запроса. X-Data-Account-ID —
+    // самый приоритетный источник в бэкенде (accountID(c)), поэтому этого заголовка
+    // достаточно, но дублируем в query/body (withParams/withBody) для полной надёжности.
+    if (dataAccountId) headers["X-Data-Account-ID"] = String(dataAccountId);
+
+    const res = await fetch(API + withParams(url, dataAccountId), {
+      headers,
       ...fetchOptions,
       signal: controller.signal,
     });
@@ -251,31 +259,36 @@ async function request(url, options = {}) {
   }
 }
 
-export async function get(url) {
-  return request(url);
+// Третий аргумент opts (необязательный) может нести { dataAccountId } —
+// тогда запрос уйдёт в указанную точку, а не в текущую активную.
+export async function get(url, opts = {}) {
+  return request(url, opts);
 }
 
-export async function post(url, body) {
+export async function post(url, body, opts = {}) {
   return request(url, {
+    ...opts,
     method: "POST",
-    body: JSON.stringify(withBody(url, body)),
+    body: JSON.stringify(withBody(url, body, opts.dataAccountId)),
   });
 }
 
-export async function put(url, body) {
+export async function put(url, body, opts = {}) {
   return request(url, {
+    ...opts,
     method: "PUT",
-    body: JSON.stringify(withBody(url, body)),
+    body: JSON.stringify(withBody(url, body, opts.dataAccountId)),
   });
 }
 
-export async function del(url, body) {
-  return request(
-    url,
-    body === undefined
-      ? { method: "DELETE" }
-      : { method: "DELETE", body: JSON.stringify(withBody(url, body)) }
-  );
+export async function del(url, body, opts = {}) {
+  return request(url, {
+    ...opts,
+    method: "DELETE",
+    ...(body === undefined
+      ? {}
+      : { body: JSON.stringify(withBody(url, body, opts.dataAccountId)) }),
+  });
 }
 
 export const apiGet = get;

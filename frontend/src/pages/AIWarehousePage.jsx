@@ -914,13 +914,76 @@ export default function AIWarehousePage() {
   const bottomRef = useRef(null);
   const messagesRef = useRef(null);
 
+  // ── Выбор точки (Нур / Меренда / …) прямо в чате ──────────────────────────
+  // Обе точки равнозначны — «главной» нет. По умолчанию берём текущую активную,
+  // но пользователь (или сам текст запроса) может переключить, и тогда И чтение
+  // контекста, и все записи ИИ уходят именно в выбранную точку.
+  const activeWs = useMemo(() => getCurrentWorkspace?.() || {}, []);
+  const [points, setPoints] = useState([]);
+  const [targetWs, setTargetWs] = useState(() => activeWs || {});
+  const targetName = targetWs?.name || wsName;
+  // Ref всегда держит актуальный id выбранной точки — обёртки читают его «вживую»,
+  // поэтому даже устаревшее замыкание запишет в правильную точку.
+  const targetIdRef = useRef(activeWs?.dataAccountId || activeWs?.id || null);
+  useEffect(() => {
+    targetIdRef.current = targetWs?.dataAccountId || targetWs?.id || null;
+  }, [targetWs]);
+
+  // Централизованные обёртки: весь бизнес-ввод/вывод ИИ идёт через них, чтобы
+  // никакой запрос случайно не ушёл не в ту точку. Стабильны (deps []),
+  // читают точку из ref.
+  const targetOpts = useCallback(
+    () => (targetIdRef.current ? { dataAccountId: targetIdRef.current } : undefined),
+    []
+  );
+  const gGet = useCallback((url) => get(url, targetOpts()), [targetOpts]);
+  const gPost = useCallback((url, body) => post(url, body, targetOpts()), [targetOpts]);
+  const gDel = useCallback((url, body) => del(url, body, targetOpts()), [targetOpts]);
+
+  // Переключать точку может только владелец/админ владельца: у работника бэкенд
+  // (accountID) жёстко привязывает данные к его точке и игнорирует override —
+  // селектор был бы для него бутафорией, поэтому не показываем.
+  const myRole = String(getSession?.()?.role || "").toLowerCase();
+  const canSwitchPoints = !["worker", "branch_admin", "workspace"].includes(myRole);
+  const hasMultiPoints = canSwitchPoints && points.length > 1;
+
+  // Список точек владельца (все точки видны для переключения — без override).
+  useEffect(() => {
+    let alive = true;
+    get("/my-workspaces")
+      .then((list) => {
+        if (!alive || !Array.isArray(list)) return;
+        setPoints(list);
+        // Синхронизируем выбранную точку с полной записью из списка (name/id),
+        // но только если это та же точка без имени/данных — чтобы не перечитывать
+        // контекст лишний раз (эффект по targetWs) на старте.
+        const activeId = activeWs?.dataAccountId || activeWs?.id || null;
+        const match = list.find((w) => Number(w.dataAccountId || w.id) === Number(activeId));
+        if (match && !activeWs?.name) setTargetWs(match);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [activeWs]);
+
+  // Переключение точки: обновляем ref сразу (синхронно) — чтобы даже уже идущий
+  // запрос писал в новую точку — и перечитываем контекст через эффект по targetWs.
+  const switchTargetPoint = useCallback((ws) => {
+    if (!ws) return;
+    const sameId = Number(ws.dataAccountId || ws.id) === Number(targetIdRef.current);
+    targetIdRef.current = ws.dataAccountId || ws.id || null;
+    setTargetWs(ws);
+    if (!sameId) {
+      setMessages((p) => [...p, { role: "bot", text: `Точка переключена на «${ws.name}». Теперь читаю остатки и записываю продукты, расходы и кассу сюда.` }]);
+    }
+  }, []);
+
   const load = async () => {
     // Не запускаем 5 запросов к SQLite одновременно.
     // В dev/docker режиме это иногда давало net::ERR_CONNECTION_RESET,
     // потому что backend закрывал соединение при резком параллельном чтении.
     const safeGet = async (url) => {
       try {
-        const result = await get(url);
+        const result = await gGet(url);
         return Array.isArray(result) ? result : [];
       } catch {
         return [];
@@ -938,7 +1001,10 @@ export default function AIWarehousePage() {
     setProductCategories(categories);
   };
 
-  useEffect(() => { load(); }, []);
+  // Перечитываем контекст (склад/движения/типы) при смене выбранной точки —
+  // сопоставление товаров и все записи ИИ идут по данным именно этой точки.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [targetWs]);
 
   // Выход из полноэкранного помощника: назад / на главную / по Esc — чтобы не «застрять».
   const navigate = useNavigate();
@@ -995,7 +1061,7 @@ export default function AIWarehousePage() {
   }));
 
   const parsePurchase = async (textPart, currentItems, fullText = textPart) => {
-    const result = await post("/ai/warehouse/parse", { text: textPart, items: itemRefs(currentItems) });
+    const result = await gPost("/ai/warehouse/parse", { text: textPart, items: itemRefs(currentItems) });
     const form = formFromAIResult(result);
     const payload = payloadFromForm(form);
     const questions = result.questions || [];
@@ -1043,11 +1109,11 @@ export default function AIWarehousePage() {
     let savedItem;
     let batchId;
     if (safeMatched) {
-      const resp = await post(`/warehouse/items/${safeMatched.id}/purchase`, safePayload);
+      const resp = await gPost(`/warehouse/items/${safeMatched.id}/purchase`, safePayload);
       batchId = num(resp?.batchId) || 0;
       savedItem = resp?.id ? resp : safeMatched;
     } else {
-      savedItem = await post("/warehouse/items", safePayload);
+      savedItem = await gPost("/warehouse/items", safePayload);
       batchId = num(savedItem?.batchId) || 0;
     }
     if (savedItem?.id) setLastEntity({ type: "warehouse_item", id: savedItem.id, name: normalizeProductEntityName(savedItem.name || safePayload.name), item: savedItem });
@@ -1074,7 +1140,7 @@ export default function AIWarehousePage() {
     const comment = priced
       .map((x) => `${normalizeProductEntityName(x.matched?.name || x.payload.name)}: ${formatMoney(x.payload.price)}; ${x.computed.quantity} ${unitLabel(x.computed.unit)}${x.computed.detail ? ` (${x.computed.detail})` : ""}`)
       .join(" | ");
-    await post("/global-expenses", {
+    await gPost("/global-expenses", {
       category: "products",
       type: "Закупка сырья",
       name: priced.length === 1 ? `Закупка: ${normalizeProductEntityName(priced[0].matched?.name || priced[0].payload.name)}` : "Закупка сырья",
@@ -1094,7 +1160,7 @@ export default function AIWarehousePage() {
     }
     if (!window.confirm(`Отменить «${card.name}»? Позиция снимется со склада, расход уменьшится.`)) return;
     try {
-      const res = await del(`/warehouse/items/${card.itemId}/batches/${card.batchId}`);
+      const res = await gDel(`/warehouse/items/${card.itemId}/batches/${card.batchId}`);
       setMessages((prev) => prev.map((m, i) => (i !== msgIdx ? m : {
         ...m,
         cards: (m.cards || []).map((c, j) => (j === cardIdx ? { ...c, cancelled: true } : c)),
@@ -1105,6 +1171,8 @@ export default function AIWarehousePage() {
     } catch (e) {
       window.notify?.(e?.message || "Не удалось отменить", "error");
     }
+    // gDel стабильна (ref внутри), load читает свежий стейт — намеренно без deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const updatePendingPurchases = async (replyText) => {
@@ -1206,7 +1274,7 @@ export default function AIWarehousePage() {
     const expense = await savePurchaseExpense(saved, purchaseRef);
     setMessages((p) => [...p, {
       role: "bot",
-      text: `Готово, закрыла все уточнения${wsName ? ` на точке «${wsName}»` : ""}.\n${saved.map((x) => `• ${x.matched ? "прибавила к" : "создала"} “${x.matched?.name || x.payload.name}” — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n")}${expense ? `\n\nВ расходы записала закупку сырья: ${formatMoney(expense.total)}.` : ""}`,
+      text: `Готово, закрыла все уточнения${targetName ? ` на точке «${targetName}»` : ""}.\n${saved.map((x) => `• ${x.matched ? "прибавила к" : "создала"} “${x.matched?.name || x.payload.name}” — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n")}${expense ? `\n\nВ расходы записала закупку сырья: ${formatMoney(expense.total)}.` : ""}`,
       cards: saved.map((x) => x.card),
     }]);
     await load();
@@ -1237,7 +1305,7 @@ export default function AIWarehousePage() {
       return true;
     }
 
-    await post(`/warehouse/items/${target.id}/hide`, { hidden: wantHidden });
+    await gPost(`/warehouse/items/${target.id}/hide`, { hidden: wantHidden });
     setPendingVisibility(null);
     setLastEntity({ type: "warehouse_item", id: target.id, name: target.name, item: { ...target, hidden: wantHidden } });
     await load();
@@ -1258,13 +1326,13 @@ export default function AIWarehousePage() {
     let categories = productCategories;
     let type = types.find((x) => normalizeName(x.name) === normalizeName(cleanType));
     if (!type) {
-      type = await post("/product-types", { name: cleanType });
+      type = await gPost("/product-types", { name: cleanType });
       types = [...types, type];
       setProductTypes(types);
     }
     let category = categories.find((x) => normalizeName(x.name) === normalizeName(cleanCategory) && Number(x.typeId || x.type_id || 0) === Number(type.id));
     if (!category) {
-      category = await post("/product-categories", { name: cleanCategory, typeId: type.id, type_id: type.id, type: type.name });
+      category = await gPost("/product-categories", { name: cleanCategory, typeId: type.id, type_id: type.id, type: type.name });
       categories = [...categories, category];
       setProductCategories(categories);
     }
@@ -1286,7 +1354,7 @@ export default function AIWarehousePage() {
         existed.push(exists.name);
         continue;
       }
-      const saved = await post("/product-types", { name });
+      const saved = await gPost("/product-types", { name });
       created.push(saved?.name || name);
       types = [...types, saved || { name }];
     }
@@ -1381,7 +1449,7 @@ export default function AIWarehousePage() {
       }
 
       // 4. Всё остальное → Claude определяет намерение за 1 вызов
-      const intentRes = await post("/ai/intent", {
+      const intentRes = await gPost("/ai/intent", {
         text: rawText,
         items: itemRefs(items),
         menuTypes: safe_productTypes.map((x) => x.name),
@@ -1432,7 +1500,7 @@ export default function AIWarehousePage() {
           }
 
           if (prepared.length > 0) {
-            setPendingPurchaseConfirmation({ items: prepared, wsName });
+            setPendingPurchaseConfirmation({ items: prepared, wsName: targetName });
             const lines = prepared.map((x) => {
               const nm = normalizeProductEntityName(x.form?.name || x.payload?.name || x.result?.name || "товар");
               const tgt = x.matched ? `прибавить к «${normalizeProductEntityName(x.matched.name)}»` : "создать новый";
@@ -1440,7 +1508,7 @@ export default function AIWarehousePage() {
             }).join("\n");
             setMessages((prev) => [...prev, {
               role: "bot",
-              text: `Проверь закупку перед записью${wsName ? ` на точку «${wsName}»` : ""}:\n${lines}\n\nЗаписать? Нажми «Да, записать» или «Отмена».`,
+              text: `Проверь закупку перед записью${targetName ? ` на точку «${targetName}»` : ""}:\n${lines}\n\nЗаписать? Нажми «Да, записать» или «Отмена».`,
             }]);
           } else if (waiting.length === 0) {
             setMessages((prev) => [...prev, { role: "bot", text: "Не понял что купили. Напиши например: «апельсин 3кг за 400р»" }]);
@@ -1454,8 +1522,8 @@ export default function AIWarehousePage() {
           const qs = (exp.questions || []).join("\n");
           if (qs) { setMessages((p) => [...p, { role: "bot", text: qs }]); break; }
           if (!exp.name || num(exp.amount) <= 0) { setMessages((p) => [...p, { role: "bot", text: "Не понял расход. Напиши что и сколько." }]); break; }
-          await post("/global-expenses", { category: exp.category || "household", type: exp.type || "Прочее", name: exp.name, amount: num(exp.amount), comment: exp.comment || "" });
-          setMessages((p) => [...p, { role: "bot", text: `Записала расход: ${exp.name} — ${formatMoney(exp.amount)}.` }]);
+          await gPost("/global-expenses", { category: exp.category || "household", type: exp.type || "Прочее", name: exp.name, amount: num(exp.amount), comment: exp.comment || "" });
+          setMessages((p) => [...p, { role: "bot", text: `Записала расход на точку «${targetName}»: ${exp.name} — ${formatMoney(exp.amount)}.` }]);
           await load();
           break;
         }
@@ -1467,8 +1535,8 @@ export default function AIWarehousePage() {
           if (qs) { setMessages((p) => [...p, { role: "bot", text: qs }]); break; }
           if (num(cash.amount) <= 0) { setMessages((p) => [...p, { role: "bot", text: "Не понял сумму. Напиши, например: «пополни кассу на 5000»." }]); break; }
           try {
-            await post("/finance/owner", { kind: "contribution", amount: num(cash.amount), note: cash.note || "Пополнение кассы (ИИ)" });
-            setMessages((p) => [...p, { role: "bot", text: `Готово — пополнила кассу на ${formatMoney(cash.amount)}${cash.note ? ` (${cash.note})` : ""}. Видно в «Расходы → Расчёты с владельцем» и в финотчёте.` }]);
+            await gPost("/finance/owner", { kind: "contribution", amount: num(cash.amount), note: cash.note || "Пополнение кассы (ИИ)" });
+            setMessages((p) => [...p, { role: "bot", text: `Готово — пополнила кассу точки «${targetName}» на ${formatMoney(cash.amount)}${cash.note ? ` (${cash.note})` : ""}. Видно в «Расходы → Расчёты с владельцем» и в финотчёте.` }]);
             await load();
           } catch (e) {
             setMessages((p) => [...p, { role: "bot", text: e?.message || "Не получилось пополнить кассу." }]);
@@ -1486,8 +1554,8 @@ export default function AIWarehousePage() {
             warehouseItemId: r.warehouseItemId, warehouse_item_id: r.warehouseItemId,
             quantity: num(r.quantity), quantityUnit: r.unit, quantity_unit: r.unit,
           })).filter((r) => r.warehouseItemId > 0 && r.quantity > 0);
-          await post("/menu-products", { name: menu.name, price: num(menu.price), type: type.name, typeId: type.id, type_id: type.id, category: category.name, categoryId: category.id, category_id: category.id, recipe });
-          setMessages((p) => [...p, { role: "bot", text: `Добавила в меню: «${menu.name}» за ${formatMoney(menu.price)}.` }]);
+          await gPost("/menu-products", { name: menu.name, price: num(menu.price), type: type.name, typeId: type.id, type_id: type.id, category: category.name, categoryId: category.id, category_id: category.id, recipe });
+          setMessages((p) => [...p, { role: "bot", text: `Добавила в меню точки «${targetName}»: «${menu.name}» за ${formatMoney(menu.price)}.` }]);
           await load();
           break;
         }
@@ -1520,7 +1588,7 @@ export default function AIWarehousePage() {
         case "question":
         case "clarify":
         default: {
-          const res = await post("/ai/warehouse/ask", {
+          const res = await gPost("/ai/warehouse/ask", {
             text: rawText,
             history: makeAIHistory(messages, rawText),
             memory: {
@@ -1575,8 +1643,8 @@ export default function AIWarehousePage() {
                   <div className="flex min-w-0 items-center gap-1.5">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
                     <p className="shrink-0 text-[11px] font-bold text-emerald-300">Онлайн</p>
-                    {wsName && (
-                      <span className="min-w-0 truncate text-[11px] font-bold text-slate-400">· 📍 {wsName}</span>
+                    {targetName && (
+                      <span className="min-w-0 truncate text-[11px] font-bold text-slate-400">· 📍 {targetName}</span>
                     )}
                   </div>
                 </div>
@@ -1603,6 +1671,34 @@ export default function AIWarehousePage() {
                 </button>
               </div>
             </div>
+
+            {hasMultiPoints && (
+              <div className="flex shrink-0 items-center gap-2 border-b border-white/10 bg-slate-950/40 px-3 py-2">
+                <span className="shrink-0 text-[11px] font-black uppercase tracking-wide text-slate-500">Точка</span>
+                <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto scrollbar-none" style={{ scrollbarWidth: "none" }}>
+                  {points.map((p) => {
+                    const pid = p.dataAccountId || p.id;
+                    const active = Number(pid) === Number(targetWs?.dataAccountId || targetWs?.id);
+                    return (
+                      <button
+                        key={pid}
+                        type="button"
+                        onClick={() => switchTargetPoint(p)}
+                        aria-pressed={active}
+                        title={`Записывать в точку «${p.name}»`}
+                        className={`flex shrink-0 items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-black transition active:scale-95 ${
+                          active
+                            ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-600/30"
+                            : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                        }`}
+                      >
+                        📍 {p.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div
               ref={messagesRef}
