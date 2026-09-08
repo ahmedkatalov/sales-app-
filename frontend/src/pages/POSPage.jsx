@@ -1233,6 +1233,13 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 </div>
               </div>
 
+              {num(cashShift.debtCash) > 0 && (
+                <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.06] px-4 py-3">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">Оплата долгов</p>
+                  <p className="mt-1 text-2xl font-black tabular-nums text-emerald-300">+{formatMoney(cashShift.debtCash)}</p>
+                </div>
+              )}
+
               {(num(cashShift.cashExpenses) > 0 || num(cashShift.ownerCash) !== 0) && (
                 <p className="text-center text-[11px] font-bold text-slate-500">
                   {num(cashShift.cashExpenses) > 0 ? `Учтены расходы из кассы −${formatMoney(cashShift.cashExpenses)}` : ""}

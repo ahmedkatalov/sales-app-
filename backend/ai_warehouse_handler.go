@@ -1211,7 +1211,12 @@ func queryRecentSales(accID, limit int) []map[string]any {
 }
 
 func queryDebtCustomers(accID, limit int) []map[string]any {
-	rows, err := db.Query(`SELECT dc.id, dc.name, IFNULL(SUM(CASE WHEN d.status='open' THEN d.amount ELSE 0 END),0), COUNT(CASE WHEN d.status='open' THEN 1 END) FROM debt_customers dc LEFT JOIN debts d ON d.customer_id=dc.id AND d.account_id=dc.account_id WHERE dc.account_id=? GROUP BY dc.id, dc.name ORDER BY SUM(CASE WHEN d.status='open' THEN d.amount ELSE 0 END) DESC LIMIT ?`, accID, limit)
+	// Остаток = открытые долги − платежи (частичные погашения учитываются).
+	rows, err := db.Query(`SELECT dc.id, dc.name,
+		IFNULL((SELECT SUM(d.amount) FROM debts d WHERE d.customer_id=dc.id AND d.account_id=dc.account_id AND d.status='open'),0)
+		- IFNULL((SELECT SUM(p.amount) FROM debt_payments p WHERE p.customer_id=dc.id AND p.account_id=dc.account_id),0) AS remaining,
+		(SELECT COUNT(*) FROM debts d WHERE d.customer_id=dc.id AND d.account_id=dc.account_id AND d.status='open')
+		FROM debt_customers dc WHERE dc.account_id=? ORDER BY remaining DESC LIMIT ?`, accID, limit)
 	if err != nil {
 		return nil
 	}
@@ -1222,6 +1227,9 @@ func queryDebtCustomers(accID, limit int) []map[string]any {
 		var name string
 		var amount float64
 		if rows.Scan(&id, &name, &amount, &cnt) == nil {
+			if amount < 0 {
+				amount = 0
+			}
 			out = append(out, map[string]any{"id": id, "name": name, "openAmount": amount, "openCount": cnt})
 		}
 	}

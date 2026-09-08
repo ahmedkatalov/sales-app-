@@ -163,6 +163,9 @@ func main() {
 	auth.GET("/debts", getDebts)
 	auth.POST("/debts/:id/close", closeDebt)
 	auth.DELETE("/debts/history", clearDebtHistory)
+	auth.GET("/debt-payments", getDebtPayments)
+	auth.POST("/debt-payments", createDebtPayment)
+	auth.DELETE("/debt-payments/:id", deleteDebtPayment)
 
 	auth.GET("/global-expenses", getGlobalExpenses)
 	auth.POST("/global-expenses", createGlobalExpense)

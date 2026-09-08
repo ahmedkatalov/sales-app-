@@ -141,7 +141,9 @@ func getFinanceReport(c *gin.Context) {
 	contribP := periodSum(`SELECT IFNULL(SUM(amount),0) FROM owner_ledger WHERE account_id=? AND kind='contribution'`, "created_at")
 	reimbP := periodSum(`SELECT IFNULL(SUM(amount),0) FROM owner_ledger WHERE account_id=? AND kind='reimbursement'`, "created_at")
 	withdrawP := periodSum(`SELECT IFNULL(SUM(amount),0) FROM owner_ledger WHERE account_id=? AND kind='withdrawal'`, "created_at")
-	cashIn := revenueCash + contribP
+	// Погашения долгов клиентов наличными за период — это приход налички в кассу.
+	debtPaidCashP := periodSum(`SELECT IFNULL(SUM(amount),0) FROM debt_payments WHERE account_id=? AND method='cash'`, "created_at")
+	cashIn := revenueCash + contribP + debtPaidCashP
 	cashOut := expenseCash + reimbP + withdrawP
 	netCash := cashIn - cashOut
 
@@ -152,14 +154,23 @@ func getFinanceReport(c *gin.Context) {
 	withdrawUpto := uptoSum(`SELECT IFNULL(SUM(amount),0) FROM owner_ledger WHERE account_id=? AND kind='withdrawal'`, "created_at")
 	cashSalesUpto := uptoSum(`SELECT IFNULL(SUM(total),0) FROM sales WHERE account_id=? AND payment_type='cash'`, "created_at")
 	cashExpUpto := uptoSum(`SELECT IFNULL(SUM(amount),0) FROM global_expenses WHERE account_id=? AND IFNULL(payment_source,'cash')='cash'`, "created_at")
+	// Погашения долгов: наличные → в кассу (cashNow), переводы → в банк (bank).
+	debtPaidCashUpto := uptoSum(`SELECT IFNULL(SUM(amount),0) FROM debt_payments WHERE account_id=? AND method='cash'`, "created_at")
+	debtPaidBankUpto := uptoSum(`SELECT IFNULL(SUM(amount),0) FROM debt_payments WHERE account_id=? AND method='transfer'`, "created_at")
 
 	owedToOwner := op.owedOwner + ownerExpUpto + contribUpto - reimbUpto
-	cashNow := op.cash + cashSalesUpto + contribUpto - cashExpUpto - reimbUpto - withdrawUpto
+	cashNow := op.cash + cashSalesUpto + debtPaidCashUpto + contribUpto - cashExpUpto - reimbUpto - withdrawUpto
 
 	// Текущие живые значения: остаток долгов клиентов и стоимость склада.
-	var receivables, inventoryLive float64
+	// Остаток долгов = открытые долги − все погашения (частичные тоже).
+	var receivables, debtsPaidAll, inventoryLive float64
 	var invCount int
 	_ = db.QueryRow(`SELECT IFNULL(SUM(amount),0) FROM debts WHERE account_id=? AND status='open'`, accID).Scan(&receivables)
+	_ = db.QueryRow(`SELECT IFNULL(SUM(amount),0) FROM debt_payments WHERE account_id=?`, accID).Scan(&debtsPaidAll)
+	receivables -= debtsPaidAll
+	if receivables < 0 {
+		receivables = 0
+	}
 	_ = db.QueryRow(`SELECT COUNT(*), IFNULL(SUM(quantity*unit_cost),0) FROM warehouse_items WHERE account_id=? AND IFNULL(hidden,0)=0`, accID).Scan(&invCount, &inventoryLive)
 	// Склад вообще не заведён в приложении → берём стартовую оценку. Если товары есть, но
 	// остаток честно равен 0 — оставляем 0 (не подменяем стартовым значением).
@@ -167,7 +178,7 @@ func getFinanceReport(c *gin.Context) {
 		inventoryLive = op.inventory
 	}
 	payables := op.supDebts
-	bank := op.bank
+	bank := op.bank + debtPaidBankUpto
 	netPosition := cashNow + bank + inventoryLive + receivables - payables - owedToOwner
 
 	c.JSON(http.StatusOK, gin.H{

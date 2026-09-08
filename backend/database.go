@@ -464,6 +464,22 @@ func createTables() {
 		`ALTER TABLE stock_batches ADD COLUMN purchase_ref TEXT DEFAULT ''`,
 		`ALTER TABLE global_expenses ADD COLUMN purchase_ref TEXT DEFAULT ''`,
 		`CREATE INDEX IF NOT EXISTS idx_batches_ref ON stock_batches(account_id, purchase_ref)`,
+		// Погашение долгов клиентов: отдельный журнал платежей (частичные, с датой,
+		// нал/перевод). Долг гасится платежами; строки debts НЕ переводятся в 'paid',
+		// остаток = сумма открытых долгов − сумма платежей. Отмена = удаление платежа.
+		`CREATE TABLE IF NOT EXISTS debt_payments (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			account_id INTEGER DEFAULT 1,
+			customer_id INTEGER NOT NULL,
+			amount REAL DEFAULT 0,
+			method TEXT DEFAULT 'cash',
+			note TEXT DEFAULT '',
+			created_by TEXT DEFAULT '',
+			created_at TEXT
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_debt_payments_acc ON debt_payments(account_id, customer_id)`,
+		// Наличные погашения долгов в открытой смене увеличивают ожидаемую наличность.
+		`ALTER TABLE cash_shifts ADD COLUMN debt_cash REAL DEFAULT 0`,
 	}
 
 	for _, q := range migrations {

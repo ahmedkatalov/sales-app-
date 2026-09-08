@@ -212,6 +212,17 @@ type DebtCustomer struct {
 	CreatedAt string  `json:"createdAt"`
 }
 
+type DebtPayment struct {
+	ID         int     `json:"id"`
+	AccountID  int     `json:"accountId"`
+	CustomerID int     `json:"customerId"`
+	Amount     float64 `json:"amount"`
+	Method     string  `json:"method"` // cash | transfer
+	Note       string  `json:"note"`
+	CreatedBy  string  `json:"createdBy"`
+	CreatedAt  string  `json:"createdAt"`
+}
+
 type DebtRecord struct {
 	ID           int        `json:"id"`
 	AccountID    int        `json:"accountId"`

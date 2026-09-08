@@ -33,7 +33,7 @@ func TestDeleteWorkspaceDataTxScoping(t *testing.T) {
 	acctTables := []string{
 		"expenses", "pending_sale_reservations", "pending_sales", "stock_batches",
 		"warehouse_movements", "product_recipes", "warehouse_items", "menu_products",
-		"product_categories", "product_types", "debts", "debt_customers",
+		"product_categories", "product_types", "debts", "debt_customers", "debt_payments",
 		"cash_movements", "cash_shifts", "global_expenses", "employees", "cards",
 	}
 	for _, tb := range acctTables {
