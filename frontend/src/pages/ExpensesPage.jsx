@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Banknote, CreditCard, User, Tag, Settings, Hash, List, Trash2 } from "lucide-react";
 import { del, get, post, put } from "../api";
 import Modal from "../components/Modal";
+import DatePicker from "../components/DatePicker";
 import { formatMoney, localISO, money, num } from "../utils/format";
 
 const today = () => localISO();
@@ -302,21 +303,17 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
     <div className="pb-nav text-slate-100 sm:pb-10">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_0%,rgba(37,99,235,.22),transparent_30%),radial-gradient(circle_at_88%_8%,rgba(124,58,237,.22),transparent_30%),linear-gradient(135deg,#050914_0%,#071128_45%,#10194a_100%)]" />
 
-      <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div className="max-w-3xl">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-300 shadow-[0_0_25px_rgba(37,99,235,.22)]">
-            <span className="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_15px_rgba(96,165,250,.9)]" />
-            Расходы
-          </div>
-          <h2 className="text-4xl font-black leading-none text-white drop-shadow sm:text-5xl">
-            Расходы точки
-          </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-            Бытовые расходы отдельно, продукты отдельно. Типы продуктов берутся из меню.
-          </p>
+      <div className="mb-6 max-w-3xl">
+        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-300 shadow-[0_0_25px_rgba(37,99,235,.22)]">
+          <span className="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_15px_rgba(96,165,250,.9)]" />
+          Расходы
         </div>
-
-    
+        <h2 className="text-3xl font-black leading-none text-white drop-shadow sm:text-5xl">
+          Расходы точки
+        </h2>
+        <p className="mt-2.5 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+          Бытовые расходы отдельно, продукты отдельно. Типы продуктов берутся из меню.
+        </p>
       </div>
 
       {error && (
@@ -384,23 +381,13 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           <div className="border-t border-white/10 px-4 py-4 sm:px-5">
             {/* Даты от/до */}
             <div className="mb-4 grid gap-3 sm:grid-cols-2">
-              <label>
+              <label className="block">
                 <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">От даты</span>
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
-                />
+                <DatePicker value={fromDate} onChange={(v) => setFromDate(v)} placeholder="Дата с" />
               </label>
-              <label>
+              <label className="block">
                 <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">До даты</span>
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
-                />
+                <DatePicker value={toDate} onChange={(v) => setToDate(v)} placeholder="Дата по" align="right" />
               </label>
             </div>
 
