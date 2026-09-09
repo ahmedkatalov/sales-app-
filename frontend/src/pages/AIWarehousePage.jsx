@@ -937,6 +937,11 @@ export default function AIWarehousePage() {
   const safe_productCategories = Array.isArray(productCategories) ? productCategories : [];
   const bottomRef = useRef(null);
   const messagesRef = useRef(null);
+  // Фото накладной: прикреплённое в поле ввода фото (data URL) + флаг распознавания.
+  // purchasePhotoRef несёт фото сквозь поток закупки, чтобы прицепить его к расходу.
+  const [attachedPhoto, setAttachedPhoto] = useState(null);
+  const [photoParsing, setPhotoParsing] = useState(false);
+  const purchasePhotoRef = useRef(null);
 
   // ── Выбор точки (Нур / Меренда / …) прямо в чате ──────────────────────────
   // Обе точки равнозначны — «главной» нет. По умолчанию берём текущую активную,
@@ -1178,7 +1183,16 @@ export default function AIWarehousePage() {
       comment,
       purchaseRef,
     });
-    return { total, comment, id: created?.id };
+    // Фото накладной (если закупку завели с фото) — сразу цепляем к расходу.
+    let photoAttached = false;
+    if (purchasePhotoRef.current && created?.id) {
+      try {
+        await gPost(`/global-expenses/${created.id}/photo`, { photo: purchasePhotoRef.current });
+        photoAttached = true;
+      } catch { /* фото не критично для закупки */ }
+      purchasePhotoRef.current = null;
+    }
+    return { total, comment, id: created?.id, photoAttached };
   };
 
   // Выборочная отмена одной позиции прямо из карточки ответа ИИ: снимает её со
@@ -1328,8 +1342,8 @@ export default function AIWarehousePage() {
     const expense = await savePurchaseExpense(saved, purchaseRef);
     setMessages((p) => [...p, {
       role: "bot",
-      text: `Готово, закрыла все уточнения${targetName ? ` на точке «${targetName}»` : ""}.\n${saved.map((x) => `• ${x.matched ? "прибавила к" : "создала"} “${x.matched?.name || x.payload.name}” — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n")}${expense ? `\n\nВ расходы записала закупку сырья: ${formatMoney(expense.total)}. Есть фото накладной?` : ""}`,
-      cards: [...saved.map((x) => x.card), ...(expense?.id ? [{ kind: "photoPrompt", expenseId: expense.id }] : [])],
+      text: `Готово, закрыла все уточнения${targetName ? ` на точке «${targetName}»` : ""}.\n${saved.map((x) => `• ${x.matched ? "прибавила к" : "создала"} “${x.matched?.name || x.payload.name}” — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n")}${expense ? `\n\nВ расходы записала закупку сырья: ${formatMoney(expense.total)}.${expense.photoAttached ? " Фото накладной прикреплено." : " Есть фото накладной?"}` : ""}`,
+      cards: [...saved.map((x) => x.card), ...(expense?.id && !expense.photoAttached ? [{ kind: "photoPrompt", expenseId: expense.id }] : [])],
     }]);
     await load();
   };
@@ -1434,8 +1448,8 @@ export default function AIWarehousePage() {
       const lines = saved.map((x) => `${x.matched ? "прибавила к" : "создала"} «${normalizeProductEntityName(x.matched?.name || x.payload.name)}» — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n");
       setMessages((prev) => [...prev, {
         role: "bot",
-        text: `Готово, записала${pending.wsName || wsName ? ` на точке «${pending.wsName || wsName}»` : ""}.\n${lines}${expense ? `\n\nЗакупка записана в расходы: ${formatMoney(expense.total)}. Есть фото накладной?` : ""}`,
-        cards: [...saved.map((x) => x.card), ...(expense?.id ? [{ kind: "photoPrompt", expenseId: expense.id }] : [])],
+        text: `Готово, записала${pending.wsName || wsName ? ` на точке «${pending.wsName || wsName}»` : ""}.\n${lines}${expense ? `\n\nЗакупка записана в расходы: ${formatMoney(expense.total)}.${expense.photoAttached ? " Фото накладной прикреплено." : " Есть фото накладной?"}` : ""}`,
+        cards: [...saved.map((x) => x.card), ...(expense?.id && !expense.photoAttached ? [{ kind: "photoPrompt", expenseId: expense.id }] : [])],
       }]);
       await load();
     } catch (e) {
@@ -1454,12 +1468,83 @@ export default function AIWarehousePage() {
     setMessages((prev) => [...prev, { role: "bot", text: "Ок, отменила закупку — ничего не записала." }]);
   };
 
+  // Общий обработчик распознанных позиций закупки (из текста ИЛИ из фото накладной):
+  // готовые — в подтверждение, неполные — в уточнения.
+  const runPurchaseItems = (parsedItems, originalText) => {
+    if (!parsedItems.length) {
+      setMessages((p) => [...p, { role: "bot", text: "Не понял что купили. Напиши например: «апельсин 3кг за 400р»" }]);
+      return;
+    }
+    const waiting = parsedItems.filter((p) => (p.questions || []).length > 0);
+    const ready = parsedItems.filter((p) => !(p.questions || []).length && p.name && num(p.price) > 0);
+    const prepared = ready.map((p) => {
+      const form = formFromAIResult(p);
+      const matched = p.matchedItemId
+        ? safe_items.find((i) => Number(i.id) === Number(p.matchedItemId))
+        : safe_items.find((i) => normalizeProductEntityName(i.name || "") === normalizeProductEntityName(p.name || ""));
+      return { originalText, result: p, form, payload: payloadFromForm(form), computed: computeWarehouseAmount(form), matched: matched || null, questions: [] };
+    });
+    if (waiting.length > 0) {
+      setPendingItems(waiting.map((p) => ({
+        originalText, result: p,
+        form: formFromAIResult(p), payload: payloadFromForm(formFromAIResult(p)),
+        computed: computeWarehouseAmount(formFromAIResult(p)),
+        matched: null, questions: p.questions || [],
+      })));
+      const qs = waiting.map((p, i) => `${i + 1}) ${(p.questions || []).join("; ")}`).join("\n");
+      setMessages((prev) => [...prev, { role: "bot", text: `Нужно уточнить:\n${qs}` }]);
+    }
+    if (prepared.length > 0) {
+      setPendingPurchaseConfirmation({ items: prepared, wsName: targetName });
+      const lines = prepared.map((x) => {
+        const nm = normalizeProductEntityName(x.form?.name || x.payload?.name || x.result?.name || "товар");
+        const tgt = x.matched ? `прибавить к «${normalizeProductEntityName(x.matched.name)}»` : "создать новый";
+        return `• ${nm} — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""} (${tgt})`;
+      }).join("\n");
+      setMessages((prev) => [...prev, { role: "bot", text: `Проверь закупку перед записью${targetName ? ` на точку «${targetName}»` : ""}:\n${lines}\n\nЗаписать? Нажми «Да, записать» или «Отмена».` }]);
+    } else if (waiting.length === 0) {
+      setMessages((prev) => [...prev, { role: "bot", text: "Не понял что купили. Напиши например: «апельсин 3кг за 400р»" }]);
+    }
+  };
+
+  // Фото накладной → распознавание → тот же поток закупки. Фото цепляем к расходу.
+  const sendPhotoPurchase = async (hint) => {
+    const photo = attachedPhoto;
+    if (!photo) return;
+    setAttachedPhoto(null);
+    setInput("");
+    setLoading(true);
+    setMessages((p) => [...p, { role: "user", text: hint ? `📷 Накладная — ${hint}` : "📷 Накладная (фото)" }]);
+    try {
+      const res = await gPost("/ai/warehouse/parse-photo", { image: photo, hint: hint || "", items: itemRefs(items) });
+      if (!res) return;
+      const parsedItems = res.items || [];
+      if (!parsedItems.length) {
+        setMessages((p) => [...p, { role: "bot", text: res.note || "Не смогла разобрать накладную. Сфотографируйте чётче или впишите вручную." }]);
+        return;
+      }
+      purchasePhotoRef.current = photo; // прикрепим к расходу после сохранения
+      setMessages((p) => [...p, { role: "bot", text: `Распознала накладную${res.total ? ` (итого ${formatMoney(res.total)})` : ""}. Проверяю позиции…` }]);
+      runPurchaseItems(parsedItems, "фото накладной");
+    } catch (e) {
+      setMessages((p) => [...p, { role: "bot", text: e?.message || "Не получилось распознать фото. Попробуйте ещё раз." }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ─────────────────────────────────────────────────────────────────────────
   // send() — Claude определяет намерение, фронт выполняет действие
   // ─────────────────────────────────────────────────────────────────────────
   const send = async (overrideText) => {
+    if (loading) return;
     const rawText = (typeof overrideText === "string" ? overrideText : input).trim();
-    if (!rawText || loading) return;
+    // Прикреплено фото накладной — распознаём его (текст, если есть, идёт подсказкой).
+    if (attachedPhoto && typeof overrideText !== "string") {
+      await sendPhotoPurchase(rawText);
+      return;
+    }
+    if (!rawText) return;
 
     setInput("");
     setLoading(true);
@@ -1517,56 +1602,7 @@ export default function AIWarehousePage() {
       switch (intentRes.intent) {
 
         case "purchase": {
-          const parsedItems = intentRes.items || [];
-          if (!parsedItems.length) {
-            setMessages((p) => [...p, { role: "bot", text: "Не понял что купили. Напиши например: «апельсин 3кг за 400р»" }]);
-            break;
-          }
-          const waiting = parsedItems.filter((p) => (p.questions || []).length > 0);
-          const ready = parsedItems.filter((p) => !(p.questions || []).length && p.name && num(p.price) > 0);
-
-          // Готовые позиции НЕ коммитим сразу — собираем превью и ждём явного «Да».
-          const prepared = ready.map((p) => {
-            const form = formFromAIResult(p);
-            const matched = p.matchedItemId
-              ? safe_items.find((i) => Number(i.id) === Number(p.matchedItemId))
-              : safe_items.find((i) => normalizeProductEntityName(i.name || "") === normalizeProductEntityName(p.name || ""));
-            return {
-              originalText: rawText,
-              result: p,
-              form,
-              payload: payloadFromForm(form),
-              computed: computeWarehouseAmount(form),
-              matched: matched || null,
-              questions: [],
-            };
-          });
-
-          if (waiting.length > 0) {
-            setPendingItems(waiting.map((p) => ({
-              originalText: rawText, result: p,
-              form: formFromAIResult(p), payload: payloadFromForm(formFromAIResult(p)),
-              computed: computeWarehouseAmount(formFromAIResult(p)),
-              matched: null, questions: p.questions || [],
-            })));
-            const qs = waiting.map((p, i) => `${i + 1}) ${(p.questions || []).join("; ")}`).join("\n");
-            setMessages((prev) => [...prev, { role: "bot", text: `Нужно уточнить:\n${qs}` }]);
-          }
-
-          if (prepared.length > 0) {
-            setPendingPurchaseConfirmation({ items: prepared, wsName: targetName });
-            const lines = prepared.map((x) => {
-              const nm = normalizeProductEntityName(x.form?.name || x.payload?.name || x.result?.name || "товар");
-              const tgt = x.matched ? `прибавить к «${normalizeProductEntityName(x.matched.name)}»` : "создать новый";
-              return `• ${nm} — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""} (${tgt})`;
-            }).join("\n");
-            setMessages((prev) => [...prev, {
-              role: "bot",
-              text: `Проверь закупку перед записью${targetName ? ` на точку «${targetName}»` : ""}:\n${lines}\n\nЗаписать? Нажми «Да, записать» или «Отмена».`,
-            }]);
-          } else if (waiting.length === 0) {
-            setMessages((prev) => [...prev, { role: "bot", text: "Не понял что купили. Напиши например: «апельсин 3кг за 400р»" }]);
-          }
+          runPurchaseItems(intentRes.items || [], rawText);
           break;
         }
 
@@ -1845,7 +1881,28 @@ export default function AIWarehousePage() {
                   </button>
                 ))}
               </div>
+              {attachedPhoto && (
+                <div className="mb-2 flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2">
+                  <img src={attachedPhoto} alt="Накладная" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                  <span className="min-w-0 flex-1 text-[11px] font-black text-blue-200">Фото накладной готово — нажмите «Отправить», чтобы распознать</span>
+                  <button type="button" onClick={() => setAttachedPhoto(null)} aria-label="Убрать фото"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-red-300"><X size={14} /></button>
+                </div>
+              )}
               <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900 px-3 py-2 transition focus-within:border-blue-400/50 focus-within:ring-4 focus-within:ring-blue-500/10">
+                <label title="Прикрепить фото накладной/чека"
+                  className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 ${(loading || photoParsing) ? "pointer-events-none opacity-50" : ""}`}>
+                  {photoParsing ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Paperclip size={18} strokeWidth={2.2} />}
+                  <input type="file" accept="image/*" capture="environment" hidden disabled={loading || photoParsing}
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0]; e.target.value = "";
+                      if (!f) return;
+                      setPhotoParsing(true);
+                      try { setAttachedPhoto(await compressImageToDataURL(f)); }
+                      catch (err) { window.notify?.(err?.message || "Не удалось обработать фото", "error"); }
+                      finally { setPhotoParsing(false); }
+                    }} />
+                </label>
                 <textarea
                   value={input}
                   onChange={(e) => {
@@ -1859,7 +1916,7 @@ export default function AIWarehousePage() {
                       send();
                     }
                   }}
-                  placeholder="Напиши закупку, расход или вопрос..."
+                  placeholder={attachedPhoto ? "Комментарий к накладной (необязательно)…" : "Напиши закупку, расход или 📎 прикрепи фото накладной…"}
                   rows={1}
                   className="flex-1 resize-none bg-transparent text-sm font-medium leading-5 text-white outline-none placeholder:text-slate-500 focus:outline-none focus-visible:outline-none"
                   style={{minHeight: "24px", maxHeight: "120px"}}

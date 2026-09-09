@@ -118,6 +118,7 @@ func main() {
 	auth.POST("/warehouse/items", createWarehouseItem)
 	auth.GET("/warehouse/items/similar", getSimilarWarehouseItems)
 	auth.POST("/ai/warehouse/parse", parseWarehousePurchaseAI)
+	auth.POST("/ai/warehouse/parse-photo", parseReceiptPhotoAI)
 	auth.POST("/ai/intent", detectIntent)
 	auth.POST("/ai/warehouse/ask", askWarehouseAI)
 	auth.POST("/ai/expense/parse", parseExpenseAI)
