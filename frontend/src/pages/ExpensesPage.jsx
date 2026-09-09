@@ -876,7 +876,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               ) : (
                 <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-slate-950/40 px-4 py-4 font-black text-slate-300 transition hover:bg-white/5">
                   <Camera size={18} strokeWidth={2.2} /> {photoBusy ? "Обрабатываю…" : "Прикрепить фото"}
-                  <input type="file" accept="image/*" capture="environment" hidden disabled={photoBusy}
+                  <input type="file" accept="image/*" hidden disabled={photoBusy}
                     onChange={(e) => { pickExpensePhoto(e.target.files?.[0]); e.target.value = ""; }} />
                 </label>
               )}

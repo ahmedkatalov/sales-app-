@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { RefreshCw, X, Send, FileDown, Paperclip } from "lucide-react";
+import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus } from "lucide-react";
 import { del, get, getCurrentWorkspace, getSession, post } from "../api";
 import { formatMoney, num } from "../utils/format";
 import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
@@ -850,7 +850,7 @@ const Message = memo(function Message({ msg, idx, onCancelCard, onAttachPhoto, o
                       <div className="flex gap-2">
                         <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-500/15 px-3 py-1.5 text-[11px] font-black text-blue-200 transition hover:bg-blue-500/25 active:scale-95 ${card.uploading ? "pointer-events-none opacity-60" : ""}`}>
                           <Paperclip size={12} strokeWidth={2.6} /> {card.uploading ? "Загружаю…" : "Прикрепить фото"}
-                          <input type="file" accept="image/*" capture="environment" hidden
+                          <input type="file" accept="image/*" hidden
                             onChange={(e) => { onAttachPhoto?.(idx, i, card, e.target.files?.[0]); e.target.value = ""; }} />
                         </label>
                         <button type="button" onClick={() => onDismissPhoto?.(idx, i)}
@@ -1889,11 +1889,11 @@ export default function AIWarehousePage() {
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-red-300"><X size={14} /></button>
                 </div>
               )}
-              <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-slate-900 px-3 py-2 transition focus-within:border-blue-400/50 focus-within:ring-4 focus-within:ring-blue-500/10">
-                <label title="Прикрепить фото накладной/чека"
-                  className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 ${(loading || photoParsing) ? "pointer-events-none opacity-50" : ""}`}>
-                  {photoParsing ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Paperclip size={18} strokeWidth={2.2} />}
-                  <input type="file" accept="image/*" capture="environment" hidden disabled={loading || photoParsing}
+              <div className="flex items-end gap-1.5 rounded-2xl border border-white/10 bg-slate-900 px-2.5 py-2 transition focus-within:border-blue-400/50 focus-within:ring-4 focus-within:ring-blue-500/10">
+                <label title="Фото накладной — камера или галерея"
+                  className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-white/10 hover:text-blue-300 ${(loading || photoParsing) ? "pointer-events-none opacity-50" : ""}`}>
+                  {photoParsing ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <ImagePlus size={20} strokeWidth={2.2} />}
+                  <input type="file" accept="image/*" hidden disabled={loading || photoParsing}
                     onChange={async (e) => {
                       const f = e.target.files?.[0]; e.target.value = "";
                       if (!f) return;
@@ -1916,7 +1916,7 @@ export default function AIWarehousePage() {
                       send();
                     }
                   }}
-                  placeholder={attachedPhoto ? "Комментарий к накладной (необязательно)…" : "Напиши закупку, расход или 📎 прикрепи фото накладной…"}
+                  placeholder={attachedPhoto ? "Комментарий к накладной (необязательно)…" : "Напиши или прикрепи фото накладной…"}
                   rows={1}
                   className="flex-1 resize-none bg-transparent text-sm font-medium leading-5 text-white outline-none placeholder:text-slate-500 focus:outline-none focus-visible:outline-none"
                   style={{minHeight: "24px", maxHeight: "120px"}}
@@ -1926,7 +1926,7 @@ export default function AIWarehousePage() {
                   disabled={loading}
                   aria-label="Отправить"
                   title="Отправить"
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 font-black text-white shadow-lg transition active:scale-95 disabled:opacity-50"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 font-black text-white shadow-lg outline-none transition focus:outline-none focus-visible:outline-none active:scale-95 disabled:opacity-50"
                 >
                   {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Send size={18} />}
                 </button>
