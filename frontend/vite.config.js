@@ -40,6 +40,10 @@ export default defineConfig({
       '/api': {
         target: 'http://backend:3000',
         changeOrigin: true,
+        // Vision-распознавание фото накладной может отвечать дольше дефолта —
+        // держим до 120с, иначе прокси отдаёт 5xx на медленный ответ бэкенда.
+        timeout: 120000,
+        proxyTimeout: 120000,
         rewrite: (path) => path.replace(/^\/api/, '')
       }
     }

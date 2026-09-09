@@ -54,6 +54,12 @@ func parseReceiptPhotoAI(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Нужно фото накладной"})
 		return
 	}
+	// Защита от гигантского фото: клиент сжимает, но подстрахуемся, чтобы большой
+	// base64 не съел память и не уронил процесс. ~9 МБ base64 ≈ ~6.7 МБ изображения.
+	if len(req.Image) > 9<<20 {
+		c.JSON(http.StatusOK, gin.H{"items": []any{}, "note": "Фото слишком большое — переснимите чуть меньше."})
+		return
+	}
 	res, err := callReceiptVisionParser(req)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"items": []any{}, "note": err.Error(), "error": err.Error()})
