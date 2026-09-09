@@ -1099,30 +1099,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         </div>
 
         <div className="flex flex-col gap-3 md:min-h-0 md:w-[270px] md:shrink-0 lg:w-[340px] xl:w-[400px]">
-        {/* Денежная смена (касса) — панель активной смены. Открыть/закрыть смену — на странице «Смены». */}
-        {cashShift && (
-          <div className="rounded-4xl border border-emerald-400/25 bg-emerald-500/[0.06] p-4 sm:p-5">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">Смена открыта</p>
-                <p className="text-sm font-bold text-slate-300">Размен {formatMoney(cashShift.openingCash)}{cashShift.openedBy ? ` · ${cashShift.openedBy}` : ""}</p>
-              </div>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /></span>
-            </div>
-            <div className="rounded-2xl bg-white/[0.04] p-3">
-              <div className="flex items-baseline justify-between">
-                <span className="text-sm text-slate-400">В кассе должно быть</span>
-                <b className="text-xl font-black text-white">{formatMoney(cashShift.expectedCash)}</b>
-              </div>
-              <div className="mt-1 text-[11px] text-slate-500">размен {formatMoney(cashShift.openingCash)} + налом {formatMoney(cashShift.cashSales)} + внесено {formatMoney(cashShift.cashIn)} − изъято {formatMoney(cashShift.cashOut)}{cashShift.cashExpenses > 0 ? <> − расходы {formatMoney(cashShift.cashExpenses)}</> : null}{cashShift.ownerCash ? <> {cashShift.ownerCash > 0 ? "+ владелец " : "− владельцу "}{formatMoney(Math.abs(cashShift.ownerCash))}</> : null}</div>
-            </div>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <button type="button" onClick={() => { setShiftInput(""); setShiftNote(""); setShiftModal("in"); }} className="rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-emerald-300 transition hover:bg-white/10">+ Внести</button>
-              <button type="button" onClick={() => { setShiftInput(""); setShiftNote(""); setShiftModal("out"); }} className="rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-red-300 transition hover:bg-white/10">− Изъять</button>
-              <button type="button" onClick={() => { setShiftInput(""); setShiftNote(""); setShiftModal("close"); }} className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-2 py-2.5 text-sm font-black leading-tight text-white transition hover:brightness-110">Закрыть смену</button>
-            </div>
-          </div>
-        )}
+        {/* Панель смены больше не занимает место в кассе: касса, внесения/изъятия и
+            закрытие смены живут в окне «Наличные» (кнопка в шапке кассы). */}
 
         {extraProducts.length > 0 && (
           <div className="rounded-4xl border border-amber-400/25 bg-amber-500/[0.06] p-4 sm:p-5">
@@ -1306,6 +1284,19 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   {num(cashShift.ownerCash) > 0 ? `внёс владелец +${formatMoney(cashShift.ownerCash)}` : num(cashShift.ownerCash) < 0 ? `выдано владельцу −${formatMoney(Math.abs(num(cashShift.ownerCash)))}` : ""}
                 </p>
               )}
+
+              {/* Действия по смене — здесь, а не постоянной панелью в кассе. */}
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button"
+                  onClick={() => { setCashCheckModal(false); setShiftInput(""); setShiftNote(""); setShiftModal("in"); }}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-emerald-300 transition hover:bg-white/10 active:scale-95">+ Внести</button>
+                <button type="button"
+                  onClick={() => { setCashCheckModal(false); setShiftInput(""); setShiftNote(""); setShiftModal("out"); }}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-red-300 transition hover:bg-white/10 active:scale-95">− Изъять</button>
+                <button type="button"
+                  onClick={() => { setCashCheckModal(false); setShiftInput(""); setShiftNote(""); setShiftModal("close"); }}
+                  className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-2 py-2.5 text-sm font-black leading-tight text-white transition hover:brightness-110 active:scale-95">Закрыть смену</button>
+              </div>
 
               <button type="button" onClick={() => setCashCheckModal(false)}
                 className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">
