@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus, Trash2 } from "lucide-react";
+import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus, Trash2, Warehouse } from "lucide-react";
 import { del, get, getCurrentWorkspace, getSession, post } from "../api";
 import { formatMoney, num } from "../utils/format";
 import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
@@ -1064,7 +1064,6 @@ export default function AIWarehousePage() {
 
   // Выход из полноэкранного помощника: назад / на главную / по Esc — чтобы не «застрять».
   const navigate = useNavigate();
-  const exitChat = () => navigate("/home");
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/home"));
   useEffect(() => {
     const onKey = (e) => {
@@ -1817,17 +1816,17 @@ export default function AIWarehousePage() {
           }`}
         >
           <section className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden xl:rounded-2xl xl:border xl:border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] xl:shadow-2xl xl:shadow-black/20">
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3 py-2.5">
-              <div className="flex min-w-0 items-center gap-2">
+            <div className="flex shrink-0 items-center justify-between gap-1.5 border-b border-white/10 px-2.5 py-2 sm:gap-2 sm:px-3 sm:py-2.5">
+              <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
                 <button onClick={goBack} aria-label="Назад" title="Назад"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15">
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15 sm:h-10 sm:w-10">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm shadow-lg shadow-blue-600/30">
+                <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm shadow-lg shadow-blue-600/30 sm:flex">
                   🤖
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-black">AI-ассистент</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-black leading-tight">AI-ассистент</p>
                   <div className="flex min-w-0 items-center gap-1.5">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
                     <p className="shrink-0 text-[11px] font-bold text-emerald-300">Онлайн</p>
@@ -1837,7 +1836,7 @@ export default function AIWarehousePage() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-1 sm:gap-2">
                 {lastUIPanel && !sidePanels[lastUIPanel] && (
                   <button
                     type="button"
@@ -1851,15 +1850,15 @@ export default function AIWarehousePage() {
                 <span className="hidden rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-black text-emerald-300 sm:inline">
                   AUTO SAVE
                 </span>
-                <button onClick={load} aria-label="Обновить" title="Обновить" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15"><RefreshCw size={16} strokeWidth={2.4} /></button>
+                <button onClick={load} aria-label="Обновить" title="Обновить" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15 sm:h-10 sm:w-10"><RefreshCw size={16} strokeWidth={2.4} /></button>
                 <button onClick={() => { if (window.confirm("Очистить весь чат? История переписки удалится.")) clearChat(); }}
                   aria-label="Очистить чат" title="Очистить чат"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition hover:bg-red-500/20 hover:text-red-300"><Trash2 size={16} strokeWidth={2.4} /></button>
-                <Link to="/warehouse" className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white transition hover:bg-white/15">Склад →</Link>
-                <button onClick={exitChat} aria-label="Закрыть помощника" title="Закрыть (Esc)"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition hover:bg-red-500/20 hover:text-red-300">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-                </button>
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition hover:bg-red-500/20 hover:text-red-300 sm:h-10 sm:w-10"><Trash2 size={16} strokeWidth={2.4} /></button>
+                <Link to="/warehouse" aria-label="Склад" title="Склад"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-black text-white transition hover:bg-white/15 sm:h-10 sm:w-auto sm:px-3">
+                  <Warehouse size={16} strokeWidth={2.4} className="sm:hidden" />
+                  <span className="hidden sm:inline">Склад →</span>
+                </Link>
               </div>
             </div>
 
