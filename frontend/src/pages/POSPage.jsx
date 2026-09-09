@@ -728,10 +728,16 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
     if (isWorkspaceUser && !currentProfile?.id) {
       openProfile?.();
+      // Заметный тост: у работника openProfile — no-op, а баннер ошибки легко не заметить,
+      // из-за чего кажется, что кнопка «не работает». Указываем, где выбрать продавца.
+      window.notify?.("Сначала выберите продавца смены — вверху кассы", "error");
       return setError("Выбери сотрудника смены");
     }
 
-    if (!safe_cart.length) return setError("Корзина пустая");
+    if (!safe_cart.length) {
+      window.notify?.("Корзина пустая — добавьте товар", "error");
+      return setError("Корзина пустая");
+    }
 
     setPaymentType("cash");
     setPaymentModal(true);
