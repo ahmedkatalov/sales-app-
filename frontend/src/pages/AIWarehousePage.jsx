@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus, Trash2, Warehouse, Pencil, Check } from "lucide-react";
+import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus, Trash2, Warehouse, Pencil, Check, Camera, Images } from "lucide-react";
 import { del, get, getCurrentWorkspace, getSession, post } from "../api";
 import { formatMoney, num } from "../utils/format";
 import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
@@ -967,6 +967,7 @@ export default function AIWarehousePage() {
   // purchasePhotoRef несёт фото сквозь поток закупки, чтобы прицепить его к расходу.
   const [attachedPhoto, setAttachedPhoto] = useState(null);
   const [photoParsing, setPhotoParsing] = useState(false);
+  const [photoMenuOpen, setPhotoMenuOpen] = useState(false); // меню «камера / галерея»
   const purchasePhotoRef = useRef(null);
   // Черновик уточнения веса по позициям (индекс → значение) и какие инпуты раскрыты.
   // Инпут показываем только после нажатия «Уточнить» — не держим их открытыми пачкой.
@@ -1587,6 +1588,17 @@ export default function AIWarehousePage() {
     }
   };
 
+  // Выбор фото из камеры или галереи → сжимаем и кладём в поле ввода (ждёт «Отправить»).
+  const handlePhotoFile = async (file, e) => {
+    if (e?.target) e.target.value = "";
+    setPhotoMenuOpen(false);
+    if (!file) return;
+    setPhotoParsing(true);
+    try { setAttachedPhoto(await compressImageToDataURL(file)); }
+    catch (err) { window.notify?.(err?.message || "Не удалось обработать фото", "error"); }
+    finally { setPhotoParsing(false); }
+  };
+
   // Фото накладной → распознавание → тот же поток закупки. Фото цепляем к расходу.
   const sendPhotoPurchase = async (hint) => {
     const photo = attachedPhoto;
@@ -2029,20 +2041,30 @@ export default function AIWarehousePage() {
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-red-300"><X size={14} /></button>
                 </div>
               )}
-              <div className="flex items-end gap-1.5 rounded-2xl border border-white/10 bg-slate-900 px-2.5 py-2 transition focus-within:border-blue-400/50 focus-within:ring-4 focus-within:ring-blue-500/10">
-                <label title="Фото накладной — камера или галерея"
-                  className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-400 transition hover:bg-white/10 hover:text-blue-300 ${(loading || photoParsing) ? "pointer-events-none opacity-50" : ""}`}>
-                  {photoParsing ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <ImagePlus size={20} strokeWidth={2.2} />}
-                  <input type="file" accept="image/*" hidden disabled={loading || photoParsing}
-                    onChange={async (e) => {
-                      const f = e.target.files?.[0]; e.target.value = "";
-                      if (!f) return;
-                      setPhotoParsing(true);
-                      try { setAttachedPhoto(await compressImageToDataURL(f)); }
-                      catch (err) { window.notify?.(err?.message || "Не удалось обработать фото", "error"); }
-                      finally { setPhotoParsing(false); }
-                    }} />
-                </label>
+              <div className="flex items-end gap-1.5 rounded-2xl border border-white/10 bg-slate-900 px-2.5 py-2">
+                <div className="relative shrink-0">
+                  <button type="button" title="Фото накладной" aria-label="Прикрепить фото"
+                    disabled={loading || photoParsing}
+                    onClick={() => setPhotoMenuOpen((v) => !v)}
+                    className={`flex h-9 w-9 items-center justify-center rounded-full text-slate-400 outline-none transition hover:bg-white/10 hover:text-blue-300 focus:outline-none focus-visible:outline-none ${(loading || photoParsing) ? "pointer-events-none opacity-50" : ""}`}>
+                    {photoParsing ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <ImagePlus size={20} strokeWidth={2.2} />}
+                  </button>
+                  {photoMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setPhotoMenuOpen(false)} />
+                      <div className="absolute bottom-full left-0 z-20 mb-2 w-52 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 p-1.5 shadow-2xl shadow-black/50">
+                        <label className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-black text-slate-200 transition hover:bg-white/10 active:scale-[0.98]">
+                          <Camera size={18} strokeWidth={2.2} className="shrink-0 text-blue-300" /> Сфотографировать
+                          <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => handlePhotoFile(e.target.files?.[0], e)} />
+                        </label>
+                        <label className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-black text-slate-200 transition hover:bg-white/10 active:scale-[0.98]">
+                          <Images size={18} strokeWidth={2.2} className="shrink-0 text-violet-300" /> Выбрать из галереи
+                          <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(e.target.files?.[0], e)} />
+                        </label>
+                      </div>
+                    </>
+                  )}
+                </div>
                 <textarea
                   value={input}
                   onChange={(e) => {
