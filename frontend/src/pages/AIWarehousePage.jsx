@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus, Trash2, Warehouse } from "lucide-react";
+import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus, Trash2, Warehouse, Pencil, Check } from "lucide-react";
 import { del, get, getCurrentWorkspace, getSession, post } from "../api";
 import { formatMoney, num } from "../utils/format";
 import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
@@ -178,6 +178,15 @@ const computeWarehouseAmount = (form) => {
   }
 
   return { quantity: total, unit, unitCost: total > 0 ? num(form.price) / total : 0, detail };
+};
+
+// Можно ли уточнить вес позиции: покупали ПОШТУЧНО, а храним в г/мл — значит объём
+// одной штуки (basePerUnit) влияет на итог и его есть смысл поправить (в т.ч. если
+// он взят «по среднему» или ИИ ошибся). Для кг/л (точный вес) и для штучного счёта
+// (стаканы и т.п.) уточнять нечего.
+const canClarifyWeight = (x) => {
+  const pu = x?.form?.purchaseUnit || x?.form?.unit;
+  return pu === "pcs" && ["g", "ml"].includes(x?.computed?.unit) && num(x?.computed?.quantity) > 0;
 };
 
 const formFromAIResult = (result) => {
@@ -959,8 +968,10 @@ export default function AIWarehousePage() {
   const [attachedPhoto, setAttachedPhoto] = useState(null);
   const [photoParsing, setPhotoParsing] = useState(false);
   const purchasePhotoRef = useRef(null);
-  // Черновик уточнения веса по позициям, занесённым «по среднему» (индекс → значение).
+  // Черновик уточнения веса по позициям (индекс → значение) и какие инпуты раскрыты.
+  // Инпут показываем только после нажатия «Уточнить» — не держим их открытыми пачкой.
   const [weightDraft, setWeightDraft] = useState({});
+  const [weightOpen, setWeightOpen] = useState({});
   // Просмотр отправленного фото на весь экран (клик по превью в сообщении).
   const [zoomImage, setZoomImage] = useState(null);
 
@@ -1467,6 +1478,7 @@ export default function AIWarehousePage() {
     if (!pending?.items?.length) { setPendingPurchaseConfirmation(null); return; }
     setPendingPurchaseConfirmation(null);
     setWeightDraft({});
+    setWeightOpen({});
     setLoading(true);
     try {
       const purchaseRef = newPurchaseRef();
@@ -1497,6 +1509,7 @@ export default function AIWarehousePage() {
   const cancelPendingPurchase = () => {
     setPendingPurchaseConfirmation(null);
     setWeightDraft({});
+    setWeightOpen({});
     setMessages((prev) => [...prev, { role: "bot", text: "Ок, отменила закупку — ничего не записала." }]);
   };
 
@@ -1506,6 +1519,7 @@ export default function AIWarehousePage() {
   const clearChat = useCallback(() => {
     clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation });
     setWeightDraft({});
+    setWeightOpen({});
     setLastEntity(null);
     setAttachedPhoto(null);
     purchasePhotoRef.current = null;
@@ -1529,6 +1543,7 @@ export default function AIWarehousePage() {
       return { ...prev, items };
     });
     setWeightDraft((p) => { const n = { ...p }; delete n[i]; return n; });
+    setWeightOpen((p) => { const n = { ...p }; delete n[i]; return n; });
   };
 
   // Общий обработчик распознанных позиций закупки (из текста ИЛИ из фото накладной):
@@ -1925,18 +1940,33 @@ export default function AIWarehousePage() {
                           <p className="text-[13px] font-black text-white">{nm} — {x.computed.quantity} {unitLabel(x.computed.unit)}</p>
                           <p className="text-[11px] font-bold text-slate-400">{num(x.payload?.price) > 0 ? `${formatMoney(x.payload.price)} · ` : ""}{tgt}</p>
                           {x.result?.assumedWeight && (
-                            <div className="mt-1.5 rounded-lg border border-amber-400/25 bg-amber-500/10 px-2 py-1.5">
-                              <p className="text-[10px] font-black text-amber-300/90">≈ вес по среднему{x.result?.assumedNote ? ` · ${x.result.assumedNote}` : ""} — можно уточнить</p>
-                              <div className="mt-1 flex items-center gap-1.5">
-                                <input type="text" inputMode="decimal" value={weightDraft[i] ?? ""}
+                            <p className="mt-1 inline-flex items-center rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-black text-amber-300/90">≈ вес по среднему{x.result?.assumedNote && x.result.assumedNote !== "уточнено" ? ` · ${x.result.assumedNote}` : ""}</p>
+                          )}
+                          {x.result?.assumedNote === "уточнено" && (
+                            <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-black text-emerald-300"><Check size={11} strokeWidth={3} /> вес уточнён</p>
+                          )}
+                          {canClarifyWeight(x) && (
+                            weightOpen[i] ? (
+                              <div className="mt-1.5 flex items-center gap-1.5">
+                                <input type="text" inputMode="decimal" autoFocus value={weightDraft[i] ?? ""}
                                   onChange={(e) => setWeightDraft((p) => ({ ...p, [i]: e.target.value }))}
-                                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyItemWeight(i); } }}
-                                  placeholder={`${unitLabel(x.computed.unit)}/шт`}
-                                  className="w-24 rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1 text-[11px] font-bold text-white outline-none focus:border-amber-400/60 focus:outline-none focus-visible:outline-none" />
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") { e.preventDefault(); applyItemWeight(i); }
+                                    if (e.key === "Escape") { setWeightOpen((p) => { const n = { ...p }; delete n[i]; return n; }); }
+                                  }}
+                                  placeholder={`${unitLabel(x.computed.unit)} в 1 шт`}
+                                  className="w-28 rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1 text-[11px] font-bold text-white outline-none focus:border-blue-400/60 focus:outline-none focus-visible:outline-none" />
                                 <button type="button" onClick={() => applyItemWeight(i)}
-                                  className="rounded-lg bg-amber-500/15 px-2.5 py-1 text-[11px] font-black text-amber-200 outline-none transition hover:bg-amber-500/25 active:scale-95 focus:outline-none focus-visible:outline-none">Уточнить</button>
+                                  className="rounded-lg bg-blue-500/20 px-2.5 py-1 text-[11px] font-black text-blue-100 outline-none transition hover:bg-blue-500/30 active:scale-95 focus:outline-none focus-visible:outline-none">Сохранить</button>
+                                <button type="button" onClick={() => setWeightOpen((p) => { const n = { ...p }; delete n[i]; return n; })} aria-label="Отмена"
+                                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-slate-200 active:scale-95"><X size={12} strokeWidth={2.6} /></button>
                               </div>
-                            </div>
+                            ) : (
+                              <button type="button" onClick={() => setWeightOpen((p) => ({ ...p, [i]: true }))}
+                                className={`mt-1.5 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-black transition active:scale-95 ${x.result?.assumedWeight ? "bg-amber-500/15 text-amber-200 hover:bg-amber-500/25" : "bg-white/5 text-slate-300 hover:bg-white/10"}`}>
+                                <Pencil size={11} strokeWidth={2.6} /> Уточнить вес
+                              </button>
+                            )
                           )}
                         </div>
                       );
