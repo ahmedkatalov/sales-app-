@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -43,8 +46,32 @@ type receiptResult struct {
 	Note  string        `json:"note"`
 }
 
-// POST /ai/warehouse/parse-photo
+// Асинхронные задачи распознавания: vision-запрос идёт в фоне, а HTTP-ответ
+// отдаётся мгновенно (jobId) — так ни один прокси (nginx/vite) не рвёт долгое
+// соединение по таймауту (это и давало 503). Клиент забирает результат опросом.
+type receiptJob struct {
+	accID  int
+	status string // pending | done | error
+	result receiptResult
+	errMsg string
+	at     time.Time
+}
+
+var (
+	receiptJobs   = map[string]*receiptJob{}
+	receiptJobsMu sync.Mutex
+)
+
+func newReceiptJobID() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// POST /ai/warehouse/parse-photo — принимает фото, запускает распознавание в фоне,
+// сразу возвращает {jobId}.
 func parseReceiptPhotoAI(c *gin.Context) {
+	accID := accountID(c)
 	var req receiptParseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверные данные"})
@@ -54,18 +81,58 @@ func parseReceiptPhotoAI(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Нужно фото накладной"})
 		return
 	}
-	// Защита от гигантского фото: клиент сжимает, но подстрахуемся, чтобы большой
-	// base64 не съел память и не уронил процесс. ~9 МБ base64 ≈ ~6.7 МБ изображения.
+	// ~9 МБ base64 ≈ ~6.7 МБ изображения — подстраховка от гигантского фото.
 	if len(req.Image) > 9<<20 {
-		c.JSON(http.StatusOK, gin.H{"items": []any{}, "note": "Фото слишком большое — переснимите чуть меньше."})
+		c.JSON(http.StatusOK, gin.H{"status": "error", "items": []any{}, "note": "Фото слишком большое — переснимите чуть меньше."})
 		return
 	}
-	res, err := callReceiptVisionParser(req)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"items": []any{}, "note": err.Error(), "error": err.Error()})
+
+	id := newReceiptJobID()
+	receiptJobsMu.Lock()
+	// Подчищаем старые задачи (>10 мин), чтобы карта не росла бесконечно.
+	for k, j := range receiptJobs {
+		if time.Since(j.at) > 10*time.Minute {
+			delete(receiptJobs, k)
+		}
+	}
+	receiptJobs[id] = &receiptJob{accID: accID, status: "pending", at: time.Now()}
+	receiptJobsMu.Unlock()
+
+	go func() {
+		res, err := callReceiptVisionParser(req)
+		receiptJobsMu.Lock()
+		if j := receiptJobs[id]; j != nil {
+			j.at = time.Now()
+			if err != nil {
+				j.status, j.errMsg = "error", err.Error()
+			} else {
+				j.status, j.result = "done", res
+			}
+		}
+		receiptJobsMu.Unlock()
+	}()
+
+	c.JSON(http.StatusOK, gin.H{"jobId": id, "status": "pending"})
+}
+
+// GET /ai/warehouse/parse-photo/:jobId — статус/результат распознавания.
+func getReceiptPhotoJob(c *gin.Context) {
+	accID := accountID(c)
+	receiptJobsMu.Lock()
+	j := receiptJobs[c.Param("jobId")]
+	receiptJobsMu.Unlock()
+	if j == nil || j.accID != accID {
+		c.JSON(http.StatusOK, gin.H{"status": "error", "items": []any{}, "note": "Задача не найдена — попробуйте ещё раз."})
 		return
 	}
-	c.JSON(http.StatusOK, res)
+	switch j.status {
+	case "pending":
+		c.JSON(http.StatusOK, gin.H{"status": "pending"})
+	case "error":
+		c.JSON(http.StatusOK, gin.H{"status": "error", "items": []any{}, "note": j.errMsg})
+	default:
+		c.JSON(http.StatusOK, gin.H{"status": "done", "items": j.result.Items, "total": j.result.Total, "note": j.result.Note})
+	}
 }
 
 func callReceiptVisionParser(req receiptParseRequest) (receiptResult, error) {

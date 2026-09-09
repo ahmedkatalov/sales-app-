@@ -1516,8 +1516,26 @@ export default function AIWarehousePage() {
     setLoading(true);
     setMessages((p) => [...p, { role: "user", text: hint ? `📷 Накладная — ${hint}` : "📷 Накладная (фото)" }]);
     try {
-      const res = await gPost("/ai/warehouse/parse-photo", { image: photo, hint: hint || "", items: itemRefs(items) });
-      if (!res) return;
+      // Запуск в фоне: POST мгновенно возвращает jobId, результат забираем опросом,
+      // чтобы долгий vision-запрос не рвался на прокси (это давало 503).
+      const start = await gPost("/ai/warehouse/parse-photo", { image: photo, hint: hint || "", items: itemRefs(items) });
+      if (!start) return;
+      let res = start;
+      if (start.jobId) {
+        res = null;
+        const opts = targetOpts();
+        for (let i = 0; i < 40; i++) { // ~80 секунд ожидания
+          await new Promise((r) => setTimeout(r, 2000));
+          let job;
+          try { job = await get(`/ai/warehouse/parse-photo/${start.jobId}`, opts); }
+          catch { continue; }
+          if (job && job.status && job.status !== "pending") { res = job; break; }
+        }
+        if (!res) {
+          setMessages((p) => [...p, { role: "bot", text: "Распознавание заняло слишком долго. Попробуйте ещё раз или впишите вручную." }]);
+          return;
+        }
+      }
       const parsedItems = res.items || [];
       if (!parsedItems.length) {
         setMessages((p) => [...p, { role: "bot", text: res.note || "Не смогла разобрать накладную. Сфотографируйте чётче или впишите вручную." }]);
