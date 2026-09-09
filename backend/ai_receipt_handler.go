@@ -38,6 +38,8 @@ type receiptItem struct {
 	Price            float64  `json:"price"`
 	MatchedItemID    int      `json:"matchedItemId"`
 	Questions        []string `json:"questions"`
+	AssumedWeight    bool     `json:"assumedWeight"` // вес/объём взят средним (в накладной не указан)
+	AssumedNote      string   `json:"assumedNote"`   // напр. "≈350 г/шт (среднее)"
 }
 
 type receiptResult struct {
@@ -159,6 +161,11 @@ func callReceiptVisionParser(req receiptParseRequest) (receiptResult, error) {
 - price: ЦЕНА ЗА ВСЮ ПОЗИЦИЮ (не за единицу).
 - matchedItemId: id похожего товара со склада (даже при опечатке/падеже), иначе 0.
 - questions: список уточнений, если чего-то не хватает.
+- assumedWeight, assumedNote: см. правило про средний вес.
+
+СРЕДНИЙ ВЕС/ОБЪЁМ (важно): если указано КОЛИЧЕСТВО штук/упаковок, но НЕ указан вес/объём одной, и у похожего складского товара размера тоже нет — НЕ спрашивай размер. Возьми ТИПИЧНЫЙ средний размер из общих знаний, заполни basePerUnit + unit (g/ml), purchaseUnit="pcs", пометь assumedWeight=true и напиши assumedNote (например "≈350 г/шт, среднее"). НЕ добавляй про это вопрос в questions.
+Примеры средних: молоко/кефир/сок/вода 1 пачка или бутылка ≈ 1000 мл (unit=ml); капуста 1 кочан ≈ 350 г; хлеб/буханка ≈ 400 г; лук/картофель/яблоки поштучно ≈ 150 г; масло пачка ≈ 180 г. Так "молоко 5шт" => 5×1000=5000 мл; "капуста 2шт" => 2×350=700 г. Считай на глаз разумно.
+Вопрос про размер задавай ТОЛЬКО если товар совсем неоднозначный по виду (стаканчики/крышки/контейнеры/упаковка без размера).
 
 КРИТИЧЕСКИ про цены:
 - Если у позиции цена НЕ подписана, но её можно ОДНОЗНАЧНО вычислить из итога — вычисли.
@@ -168,7 +175,7 @@ func callReceiptVisionParser(req receiptParseRequest) (receiptResult, error) {
 - Если не указано количество — добавь вопрос про количество.
 
 Верни JSON:
-{"items":[{"name":"","purchaseQuantity":0,"purchaseUnit":"","unit":"","basePerUnit":1,"unitsPerPackage":1,"price":0,"matchedItemId":0,"questions":[]}],"total":0,"note":"кратко: что распознал, что неясно"}
+{"items":[{"name":"","purchaseQuantity":0,"purchaseUnit":"","unit":"","basePerUnit":1,"unitsPerPackage":1,"price":0,"matchedItemId":0,"assumedWeight":false,"assumedNote":"","questions":[]}],"total":0,"note":"кратко: что распознал, что неясно"}
 
 Если на фото НЕ накладная или совсем не разобрать — верни items=[] и note с объяснением.
 

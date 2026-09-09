@@ -942,6 +942,8 @@ export default function AIWarehousePage() {
   const [attachedPhoto, setAttachedPhoto] = useState(null);
   const [photoParsing, setPhotoParsing] = useState(false);
   const purchasePhotoRef = useRef(null);
+  // Черновик уточнения веса по позициям, занесённым «по среднему» (индекс → значение).
+  const [weightDraft, setWeightDraft] = useState({});
 
   // ── Выбор точки (Нур / Меренда / …) прямо в чате ──────────────────────────
   // Обе точки равнозначны — «главной» нет. По умолчанию берём текущую активную,
@@ -1436,6 +1438,7 @@ export default function AIWarehousePage() {
     const pending = pendingPurchaseConfirmation;
     if (!pending?.items?.length) { setPendingPurchaseConfirmation(null); return; }
     setPendingPurchaseConfirmation(null);
+    setWeightDraft({});
     setLoading(true);
     try {
       const purchaseRef = newPurchaseRef();
@@ -1465,7 +1468,25 @@ export default function AIWarehousePage() {
 
   const cancelPendingPurchase = () => {
     setPendingPurchaseConfirmation(null);
+    setWeightDraft({});
     setMessages((prev) => [...prev, { role: "bot", text: "Ок, отменила закупку — ничего не записала." }]);
+  };
+
+  // Уточнить вес одной позиции (занесённой «по среднему») перед записью: пересчитываем
+  // её объём/вес по введённому значению за штуку и снимаем метку «среднее».
+  const applyItemWeight = (i) => {
+    const grams = num(weightDraft[i]);
+    if (grams <= 0) { window.notify?.("Введите вес больше нуля", "error"); return; }
+    setPendingPurchaseConfirmation((prev) => {
+      if (!prev?.items?.[i]) return prev;
+      const items = prev.items.map((x, j) => {
+        if (j !== i) return x;
+        const form = { ...x.form, basePerUnit: String(grams), packagingQuantity: String(grams) };
+        return { ...x, form, payload: payloadFromForm(form), computed: computeWarehouseAmount(form), result: { ...(x.result || {}), assumedWeight: false, assumedNote: "уточнено" } };
+      });
+      return { ...prev, items };
+    });
+    setWeightDraft((p) => { const n = { ...p }; delete n[i]; return n; });
   };
 
   // Общий обработчик распознанных позиций закупки (из текста ИЛИ из фото накладной):
@@ -1501,7 +1522,9 @@ export default function AIWarehousePage() {
         const tgt = x.matched ? `прибавить к «${normalizeProductEntityName(x.matched.name)}»` : "создать новый";
         return `• ${nm} — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""} (${tgt})`;
       }).join("\n");
-      setMessages((prev) => [...prev, { role: "bot", text: `Проверь закупку перед записью${targetName ? ` на точку «${targetName}»` : ""}:\n${lines}\n\nЗаписать? Нажми «Да, записать» или «Отмена».` }]);
+      const anyAssumed = prepared.some((x) => x.result?.assumedWeight);
+      const assumedHint = anyAssumed ? "\n\nГде вес не был указан — взяла средний (жёлтая пометка). Можно уточнить нужные позиции, остальные оставить как есть." : "";
+      setMessages((prev) => [...prev, { role: "bot", text: `Проверь закупку перед записью${targetName ? ` на точку «${targetName}»` : ""}:\n${lines}${assumedHint}\n\nЗаписать? Нажми «Да, записать» или «Отмена».` }]);
     } else if (waiting.length === 0) {
       setMessages((prev) => [...prev, { role: "bot", text: "Не понял что купили. Напиши например: «апельсин 3кг за 400р»" }]);
     }
@@ -1846,6 +1869,20 @@ export default function AIWarehousePage() {
                         <div key={i} className="rounded-xl bg-white/5 px-3 py-2">
                           <p className="text-[13px] font-black text-white">{nm} — {x.computed.quantity} {unitLabel(x.computed.unit)}</p>
                           <p className="text-[11px] font-bold text-slate-400">{num(x.payload?.price) > 0 ? `${formatMoney(x.payload.price)} · ` : ""}{tgt}</p>
+                          {x.result?.assumedWeight && (
+                            <div className="mt-1.5 rounded-lg border border-amber-400/25 bg-amber-500/10 px-2 py-1.5">
+                              <p className="text-[10px] font-black text-amber-300/90">≈ вес по среднему{x.result?.assumedNote ? ` · ${x.result.assumedNote}` : ""} — можно уточнить</p>
+                              <div className="mt-1 flex items-center gap-1.5">
+                                <input type="text" inputMode="decimal" value={weightDraft[i] ?? ""}
+                                  onChange={(e) => setWeightDraft((p) => ({ ...p, [i]: e.target.value }))}
+                                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyItemWeight(i); } }}
+                                  placeholder={`${unitLabel(x.computed.unit)}/шт`}
+                                  className="w-24 rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1 text-[11px] font-bold text-white outline-none focus:border-amber-400/60 focus:outline-none focus-visible:outline-none" />
+                                <button type="button" onClick={() => applyItemWeight(i)}
+                                  className="rounded-lg bg-amber-500/15 px-2.5 py-1 text-[11px] font-black text-amber-200 outline-none transition hover:bg-amber-500/25 active:scale-95 focus:outline-none focus-visible:outline-none">Уточнить</button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
