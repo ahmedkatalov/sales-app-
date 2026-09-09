@@ -246,7 +246,8 @@ func getGlobalExpenses(c *gin.Context) {
 			g.amount,
 			g.comment,
 			IFNULL(g.payment_source, 'cash'),
-			g.created_at
+			g.created_at,
+			CASE WHEN IFNULL(g.photo_path,'') <> '' THEN 1 ELSE 0 END
 		FROM global_expenses g
 		LEFT JOIN employees e ON e.id = g.employee_id AND e.account_id = g.account_id
 		WHERE g.account_id = ?
@@ -262,10 +263,12 @@ func getGlobalExpenses(c *gin.Context) {
 
 	for rows.Next() {
 		var e GlobalExpense
-		if err := rows.Scan(&e.ID, &e.AccountID, &e.EmployeeID, &e.EmployeeName, &e.Category, &e.Type, &e.Name, &e.Amount, &e.Comment, &e.PaymentSource, &e.CreatedAt); err != nil {
+		var hasPhoto int
+		if err := rows.Scan(&e.ID, &e.AccountID, &e.EmployeeID, &e.EmployeeName, &e.Category, &e.Type, &e.Name, &e.Amount, &e.Comment, &e.PaymentSource, &e.CreatedAt, &hasPhoto); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		e.HasPhoto = hasPhoto == 1
 		list = append(list, e)
 	}
 
@@ -311,7 +314,10 @@ func createGlobalExpense(c *gin.Context) {
 }
 
 func deleteGlobalExpense(c *gin.Context) {
-	_, err := db.Exec(`DELETE FROM global_expenses WHERE id = ? AND account_id = ?`, c.Param("id"), accountID(c))
+	accID := accountID(c)
+	// Сначала удалим файл фото (если был), потом строку — иначе путь потеряется.
+	removeExpensePhotoFile(accID, c.Param("id"))
+	_, err := db.Exec(`DELETE FROM global_expenses WHERE id = ? AND account_id = ?`, c.Param("id"), accID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

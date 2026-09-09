@@ -249,6 +249,7 @@ type GlobalExpense struct {
 	PaymentSource string  `json:"paymentSource"` // cash | card | owner
 	PurchaseRef   string  `json:"purchaseRef"`   // ключ закупки: расход снимается при отмене закупки
 	CreatedAt     string  `json:"createdAt"`
+	HasPhoto      bool    `json:"hasPhoto"` // есть ли прикреплённое фото накладной/чека
 }
 
 type Expense struct {

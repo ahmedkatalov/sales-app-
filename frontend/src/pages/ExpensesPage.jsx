@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Banknote, CreditCard, User, Tag, Settings, Hash, List, Trash2 } from "lucide-react";
-import { del, get, post, put } from "../api";
+import { Banknote, CreditCard, User, Tag, Settings, Hash, List, Trash2, Paperclip, Camera, X } from "lucide-react";
+import { del, get, post, put, fetchBlobUrl } from "../api";
+import { compressImageToDataURL } from "../utils/image";
 import Modal from "../components/Modal";
 import DatePicker from "../components/DatePicker";
 import { formatMoney, localISO, money, num } from "../utils/format";
@@ -50,7 +51,14 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
     amount: "",
     comment: "",
     paymentSource: "cash", // cash | card | owner
+    photo: null, // data URL фото накладной/чека (готовим к загрузке после создания расхода)
   });
+  const [photoBusy, setPhotoBusy] = useState(false); // идёт сжатие выбранного фото
+
+  // Просмотр фото накладной по расходу
+  const [photoView, setPhotoView] = useState(null); // { id, name }
+  const [photoViewUrl, setPhotoViewUrl] = useState("");
+  const [photoViewLoading, setPhotoViewLoading] = useState(false);
 
   // Расчёты с владельцем (леджер)
   const [ownerFin, setOwnerFin] = useState(null);
@@ -237,7 +245,42 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
       amount: "",
       comment: "",
       paymentSource: "cash",
+      photo: null,
     });
+  };
+
+  // Выбор фото накладной/чека в форме: сжимаем и держим data URL до создания расхода.
+  const pickExpensePhoto = async (file) => {
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      const dataUrl = await compressImageToDataURL(file);
+      setForm((p) => ({ ...p, photo: dataUrl }));
+    } catch (e) {
+      window.notify?.(e?.message || "Не удалось обработать фото", "error");
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  // Просмотр прикреплённого фото: тянем как blob (с авторизацией) → object URL.
+  const openPhotoView = async (expense) => {
+    setPhotoView({ id: expense.id, name: expense.name });
+    setPhotoViewLoading(true);
+    setPhotoViewUrl("");
+    try {
+      const url = await fetchBlobUrl(`/global-expenses/${expense.id}/photo`);
+      setPhotoViewUrl(url);
+    } catch {
+      window.notify?.("Не удалось загрузить фото", "error");
+    } finally {
+      setPhotoViewLoading(false);
+    }
+  };
+  const closePhotoView = () => {
+    if (photoViewUrl) URL.revokeObjectURL(photoViewUrl);
+    setPhotoViewUrl("");
+    setPhotoView(null);
   };
 
   // Защита от двойного запроса + показ ошибки (тост поверх модалки).
@@ -266,7 +309,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
     if (!form.name.trim()) return setError("Напиши, за что оплатили");
     if (num(form.amount) <= 0) return setError("Укажи сумму расхода");
     await guarded(async () => {
-      await post("/global-expenses", {
+      const created = await post("/global-expenses", {
         employeeId: currentProfile?.id || 0,
         category: form.category,
         type: form.type,
@@ -275,6 +318,14 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         comment: form.comment.trim(),
         paymentSource: form.paymentSource || "cash",
       });
+      // Фото накладной/чека — грузим уже к созданному расходу (по его id).
+      if (form.photo && created?.id) {
+        try {
+          await post(`/global-expenses/${created.id}/photo`, { photo: form.photo });
+        } catch (e) {
+          window.notify?.("Расход сохранён, но фото не загрузилось: " + (e?.message || ""), "error");
+        }
+      }
       resetForm();
       setExpenseModal(false);
       await load();
@@ -618,6 +669,12 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                   <td className="p-4 font-bold text-white">
                     {e.name}
                     <span className={`ml-2 inline-block rounded-md border px-1.5 py-0.5 align-middle text-[10px] font-black ${srcMeta(e).cls}`}>{srcMeta(e).label}</span>
+                    {e.hasPhoto && (
+                      <button onClick={() => openPhotoView(e)} title="Открыть фото накладной"
+                        className="ml-2 inline-flex items-center gap-1 rounded-md border border-blue-400/25 bg-blue-500/10 px-1.5 py-0.5 align-middle text-[10px] font-black text-blue-200 transition hover:bg-blue-500/20">
+                        <Paperclip size={11} strokeWidth={2.6} /> накладная
+                      </button>
+                    )}
                   </td>
                   <td className="p-4 text-slate-400">{e.comment || "—"}</td>
                   <td className="p-4 font-black text-red-300">{formatMoney(e.amount)}</td>
@@ -665,6 +722,12 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 <p className="truncate text-base font-black text-white">{e.name}</p>
                 <p className="truncate text-xs text-slate-400">{categoryLabel(e.category)} · {e.type || "—"}</p>
                 <span className={`mt-1 inline-block rounded-md border px-1.5 py-0.5 text-[10px] font-black ${srcMeta(e).cls}`}>{srcMeta(e).label}</span>
+                {e.hasPhoto && (
+                  <button onClick={() => openPhotoView(e)}
+                    className="ml-1.5 mt-1 inline-flex items-center gap-1 rounded-md border border-blue-400/25 bg-blue-500/10 px-1.5 py-0.5 align-top text-[10px] font-black text-blue-200 transition hover:bg-blue-500/20">
+                    <Paperclip size={11} strokeWidth={2.6} /> накладная
+                  </button>
+                )}
                 <p className="mt-0.5 truncate text-xs text-slate-500">
                   {String(e.createdAt || "").slice(0, 10) || "—"}{e.employeeName ? ` · ${e.employeeName}` : ""}
                 </p>
@@ -797,6 +860,27 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 className="min-h-28 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
               />
             </label>
+
+            <div>
+              <span className="mb-2 block text-sm font-black text-slate-300">Фото накладной / чека <span className="font-bold text-slate-500">— необязательно</span></span>
+              {form.photo ? (
+                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-3">
+                  <img src={form.photo} alt="Накладная" className="h-16 w-16 shrink-0 rounded-xl object-cover" />
+                  <span className="flex-1 text-sm font-black text-emerald-300">Фото готово к загрузке</span>
+                  <button type="button" onClick={() => setForm((p) => ({ ...p, photo: null }))}
+                    aria-label="Убрать фото"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-red-300">
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-slate-950/40 px-4 py-4 font-black text-slate-300 transition hover:bg-white/5">
+                  <Camera size={18} strokeWidth={2.2} /> {photoBusy ? "Обрабатываю…" : "Прикрепить фото"}
+                  <input type="file" accept="image/*" capture="environment" hidden disabled={photoBusy}
+                    onChange={(e) => { pickExpensePhoto(e.target.files?.[0]); e.target.value = ""; }} />
+                </label>
+              )}
+            </div>
           </div>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -943,6 +1027,24 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               </button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {photoView && (
+        <Modal title="Фото накладной" section={photoView.name} onClose={closePhotoView} legacyLight={false}>
+          <div className="flex min-h-[200px] items-center justify-center">
+            {photoViewLoading ? (
+              <span className="text-sm font-bold text-slate-400">Загружаю…</span>
+            ) : photoViewUrl ? (
+              <img src={photoViewUrl} alt="Накладная" className="max-h-[70vh] w-full rounded-2xl object-contain" />
+            ) : (
+              <span className="text-sm font-bold text-slate-400">Фото недоступно</span>
+            )}
+          </div>
+          <button type="button" onClick={closePhotoView}
+            className="mt-4 w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">
+            Закрыть
+          </button>
         </Modal>
       )}
     </div>

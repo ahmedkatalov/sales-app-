@@ -490,6 +490,9 @@ func createTables() {
 		// «день» в отчётах: продажа в 00:30 у точки, работающей с 09:00, относится к
 		// вчерашнему рабочему дню. 0 = обычный календарный день (поведение по умолчанию).
 		`ALTER TABLE account_settings ADD COLUMN day_start_hour INTEGER DEFAULT 0`,
+		// Фото накладной/чека к расходу: храним ПУТЬ к файлу на диске (data/uploads/…),
+		// не сам блоб — при SetMaxOpenConns(1) блоб в БД тормозил бы всё.
+		`ALTER TABLE global_expenses ADD COLUMN photo_path TEXT DEFAULT ''`,
 	}
 
 	for _, q := range migrations {

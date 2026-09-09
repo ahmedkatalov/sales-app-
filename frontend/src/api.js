@@ -291,6 +291,18 @@ export async function del(url, body, opts = {}) {
   });
 }
 
+// Загрузка защищённого файла (фото накладной) как object URL: <img src> не умеет
+// слать заголовки авторизации, поэтому тянем как blob с авторизацией и оборачиваем
+// в URL.createObjectURL. Не забудьте URL.revokeObjectURL после использования.
+export async function fetchBlobUrl(url, opts = {}) {
+  const headers = { ...authHeaders() };
+  if (opts.dataAccountId) headers["X-Data-Account-ID"] = String(opts.dataAccountId);
+  const res = await fetch(API + withParams(url, opts.dataAccountId), { headers });
+  if (!res.ok) throw new Error("Не удалось загрузить файл");
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
 export const apiGet = get;
 export const apiPost = post;
 export const apiPut = put;

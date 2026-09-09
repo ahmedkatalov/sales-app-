@@ -1,10 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { RefreshCw, X, Send, FileDown } from "lucide-react";
+import { RefreshCw, X, Send, FileDown, Paperclip } from "lucide-react";
 import { del, get, getCurrentWorkspace, getSession, post } from "../api";
 import { formatMoney, num } from "../utils/format";
 import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
 import { escHtml, printHtmlDocument } from "../utils/print";
+import { compressImageToDataURL } from "../utils/image";
 
 
 const normalizeText = (text) => String(text || "").replace(/ё/g, "е").replace(/,/g, ".").replace(/\s+/g, " ").trim();
@@ -826,7 +827,7 @@ function exportTextToPdf(text) {
   printHtmlDocument(html);
 }
 
-const Message = memo(function Message({ msg, idx, onCancelCard }) {
+const Message = memo(function Message({ msg, idx, onCancelCard, onAttachPhoto, onDismissPhoto }) {
   const isUser = msg.role === "user";
   const showPdf = msg.role === "bot" && msg.text && msg.text !== AI_WELCOME_MESSAGE.text && msg.text.length > 120;
   return (
@@ -837,6 +838,28 @@ const Message = memo(function Message({ msg, idx, onCancelCard }) {
         {msg.cards?.length > 0 && (
           <div className="mt-3 space-y-2">
             {msg.cards.map((card, i) => (
+              card.kind === "photoPrompt" ? (
+                <div key={i} className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+                  {card.done ? (
+                    <p className="inline-flex items-center gap-1.5 text-[12px] font-black text-emerald-300"><Paperclip size={12} strokeWidth={2.6} /> Фото накладной прикреплено</p>
+                  ) : card.dismissed ? (
+                    <p className="text-[12px] font-bold text-slate-400">Без фото</p>
+                  ) : (
+                    <>
+                      <p className="mb-2 text-[12px] font-bold text-slate-300">Есть фото накладной или чека?</p>
+                      <div className="flex gap-2">
+                        <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-500/15 px-3 py-1.5 text-[11px] font-black text-blue-200 transition hover:bg-blue-500/25 active:scale-95 ${card.uploading ? "pointer-events-none opacity-60" : ""}`}>
+                          <Paperclip size={12} strokeWidth={2.6} /> {card.uploading ? "Загружаю…" : "Прикрепить фото"}
+                          <input type="file" accept="image/*" capture="environment" hidden
+                            onChange={(e) => { onAttachPhoto?.(idx, i, card, e.target.files?.[0]); e.target.value = ""; }} />
+                        </label>
+                        <button type="button" onClick={() => onDismissPhoto?.(idx, i)}
+                          className="rounded-lg bg-white/5 px-3 py-1.5 text-[11px] font-black text-slate-300 transition hover:bg-white/10 active:scale-95">Без фото</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
               <div key={i} className={`rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-slate-100 ${card.cancelled ? "opacity-50" : ""}`}>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -854,6 +877,7 @@ const Message = memo(function Message({ msg, idx, onCancelCard }) {
                   </button>
                 ) : null}
               </div>
+              )
             ))}
           </div>
         )}
@@ -1146,7 +1170,7 @@ export default function AIWarehousePage() {
     const comment = priced
       .map((x) => `${normalizeProductEntityName(x.matched?.name || x.payload.name)}: ${formatMoney(x.payload.price)}; ${x.computed.quantity} ${unitLabel(x.computed.unit)}${x.computed.detail ? ` (${x.computed.detail})` : ""}`)
       .join(" | ");
-    await gPost("/global-expenses", {
+    const created = await gPost("/global-expenses", {
       category: "products",
       type: "Закупка сырья",
       name: priced.length === 1 ? `Закупка: ${normalizeProductEntityName(priced[0].matched?.name || priced[0].payload.name)}` : "Закупка сырья",
@@ -1154,7 +1178,7 @@ export default function AIWarehousePage() {
       comment,
       purchaseRef,
     });
-    return { total, comment };
+    return { total, comment, id: created?.id };
   };
 
   // Выборочная отмена одной позиции прямо из карточки ответа ИИ: снимает её со
@@ -1179,6 +1203,30 @@ export default function AIWarehousePage() {
     }
     // gDel стабильна (ref внутри), load читает свежий стейт — намеренно без deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Хелпер: точечно обновить поля карточки в сообщении (флаги фото).
+  const patchCard = (msgIdx, cardIdx, patch) => setMessages((prev) => prev.map((m, i) => (
+    i !== msgIdx ? m : { ...m, cards: (m.cards || []).map((c, j) => (j === cardIdx ? { ...c, ...patch } : c)) }
+  )));
+
+  // Прикрепить фото накладной/чека к расходу прямо из карточки-подсказки ИИ.
+  const onAttachPhoto = useCallback(async (msgIdx, cardIdx, card, file) => {
+    if (!file || !card?.expenseId) return;
+    patchCard(msgIdx, cardIdx, { uploading: true });
+    try {
+      const dataUrl = await compressImageToDataURL(file);
+      await gPost(`/global-expenses/${card.expenseId}/photo`, { photo: dataUrl });
+      patchCard(msgIdx, cardIdx, { uploading: false, done: true });
+      window.notify?.("Фото накладной прикреплено", "success");
+    } catch (e) {
+      patchCard(msgIdx, cardIdx, { uploading: false });
+      window.notify?.(e?.message || "Не удалось прикрепить фото", "error");
+    }
+  }, [gPost]);
+
+  const onDismissPhoto = useCallback((msgIdx, cardIdx) => {
+    patchCard(msgIdx, cardIdx, { dismissed: true });
   }, []);
 
   const updatePendingPurchases = async (replyText) => {
@@ -1280,8 +1328,8 @@ export default function AIWarehousePage() {
     const expense = await savePurchaseExpense(saved, purchaseRef);
     setMessages((p) => [...p, {
       role: "bot",
-      text: `Готово, закрыла все уточнения${targetName ? ` на точке «${targetName}»` : ""}.\n${saved.map((x) => `• ${x.matched ? "прибавила к" : "создала"} “${x.matched?.name || x.payload.name}” — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n")}${expense ? `\n\nВ расходы записала закупку сырья: ${formatMoney(expense.total)}.` : ""}`,
-      cards: saved.map((x) => x.card),
+      text: `Готово, закрыла все уточнения${targetName ? ` на точке «${targetName}»` : ""}.\n${saved.map((x) => `• ${x.matched ? "прибавила к" : "создала"} “${x.matched?.name || x.payload.name}” — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n")}${expense ? `\n\nВ расходы записала закупку сырья: ${formatMoney(expense.total)}. Есть фото накладной?` : ""}`,
+      cards: [...saved.map((x) => x.card), ...(expense?.id ? [{ kind: "photoPrompt", expenseId: expense.id }] : [])],
     }]);
     await load();
   };
@@ -1386,8 +1434,8 @@ export default function AIWarehousePage() {
       const lines = saved.map((x) => `${x.matched ? "прибавила к" : "создала"} «${normalizeProductEntityName(x.matched?.name || x.payload.name)}» — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n");
       setMessages((prev) => [...prev, {
         role: "bot",
-        text: `Готово, записала${pending.wsName || wsName ? ` на точке «${pending.wsName || wsName}»` : ""}.\n${lines}${expense ? `\n\nЗакупка записана в расходы: ${formatMoney(expense.total)}.` : ""}`,
-        cards: saved.map((x) => x.card),
+        text: `Готово, записала${pending.wsName || wsName ? ` на точке «${pending.wsName || wsName}»` : ""}.\n${lines}${expense ? `\n\nЗакупка записана в расходы: ${formatMoney(expense.total)}. Есть фото накладной?` : ""}`,
+        cards: [...saved.map((x) => x.card), ...(expense?.id ? [{ kind: "photoPrompt", expenseId: expense.id }] : [])],
       }]);
       await load();
     } catch (e) {
@@ -1528,8 +1576,12 @@ export default function AIWarehousePage() {
           const qs = (exp.questions || []).join("\n");
           if (qs) { setMessages((p) => [...p, { role: "bot", text: qs }]); break; }
           if (!exp.name || num(exp.amount) <= 0) { setMessages((p) => [...p, { role: "bot", text: "Не понял расход. Напиши что и сколько." }]); break; }
-          await gPost("/global-expenses", { category: exp.category || "household", type: exp.type || "Прочее", name: exp.name, amount: num(exp.amount), comment: exp.comment || "" });
-          setMessages((p) => [...p, { role: "bot", text: `Записала расход на точку «${targetName}»: ${exp.name} — ${formatMoney(exp.amount)}.` }]);
+          const createdExp = await gPost("/global-expenses", { category: exp.category || "household", type: exp.type || "Прочее", name: exp.name, amount: num(exp.amount), comment: exp.comment || "" });
+          setMessages((p) => [...p, {
+            role: "bot",
+            text: `Записала расход на точку «${targetName}»: ${exp.name} — ${formatMoney(exp.amount)}. Есть фото накладной или чека?`,
+            cards: createdExp?.id ? [{ kind: "photoPrompt", expenseId: createdExp.id }] : [],
+          }]);
           await load();
           break;
         }
@@ -1715,7 +1767,7 @@ export default function AIWarehousePage() {
                 Сегодня
               </div>
               {messages.map((msg, i) => (
-                <Message key={i} idx={i} msg={msg} onCancelCard={cancelPurchaseCard} />
+                <Message key={i} idx={i} msg={msg} onCancelCard={cancelPurchaseCard} onAttachPhoto={onAttachPhoto} onDismissPhoto={onDismissPhoto} />
               ))}
               {loading && <Message msg={{ role: "bot", text: "Думаю и проверяю данные..." }} />}
               <div ref={bottomRef} />
