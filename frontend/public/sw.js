@@ -11,7 +11,7 @@
  *
  * Чтобы принудительно обновить кэш у всех — поднимите VERSION.
  */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `okvion-sales-${VERSION}`;
 const SHELL = ['/', '/manifest.webmanifest', '/pwa-192.png', '/pwa-512.png', '/apple-touch-icon.png'];
 
@@ -63,16 +63,24 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return; // сторонние домены — как обычно
   if (isBypassed(url)) return;
 
-  // Навигации: сеть-сначала, офлайн — кэш оболочки или заглушка.
+  // Навигации: сеть-сначала. ВАЖНО: кэшируем оболочку ТОЛЬКО при успешном (200)
+  // ответе — иначе 5xx во время перезапуска сервера «отравлял» кэш, и iOS потом
+  // упорно отдавал сломанную страницу (сайт «не открывался» даже после починки).
   if (req.mode === 'navigate') {
     event.respondWith((async () => {
+      const cache = await caches.open(CACHE);
       try {
         const net = await fetch(req);
-        const cache = await caches.open(CACHE);
-        cache.put('/', net.clone()); // держим свежую оболочку
-        return net;
+        if (net && net.ok) {
+          cache.put('/', net.clone()); // держим свежую РАБОЧУЮ оболочку
+          return net;
+        }
+        // Сервер ответил ошибкой (например, перезапуск) — отдаём последнюю рабочую
+        // оболочку из кэша, если она есть, вместо страницы ошибки.
+        const cached = await cache.match('/');
+        return cached || net;
       } catch {
-        const cached = (await caches.match('/')) || (await caches.match(req));
+        const cached = (await cache.match('/')) || (await cache.match(req));
         return cached || new Response(OFFLINE_HTML, {
           status: 503,
           headers: { 'Content-Type': 'text/html; charset=utf-8' },

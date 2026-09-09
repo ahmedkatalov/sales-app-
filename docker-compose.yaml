@@ -1,6 +1,9 @@
 services:
   backend:
     build: ./backend
+    # Автоперезапуск: если процесс упал/сервер перезагрузился — контейнер сам
+    # поднимется, иначе сайт «не открывается», пока вручную не рестартнёшь.
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
@@ -14,6 +17,7 @@ services:
 
   frontend:
     build: ./frontend
+    restart: unless-stopped
     ports:
       - "8081:5173"
     volumes:
