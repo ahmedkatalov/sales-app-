@@ -1119,7 +1119,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <div className="mt-3 grid grid-cols-3 gap-2">
               <button type="button" onClick={() => { setShiftInput(""); setShiftNote(""); setShiftModal("in"); }} className="rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-emerald-300 transition hover:bg-white/10">+ Внести</button>
               <button type="button" onClick={() => { setShiftInput(""); setShiftNote(""); setShiftModal("out"); }} className="rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-red-300 transition hover:bg-white/10">− Изъять</button>
-              <button type="button" onClick={() => { setShiftInput(""); setShiftNote(""); setShiftModal("close"); }} className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-2 py-2.5 text-sm font-black text-white transition hover:brightness-110">Закрыть</button>
+              <button type="button" onClick={() => { setShiftInput(""); setShiftNote(""); setShiftModal("close"); }} className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-2 py-2.5 text-sm font-black leading-tight text-white transition hover:brightness-110">Закрыть смену</button>
             </div>
           </div>
         )}
@@ -1450,6 +1450,12 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
       {shiftModal === "close" && cashShift && (
         <Modal title="Закрыть смену" onClose={() => setShiftModal(null)}>
+          <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-3.5">
+            <AlertTriangle size={18} strokeWidth={2.4} className="mt-0.5 shrink-0 text-amber-300" />
+            <p className="text-[13px] font-bold leading-5 text-amber-100">
+              Вы закрываете смену. Касса обнулится: чтобы продолжить продавать, потом откройте новую смену с разменом. Отменить закрытие нельзя.
+            </p>
+          </div>
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <div className="flex items-baseline justify-between">
               <span className="text-sm text-slate-400">По программе должно быть</span>
@@ -1467,7 +1473,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           )}
           <div className="mt-6 flex gap-3">
             <button type="button" onClick={() => setShiftModal(null)} className="btn-white flex-1">Отмена</button>
-            <button type="button" onClick={closeShift} disabled={shiftBusy} className="btn-blue flex-1 disabled:cursor-not-allowed disabled:opacity-60">{shiftBusy ? "…" : "Закрыть смену"}</button>
+            <button type="button" onClick={closeShift} disabled={shiftBusy} className="btn-blue flex-1 disabled:cursor-not-allowed disabled:opacity-60">{shiftBusy ? "…" : "Да, закрыть смену"}</button>
           </div>
         </Modal>
       )}
