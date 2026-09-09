@@ -1,11 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus } from "lucide-react";
+import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus, Trash2 } from "lucide-react";
 import { del, get, getCurrentWorkspace, getSession, post } from "../api";
 import { formatMoney, num } from "../utils/format";
 import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
 import { escHtml, printHtmlDocument } from "../utils/print";
-import { compressImageToDataURL } from "../utils/image";
+import { compressImageToDataURL, shrinkDataURL } from "../utils/image";
 
 
 const normalizeText = (text) => String(text || "").replace(/ё/g, "е").replace(/,/g, ".").replace(/\s+/g, " ").trim();
@@ -16,6 +16,17 @@ const isCancelContextText = (text) => {
   const t = lower(text);
   return /^(стоп|отмена|отмени|не надо|не нужно|забей|хватит|закрой|сброс|сбрось|другая тема|другое|сменим тему|уходи от этой темы|уйди от этой темы|забудь это|не записывай|не сохраняй)$/i.test(t)
     || /(уходи|уйди|отстань|забей|закрой)\s+(от\s+)?(этой\s+)?тем/i.test(t);
+};
+
+// «Очисти чат» и синонимы: пользователь просит стереть переписку голосом/текстом.
+// Требуем и глагол очистки, и объект «чат/переписка/диалог/беседа/сообщения» —
+// чтобы «удали молоко» или «очисти историю закупок» НЕ стирали чат.
+const isClearChatCommand = (text) => {
+  const t = lower(text);
+  if (/^(новый чат|начни заново|начнем заново|clear chat|reset chat|очисти всё|очисти все)$/i.test(t)) return true;
+  // Без \b: в JS граница слова не работает с кириллицей. Требуем глагол очистки
+  // и рядом (в пределах 24 символов) объект «чат/переписка/диалог/беседа/сообщения».
+  return /(очист|очищ|почист|сотри|стер|удал|убер|сброс|обнул)[^.!?]{0,24}(чат|переписк|диалог|беседу|беседы|сообщени)/i.test(t);
 };
 
 const sanitizeAssistantAnswer = (answer) => {
@@ -827,13 +838,19 @@ function exportTextToPdf(text) {
   printHtmlDocument(html);
 }
 
-const Message = memo(function Message({ msg, idx, onCancelCard, onAttachPhoto, onDismissPhoto }) {
+const Message = memo(function Message({ msg, idx, onCancelCard, onAttachPhoto, onDismissPhoto, onOpenImage }) {
   const isUser = msg.role === "user";
   const showPdf = msg.role === "bot" && msg.text && msg.text !== AI_WELCOME_MESSAGE.text && msg.text.length > 120;
   return (
     <div className={`flex gap-2 sm:gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-sm shadow-lg shadow-blue-600/30 sm:flex">🤖</div>}
       <div className={`max-w-[90%] rounded-3xl px-4 py-3 text-[13px] font-bold leading-6 shadow-lg sm:max-w-[78%] ${isUser ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white" : "border border-white/10 bg-white/[0.08] text-slate-100 backdrop-blur"}`}>
+        {msg.image && (
+          <button type="button" onClick={() => onOpenImage?.(msg.image)} title="Открыть фото"
+            className="mb-2 block w-full overflow-hidden rounded-2xl border border-white/20 transition active:scale-[0.98]">
+            <img src={msg.image} alt="Отправленное фото" className="max-h-56 w-full object-cover" />
+          </button>
+        )}
         {isUser ? <p className="whitespace-pre-line">{msg.text}</p> : <RichText text={msg.text} />}
         {msg.cards?.length > 0 && (
           <div className="mt-3 space-y-2">
@@ -944,6 +961,8 @@ export default function AIWarehousePage() {
   const purchasePhotoRef = useRef(null);
   // Черновик уточнения веса по позициям, занесённым «по среднему» (индекс → значение).
   const [weightDraft, setWeightDraft] = useState({});
+  // Просмотр отправленного фото на весь экран (клик по превью в сообщении).
+  const [zoomImage, setZoomImage] = useState(null);
 
   // ── Выбор точки (Нур / Меренда / …) прямо в чате ──────────────────────────
   // Обе точки равнозначны — «главной» нет. По умолчанию берём текущую активную,
@@ -1059,21 +1078,31 @@ export default function AIWarehousePage() {
   }, [navigate]);
 
   useEffect(() => {
+    const kept = messages.slice(-80);
+    const base = {
+      pendingItems,
+      lastEntity,
+      pendingVisibility,
+      pendingMenuTypeCreation,
+      pendingPurchaseConfirmation,
+      sidePanels,
+      lastUIPanel,
+      aiBrain,
+      savedAt: new Date().toISOString(),
+    };
+    const write = (msgs) => localStorage.setItem(storageKey, JSON.stringify({ ...base, messages: msgs }));
     try {
-      localStorage.setItem(storageKey, JSON.stringify({
-        messages: messages.slice(-80),
-        pendingItems,
-        lastEntity,
-        pendingVisibility,
-        pendingMenuTypeCreation,
-        pendingPurchaseConfirmation,
-        sidePanels,
-        lastUIPanel,
-        aiBrain,
-        savedAt: new Date().toISOString(),
-      }));
+      write(kept);
     } catch {
-      // localStorage может быть недоступен в приватном режиме — чат всё равно работает в памяти страницы.
+      // Скорее всего превышена квота из-за фото накладных. Стираем картинки из
+      // всех сообщений кроме последних четырёх и пробуем снова — так чат
+      // продолжит сохраняться, а свежие превью останутся.
+      try {
+        const trimmed = kept.map((m, i, arr) => (m?.image && i < arr.length - 4 ? { ...m, image: undefined } : m));
+        write(trimmed);
+      } catch {
+        // localStorage недоступен (приватный режим) — чат работает в памяти страницы.
+      }
     }
   }, [storageKey, messages, pendingItems, lastEntity, pendingVisibility, pendingMenuTypeCreation, pendingPurchaseConfirmation, sidePanels, lastUIPanel, aiBrain]);
 
@@ -1472,6 +1501,20 @@ export default function AIWarehousePage() {
     setMessages((prev) => [...prev, { role: "bot", text: "Ок, отменила закупку — ничего не записала." }]);
   };
 
+  // Очистить чат: стираем переписку и все незакрытые операции (по команде «очисти
+  // чат» или кнопкой в шапке). Чат сохраняется автоматически, поэтому чистим и
+  // localStorage — иначе старая переписка вернулась бы после перезагрузки.
+  const clearChat = useCallback(() => {
+    clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation });
+    setWeightDraft({});
+    setLastEntity(null);
+    setAttachedPhoto(null);
+    purchasePhotoRef.current = null;
+    setZoomImage(null);
+    setMessages([AI_WELCOME_MESSAGE, { role: "bot", text: "Готово — очистила чат. Начнём заново 🙂" }]);
+    try { localStorage.removeItem(storageKey); } catch { /* приватный режим */ }
+  }, [storageKey]);
+
   // Уточнить вес одной позиции (занесённой «по среднему») перед записью: пересчитываем
   // её объём/вес по введённому значению за штуку и снимаем метку «среднее».
   const applyItemWeight = (i) => {
@@ -1537,7 +1580,11 @@ export default function AIWarehousePage() {
     setAttachedPhoto(null);
     setInput("");
     setLoading(true);
-    setMessages((p) => [...p, { role: "user", text: hint ? `📷 Накладная — ${hint}` : "📷 Накладная (фото)" }]);
+    // Показываем отправленное фото прямо в чате. В сообщение (и localStorage)
+    // кладём лёгкое превью, а не тяжёлый оригинал — иначе забьётся квота.
+    let preview = photo;
+    try { preview = await shrinkDataURL(photo, { maxEdge: 480, quality: 0.6 }); } catch { preview = photo; }
+    setMessages((p) => [...p, { role: "user", text: hint ? `📷 Накладная — ${hint}` : "📷 Накладная (фото)", image: preview }]);
     try {
       // Запуск в фоне: POST мгновенно возвращает jobId, результат забираем опросом,
       // чтобы долгий vision-запрос не рвался на прокси (это давало 503).
@@ -1580,6 +1627,12 @@ export default function AIWarehousePage() {
   const send = async (overrideText) => {
     if (loading) return;
     const rawText = (typeof overrideText === "string" ? overrideText : input).trim();
+    // «Очисти чат» — стираем переписку сразу, локально (даже если было прикреплено фото).
+    if (rawText && isClearChatCommand(rawText)) {
+      setInput("");
+      clearChat();
+      return;
+    }
     // Прикреплено фото накладной — распознаём его (текст, если есть, идёт подсказкой).
     if (attachedPhoto && typeof overrideText !== "string") {
       await sendPhotoPurchase(rawText);
@@ -1799,6 +1852,9 @@ export default function AIWarehousePage() {
                   AUTO SAVE
                 </span>
                 <button onClick={load} aria-label="Обновить" title="Обновить" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15"><RefreshCw size={16} strokeWidth={2.4} /></button>
+                <button onClick={() => { if (window.confirm("Очистить весь чат? История переписки удалится.")) clearChat(); }}
+                  aria-label="Очистить чат" title="Очистить чат"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition hover:bg-red-500/20 hover:text-red-300"><Trash2 size={16} strokeWidth={2.4} /></button>
                 <Link to="/warehouse" className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white transition hover:bg-white/15">Склад →</Link>
                 <button onClick={exitChat} aria-label="Закрыть помощника" title="Закрыть (Esc)"
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition hover:bg-red-500/20 hover:text-red-300">
@@ -1844,7 +1900,7 @@ export default function AIWarehousePage() {
                 Сегодня
               </div>
               {messages.map((msg, i) => (
-                <Message key={i} idx={i} msg={msg} onCancelCard={cancelPurchaseCard} onAttachPhoto={onAttachPhoto} onDismissPhoto={onDismissPhoto} />
+                <Message key={i} idx={i} msg={msg} onCancelCard={cancelPurchaseCard} onAttachPhoto={onAttachPhoto} onDismissPhoto={onDismissPhoto} onOpenImage={setZoomImage} />
               ))}
               {loading && <Message msg={{ role: "bot", text: "Думаю и проверяю данные..." }} />}
               <div ref={bottomRef} />
@@ -2076,6 +2132,21 @@ export default function AIWarehousePage() {
           )}
         </div>
       </div>
+
+      {zoomImage && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+          onClick={() => setZoomImage(null)}
+          role="dialog"
+          aria-label="Просмотр фото"
+        >
+          <img src={zoomImage} alt="Отправленное фото" className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl" onClick={(e) => e.stopPropagation()} />
+          <button type="button" onClick={() => setZoomImage(null)} aria-label="Закрыть"
+            className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 active:scale-95">
+            <X size={22} strokeWidth={2.4} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
