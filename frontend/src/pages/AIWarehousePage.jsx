@@ -433,20 +433,20 @@ const extractPrice = (text) => {
 
   // Если рублей не написали: «гранат 2 кг 450». Берём последнее число,
   // которое не является количеством/размером с единицей измерения.
-  const afterZa = [...t.matchAll(/(?:за|цена|стоимость|сумма|обошл\w*)\s*(\d+(?:\.\d+)?\s*(?:к|тыс|тысяч)?)(?!\s*(?:кг|килограмм|гр|грамм|мл|миллилитр|л\b|литр|шт|штук|шту))/gi)];
+  const afterZa = [...t.matchAll(/(?:за|цена|стоимость|сумма|обошл\w*)\s*(\d+(?:\.\d+)?\s*(?:к|тыс|тысяч)?)(?!\s*(?:кг|килограмм|грамм|гр|г(?![а-яёa-z])|мл|миллилитр|литр|л(?![а-яёa-z])|шт|штук|шту))/gi)];
   if (afterZa.length) return parseMoneyNumber(afterZa[afterZa.length - 1][1]);
 
   const numbers = [...t.matchAll(/\d+(?:\.\d+)?\s*(?:к|тыс|тысяч)?/gi)]
     .filter((m) => {
       const tail = t.slice(m.index + m[0].length, m.index + m[0].length + 16);
-      return !/^\s*(?:кг|килограмм|гр|грамм|мл|миллилитр|л\b|литр|шт|штук|шту|короб|упак|пач|бутыл)/i.test(tail);
+      return !/^\s*(?:кг|килограмм|грамм|гр|г(?![а-яёa-z])|мл|миллилитр|литр|л(?![а-яёa-z])|шт|штук|шту|короб|упак|пач|бутыл)/i.test(tail);
     });
   return numbers.length ? parseMoneyNumber(numbers[numbers.length - 1][0]) : 0;
 };
 
 const extractQuantityAndUnit = (text) => {
   const t = lower(text);
-  const m = t.match(/(\d+(?:\.\d+)?)\s*(короб\w*|упак\w*|пач\w*|бутыл\w*|кг|килограмм\w*|гр|грамм\w*|мл|миллилитр\w*|л\b|литр\w*|шт|штук\w*|шту\w*)/i);
+  const m = t.match(/(\d+(?:\.\d+)?)\s*(короб\w*|упак\w*|пач\w*|бутыл\w*|кг|килограмм\w*|грамм\w*|гр|г(?![а-яёa-z])|мл|миллилитр\w*|литр\w*|л(?![а-яёa-z])|шт|штук\w*|шту\w*)/i);
   if (!m) return null;
   const value = Number(m[1]);
   const unitText = m[2];
@@ -454,9 +454,9 @@ const extractQuantityAndUnit = (text) => {
   let unit = "pcs";
   let basePerUnit = 1;
   if (/кг|килограмм/.test(unitText)) { purchaseUnit = "kg"; unit = "g"; }
-  else if (/гр|грамм|\bг\b/.test(unitText)) { purchaseUnit = "g"; unit = "g"; }
+  else if (/грамм|гр|^г$/.test(unitText)) { purchaseUnit = "g"; unit = "g"; }
   else if (/мл|миллилитр/.test(unitText)) { purchaseUnit = "ml"; unit = "ml"; }
-  else if (/л\b|литр/.test(unitText)) { purchaseUnit = "l"; unit = "ml"; }
+  else if (/литр|^л$/.test(unitText)) { purchaseUnit = "l"; unit = "ml"; }
   else if (/короб/.test(unitText)) purchaseUnit = "box";
   else if (/упак|пач/.test(unitText)) purchaseUnit = "pack";
   else if (/бутыл/.test(unitText)) purchaseUnit = "bottle";
@@ -465,15 +465,16 @@ const extractQuantityAndUnit = (text) => {
 
 const extractSize = (text, fallbackUnit = "pcs") => {
   const t = lower(text);
-  const m = t.match(/(?:по|кажд\w*|одн\w*)\s*(\d+(?:\.\d+)?)\s*(кг|килограмм\w*|гр|грамм\w*|мл|миллилитр\w*|л\b|литр\w*)/i)
-    || t.match(/(\d+(?:\.\d+)?)\s*(кг|килограмм\w*|гр|грамм\w*|мл|миллилитр\w*|л\b|литр\w*)/i);
+  const units = "кг|килограмм\\w*|грамм\\w*|гр|г(?![а-яёa-z])|мл|миллилитр\\w*|литр\\w*|л(?![а-яёa-z])";
+  const m = t.match(new RegExp(`(?:по|кажд\\w*|одн\\w*)\\s*(\\d+(?:\\.\\d+)?)\\s*(${units})`, "i"))
+    || t.match(new RegExp(`(\\d+(?:\\.\\d+)?)\\s*(${units})`, "i"));
   if (!m) return null;
   let value = Number(m[1]);
   const unitText = m[2];
   let unit = fallbackUnit;
   if (/кг|килограмм/.test(unitText)) { value *= 1000; unit = "g"; }
-  else if (/гр|грамм|\bг\b/.test(unitText)) unit = "g";
-  else if (/л\b|литр/.test(unitText)) { value *= 1000; unit = "ml"; }
+  else if (/грамм|гр|^г$/.test(unitText)) unit = "g";
+  else if (/литр|^л$/.test(unitText)) { value *= 1000; unit = "ml"; }
   else if (/мл|миллилитр/.test(unitText)) unit = "ml";
   return { basePerUnit: String(value), packagingQuantity: String(value), unit };
 };
@@ -710,6 +711,17 @@ const shortQuestionForPending = (pending) => {
   if (!form.price) return `За сколько купили «${name}»?`;
   return `Уточни данные по товару «${name}».`;
 };
+
+// Текстовая часть ответа-уточнения (возможное название/вид), без чисел/единиц/денег.
+// «маленькие 250г упаковка» -> «маленькие»; «пекинская капуста» -> «пекинская капуста»; «300г» -> "".
+const nameFromClarification = (raw) => normalizeText(raw)
+  .replace(/\d+(?:[.,]\d+)?\s*(?:кг|килограмм\w*|гр|грамм\w*|мл|миллилитр\w*|л\b|литр\w*|шт|штук\w*|шту\w*|₽|руб\w*|р\b)/gi, " ")
+  .replace(/\b(за|по|цена|цене|стоимость|сумма|упаковк\w*|пачк\w*|бутыл\w*|коробк\w*|это|примерно|около)\b/gi, " ")
+  .replace(/\s+/g, " ")
+  .trim();
+
+// Есть ли в ответе значимые буквы (название/бренд/вид), а не только число+единица.
+const clarificationHasWords = (raw) => nameFromClarification(raw).replace(/[^а-яa-z]/gi, "").length >= 2;
 
 // ── Лёгкий markdown-рендер для ответов ассистента ──────────────────────
 // Разбирает **жирный**, *курсив*, `код`, заголовки #/##/###, списки -,*,•,1.
@@ -973,6 +985,8 @@ export default function AIWarehousePage() {
   // Инпут показываем только после нажатия «Уточнить» — не держим их открытыми пачкой.
   const [weightDraft, setWeightDraft] = useState({});
   const [weightOpen, setWeightOpen] = useState({});
+  // Черновик ответов на уточнения по позициям (что за товар / марка / фасовка), индекс → текст.
+  const [clarifyDraft, setClarifyDraft] = useState({});
   // Просмотр отправленного фото на весь экран (клик по превью в сообщении).
   const [zoomImage, setZoomImage] = useState(null);
 
@@ -1367,6 +1381,7 @@ export default function AIWarehousePage() {
     }
 
     if (stillWaiting.length) {
+      setClarifyDraft({});
       setPendingItems(stillWaiting);
       const savedText = saved.length
         ? `Сохранила:\n${saved.map((x) => `• ${x.matched?.name || x.payload.name} — ${x.computed.quantity} ${unitLabel(x.computed.unit)}${num(x.payload?.price) > 0 ? ` за ${formatMoney(x.payload.price)}` : ""}`).join("\n")}\n\n`
@@ -1521,6 +1536,7 @@ export default function AIWarehousePage() {
     clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation });
     setWeightDraft({});
     setWeightOpen({});
+    setClarifyDraft({});
     setLastEntity(null);
     setAttachedPhoto(null);
     purchasePhotoRef.current = null;
@@ -1547,6 +1563,102 @@ export default function AIWarehousePage() {
     setWeightOpen((p) => { const n = { ...p }; delete n[i]; return n; });
   };
 
+  // Ответить на уточнение по КОНКРЕТНОЙ позиции прямо в карточке (не печатая в чат):
+  // разбираем ответ (название/марка/фасовка/вес/цена), досоставляем позицию. Готовую —
+  // переносим в подтверждение к остальным (единый экран «Записать»), неполную — оставляем
+  // с обновлённым вопросом. Индексы стабильны: готовые помечаем resolved и переносим все
+  // разом, когда не осталось незакрытых.
+  const applyClarification = async (index) => {
+    const raw = normalizeText(clarifyDraft[index] || "");
+    if (!raw) { window.notify?.("Впишите ответ на уточнение", "error"); return; }
+    const pending = pendingItems[index];
+    if (!pending || pending.resolved) return;
+    setLoading(true);
+    try {
+      let candidate;
+      if (clarificationHasWords(raw)) {
+        // Есть слова (название/марка/вид) — просим ИИ применить уточнение с контекстом,
+        // сохраняя уже известные цену и количество (важно для фото — там их не переспросить).
+        const known = [];
+        const qty = pending.form?.purchaseQuantity || pending.form?.quantity;
+        const pu = pending.form?.purchaseUnit || pending.form?.unit || "";
+        const price = num(pending.form?.price);
+        const base = pending.result?.name || pending.form?.name || "товар";
+        if (num(qty) > 0) known.push(`${qty} ${pu}`.trim());
+        if (price > 0) known.push(`за ${price}р`);
+        try {
+          const combined = `${base} ${known.join(" ")}. Пользователь уточнил: ${raw}. Верни ОДНУ позицию этого товара с исправленным названием, не теряя цену и количество.`;
+          const parsed = await parsePurchase(combined, items);
+          const form = { ...(pending.form || {}), ...(parsed.form || {}) };
+          if (num(parsed.form?.price) <= 0 && price > 0) form.price = String(price);
+          if (num(parsed.form?.purchaseQuantity) <= 0 && num(qty) > 0) { form.purchaseQuantity = String(qty); form.quantity = String(qty); }
+          candidate = { ...pending, ...parsed, originalText: pending.originalText, form };
+        } catch {
+          // ИИ недоступен — приклеиваем уточнение к названию локально (короткое = уточнение вида).
+          const local = mergeClarificationLocally(pending, raw);
+          candidate = local.parsed;
+          const textPart = nameFromClarification(raw);
+          if (textPart) {
+            const merged = textPart.split(" ").length >= 2 ? textPart : `${base} ${textPart}`.replace(/\s+/g, " ").trim();
+            candidate.form = { ...candidate.form, name: merged };
+            candidate.result = { ...(candidate.result || {}), name: merged };
+          }
+        }
+      } else {
+        // Только число+единица (вес/кол-во/цена) — закрываем локально.
+        const local = mergeClarificationLocally(pending, raw);
+        candidate = local.parsed;
+      }
+
+      const cleanName = normalizeProductEntityName(candidate.form?.name || candidate.payload?.name || candidate.result?.name || "");
+      if (cleanName) {
+        candidate.form = { ...(candidate.form || {}), name: cleanName };
+        candidate.result = { ...(candidate.result || {}), name: cleanName };
+      }
+      candidate.payload = payloadFromForm(candidate.form || {});
+      candidate.computed = computeWarehouseAmount(candidate.form || {});
+
+      const questions = [];
+      if (!cleanName) questions.push("Как называется товар?");
+      if (num(candidate.form?.purchaseQuantity || candidate.form?.quantity) <= 0) questions.push(`Сколько купили «${cleanName || "товар"}»?`);
+      if (num(candidate.form?.price) <= 0) questions.push(`За сколько купили «${cleanName || "товар"}»?`);
+      candidate.questions = questions;
+      candidate.result = { ...(candidate.result || {}), questions };
+
+      if (questions.length) {
+        // Ещё не хватает данных — оставляем карточку с новым вопросом.
+        setPendingItems((prev) => prev.map((p, i) => (i === index ? candidate : p)));
+        setClarifyDraft((d) => ({ ...d, [index]: "" }));
+        window.notify?.("Осталось уточнить ещё — впишите недостающее", "info");
+        return;
+      }
+
+      // Позиция готова — сопоставляем со складом и помечаем resolved.
+      const matched = candidate.result?.matchedItemId
+        ? safe_items.find((it) => Number(it.id) === Number(candidate.result.matchedItemId))
+        : safe_items.find((it) => normalizeProductEntityName(it.name || "") === cleanName);
+      const prepared = { originalText: candidate.originalText, result: candidate.result, form: candidate.form, payload: candidate.payload, computed: candidate.computed, matched: matched || null, questions: [] };
+      const next = pendingItems.map((p, i) => (i === index ? { ...candidate, resolved: true, prepared } : p));
+
+      if (next.every((p) => p.resolved)) {
+        // Все уточнения закрыты — переносим в подтверждение к остальным (единый экран «Записать»).
+        setPendingPurchaseConfirmation((prev) => ({
+          items: [...(prev?.items || []), ...next.map((p) => p.prepared)],
+          wsName: prev?.wsName || targetName,
+        }));
+        setPendingItems([]);
+        setClarifyDraft({});
+      } else {
+        setPendingItems(next);
+        setClarifyDraft((d) => { const n = { ...d }; delete n[index]; return n; });
+      }
+    } catch (e) {
+      window.notify?.(e?.message || "Не получилось уточнить", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Общий обработчик распознанных позиций закупки (из текста ИЛИ из фото накладной):
   // готовые — в подтверждение, неполные — в уточнения.
   const runPurchaseItems = (parsedItems, originalText) => {
@@ -1564,14 +1676,14 @@ export default function AIWarehousePage() {
       return { originalText, result: p, form, payload: payloadFromForm(form), computed: computeWarehouseAmount(form), matched: matched || null, questions: [] };
     });
     if (waiting.length > 0) {
+      setClarifyDraft({});
       setPendingItems(waiting.map((p) => ({
         originalText, result: p,
         form: formFromAIResult(p), payload: payloadFromForm(formFromAIResult(p)),
         computed: computeWarehouseAmount(formFromAIResult(p)),
         matched: null, questions: p.questions || [],
       })));
-      const qs = waiting.map((p, i) => `${i + 1}) ${(p.questions || []).join("; ")}`).join("\n");
-      setMessages((prev) => [...prev, { role: "bot", text: `Нужно уточнить:\n${qs}` }]);
+      setMessages((prev) => [...prev, { role: "bot", text: `По ${waiting.length === 1 ? "одной позиции нужно" : "нескольким позициям нужно"} уточнение — впишите ответ прямо в карточке ниже и нажмите «Уточнить». Можно и просто написать в чат.` }]);
     }
     if (prepared.length > 0) {
       setPendingPurchaseConfirmation({ items: prepared, wsName: targetName });
@@ -2003,16 +2115,57 @@ export default function AIWarehousePage() {
                 </div>
               )}
               {pendingItems.length > 0 && (
-                <div className="mb-2 flex items-center gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2">
-                  <span className="text-xs font-bold text-amber-200">
-                    Жду ответ по закупке: {pendingItems.map((x) => normalizeProductEntityName(x.result?.name || x.payload?.name || x.form?.name || "товар")).join(", ")}
-                  </span>
-                  <button
-                    onClick={() => { clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation }); setMessages((p) => [...p, { role: "bot", text: "Ок, закрыла уточнения. Что дальше?" }]); }}
-                    className="ml-auto shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-200 transition active:scale-95 hover:bg-white/10"
-                  >
-                    Отменить уточнения
-                  </button>
+                <div className="mb-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="min-w-0 text-xs font-black text-amber-200">
+                      Нужно уточнить {pendingItems.filter((x) => !x.resolved).length} {pendingItems.filter((x) => !x.resolved).length === 1 ? "позицию" : "позиции"}
+                    </p>
+                    <button
+                      onClick={() => { clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation }); setClarifyDraft({}); setMessages((p) => [...p, { role: "bot", text: "Ок, закрыла уточнения. Что дальше?" }]); }}
+                      className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-200 transition active:scale-95 hover:bg-white/10"
+                    >
+                      Отменить
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {pendingItems.map((x, i) => {
+                      const nm = normalizeProductEntityName(x.result?.name || x.form?.name || x.payload?.name || "товар") || "Товар";
+                      const q = normalizeQuestionText(x.questions || x.result?.questions) || shortQuestionForPending(x);
+                      if (x.resolved) {
+                        return (
+                          <div key={i} className="rounded-xl bg-white/5 px-3 py-2 opacity-70">
+                            <p className="text-[13px] font-black text-white">{nm} — {x.computed?.quantity} {unitLabel(x.computed?.unit)}</p>
+                            <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-black text-emerald-300"><Check size={11} strokeWidth={3} /> уточнено</p>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={i} className="rounded-xl bg-slate-950/40 px-3 py-2.5">
+                          <p className="text-[13px] font-black text-white">{nm}</p>
+                          <p className="mt-0.5 whitespace-pre-line text-[11px] font-bold leading-snug text-amber-200/90">{q}</p>
+                          <div className="mt-2 flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              value={clarifyDraft[i] ?? ""}
+                              onChange={(e) => setClarifyDraft((p) => ({ ...p, [i]: e.target.value }))}
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyClarification(i); } }}
+                              placeholder="Ваш ответ…"
+                              disabled={loading}
+                              className="min-w-0 flex-1 rounded-lg border border-white/10 bg-slate-950/60 px-2.5 py-1.5 text-[12px] font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-amber-400/50 focus:outline-none focus-visible:outline-none disabled:opacity-50"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => applyClarification(i)}
+                              disabled={loading}
+                              className="shrink-0 rounded-lg bg-amber-500/20 px-3 py-1.5 text-[11px] font-black text-amber-100 outline-none transition hover:bg-amber-500/30 active:scale-95 focus:outline-none focus-visible:outline-none disabled:opacity-50"
+                            >
+                              Уточнить
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
               <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none" style={{scrollbarWidth:"none"}}>
