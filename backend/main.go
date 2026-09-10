@@ -155,6 +155,7 @@ func main() {
 
 	// Денежная касса (смена)
 	auth.GET("/cash/shift/current", getCurrentCashShift)
+	auth.GET("/cash/shift/sales", getShiftSales)
 	auth.POST("/cash/shift/open", openCashShift)
 	auth.POST("/cash/shift/close", closeCashShift)
 	auth.POST("/cash/movement", addCashMovement)

@@ -89,6 +89,35 @@ func getCurrentCashShift(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"open": true, "shift": s})
 }
 
+// GET /cash/shift/sales — чеки за смену (работник может посмотреть, что пробил).
+// Смена открыта → все продажи с момента открытия; смены нет → продажи за
+// сегодняшний рабочий день, чтобы список не был пустым.
+func getShiftSales(c *gin.Context) {
+	accID := accountID(c)
+	if s, ok := loadOpenShift(accID); ok {
+		sales, err := querySalesWhere(
+			[]string{"s.account_id = ?", "datetime(s.created_at) >= datetime(?)"},
+			[]any{accID, s.OpenedAt},
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"open": true, "scope": "shift", "openedAt": s.OpenedAt, "openedBy": s.OpenedBy, "sales": sales})
+		return
+	}
+	off := dayOffset(accID)
+	sales, err := querySalesWhere(
+		[]string{"s.account_id = ?", "date(s.created_at, 'localtime'" + off + ") = date('now', 'localtime'" + off + ")"},
+		[]any{accID},
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"open": false, "scope": "today", "sales": sales})
+}
+
 // POST /cash/shift/open — открыть смену с разменом
 func openCashShift(c *gin.Context) {
 	accID := accountID(c)

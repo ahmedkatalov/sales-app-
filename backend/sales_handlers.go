@@ -573,27 +573,12 @@ func deletePendingSale(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
-func getSales(c *gin.Context) {
-	accountID := accountID(c)
-	off := dayOffset(accountID) // рабочий день точки (ночные продажи → верный день)
-	from := c.Query("from")
-	to := c.Query("to")
-
-	where := []string{"s.account_id = ?"}
-	args := []any{accountID}
-
-	if from != "" {
-		where = append(where, "date(s.created_at, 'localtime'"+off+") >= date(?)")
-		args = append(args, from)
-	}
-
-	if to != "" {
-		where = append(where, "date(s.created_at, 'localtime'"+off+") <= date(?)")
-		args = append(args, to)
-	}
-
+// querySalesWhere — общий загрузчик чеков по произвольному условию (WHERE по
+// алиасу s). Возвращает продажи (новые сверху) с батч-подгрузкой позиций, без
+// N+1. Используется и обычным списком продаж, и «чеками за смену».
+func querySalesWhere(where []string, args []any) ([]Sale, error) {
 	rows, err := db.Query(`
-		SELECT 
+		SELECT
 			s.id,
 			s.account_id,
 			IFNULL(s.employee_id, 0),
@@ -615,44 +600,28 @@ func getSales(c *gin.Context) {
 		ORDER BY s.id DESC
 	`, args...)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return nil, err
 	}
-	defer rows.Close()
 
 	list := []Sale{}
-
 	for rows.Next() {
 		var s Sale
 		if err := rows.Scan(
-			&s.ID,
-			&s.AccountID,
-			&s.EmployeeID,
-			&s.EmployeeName,
-			&s.PaymentType,
-			&s.CardID,
-			&s.CardName,
-			&s.Subtotal,
-			&s.DiscountPercent,
-			&s.DiscountAmount,
-			&s.Total,
-			&s.CashGiven,
-			&s.ChangeAmount,
-			&s.CreatedAt,
+			&s.ID, &s.AccountID, &s.EmployeeID, &s.EmployeeName, &s.PaymentType,
+			&s.CardID, &s.CardName, &s.Subtotal, &s.DiscountPercent, &s.DiscountAmount,
+			&s.Total, &s.CashGiven, &s.ChangeAmount, &s.CreatedAt,
 		); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+			rows.Close()
+			return nil, err
 		}
-
 		list = append(list, s)
 	}
-	// Закрываем rows до вложенных запросов getSaleItems: при SetMaxOpenConns(1)
-	// открытый rows держит единственное соединение и вызвал бы дедлок.
+	// Закрываем rows до вложенных запросов: при SetMaxOpenConns(1) открытый rows
+	// держит единственное соединение и вызвал бы дедлок.
 	rows.Close()
 
-	// Батч позиций вместо N+1: одним запросом тянем позиции всех загруженных продаж
-	// (через подзапрос по тому же WHERE — без лимита на число плейсхолдеров) и
-	// группируем по sale_id. Индекс idx_sale_items_sale делает это точечным.
+	// Батч позиций вместо N+1: одним запросом тянем позиции всех продаж (через
+	// подзапрос по тому же WHERE) и группируем по sale_id.
 	if len(list) > 0 {
 		itemsBySale := map[int][]SaleItem{}
 		irows, ierr := db.Query(`
@@ -675,6 +644,33 @@ func getSales(c *gin.Context) {
 		for i := range list {
 			list[i].Items = itemsBySale[list[i].ID]
 		}
+	}
+	return list, nil
+}
+
+func getSales(c *gin.Context) {
+	accountID := accountID(c)
+	off := dayOffset(accountID) // рабочий день точки (ночные продажи → верный день)
+	from := c.Query("from")
+	to := c.Query("to")
+
+	where := []string{"s.account_id = ?"}
+	args := []any{accountID}
+
+	if from != "" {
+		where = append(where, "date(s.created_at, 'localtime'"+off+") >= date(?)")
+		args = append(args, from)
+	}
+
+	if to != "" {
+		where = append(where, "date(s.created_at, 'localtime'"+off+") <= date(?)")
+		args = append(args, to)
+	}
+
+	list, err := querySalesWhere(where, args)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.JSON(http.StatusOK, list)

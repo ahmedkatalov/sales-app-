@@ -6,7 +6,7 @@ import PendingPaymentsModal from "../components/PendingPaymentsModal";
 import { formatMoney, money, num } from "../utils/format";
 import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
-import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2 } from "lucide-react";
+import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt } from "lucide-react";
 
 const RECIPE_UNITS = [
   ["g", "г"],
@@ -294,6 +294,24 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     setCashCheckModal(true);
     setCashCheckLoading(true);
     try { await loadCashShift(); } finally { setCashCheckLoading(false); }
+  };
+
+  // «Чеки за смену»: работник видит, что пробил за смену (или за сегодня, если
+  // смена не открыта). Данные тянем с сервера при каждом открытии — актуально.
+  const [receiptsModal, setReceiptsModal] = useState(false);
+  const [receiptsLoading, setReceiptsLoading] = useState(false);
+  const [receiptsData, setReceiptsData] = useState(null); // { open, scope, openedAt, sales }
+  const openReceipts = async () => {
+    setReceiptsModal(true);
+    setReceiptsLoading(true);
+    try {
+      const r = await get("/cash/shift/sales");
+      setReceiptsData(r && Array.isArray(r.sales) ? r : { open: false, scope: "today", sales: [] });
+    } catch {
+      setReceiptsData({ open: false, scope: "today", sales: [] });
+    } finally {
+      setReceiptsLoading(false);
+    }
   };
 
   // «К оплате» прямо из кассы: счётчик отложенных чеков + модалка приёма оплаты.
@@ -828,6 +846,13 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3 font-black text-sky-200 transition hover:bg-sky-500/20 active:scale-95">
             <CreditCard size={18} strokeWidth={2.4} />
             <span className="hidden sm:inline">Карты</span>
+          </button>
+          <button type="button" onClick={openReceipts}
+            aria-label="Чеки за смену — что пробили"
+            title="Чеки за смену — что пробили"
+            className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3 font-black text-violet-200 transition hover:bg-violet-500/20 active:scale-95">
+            <Receipt size={18} strokeWidth={2.4} />
+            <span className="hidden sm:inline">Чеки</span>
           </button>
         </div>
 
@@ -1420,6 +1445,81 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               Готово
             </button>
           </div>
+        </Modal>
+      )}
+
+      {receiptsModal && (
+        <Modal title="Чеки за смену" section={receiptsData && receiptsData.open === false ? "За сегодня" : "За смену"} onClose={() => setReceiptsModal(false)} legacyLight={false}>
+          {receiptsLoading ? (
+            <div className="py-10 text-center text-sm font-bold text-slate-400">Загружаю чеки…</div>
+          ) : (() => {
+            const sales = Array.isArray(receiptsData?.sales) ? receiptsData.sales : [];
+            const sum = sales.reduce((a, s) => a + num(s.total), 0);
+            const scopeLabel = receiptsData?.open ? "за текущую смену" : "за сегодня";
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-[11px] font-black uppercase tracking-wide text-violet-300/80">Чеков {scopeLabel}</p>
+                    <p className="text-2xl font-black text-white">{sales.length}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-[11px] font-black uppercase tracking-wide text-violet-300/80">Сумма</p>
+                    <p className="text-2xl font-black text-emerald-300">{formatMoney(sum)}</p>
+                  </div>
+                </div>
+                {!receiptsData?.open && (
+                  <p className="text-xs font-bold text-slate-400">Смена не открыта — показаны чеки за сегодня. Откройте смену в окне «Наличные».</p>
+                )}
+                {sales.length === 0 ? (
+                  <div className="flex flex-col items-center py-8 text-center">
+                    <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-slate-500"><Receipt size={26} strokeWidth={1.8} /></div>
+                    <p className="font-black text-white">Пока нет чеков</p>
+                    <p className="mt-1 text-sm font-bold text-slate-400">Как пробьёте первую продажу — она появится здесь.</p>
+                  </div>
+                ) : (
+                  <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1">
+                    {sales.map((s) => {
+                      const pt = s.paymentType || s.payment_type;
+                      const pay = pt === "transfer"
+                        ? { t: s.cardName ? `Перевод · ${s.cardName}` : "Перевод", c: "bg-sky-500/15 text-sky-300" }
+                        : pt === "debt"
+                        ? { t: "Долг", c: "bg-amber-500/15 text-amber-300" }
+                        : { t: "Наличные", c: "bg-emerald-500/15 text-emerald-300" };
+                      const time = String(s.createdAt || s.created_at || "").slice(11, 16);
+                      const items = Array.isArray(s.items) ? s.items : [];
+                      return (
+                        <div key={s.id} className="rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <span className="shrink-0 rounded-lg bg-white/5 px-2 py-1 text-xs font-black text-slate-300">{time || "—"}</span>
+                              <span className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-black ${pay.c}`}>{pay.t}</span>
+                              {s.employeeName && <span className="truncate text-xs font-bold text-slate-400">· {s.employeeName}</span>}
+                            </div>
+                            <span className="shrink-0 text-base font-black text-white">{formatMoney(s.total)}</span>
+                          </div>
+                          {items.length > 0 && (
+                            <div className="mt-2 space-y-0.5 border-t border-white/5 pt-2">
+                              {items.map((it, i) => (
+                                <div key={i} className="flex items-center justify-between gap-2 text-[12px] font-bold text-slate-300">
+                                  <span className="min-w-0 truncate">{it.name} <span className="text-slate-500">× {num(it.qty)}</span></span>
+                                  <span className="shrink-0 text-slate-400">{formatMoney(num(it.total) || num(it.price) * num(it.qty))}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {num(s.changeAmount) > 0 && (
+                            <p className="mt-1.5 text-[11px] font-bold text-slate-500">Сдача: {formatMoney(s.changeAmount)}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <button type="button" onClick={() => setReceiptsModal(false)} className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">Готово</button>
+              </div>
+            );
+          })()}
         </Modal>
       )}
 
