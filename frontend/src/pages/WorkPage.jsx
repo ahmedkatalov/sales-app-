@@ -7,7 +7,7 @@ import MenuTransferModal from "../components/MenuTransferModal";
 import MenuPdfImportModal from "../components/MenuPdfImportModal";
 import EmptyState from "../components/EmptyState";
 import { useMediaQuery } from "../hooks/useMediaQuery";
-import { formatMoney, money, num } from "../utils/format";
+import { formatMoney, money, num, businessISO } from "../utils/format";
 import { getWarehouseUnitCost } from "../utils/menu";
 import { csvCell, csvNum, downloadCsv } from "../utils/csv";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
@@ -380,6 +380,18 @@ export default function WorkPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTypeId, folders, selectedFolderId]);
 
+  // Продажи считаем за ТЕКУЩИЙ рабочий месяц (карточки называются «/ мес») —
+  // так «Выручка/Продано» на этой странице совпадают с «Аналитикой», а не берут
+  // всю историю. Рабочий месяц (businessISO) — как во всех «сегодня/за месяц».
+  const currentSalesMonth = businessISO().slice(0, 7);
+  const monthSales = useMemo(
+    () => (Array.isArray(sales) ? sales : []).filter((s) => {
+      const created = s.createdAt || s.created_at;
+      return created && businessISO(new Date(created)).slice(0, 7) === currentSalesMonth;
+    }),
+    [sales, currentSalesMonth]
+  );
+
   // Считаем продажи по СТАБИЛЬНОМУ id товара и по ЗАПИСАННЫМ в чеке суммам
   // (price/cost/total на момент продажи), а не по текущей цене — иначе смена
   // цены задним числом переписывала выручку, а одинаковые имена склеивались.
@@ -410,7 +422,7 @@ export default function WorkPage() {
       bucket.cost += cost;
     };
 
-    (Array.isArray(sales) ? sales : []).forEach((sale) => {
+    monthSales.forEach((sale) => {
       if (Array.isArray(sale.items)) {
         sale.items.forEach(addItem);
       } else if (sale.productName || sale.name || sale.product_name) {
@@ -419,7 +431,26 @@ export default function WorkPage() {
     });
 
     return { byId, byName };
-  }, [sales]);
+  }, [monthSales]);
+
+  // Итоги для верхних карточек — ВСЕ продажи за месяц (а не только по товарам из
+  // текущего меню), чтобы «Выручка/Продано/Прибыль» отражали реальную кассу и
+  // совпадали с «Аналитикой». Продажи снятых из меню/доп. позиций тоже учтены.
+  const monthTotals = useMemo(() => {
+    let quantity = 0, revenue = 0, cost = 0;
+    const addOne = (item) => {
+      const qty = Number(item.qty || item.quantity || item.count || 1) || 0;
+      if (qty <= 0) return;
+      quantity += qty;
+      revenue += money(item.total != null ? item.total : money(item.price) * qty);
+      cost += money(item.cost) * qty;
+    };
+    monthSales.forEach((sale) => {
+      if (Array.isArray(sale.items) && sale.items.length) sale.items.forEach(addOne);
+      else if (sale.productName || sale.name || sale.product_name) addOne(sale);
+    });
+    return { quantity, revenue, cost, cleanProfit: revenue - cost };
+  }, [monthSales]);
 
   const visibleProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -1013,7 +1044,7 @@ export default function WorkPage() {
             </span>
             <p className="min-w-0 text-[10px] font-bold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-xs">Продано / мес</p>
           </div>
-          <p className="mt-2.5 text-base font-black tabular-nums text-white sm:mt-3 sm:text-3xl">{num(totals.quantity)}</p>
+          <p className="mt-2.5 text-base font-black tabular-nums text-white sm:mt-3 sm:text-3xl">{num(monthTotals.quantity)}</p>
         </div>
 
         <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur sm:p-5">
@@ -1023,7 +1054,7 @@ export default function WorkPage() {
             </span>
             <p className="min-w-0 text-[10px] font-bold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-xs">Выручка</p>
           </div>
-          <p className="mt-2.5 text-base font-black tabular-nums text-white sm:mt-3 sm:text-3xl">{formatMoney(totals.revenue)}</p>
+          <p className="mt-2.5 text-base font-black tabular-nums text-white sm:mt-3 sm:text-3xl">{formatMoney(monthTotals.revenue)}</p>
         </div>
 
         <div className="min-w-0 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.07] p-3 backdrop-blur sm:p-5">
@@ -1033,7 +1064,7 @@ export default function WorkPage() {
             </span>
             <p className="min-w-0 text-[10px] font-bold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-xs">Чистая прибыль</p>
           </div>
-          <p className="mt-2.5 text-base font-black tabular-nums text-emerald-400 sm:mt-3 sm:text-3xl">{formatMoney(totals.cleanProfit)}</p>
+          <p className="mt-2.5 text-base font-black tabular-nums text-emerald-400 sm:mt-3 sm:text-3xl">{formatMoney(monthTotals.cleanProfit)}</p>
         </div>
       </div>
 
