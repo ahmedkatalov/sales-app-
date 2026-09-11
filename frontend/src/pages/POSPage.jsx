@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { del, get, getSession, post } from "../api";
 import Modal from "../components/Modal";
 import PendingPaymentsModal from "../components/PendingPaymentsModal";
-import { formatMoney, money, num } from "../utils/format";
+import { formatMoney, money, num, businessISO } from "../utils/format";
 import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
 import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt } from "lucide-react";
@@ -288,12 +288,21 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   };
   useEffect(() => { loadCashShift(); }, []);
 
+  // Итоги за сегодня (рабочий день): продаж, выручка, сколько нала принесли продажи.
+  const [todayStats, setTodayStats] = useState(null);
+
   // «Проверить кассу»: обновляем цифры и открываем окно (актуально даже если
   // продажи шли на другом устройстве — не доверяем устаревшему состоянию).
+  // Заодно тянем «за сегодня» — сколько работник наработал за день.
   const openCashCheck = async () => {
     setCashCheckModal(true);
     setCashCheckLoading(true);
-    try { await loadCashShift(); } finally { setCashCheckLoading(false); }
+    const today = businessISO();
+    const statsPromise = get(`/sales/stats?from=${today}&to=${today}`).catch(() => null);
+    try {
+      await loadCashShift();
+      setTodayStats(await statsPromise);
+    } finally { setCashCheckLoading(false); }
   };
 
   // «Чеки за смену»: работник видит, что пробил за смену (или за сегодня, если
@@ -1262,6 +1271,32 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
       {cashCheckModal && (
         <Modal title="Проверить кассу" section="Наличные" onClose={() => setCashCheckModal(false)} legacyLight={false}>
+          <div className="space-y-4">
+            {/* Работа за сегодня: продаж, выручка, сколько нала принесли продажи за день */}
+            <div className="rounded-3xl border border-violet-400/20 bg-violet-500/[0.08] p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-black uppercase tracking-wide text-violet-300/80">Работа за сегодня</p>
+                {cashCheckLoading && <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />}
+              </div>
+              <div className="mt-2.5 grid grid-cols-3 gap-2">
+                <div className="rounded-2xl bg-white/[0.05] px-2.5 py-2.5 text-center">
+                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Продаж</p>
+                  <p className="mt-0.5 text-2xl font-black tabular-nums text-white">{num(todayStats?.salesCount)}</p>
+                </div>
+                <div className="rounded-2xl bg-white/[0.05] px-2.5 py-2.5 text-center">
+                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Выручка</p>
+                  <p className="mt-0.5 text-lg font-black tabular-nums text-white sm:text-xl">{formatMoney(num(todayStats?.totalRevenue))}</p>
+                </div>
+                <div className="rounded-2xl bg-emerald-500/10 px-2.5 py-2.5 text-center">
+                  <p className="text-[10px] font-black uppercase tracking-wide text-emerald-300/80">Налом</p>
+                  <p className="mt-0.5 text-lg font-black tabular-nums text-emerald-300 sm:text-xl">{formatMoney(num(todayStats?.cashTotal))}</p>
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] font-bold leading-snug text-slate-500">
+                «Налом» — сколько наличных принесли продажи именно за сегодня. Общая касса ниже — с разменом и за всю смену.
+              </p>
+            </div>
+
           {cashShift ? (
             <div className="space-y-4">
               {/* Главное число: сколько наличных должно быть в кассе прямо сейчас */}
@@ -1352,6 +1387,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               </button>
             </div>
           )}
+          </div>
         </Modal>
       )}
 
