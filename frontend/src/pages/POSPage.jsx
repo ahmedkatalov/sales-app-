@@ -8,6 +8,10 @@ import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
 import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt } from "lucide-react";
 
+// Бизнес-дата на N дней назад (0 = сегодня) с учётом времени открытия точки.
+// Вне компонента — eslint (react-hooks/purity) не любит Date.now/new Date в теле.
+const businessDayISO = (daysAgo = 0) => businessISO(new Date(Date.now() - daysAgo * 86400000));
+
 const RECIPE_UNITS = [
   ["g", "г"],
   ["kg", "кг"],
@@ -305,23 +309,27 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     } finally { setCashCheckLoading(false); }
   };
 
-  // «Чеки за смену»: работник видит, что пробил за смену (или за сегодня, если
-  // смена не открыта). Данные тянем с сервера при каждом открытии — актуально.
+  // «Чеки»: работник видит, что пробил ЗА СЕГОДНЯ (по умолчанию), а если хочет —
+  // может переключиться на «Вчера». По дню, а не по смене: смена может тянуться
+  // с прошлого дня (если не закрыли) и мешать вчерашние чеки к сегодняшним.
   const [receiptsModal, setReceiptsModal] = useState(false);
   const [receiptsLoading, setReceiptsLoading] = useState(false);
-  const [receiptsData, setReceiptsData] = useState(null); // { open, scope, openedAt, sales }
-  const openReceipts = async () => {
-    setReceiptsModal(true);
+  const [receiptsDay, setReceiptsDay] = useState("today"); // 'today' | 'yesterday'
+  const [receiptsSales, setReceiptsSales] = useState([]);
+  const loadReceipts = async (day) => {
     setReceiptsLoading(true);
     try {
-      const r = await get("/cash/shift/sales");
-      setReceiptsData(r && Array.isArray(r.sales) ? r : { open: false, scope: "today", sales: [] });
+      const iso = businessDayISO(day === "yesterday" ? 1 : 0);
+      const r = await get(`/sales?from=${iso}&to=${iso}`);
+      setReceiptsSales(Array.isArray(r) ? r : []);
     } catch {
-      setReceiptsData({ open: false, scope: "today", sales: [] });
+      setReceiptsSales([]);
     } finally {
       setReceiptsLoading(false);
     }
   };
+  const openReceipts = () => { setReceiptsModal(true); setReceiptsDay("today"); setReceiptsSales([]); loadReceipts("today"); };
+  const switchReceiptsDay = (day) => { setReceiptsDay(day); loadReceipts(day); };
 
   // «К оплате» прямо из кассы: счётчик отложенных чеков + модалка приёма оплаты.
   const [pendingModal, setPendingModal] = useState(false);
@@ -857,8 +865,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <span className="hidden sm:inline">Карты</span>
           </button>
           <button type="button" onClick={openReceipts}
-            aria-label="Чеки за смену — что пробили"
-            title="Чеки за смену — что пробили"
+            aria-label="Чеки за сегодня — что пробили"
+            title="Чеки за сегодня — что пробили"
             className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3 font-black text-violet-200 transition hover:bg-violet-500/20 active:scale-95">
             <Receipt size={18} strokeWidth={2.4} />
             <span className="hidden sm:inline">Чеки</span>
@@ -1485,15 +1493,24 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       )}
 
       {receiptsModal && (
-        <Modal title="Чеки за смену" section={receiptsData && receiptsData.open === false ? "За сегодня" : "За смену"} onClose={() => setReceiptsModal(false)} legacyLight={false}>
-          {receiptsLoading ? (
-            <div className="py-10 text-center text-sm font-bold text-slate-400">Загружаю чеки…</div>
-          ) : (() => {
-            const sales = Array.isArray(receiptsData?.sales) ? receiptsData.sales : [];
-            const sum = sales.reduce((a, s) => a + num(s.total), 0);
-            const scopeLabel = receiptsData?.open ? "за текущую смену" : "за сегодня";
-            return (
-              <div className="space-y-3">
+        <Modal title="Чеки" section={receiptsDay === "yesterday" ? "За вчера" : "За сегодня"} onClose={() => setReceiptsModal(false)} legacyLight={false}>
+          <div className="space-y-3">
+            <div className="flex gap-1.5 rounded-2xl bg-white/[0.05] p-1">
+              {[["today", "Сегодня"], ["yesterday", "Вчера"]].map(([k, label]) => (
+                <button key={k} type="button" onClick={() => switchReceiptsDay(k)} disabled={receiptsLoading && receiptsDay === k}
+                  className={`flex-1 rounded-xl px-3 py-2 text-[13px] font-black transition active:scale-95 ${receiptsDay === k ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg" : "text-slate-300 hover:bg-white/5"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {receiptsLoading ? (
+              <div className="py-10 text-center text-sm font-bold text-slate-400">Загружаю чеки…</div>
+            ) : (() => {
+              const sales = receiptsSales;
+              const sum = sales.reduce((a, s) => a + num(s.total), 0);
+              const scopeLabel = receiptsDay === "yesterday" ? "за вчера" : "за сегодня";
+              return (
+              <>
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3">
                   <div className="min-w-0">
                     <p className="truncate text-[11px] font-black uppercase tracking-wide text-violet-300/80">Чеков {scopeLabel}</p>
@@ -1504,14 +1521,11 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     <p className="text-2xl font-black text-emerald-300">{formatMoney(sum)}</p>
                   </div>
                 </div>
-                {!receiptsData?.open && (
-                  <p className="text-xs font-bold text-slate-400">Смена не открыта — показаны чеки за сегодня. Откройте смену в окне «Наличные».</p>
-                )}
                 {sales.length === 0 ? (
                   <div className="flex flex-col items-center py-8 text-center">
                     <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-slate-500"><Receipt size={26} strokeWidth={1.8} /></div>
-                    <p className="font-black text-white">Пока нет чеков</p>
-                    <p className="mt-1 text-sm font-bold text-slate-400">Как пробьёте первую продажу — она появится здесь.</p>
+                    <p className="font-black text-white">{receiptsDay === "yesterday" ? "Вчера чеков не было" : "Пока нет чеков"}</p>
+                    <p className="mt-1 text-sm font-bold text-slate-400">{receiptsDay === "yesterday" ? "За вчерашний день продаж нет." : "Как пробьёте первую продажу — она появится здесь."}</p>
                   </div>
                 ) : (
                   <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1">
@@ -1552,10 +1566,11 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     })}
                   </div>
                 )}
-                <button type="button" onClick={() => setReceiptsModal(false)} className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">Готово</button>
-              </div>
-            );
-          })()}
+              </>
+              );
+            })()}
+            <button type="button" onClick={() => setReceiptsModal(false)} className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">Готово</button>
+          </div>
         </Modal>
       )}
 
