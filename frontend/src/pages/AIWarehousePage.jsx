@@ -987,6 +987,12 @@ export default function AIWarehousePage() {
   const [weightOpen, setWeightOpen] = useState({});
   // Черновик ответов на уточнения по позициям (что за товар / марка / фасовка), индекс → текст.
   const [clarifyDraft, setClarifyDraft] = useState({});
+  // Панель уточнений: отдельная прокручиваемая модалка (много позиций не влезали в
+  // нижнюю панель). clarifyOpen — у какой позиции раскрыт инпут (по кнопке «Уточнить»).
+  const [clarifyModalOpen, setClarifyModalOpen] = useState(false);
+  const [clarifyOpen, setClarifyOpen] = useState({});
+  // Фото накладной текущей закупки — чтобы открыть его прямо из окна уточнений/подтверждения.
+  const [pendingPhoto, setPendingPhoto] = useState(null);
   // Просмотр отправленного фото на весь экран (клик по превью в сообщении).
   const [zoomImage, setZoomImage] = useState(null);
 
@@ -1136,6 +1142,14 @@ export default function AIWarehousePage() {
     if (!box) return;
     box.scrollTo({ top: box.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
+
+  // Когда уточнений не осталось — закрываем окно уточнений и его временные состояния.
+  useEffect(() => {
+    if (pendingItems.length === 0) {
+      setClarifyModalOpen(false);
+      setClarifyOpen({});
+    }
+  }, [pendingItems.length]);
 
   const recentAdded = useMemo(() => (Array.isArray(movements) ? movements : []).filter((m) => String(m.movementType || m.movement_type) === "in").slice(0, 5), [movements]);
   const topItems = useMemo(() => [...items].filter((x) => !(x.hidden || x.isHidden || x.is_hidden)).sort((a, b) => num(b.quantity) - num(a.quantity)).slice(0, 7), [items]);
@@ -1519,6 +1533,7 @@ export default function AIWarehousePage() {
       setMessages((prev) => [...prev, { role: "bot", text: friendly }]);
     } finally {
       setLoading(false);
+      setPendingPhoto(null);
     }
   };
 
@@ -1526,6 +1541,7 @@ export default function AIWarehousePage() {
     setPendingPurchaseConfirmation(null);
     setWeightDraft({});
     setWeightOpen({});
+    setPendingPhoto(null);
     setMessages((prev) => [...prev, { role: "bot", text: "Ок, отменила закупку — ничего не записала." }]);
   };
 
@@ -1537,6 +1553,9 @@ export default function AIWarehousePage() {
     setWeightDraft({});
     setWeightOpen({});
     setClarifyDraft({});
+    setClarifyOpen({});
+    setClarifyModalOpen(false);
+    setPendingPhoto(null);
     setLastEntity(null);
     setAttachedPhoto(null);
     purchasePhotoRef.current = null;
@@ -1648,9 +1667,11 @@ export default function AIWarehousePage() {
         }));
         setPendingItems([]);
         setClarifyDraft({});
+        setClarifyOpen({});
       } else {
         setPendingItems(next);
         setClarifyDraft((d) => { const n = { ...d }; delete n[index]; return n; });
+        setClarifyOpen((d) => { const n = { ...d }; delete n[index]; return n; });
       }
     } catch (e) {
       window.notify?.(e?.message || "Не получилось уточнить", "error");
@@ -1677,13 +1698,15 @@ export default function AIWarehousePage() {
     });
     if (waiting.length > 0) {
       setClarifyDraft({});
+      setClarifyOpen({});
+      setClarifyModalOpen(true);
       setPendingItems(waiting.map((p) => ({
         originalText, result: p,
         form: formFromAIResult(p), payload: payloadFromForm(formFromAIResult(p)),
         computed: computeWarehouseAmount(formFromAIResult(p)),
         matched: null, questions: p.questions || [],
       })));
-      setMessages((prev) => [...prev, { role: "bot", text: `По ${waiting.length === 1 ? "одной позиции нужно" : "нескольким позициям нужно"} уточнение — впишите ответ прямо в карточке ниже и нажмите «Уточнить». Можно и просто написать в чат.` }]);
+      setMessages((prev) => [...prev, { role: "bot", text: `По ${waiting.length === 1 ? "одной позиции нужно" : "нескольким позициям нужно"} уточнение — открыла окно уточнений, впишите ответ у нужной позиции. Можно и просто написать в чат.` }]);
     }
     if (prepared.length > 0) {
       setPendingPurchaseConfirmation({ items: prepared, wsName: targetName });
@@ -1750,6 +1773,7 @@ export default function AIWarehousePage() {
         return;
       }
       purchasePhotoRef.current = photo; // прикрепим к расходу после сохранения
+      setPendingPhoto(photo); // чтобы можно было открыть накладную из окна уточнений
       setMessages((p) => [...p, { role: "bot", text: `Распознала накладную${res.total ? ` (итого ${formatMoney(res.total)})` : ""}. Проверяю позиции…` }]);
       runPurchaseItems(parsedItems, "фото накладной");
     } catch (e) {
@@ -2052,9 +2076,17 @@ export default function AIWarehousePage() {
               </div>
               {pendingPurchaseConfirmation?.items?.length > 0 && (
                 <div className="mb-2 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-3">
-                  <p className="mb-2 text-xs font-black text-blue-200">
-                    Проверь закупку{pendingPurchaseConfirmation.wsName || wsName ? ` — запишу на точку «${pendingPurchaseConfirmation.wsName || wsName}»` : ""}
-                  </p>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="min-w-0 text-xs font-black text-blue-200">
+                      Проверь закупку{pendingPurchaseConfirmation.wsName || wsName ? ` — запишу на точку «${pendingPurchaseConfirmation.wsName || wsName}»` : ""}
+                    </p>
+                    {pendingPhoto && (
+                      <button type="button" onClick={() => setZoomImage(pendingPhoto)}
+                        className="flex shrink-0 items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-black text-blue-200 transition hover:bg-white/15 active:scale-95">
+                        <ImagePlus size={12} strokeWidth={2.6} /> Фото
+                      </button>
+                    )}
+                  </div>
                   <div className="space-y-1.5">
                     {pendingPurchaseConfirmation.items.map((x, i) => {
                       const nm = normalizeProductEntityName(x.form?.name || x.payload?.name || x.result?.name || "товар");
@@ -2115,57 +2147,22 @@ export default function AIWarehousePage() {
                 </div>
               )}
               {pendingItems.length > 0 && (
-                <div className="mb-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-3">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="min-w-0 text-xs font-black text-amber-200">
-                      Нужно уточнить {pendingItems.filter((x) => !x.resolved).length} {pendingItems.filter((x) => !x.resolved).length === 1 ? "позицию" : "позиции"}
-                    </p>
-                    <button
-                      onClick={() => { clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation }); setClarifyDraft({}); setMessages((p) => [...p, { role: "bot", text: "Ок, закрыла уточнения. Что дальше?" }]); }}
-                      className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-200 transition active:scale-95 hover:bg-white/10"
-                    >
-                      Отменить
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    {pendingItems.map((x, i) => {
-                      const nm = normalizeProductEntityName(x.result?.name || x.form?.name || x.payload?.name || "товар") || "Товар";
-                      const q = normalizeQuestionText(x.questions || x.result?.questions) || shortQuestionForPending(x);
-                      if (x.resolved) {
-                        return (
-                          <div key={i} className="rounded-xl bg-white/5 px-3 py-2 opacity-70">
-                            <p className="text-[13px] font-black text-white">{nm} — {x.computed?.quantity} {unitLabel(x.computed?.unit)}</p>
-                            <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-black text-emerald-300"><Check size={11} strokeWidth={3} /> уточнено</p>
-                          </div>
-                        );
-                      }
-                      return (
-                        <div key={i} className="rounded-xl bg-slate-950/40 px-3 py-2.5">
-                          <p className="text-[13px] font-black text-white">{nm}</p>
-                          <p className="mt-0.5 whitespace-pre-line text-[11px] font-bold leading-snug text-amber-200/90">{q}</p>
-                          <div className="mt-2 flex items-center gap-1.5">
-                            <input
-                              type="text"
-                              value={clarifyDraft[i] ?? ""}
-                              onChange={(e) => setClarifyDraft((p) => ({ ...p, [i]: e.target.value }))}
-                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyClarification(i); } }}
-                              placeholder="Ваш ответ…"
-                              disabled={loading}
-                              className="min-w-0 flex-1 rounded-lg border border-white/10 bg-slate-950/60 px-2.5 py-1.5 text-[12px] font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-amber-400/50 focus:outline-none focus-visible:outline-none disabled:opacity-50"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => applyClarification(i)}
-                              disabled={loading}
-                              className="shrink-0 rounded-lg bg-amber-500/20 px-3 py-1.5 text-[11px] font-black text-amber-100 outline-none transition hover:bg-amber-500/30 active:scale-95 focus:outline-none focus-visible:outline-none disabled:opacity-50"
-                            >
-                              Уточнить
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                <div className="mb-2 flex items-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2">
+                  <span className="min-w-0 flex-1 truncate text-xs font-black text-amber-200">
+                    Нужно уточнить {pendingItems.filter((x) => !x.resolved).length} {pendingItems.filter((x) => !x.resolved).length === 1 ? "позицию" : "позиции"}
+                  </span>
+                  <button
+                    onClick={() => setClarifyModalOpen(true)}
+                    className="shrink-0 rounded-full bg-amber-500/25 px-3 py-1 text-[11px] font-black text-amber-100 transition active:scale-95 hover:bg-amber-500/35"
+                  >
+                    Открыть
+                  </button>
+                  <button
+                    onClick={() => { clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation }); setClarifyDraft({}); setClarifyOpen({}); setPendingPhoto(null); setMessages((p) => [...p, { role: "bot", text: "Ок, закрыла уточнения. Что дальше?" }]); }}
+                    className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-200 transition active:scale-95 hover:bg-white/10"
+                  >
+                    Отменить
+                  </button>
                 </div>
               )}
               <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none" style={{scrollbarWidth:"none"}}>
@@ -2336,6 +2333,107 @@ export default function AIWarehousePage() {
           )}
         </div>
       </div>
+
+      {clarifyModalOpen && pendingItems.length > 0 && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4"
+          onClick={() => setClarifyModalOpen(false)}
+          role="dialog"
+          aria-label="Уточнения по закупке"
+        >
+          <div
+            className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-slate-900 shadow-2xl sm:rounded-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-black text-white">Нужно уточнить</p>
+                <p className="truncate text-[11px] font-bold text-amber-300">
+                  {pendingItems.filter((x) => !x.resolved).length} {pendingItems.filter((x) => !x.resolved).length === 1 ? "позиция" : "позиции"} · остальное запишу сразу
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {pendingPhoto && (
+                  <button type="button" onClick={() => setZoomImage(pendingPhoto)}
+                    className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-black text-blue-200 transition hover:bg-white/15 active:scale-95">
+                    <ImagePlus size={13} strokeWidth={2.6} /> Фото
+                  </button>
+                )}
+                <button type="button" onClick={() => setClarifyModalOpen(false)} aria-label="Свернуть"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-slate-300 transition hover:bg-white/15 active:scale-95">
+                  <X size={18} strokeWidth={2.4} />
+                </button>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-3">
+              {pendingItems.map((x, i) => {
+                const nm = normalizeProductEntityName(x.result?.name || x.form?.name || x.payload?.name || "товар") || "Товар";
+                const q = normalizeQuestionText(x.questions || x.result?.questions) || shortQuestionForPending(x);
+                if (x.resolved) {
+                  return (
+                    <div key={i} className="rounded-2xl border border-emerald-400/15 bg-emerald-500/[0.06] px-3.5 py-3">
+                      <p className="text-[14px] font-black text-white">{nm} — {x.computed?.quantity} {unitLabel(x.computed?.unit)}</p>
+                      <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-300"><Check size={11} strokeWidth={3} /> уточнено</p>
+                    </div>
+                  );
+                }
+                const open = !!clarifyOpen[i];
+                return (
+                  <div key={i} className="rounded-2xl border border-white/10 bg-slate-950/50 px-3.5 py-3">
+                    <p className="text-[14px] font-black text-white">{nm}</p>
+                    <p className="mt-1 whitespace-pre-line text-[12px] font-bold leading-snug text-amber-200/90">{q}</p>
+                    {!open ? (
+                      <button type="button" onClick={() => setClarifyOpen((p) => ({ ...p, [i]: true }))}
+                        className="mt-2.5 rounded-xl bg-amber-500/20 px-4 py-2 text-[12px] font-black text-amber-100 outline-none transition hover:bg-amber-500/30 active:scale-95 focus:outline-none focus-visible:outline-none">
+                        Уточнить
+                      </button>
+                    ) : (
+                      <div className="mt-2.5 space-y-2">
+                        <input
+                          type="text"
+                          autoFocus
+                          value={clarifyDraft[i] ?? ""}
+                          onChange={(e) => setClarifyDraft((p) => ({ ...p, [i]: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); applyClarification(i); }
+                            if (e.key === "Escape") { setClarifyOpen((p) => { const n = { ...p }; delete n[i]; return n; }); }
+                          }}
+                          placeholder="Ваш ответ… напр. «пекинская капуста» или «250г»"
+                          disabled={loading}
+                          className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-[13px] font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-amber-400/60 focus:outline-none focus-visible:outline-none disabled:opacity-50"
+                        />
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => applyClarification(i)} disabled={loading}
+                            className="flex-1 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 px-4 py-2.5 text-[12px] font-black text-white shadow-lg outline-none transition active:scale-95 focus:outline-none focus-visible:outline-none disabled:opacity-50">
+                            {loading ? "Обрабатываю…" : "Готово"}
+                          </button>
+                          <button type="button" onClick={() => setClarifyOpen((p) => { const n = { ...p }; delete n[i]; return n; })}
+                            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-[12px] font-black text-slate-200 transition hover:bg-white/10 active:scale-95">
+                            Скрыть
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex shrink-0 gap-2 border-t border-white/10 p-3">
+              <button type="button"
+                onClick={() => { clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation }); setClarifyDraft({}); setClarifyOpen({}); setPendingPhoto(null); setMessages((p) => [...p, { role: "bot", text: "Ок, закрыла уточнения. Что дальше?" }]); }}
+                className="flex-1 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2.5 text-[12px] font-black text-red-300 transition hover:bg-red-500/20 active:scale-95">
+                Отменить всё
+              </button>
+              <button type="button" onClick={() => setClarifyModalOpen(false)}
+                className="flex-1 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-[12px] font-black text-white transition hover:bg-white/10 active:scale-95">
+                Свернуть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {zoomImage && (
         <div
