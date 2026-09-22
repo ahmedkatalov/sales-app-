@@ -929,8 +929,8 @@ export default function WorkPage() {
       const localTypes = Array.isArray(freshTypes) ? [...freshTypes] : [];
       const localFolders = Array.isArray(freshCats) ? [...freshCats] : [];
       const productKey = (folderName, name) => `${norm(folderName)}|${norm(name)}`;
-      const existingKeys = new Set(
-        (Array.isArray(freshProducts) ? freshProducts : []).map((p) => productKey(p.category, p.name))
+      const existingByKey = new Map(
+        (Array.isArray(freshProducts) ? freshProducts : []).map((p) => [productKey(p.category, p.name), p])
       );
 
       const findType = async (nm) => {
@@ -955,6 +955,7 @@ export default function WorkPage() {
       };
 
       let imported = 0;
+      let filled = 0;
       let skipped = 0;
       for (const line of dataLines) {
         const [name, typeName, folderName, cost, price, composition] = parseCsvLine(line);
@@ -962,19 +963,35 @@ export default function WorkPage() {
 
         const fName = folderName || selectedFolder?.name || "";
         const key = productKey(fName, name);
-        if (existingKeys.has(key)) { skipped += 1; continue; } // уже есть — не дублируем
+        const recipe = parseComposition(composition);
+
+        const existing = existingByKey.get(key);
+        if (existing) {
+          // Товар уже есть. Если у него НЕТ состава, а в файле состав указан —
+          // дозаполняем (PUT с recipe меняет только состав, цену/имя не трогает).
+          // Если состав уже есть — не перезаписываем.
+          const hasRecipe = Array.isArray(existing.recipe) && existing.recipe.length > 0;
+          if (recipe.length && !hasRecipe) {
+            await put(`/menu-products/${existing.id}`, { recipe });
+            existing.recipe = recipe; // чтобы повторный запуск не трогал
+            filled += 1;
+          } else {
+            skipped += 1;
+          }
+          continue;
+        }
 
         const type = await findType(typeName || selectedType?.name);
         const folder = await findFolder(fName, type.id);
 
-        await post("/menu-products", {
+        const created = await post("/menu-products", {
           categoryId: Number(folder.id),
           name: name.trim(),
           cost: num(cost),
           price: num(price),
-          recipe: parseComposition(composition),
+          recipe,
         });
-        existingKeys.add(key);
+        existingByKey.set(key, { ...(created || {}), recipe });
         imported += 1;
       }
 
@@ -982,7 +999,7 @@ export default function WorkPage() {
       if (fileInputRef.current) fileInputRef.current.value = "";
 
       await load();
-      alert(`Импортировано: ${imported}${skipped ? `\nПропущено (уже были): ${skipped}` : ""}`);
+      alert(`Импортировано новых: ${imported}${filled ? `\nДозаполнено составов: ${filled}` : ""}${skipped ? `\nПропущено (уже были): ${skipped}` : ""}`);
     } catch (e) {
       setError(e.message || "Ошибка импорта");
     }
