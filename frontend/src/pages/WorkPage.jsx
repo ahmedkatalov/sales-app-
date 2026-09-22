@@ -855,42 +855,6 @@ export default function WorkPage() {
     downloadCsv(`menu-products-${selectedType?.name || "all"}.csv`, rows);
   };
 
-  const findOrCreateType = async (name) => {
-    const clean = String(name || "").trim();
-
-    if (!clean) throw new Error("В Excel не заполнен тип");
-
-    const existing = safeTypes.find(
-      (t) => String(t.name).trim().toLowerCase() === clean.toLowerCase()
-    );
-
-    if (existing) return existing;
-
-    return await post("/product-types", { name: clean });
-  };
-
-  const findOrCreateFolder = async (name, typeId, localFolders) => {
-    const clean = String(name || "").trim();
-
-    if (!clean) throw new Error("В Excel не заполнена папка");
-
-    const existing = localFolders.find(
-      (f) =>
-        String(f.typeId || "") === String(typeId) &&
-        String(f.name).trim().toLowerCase() === clean.toLowerCase()
-    );
-
-    if (existing) return existing;
-
-    const created = await post("/product-categories", {
-      name: clean,
-      typeId: Number(typeId),
-    });
-
-    localFolders.push(created);
-    return created;
-  };
-
   const parseCsvLine = (line) => {
     const result = [];
     let current = "";
@@ -954,20 +918,54 @@ export default function WorkPage() {
         ? lines.slice(1)
         : lines;
 
-      const localFolders = [...folders];
-      let imported = 0;
+      // Берём СВЕЖИЕ типы/папки/товары с сервера — чтобы повторный импорт (или
+      // устаревший стейт) не плодил дубли папок и товаров.
+      const norm = (s) => String(s || "").trim().toLowerCase();
+      const [freshTypes, freshCats, freshProducts] = await Promise.all([
+        get("/product-types").catch(() => []),
+        get("/product-categories").catch(() => []),
+        get("/menu-products").catch(() => []),
+      ]);
+      const localTypes = Array.isArray(freshTypes) ? [...freshTypes] : [];
+      const localFolders = Array.isArray(freshCats) ? [...freshCats] : [];
+      const productKey = (folderName, name) => `${norm(folderName)}|${norm(name)}`;
+      const existingKeys = new Set(
+        (Array.isArray(freshProducts) ? freshProducts : []).map((p) => productKey(p.category, p.name))
+      );
 
+      const findType = async (nm) => {
+        const clean = String(nm || "").trim();
+        if (!clean) throw new Error("В Excel не заполнен тип");
+        const ex = localTypes.find((t) => norm(t.name) === norm(clean));
+        if (ex) return ex;
+        const created = await post("/product-types", { name: clean });
+        localTypes.push(created);
+        return created;
+      };
+      const findFolder = async (nm, typeId) => {
+        const clean = String(nm || "").trim();
+        if (!clean) throw new Error("В Excel не заполнена папка");
+        const ex = localFolders.find(
+          (f) => String(f.typeId ?? f.type_id ?? "") === String(typeId) && norm(f.name) === norm(clean)
+        );
+        if (ex) return ex;
+        const created = await post("/product-categories", { name: clean, typeId: Number(typeId) });
+        localFolders.push({ ...created, typeId: created.typeId ?? created.type_id ?? Number(typeId) });
+        return created;
+      };
+
+      let imported = 0;
+      let skipped = 0;
       for (const line of dataLines) {
         const [name, typeName, folderName, cost, price, composition] = parseCsvLine(line);
-
         if (!name?.trim()) continue;
 
-        const type = await findOrCreateType(typeName || selectedType?.name);
-        const folder = await findOrCreateFolder(
-          folderName || selectedFolder?.name,
-          type.id,
-          localFolders
-        );
+        const fName = folderName || selectedFolder?.name || "";
+        const key = productKey(fName, name);
+        if (existingKeys.has(key)) { skipped += 1; continue; } // уже есть — не дублируем
+
+        const type = await findType(typeName || selectedType?.name);
+        const folder = await findFolder(fName, type.id);
 
         await post("/menu-products", {
           categoryId: Number(folder.id),
@@ -976,20 +974,70 @@ export default function WorkPage() {
           price: num(price),
           recipe: parseComposition(composition),
         });
-
+        existingKeys.add(key);
         imported += 1;
       }
 
       setImportModal(false);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
 
       await load();
-      alert(`Импортировано товаров: ${imported}`);
+      alert(`Импортировано: ${imported}${skipped ? `\nПропущено (уже были): ${skipped}` : ""}`);
     } catch (e) {
       setError(e.message || "Ошибка импорта");
+    }
+  };
+
+  // Убрать дубли меню (после того, как импорт запускали несколько раз):
+  // оставляем по одному товару на «папка+название», удаляем лишние, затем чистим
+  // пустые папки-дубли. Папки с товарами не трогаем — удаление папки НЕ удаляет
+  // товары (сервер их просто открепляет), поэтому чистим только опустевшие дубли.
+  const removeMenuDuplicates = async () => {
+    const norm = (s) => String(s || "").trim().toLowerCase();
+    try {
+      const [prods, cats] = await Promise.all([
+        get("/menu-products").catch(() => []),
+        get("/product-categories").catch(() => []),
+      ]);
+      const products = Array.isArray(prods) ? prods : [];
+      const catList = Array.isArray(cats) ? cats : [];
+
+      const groups = {};
+      for (const p of products) {
+        (groups[`${norm(p.category)}|${norm(p.name)}`] ||= []).push(p);
+      }
+      const toDelete = [];
+      for (const k of Object.keys(groups)) {
+        const arr = groups[k];
+        if (arr.length <= 1) continue;
+        arr.sort((a, b) => (Number(a.categoryId) - Number(b.categoryId)) || (Number(a.id) - Number(b.id)));
+        toDelete.push(...arr.slice(1)); // оставляем самый старый экземпляр
+      }
+      const delIds = new Set(toDelete.map((p) => p.id));
+      const keptCatIds = new Set(products.filter((p) => !delIds.has(p.id)).map((p) => Number(p.categoryId)));
+
+      const catGroups = {};
+      for (const c of catList) (catGroups[`${c.typeId}|${norm(c.name)}`] ||= []).push(c);
+      const foldersToDelete = [];
+      for (const k of Object.keys(catGroups)) {
+        const arr = catGroups[k];
+        if (arr.length <= 1) continue;
+        for (const c of arr) if (!keptCatIds.has(Number(c.id))) foldersToDelete.push(c);
+      }
+
+      if (!toDelete.length && !foldersToDelete.length) {
+        alert("Дублей не найдено 👍");
+        return;
+      }
+      if (!window.confirm(`Убрать дубли?\n\nТоваров-дублей: ${toDelete.length}\nПустых папок-дублей: ${foldersToDelete.length}\n\nОстанется по одному экземпляру каждого. Отменить нельзя.`)) return;
+
+      for (const p of toDelete) { try { await del(`/menu-products/${p.id}`); } catch { /* пропускаем сбойные */ } }
+      for (const c of foldersToDelete) { try { await del(`/product-categories/${c.id}`); } catch { /* пропускаем */ } }
+
+      await load();
+      alert(`Готово ✅\nУдалено дублей: товаров ${toDelete.length}, папок ${foldersToDelete.length}.`);
+    } catch (e) {
+      setError(e.message || "Не удалось убрать дубли");
     }
   };
 
@@ -1590,6 +1638,10 @@ export default function WorkPage() {
 
             <button onClick={exportExcel} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 w-full">
               Скачать пример / экспорт текущих товаров
+            </button>
+
+            <button onClick={removeMenuDuplicates} className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 font-black text-amber-200 transition hover:bg-amber-500/20 w-full">
+              Убрать дубли (если импорт запускали несколько раз)
             </button>
 
             <input
