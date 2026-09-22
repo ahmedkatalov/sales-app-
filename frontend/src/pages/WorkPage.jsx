@@ -917,6 +917,30 @@ export default function WorkPage() {
     return result;
   };
 
+  // Разбор колонки «Состав»: ингредиенты через «|», у каждого имя + количество и
+  // единица в конце. Напр. «Тесто пшеничное 220 г | Моцарелла 120 г | Томатный соус 40 г».
+  // Отдаём в рецепт по ИМЕНИ — бэкенд сам привяжет к складу при точном совпадении,
+  // иначе позиция ляжет как «требует привязки» (без списания — безопасно).
+  const parseComposition = (cell) => {
+    const raw = String(cell || "").trim();
+    if (!raw) return [];
+    const unitMap = { "г": "g", "гр": "g", "g": "g", "мл": "ml", "ml": "ml", "шт": "pcs", "pcs": "pcs", "кг": "kg", "kg": "kg", "л": "l", "l": "l" };
+    return raw
+      .split("|")
+      .map((part) => {
+        const p = part.trim();
+        if (!p) return null;
+        const m = p.match(/([\d]+(?:[.,][\d]+)?)\s*(кг|гр|г|мл|шт|л|kg|g|ml|pcs|l)?\.?\s*$/i);
+        if (!m) return null;
+        const quantity = Number(m[1].replace(",", "."));
+        const unit = unitMap[(m[2] || "г").toLowerCase()] || "g";
+        const nm = p.slice(0, m.index).trim().replace(/[–—:-]\s*$/, "").trim();
+        if (!nm || !(quantity > 0)) return null;
+        return { ingredientName: nm, quantity, quantityUnit: unit };
+      })
+      .filter(Boolean);
+  };
+
   const importExcel = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -934,7 +958,7 @@ export default function WorkPage() {
       let imported = 0;
 
       for (const line of dataLines) {
-        const [name, typeName, folderName, cost, price] = parseCsvLine(line);
+        const [name, typeName, folderName, cost, price, composition] = parseCsvLine(line);
 
         if (!name?.trim()) continue;
 
@@ -950,6 +974,7 @@ export default function WorkPage() {
           name: name.trim(),
           cost: num(cost),
           price: num(price),
+          recipe: parseComposition(composition),
         });
 
         imported += 1;
@@ -1554,7 +1579,13 @@ export default function WorkPage() {
           <div className="space-y-4">
             <p className="text-sm text-slate-400">
               Загрузи CSV-файл, который открывается в Excel. Колонки:
-              Название, Тип, Папка, Себестоимость, Цена продажи.
+              Название, Тип, Папка, Себестоимость, Цена продажи, Состав.
+            </p>
+            <p className="text-xs text-slate-500">
+              Колонка «Состав» необязательна — ингредиенты через «|», у каждого
+              количество в конце, напр.: <span className="text-slate-300">Куриное филе 90 г | Булочка 80 г | Соус 20 г</span>.
+              Ингредиенты, совпавшие по названию со складом, свяжутся и посчитают
+              себестоимость; остальные останутся «без привязки».
             </p>
 
             <button onClick={exportExcel} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 w-full">
