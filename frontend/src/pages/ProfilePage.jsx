@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3, Bot, Briefcase, Clock, FileText, Lightbulb,
   Package, ShoppingCart, Trash2, TrendingUp, Wallet,
+  ClipboardList, Copy, RefreshCw,
 } from "lucide-react";
 import {
   del,
@@ -72,6 +73,9 @@ export default function ProfilePage({
   // Начало рабочего дня точки (во сколько открывается кофейня) — влияет на отчёты «за сегодня».
   const [dayStart, setDayStart] = useState(0);
   const [dayStartSaving, setDayStartSaving] = useState(false);
+  // Ключ приёма заказов с сайта (для настройки сайта меню).
+  const [intakeKey, setIntakeKey] = useState("");
+  const [keyBusy, setKeyBusy] = useState(false);
   const [workspaces,      setWorkspaces]      = useState([]);
   const [workspaceUsers,  setWorkspaceUsers]  = useState([]);
   const [workspaceAccess, setWorkspaceAccess] = useState([]);
@@ -182,7 +186,24 @@ export default function ProfilePage({
     get("/settings/business-day")
       .then((r) => setDayStart(Number(r?.dayStartHour) || 0))
       .catch(() => setDayStart(0));
+    get("/online-orders/key")
+      .then((r) => setIntakeKey(r?.key || ""))
+      .catch(() => setIntakeKey(""));
   }, [workspace?.dataAccountId]);
+
+  const rotateIntakeKey = async () => {
+    if (!window.confirm("Перевыпустить ключ? Старый перестанет работать — на сайте надо будет вписать новый.")) return;
+    setKeyBusy(true);
+    try {
+      const k = await post("/online-orders/key/rotate", {});
+      setIntakeKey(k?.key || "");
+      window.notify?.("Новый ключ создан — обновите его на сайте", "success");
+    } catch (e) {
+      window.notify?.(e?.message || "Не удалось перевыпустить ключ", "error");
+    } finally {
+      setKeyBusy(false);
+    }
+  };
 
   const saveDayStart = async (hour) => {
     setDayStartSaving(true);
@@ -560,6 +581,34 @@ export default function ProfilePage({
                   </select>
                   <p className="mt-2 text-[11px] font-bold text-slate-500">
                     {dayStartSaving ? "Сохраняю…" : dayStart === 0 ? "День считается с полуночи." : `День точки: с ${String(dayStart).padStart(2, "0")}:00 до ${String(dayStart).padStart(2, "0")}:00 следующего дня.`}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {(isOwner || isBranchAdmin) && (
+              <div className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
+                <div className="flex items-center gap-2 text-indigo-400">
+                  <ClipboardList size={16} strokeWidth={2.4} />
+                  <p className="text-sm font-bold">Заказы с сайта</p>
+                </div>
+                <h3 className="mt-1 text-xl font-black text-white">Ключ приёма заказов</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-400">
+                  Вставьте этот ключ на сайте меню — заказы будут падать в кассу во вкладку «Заказы». Ключ секретный, не публикуйте его.
+                </p>
+                <div className="mt-4">
+                  <label className="mb-2 block text-sm font-black text-slate-300">Ключ</label>
+                  <div className="flex items-center gap-2">
+                    <code className="min-w-0 flex-1 truncate rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-slate-200">{intakeKey || "…"}</code>
+                    <button type="button" onClick={() => { if (intakeKey) { navigator.clipboard?.writeText(intakeKey); window.notify?.("Ключ скопирован", "success"); } }}
+                      aria-label="Скопировать ключ" title="Скопировать"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10"><Copy size={17} strokeWidth={2.4} /></button>
+                    <button type="button" onClick={rotateIntakeKey} disabled={keyBusy}
+                      aria-label="Перевыпустить ключ" title="Перевыпустить"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 disabled:opacity-50"><RefreshCw size={17} strokeWidth={2.4} /></button>
+                  </div>
+                  <p className="mt-2 text-[11px] font-bold text-slate-500">
+                    Эндпоинт для сайта: <span className="text-slate-300">https://okvionsales.ru/api/public/orders</span>
                   </p>
                 </div>
               </div>

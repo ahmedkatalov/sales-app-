@@ -6,7 +6,7 @@ import PendingPaymentsModal from "../components/PendingPaymentsModal";
 import { formatMoney, money, num, businessISO } from "../utils/format";
 import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
-import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt, ClipboardList, Copy, RefreshCw } from "lucide-react";
+import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt, ClipboardList } from "lucide-react";
 
 // Бизнес-дата на N дней назад (0 = сегодня) с учётом времени открытия точки.
 // Вне компонента — eslint (react-hooks/purity) не любит Date.now/new Date в теле.
@@ -347,31 +347,74 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     return () => window.removeEventListener("sales-pending-change", onChange);
   }, [refreshPendingCount]);
 
-  // Онлайн-заказы с сайта: вкладка «Заказы» в кассе. Опрашиваем каждые 15с,
-  // чтобы новый заказ подсвечивался бейджем без перезагрузки.
+  // Онлайн-заказы с сайта: вкладка «Заказы» в кассе. Опрашиваем каждые 5с — новый
+  // заказ появляется САМ, без перезагрузки, со звонком.
   const [ordersModal, setOrdersModal] = useState(false);
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersCount, setOrdersCount] = useState(0);
   const [activeOnlineOrderId, setActiveOnlineOrderId] = useState(null);
-  const [intakeKey, setIntakeKey] = useState("");
-  const [keyBusy, setKeyBusy] = useState(false);
   const prevOrdersCountRef = useRef(0);
+  const firstOrdersLoadRef = useRef(true);
+
+  // Звук «пам-пам» на новый заказ — синтез через Web Audio (без файла). Контекст
+  // разблокируем по первому касанию (политика автоплея браузеров).
+  const audioCtxRef = useRef(null);
+  const getAudioCtx = () => {
+    if (!audioCtxRef.current) {
+      try { audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; }
+    }
+    return audioCtxRef.current;
+  };
+  const playChime = () => {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    try {
+      if (ctx.state === "suspended") ctx.resume();
+      const t0 = ctx.currentTime;
+      [[880, 0], [1320, 0.16]].forEach(([freq, dt]) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, t0 + dt);
+        gain.gain.exponentialRampToValueAtTime(0.35, t0 + dt + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t0 + dt);
+        osc.stop(t0 + dt + 0.4);
+      });
+    } catch { /* ignore */ }
+  };
+  useEffect(() => {
+    const unlock = () => { const ctx = getAudioCtx(); if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {}); };
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => { window.removeEventListener("pointerdown", unlock); window.removeEventListener("keydown", unlock); };
+  }, []);
+
   const refreshOrders = useCallback(async () => {
     try {
       const r = await get("/online-orders");
       const list = Array.isArray(r) ? r : [];
       setOrders(list);
       const newCount = list.filter((o) => o.status === "new").length;
-      // Мягкий сигнал работнику о новом заказе (без назойливости).
-      if (newCount > prevOrdersCountRef.current) window.notify?.("Новый заказ с сайта 🛎", "success");
+      // Новый заказ (не на первой загрузке) — звонок + тост.
+      if (!firstOrdersLoadRef.current && newCount > prevOrdersCountRef.current) {
+        playChime();
+        window.notify?.("🛎 Новый заказ с сайта!", "success");
+      }
+      firstOrdersLoadRef.current = false;
       prevOrdersCountRef.current = newCount;
       setOrdersCount(newCount);
     } catch { /* ignore */ }
+    // playChime использует только refs — стабильна; deps намеренно пустые.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     refreshOrders();
-    const t = setInterval(refreshOrders, 15000);
+    const t = setInterval(refreshOrders, 5000);
     return () => clearInterval(t);
   }, [refreshOrders]);
 
@@ -380,9 +423,6 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     setOrdersLoading(true);
     try {
       await refreshOrders();
-      if (!isWorker && !intakeKey) {
-        try { const k = await get("/online-orders/key"); setIntakeKey(k?.key || ""); } catch { /* ignore */ }
-      }
     } finally {
       setOrdersLoading(false);
     }
@@ -416,19 +456,6 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     await refreshOrders();
   };
 
-  const rotateIntakeKey = async () => {
-    if (!window.confirm("Перевыпустить ключ? Старый перестанет работать — на сайте надо будет вписать новый.")) return;
-    setKeyBusy(true);
-    try {
-      const k = await post("/online-orders/key/rotate", {});
-      setIntakeKey(k?.key || "");
-      window.notify?.("Новый ключ создан — обновите его на сайте", "success");
-    } catch (e) {
-      window.notify?.(e?.message || "Не удалось перевыпустить ключ", "error");
-    } finally {
-      setKeyBusy(false);
-    }
-  };
 
   // Кассовые движения — защита от двойного тапа (ref синхронный) + показ ошибки.
   const [shiftBusy, setShiftBusy] = useState(false);
@@ -1006,67 +1033,65 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       {pendingModal && <PendingPaymentsModal onClose={() => { setPendingModal(false); refreshPendingCount(); }} />}
 
       {ordersModal && (
-        <Modal title="Заказы с сайта" section={`Новых: ${ordersCount}`} onClose={() => setOrdersModal(false)} legacyLight={false}>
+        <Modal title="Заказы с сайта" section={ordersCount > 0 ? `${ordersCount} новых` : "Заказы"} onClose={() => setOrdersModal(false)} legacyLight={false}>
           <div className="space-y-3">
-            {!isWorker && (
-              <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-3">
-                <p className="text-[11px] font-black uppercase tracking-wide text-indigo-300/80">Ключ приёма заказов (для сайта)</p>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <code className="min-w-0 flex-1 truncate rounded-lg bg-slate-950/60 px-2.5 py-2 text-[12px] font-bold text-slate-200">{intakeKey || "…"}</code>
-                  <button type="button" onClick={() => { if (intakeKey) { navigator.clipboard?.writeText(intakeKey); window.notify?.("Ключ скопирован", "success"); } }}
-                    aria-label="Скопировать ключ" title="Скопировать"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-300 transition hover:bg-white/10"><Copy size={15} strokeWidth={2.4} /></button>
-                  <button type="button" onClick={rotateIntakeKey} disabled={keyBusy}
-                    aria-label="Перевыпустить ключ" title="Перевыпустить"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-300 transition hover:bg-white/10 disabled:opacity-50"><RefreshCw size={15} strokeWidth={2.4} /></button>
-                </div>
-                <p className="mt-1.5 text-[11px] font-bold text-slate-400">Вставьте этот ключ на сайте меню, чтобы заказы падали сюда.</p>
-              </div>
-            )}
-
             {ordersLoading ? (
               <div className="py-10 text-center text-sm font-bold text-slate-400">Загружаю заказы…</div>
             ) : orders.length === 0 ? (
-              <div className="flex flex-col items-center py-8 text-center">
-                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-slate-500"><ClipboardList size={26} strokeWidth={1.8} /></div>
-                <p className="font-black text-white">Заказов нет</p>
-                <p className="mt-1 text-sm font-bold text-slate-400">Новые заказы с сайта появятся здесь.</p>
+              <div className="flex flex-col items-center py-10 text-center">
+                <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/5 text-slate-500"><ClipboardList size={30} strokeWidth={1.8} /></div>
+                <p className="text-base font-black text-white">Заказов пока нет</p>
+                <p className="mt-1 text-sm font-bold text-slate-400">Новый заказ придёт сюда сам — со звонком 🛎, обновлять не нужно.</p>
               </div>
             ) : (
-              <div className="max-h-[56vh] space-y-2.5 overflow-y-auto pr-1">
+              <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
                 {orders.map((o) => {
                   const items = Array.isArray(o.items) ? o.items : [];
                   const time = String(o.createdAt || "").slice(11, 16);
                   const isNew = o.status === "new";
                   return (
-                    <div key={o.id} className={`rounded-2xl border p-3 ${isNew ? "border-pink-400/30 bg-pink-500/[0.07]" : "border-white/10 bg-white/[0.04]"}`}>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black ${isNew ? "bg-pink-500/20 text-pink-200" : "bg-white/10 text-slate-300"}`}>{isNew ? "НОВЫЙ" : "В работе"}</span>
-                            <span className="shrink-0 text-xs font-black text-slate-400">{time || ""}</span>
-                          </div>
-                          <p className="mt-1 truncate text-[13px] font-black text-white">{o.customerName || "Клиент"}{o.customerPhone ? ` · ${o.customerPhone}` : ""}</p>
-                        </div>
-                        <span className="shrink-0 text-base font-black text-emerald-300">{formatMoney(o.total)}</span>
+                    <div key={o.id} className={`overflow-hidden rounded-3xl border ${isNew ? "border-pink-400/40 bg-pink-500/[0.08] shadow-lg shadow-pink-500/5" : "border-white/10 bg-white/[0.04]"}`}>
+                      {/* Шапка заказа */}
+                      <div className="flex items-center justify-between gap-2 px-4 pt-3.5">
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black ${isNew ? "bg-pink-500/25 text-pink-100" : "bg-white/10 text-slate-300"}`}>
+                          {isNew && <span className="h-1.5 w-1.5 rounded-full bg-pink-300 motion-safe:animate-pulse" />}
+                          {isNew ? "НОВЫЙ ЗАКАЗ" : "В РАБОТЕ"}
+                        </span>
+                        <span className="text-xs font-black text-slate-400">🌐 сайт{time ? ` · ${time}` : ""}</span>
                       </div>
-                      <div className="mt-2 space-y-0.5 border-t border-white/5 pt-2">
+                      {/* Клиент + сумма */}
+                      <div className="flex items-end justify-between gap-3 px-4 pt-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-[16px] font-black leading-tight text-white">{o.customerName || "Клиент"}</p>
+                          {o.customerPhone && <a href={`tel:${o.customerPhone}`} className="text-[13px] font-bold text-blue-300">{o.customerPhone}</a>}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Сумма</p>
+                          <p className="text-xl font-black leading-none text-emerald-300">{formatMoney(o.total)}</p>
+                        </div>
+                      </div>
+                      {/* Позиции */}
+                      <div className="mx-4 mt-3 space-y-1.5 rounded-2xl bg-slate-950/40 p-3">
                         {items.map((it, i) => (
-                          <div key={i} className="flex items-center justify-between gap-2 text-[12px] font-bold text-slate-300">
-                            <span className="min-w-0 truncate">{it.name} <span className="text-slate-500">× {num(it.qty)}</span></span>
+                          <div key={i} className="flex items-center justify-between gap-2 text-[13px] font-bold text-slate-200">
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span className="shrink-0 rounded-lg bg-blue-500/15 px-1.5 py-0.5 text-[12px] font-black text-blue-200">×{num(it.qty)}</span>
+                              <span className="truncate">{it.name}</span>
+                            </span>
                             <span className="shrink-0 text-slate-400">{formatMoney(num(it.price) * num(it.qty))}</span>
                           </div>
                         ))}
                       </div>
-                      {o.comment && <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-200">💬 {o.comment}</p>}
-                      {o.address && <p className="mt-1 text-[11px] font-bold text-slate-400">📍 {o.address}</p>}
-                      <div className="mt-2.5 flex gap-2">
+                      {o.comment && <p className="mx-4 mt-2 rounded-2xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-[12px] font-bold text-amber-200">💬 {o.comment}</p>}
+                      {o.address && <p className="mx-4 mt-1.5 text-[12px] font-bold text-slate-400">📍 {o.address}</p>}
+                      {/* Действия */}
+                      <div className="flex gap-2 p-4 pt-3">
                         <button type="button" onClick={() => acceptOrder(o)}
-                          className="flex-1 rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 px-3 py-2 text-xs font-black text-white shadow-lg transition active:scale-95">
-                          Принять в кассу
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 px-3 py-3 text-sm font-black text-white shadow-lg transition active:scale-95">
+                          <Check size={16} strokeWidth={2.6} /> Принять в кассу
                         </button>
                         <button type="button" onClick={() => rejectOrder(o)}
-                          className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs font-black text-red-300 transition hover:bg-red-500/20 active:scale-95">
+                          className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm font-black text-red-300 transition hover:bg-red-500/20 active:scale-95">
                           Отклонить
                         </button>
                       </div>
