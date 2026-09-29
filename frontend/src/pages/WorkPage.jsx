@@ -218,6 +218,9 @@ export default function WorkPage() {
   const [structureModal, setStructureModal] = useState(false);
   const [typeModal, setTypeModal] = useState(false);
   const [folderModal, setFolderModal] = useState(false);
+  // Переименование типа/папки: { kind: "type"|"folder", id, name }.
+  const [renaming, setRenaming] = useState(null);
+  const [renameBusy, setRenameBusy] = useState(false);
   const [productModal, setProductModal] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState(null);
   const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
@@ -528,6 +531,26 @@ export default function WorkPage() {
     await load();
     setSelectedTypeId(String(created.id));
     setStructureModal(true);
+  };
+
+  // Переименовать тип или папку (inline в «Типы и папки»).
+  const startRename = (kind, item) => setRenaming({ kind, id: item.id, name: item.name });
+  const saveRename = async () => {
+    if (!renaming) return;
+    const name = String(renaming.name || "").trim();
+    if (!name) { window.notify?.("Введите название", "error"); return; }
+    setRenameBusy(true);
+    try {
+      const url = renaming.kind === "type" ? `/product-types/${renaming.id}` : `/product-categories/${renaming.id}`;
+      await put(url, { name });
+      setRenaming(null);
+      await load();
+      window.notify?.(renaming.kind === "type" ? "Тип переименован" : "Папка переименована", "success");
+    } catch (e) {
+      window.notify?.(e?.message || "Не удалось переименовать", "error");
+    } finally {
+      setRenameBusy(false);
+    }
   };
 
   const createFolder = async () => {
@@ -1550,19 +1573,29 @@ export default function WorkPage() {
               </div>
 
               <div className="space-y-2">
-                {safeTypes.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setSelectedTypeId(String(t.id))}
-                    className={`w-full rounded-2xl px-4 py-4 text-left font-black ${
-                      String(selectedTypeId) === String(t.id)
-                        ? "bg-[#070b1a] text-white"
-                        : "bg-white/5 text-slate-100"
-                    }`}
-                  >
-                    {t.name}
-                  </button>
-                ))}
+                {safeTypes.map((t) => {
+                  const isEditing = renaming?.kind === "type" && renaming.id === t.id;
+                  const active = String(selectedTypeId) === String(t.id);
+                  return (
+                    <div key={t.id} className={`flex items-center gap-1.5 rounded-2xl px-2 ${active ? "bg-[#070b1a]" : "bg-white/5"}`}>
+                      {isEditing ? (
+                        <>
+                          <input autoFocus value={renaming.name}
+                            onChange={(e) => setRenaming((p) => ({ ...p, name: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setRenaming(null); }}
+                            className="min-w-0 flex-1 rounded-xl border border-blue-400/50 bg-slate-950/60 px-3 py-3 font-black text-white outline-none" />
+                          <button onClick={saveRename} disabled={renameBusy} aria-label="Сохранить" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white disabled:opacity-50"><Check size={18} strokeWidth={2.6} /></button>
+                          <button onClick={() => setRenaming(null)} aria-label="Отмена" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-slate-300"><X size={18} strokeWidth={2.6} /></button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => setSelectedTypeId(String(t.id))} className={`min-w-0 flex-1 truncate rounded-xl px-2 py-3 text-left font-black ${active ? "text-white" : "text-slate-100"}`}>{t.name}</button>
+                          <button onClick={() => startRename("type", t)} aria-label="Переименовать тип" title="Переименовать" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white/10 hover:text-blue-300"><Pencil size={16} strokeWidth={2.4} /></button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
 
                 {!safeTypes.length && (
                   <p className="text-slate-400">
@@ -1593,19 +1626,29 @@ export default function WorkPage() {
               </div>
 
               <div className="space-y-2">
-                {typeFolders.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setSelectedFolderId(String(f.id))}
-                    className={`w-full rounded-2xl px-4 py-4 text-left font-black ${
-                      String(selectedFolderId) === String(f.id)
-                        ? "bg-[#070b1a] text-white"
-                        : "bg-white/5 text-slate-100"
-                    }`}
-                  >
-                    {f.name}
-                  </button>
-                ))}
+                {typeFolders.map((f) => {
+                  const isEditing = renaming?.kind === "folder" && renaming.id === f.id;
+                  const active = String(selectedFolderId) === String(f.id);
+                  return (
+                    <div key={f.id} className={`flex items-center gap-1.5 rounded-2xl px-2 ${active ? "bg-[#070b1a]" : "bg-white/5"}`}>
+                      {isEditing ? (
+                        <>
+                          <input autoFocus value={renaming.name}
+                            onChange={(e) => setRenaming((p) => ({ ...p, name: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setRenaming(null); }}
+                            className="min-w-0 flex-1 rounded-xl border border-blue-400/50 bg-slate-950/60 px-3 py-3 font-black text-white outline-none" />
+                          <button onClick={saveRename} disabled={renameBusy} aria-label="Сохранить" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white disabled:opacity-50"><Check size={18} strokeWidth={2.6} /></button>
+                          <button onClick={() => setRenaming(null)} aria-label="Отмена" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-slate-300"><X size={18} strokeWidth={2.6} /></button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => setSelectedFolderId(String(f.id))} className={`min-w-0 flex-1 truncate rounded-xl px-2 py-3 text-left font-black ${active ? "text-white" : "text-slate-100"}`}>{f.name}</button>
+                          <button onClick={() => startRename("folder", f)} aria-label="Переименовать папку" title="Переименовать" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white/10 hover:text-blue-300"><Pencil size={16} strokeWidth={2.4} /></button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
 
                 {selectedTypeId && !typeFolders.length && (
                   <p className="text-slate-400">В этом типе ещё нет папок.</p>

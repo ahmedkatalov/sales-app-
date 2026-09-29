@@ -57,6 +57,48 @@ func createProductType(c *gin.Context) {
 	c.JSON(http.StatusOK, t)
 }
 
+// updateProductType — переименовать тип. Обновляем и денормализованные копии имени
+// типа в категориях и товарах (там имя типа хранится строкой), чтобы не рассинхрон.
+func updateProductType(c *gin.Context) {
+	id := parsePositiveInt(c.Param("id"))
+	accID := accountID(c)
+	var body struct {
+		Name string `json:"name"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверные данные"})
+		return
+	}
+	name := strings.TrimSpace(body.Name)
+	if name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Введите название типа"})
+		return
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer tx.Rollback()
+
+	res, err := tx.Exec(`UPDATE product_types SET name=? WHERE id=? AND account_id=?`, name, id, accID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Тип не найден"})
+		return
+	}
+	_, _ = tx.Exec(`UPDATE product_categories SET type=? WHERE type_id=? AND account_id=?`, name, id, accID)
+	_, _ = tx.Exec(`UPDATE menu_products SET type=? WHERE account_id=? AND category_id IN (SELECT id FROM product_categories WHERE type_id=? AND account_id=?)`, name, accID, id, accID)
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
 // deleteProductType — обнуляет ссылки в категориях и удаляет тип в одной транзакции.
 func deleteProductType(c *gin.Context) {
 	id := c.Param("id")
@@ -156,6 +198,47 @@ func createProductCategory(c *gin.Context) {
 	cat.ID = int(id)
 
 	c.JSON(http.StatusOK, cat)
+}
+
+// updateProductCategory — переименовать папку. Обновляем и денормализованное имя
+// категории в товарах (menu_products.category хранит имя строкой).
+func updateProductCategory(c *gin.Context) {
+	id := parsePositiveInt(c.Param("id"))
+	accID := accountID(c)
+	var body struct {
+		Name string `json:"name"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверные данные"})
+		return
+	}
+	name := strings.TrimSpace(body.Name)
+	if name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Введите название папки"})
+		return
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer tx.Rollback()
+
+	res, err := tx.Exec(`UPDATE product_categories SET name=? WHERE id=? AND account_id=?`, name, id, accID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Папка не найдена"})
+		return
+	}
+	_, _ = tx.Exec(`UPDATE menu_products SET category=? WHERE category_id=? AND account_id=?`, name, id, accID)
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusOK)
 }
 
 // deleteProductCategory — обнуляет ссылки в меню и удаляет категорию в одной транзакции.

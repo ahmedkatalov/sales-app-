@@ -110,10 +110,12 @@ func main() {
 
 	auth.GET("/product-types", getProductTypes)
 	auth.POST("/product-types", createProductType)
+	auth.PUT("/product-types/:id", updateProductType)
 	auth.DELETE("/product-types/:id", deleteProductType)
 
 	auth.GET("/product-categories", getProductCategories)
 	auth.POST("/product-categories", createProductCategory)
+	auth.PUT("/product-categories/:id", updateProductCategory)
 	auth.DELETE("/product-categories/:id", deleteProductCategory)
 
 	auth.GET("/warehouse/items", getWarehouseItems)
