@@ -357,8 +357,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   const prevOrdersCountRef = useRef(0);
   const firstOrdersLoadRef = useRef(true);
 
-  // Звук «пам-пам» на новый заказ — синтез через Web Audio (без файла). Контекст
-  // разблокируем по первому касанию (политика автоплея браузеров).
+  // Звук на заказы. Новый заказ → ГОЛОС «У вас новый заказ» (+ колокольчик для
+  // привлечения). Напоминание раз в 2 мин → ДРУГОЙ звук (тройной колокол).
+  // Всё синтезом (Web Audio + Speech), без файлов. Контекст/речь разблокируем по
+  // первому касанию (политика автоплея браузеров).
   const audioCtxRef = useRef(null);
   const getAudioCtx = () => {
     if (!audioCtxRef.current) {
@@ -366,29 +368,62 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     }
     return audioCtxRef.current;
   };
-  const playChime = () => {
+  // Колокольный тон: n ударов, с обертонами и длинным затуханием (громко).
+  const playBell = (n = 1, base = 880, step = 0.4) => {
     const ctx = getAudioCtx();
     if (!ctx) return;
     try {
       if (ctx.state === "suspended") ctx.resume();
       const t0 = ctx.currentTime;
-      [[880, 0], [1320, 0.16]].forEach(([freq, dt]) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.0001, t0 + dt);
-        gain.gain.exponentialRampToValueAtTime(0.35, t0 + dt + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + 0.35);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(t0 + dt);
-        osc.stop(t0 + dt + 0.4);
-      });
+      for (let i = 0; i < n; i++) {
+        const t = t0 + i * step;
+        [[base, 0.6], [base * 2.0, 0.28], [base * 2.76, 0.14]].forEach(([f, amp]) => {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = f;
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(amp, t + 0.008);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+          osc.connect(g);
+          g.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.65);
+        });
+      }
     } catch { /* ignore */ }
   };
+  const speak = (text) => {
+    try {
+      const synth = window.speechSynthesis;
+      if (!synth) return false;
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "ru-RU";
+      u.rate = 1;
+      u.pitch = 1;
+      u.volume = 1;
+      const ru = (synth.getVoices() || []).find((v) => /ru/i.test(v.lang));
+      if (ru) u.voice = ru;
+      synth.speak(u);
+      return true;
+    } catch { return false; }
+  };
+  // Новый заказ: колокольчик + голос.
+  const announceNewOrder = () => {
+    playBell(1, 1046);
+    if (!speak("У вас новый заказ")) playBell(2, 1046); // если голос недоступен — двойной колокол
+  };
+  // Напоминание про необработанный заказ: тройной колокол (другой звук, не голос).
+  const playReminder = () => playBell(3, 740, 0.32);
+
   useEffect(() => {
-    const unlock = () => { const ctx = getAudioCtx(); if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {}); };
+    const unlock = () => {
+      const ctx = getAudioCtx();
+      if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+      // «прогреваем» голосовой список — чтобы русский голос подхватился заранее.
+      try { window.speechSynthesis?.getVoices(); } catch { /* ignore */ }
+    };
     window.addEventListener("pointerdown", unlock);
     window.addEventListener("keydown", unlock);
     return () => { window.removeEventListener("pointerdown", unlock); window.removeEventListener("keydown", unlock); };
@@ -400,9 +435,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       const list = Array.isArray(r) ? r : [];
       setOrders(list);
       const newCount = list.filter((o) => o.status === "new").length;
-      // Новый заказ (не на первой загрузке) — звонок + тост.
+      // Новый заказ (не на первой загрузке) — голос «У вас новый заказ» + тост.
       if (!firstOrdersLoadRef.current && newCount > prevOrdersCountRef.current) {
-        playChime();
+        announceNewOrder();
         window.notify?.("🛎 Новый заказ с сайта!", "success");
       }
       firstOrdersLoadRef.current = false;
@@ -423,12 +458,12 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   useEffect(() => {
     const t = setInterval(() => {
       if (prevOrdersCountRef.current > 0) {
-        playChime();
+        playReminder();
         window.notify?.("🛎 Есть необработанный заказ", "success");
       }
     }, 120000);
     return () => clearInterval(t);
-    // playChime использует только refs — стабильна.
+    // playReminder использует только refs — стабильна.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
