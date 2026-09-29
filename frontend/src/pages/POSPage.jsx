@@ -418,6 +418,20 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     return () => clearInterval(t);
   }, [refreshOrders]);
 
+  // Напоминание: пока есть НЕОБРАБОТАННЫЙ (новый) заказ — повторяем звонок каждые
+  // 2 минуты, чтобы работник не пропустил. Как только заказ приняли — молчит.
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (prevOrdersCountRef.current > 0) {
+        playChime();
+        window.notify?.("🛎 Есть необработанный заказ", "success");
+      }
+    }, 120000);
+    return () => clearInterval(t);
+    // playChime использует только refs — стабильна.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const openOrders = async () => {
     setOrdersModal(true);
     setOrdersLoading(true);
