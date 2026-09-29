@@ -493,6 +493,29 @@ func createTables() {
 		// Фото накладной/чека к расходу: храним ПУТЬ к файлу на диске (data/uploads/…),
 		// не сам блоб — при SetMaxOpenConns(1) блоб в БД тормозил бы всё.
 		`ALTER TABLE global_expenses ADD COLUMN photo_path TEXT DEFAULT ''`,
+		// Онлайн-заказы с сайта меню: сайт шлёт заказ на POST /public/orders с ключом
+		// приёма (order_intake_key), заказ падает во вкладку «Заказы» в кассе.
+		`CREATE TABLE IF NOT EXISTS online_orders (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			account_id INTEGER DEFAULT 1,
+			status TEXT DEFAULT 'new',
+			customer_name TEXT DEFAULT '',
+			customer_phone TEXT DEFAULT '',
+			address TEXT DEFAULT '',
+			comment TEXT DEFAULT '',
+			source TEXT DEFAULT 'site',
+			total REAL DEFAULT 0,
+			items_json TEXT DEFAULT '[]',
+			external_id TEXT DEFAULT '',
+			created_at TEXT,
+			updated_at TEXT
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_online_orders_acc_status ON online_orders(account_id, status)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_online_orders_ext ON online_orders(account_id, external_id) WHERE external_id != ''`,
+		// Ключ приёма заказов с сайта — по нему публичный эндпоинт понимает, в какую
+		// точку класть заказ. Уникален; храним в настройках точки.
+		`ALTER TABLE account_settings ADD COLUMN order_intake_key TEXT DEFAULT ''`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_account_intake_key ON account_settings(order_intake_key) WHERE order_intake_key != ''`,
 	}
 
 	for _, q := range migrations {

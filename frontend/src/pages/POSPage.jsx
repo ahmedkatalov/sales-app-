@@ -6,7 +6,7 @@ import PendingPaymentsModal from "../components/PendingPaymentsModal";
 import { formatMoney, money, num, businessISO } from "../utils/format";
 import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
-import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt } from "lucide-react";
+import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt, ClipboardList, Copy, RefreshCw } from "lucide-react";
 
 // Бизнес-дата на N дней назад (0 = сегодня) с учётом времени открытия точки.
 // Вне компонента — eslint (react-hooks/purity) не любит Date.now/new Date в теле.
@@ -346,6 +346,89 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     window.addEventListener("sales-pending-change", onChange);
     return () => window.removeEventListener("sales-pending-change", onChange);
   }, [refreshPendingCount]);
+
+  // Онлайн-заказы с сайта: вкладка «Заказы» в кассе. Опрашиваем каждые 15с,
+  // чтобы новый заказ подсвечивался бейджем без перезагрузки.
+  const [ordersModal, setOrdersModal] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersCount, setOrdersCount] = useState(0);
+  const [activeOnlineOrderId, setActiveOnlineOrderId] = useState(null);
+  const [intakeKey, setIntakeKey] = useState("");
+  const [keyBusy, setKeyBusy] = useState(false);
+  const prevOrdersCountRef = useRef(0);
+  const refreshOrders = useCallback(async () => {
+    try {
+      const r = await get("/online-orders");
+      const list = Array.isArray(r) ? r : [];
+      setOrders(list);
+      const newCount = list.filter((o) => o.status === "new").length;
+      // Мягкий сигнал работнику о новом заказе (без назойливости).
+      if (newCount > prevOrdersCountRef.current) window.notify?.("Новый заказ с сайта 🛎", "success");
+      prevOrdersCountRef.current = newCount;
+      setOrdersCount(newCount);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    refreshOrders();
+    const t = setInterval(refreshOrders, 15000);
+    return () => clearInterval(t);
+  }, [refreshOrders]);
+
+  const openOrders = async () => {
+    setOrdersModal(true);
+    setOrdersLoading(true);
+    try {
+      await refreshOrders();
+      if (!isWorker && !intakeKey) {
+        try { const k = await get("/online-orders/key"); setIntakeKey(k?.key || ""); } catch { /* ignore */ }
+      }
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  // Принять заказ в кассу: грузим позиции в корзину (сопоставляя с меню по имени,
+  // чтобы списался склад и посчиталась себестоимость), помечаем заказ «в работе».
+  const acceptOrder = async (o) => {
+    const menu = Array.isArray(products) ? products : [];
+    const byName = (nm) => menu.find((p) => String(p.name || "").trim().toLowerCase() === String(nm || "").trim().toLowerCase());
+    const items = (Array.isArray(o.items) ? o.items : []).map((it, i) => {
+      const m = byName(it.name);
+      const qty = Math.max(1, Math.floor(num(it.qty) || 1));
+      return m
+        ? { productId: m.id, name: m.name, type: m.typeName || m.type, qty, price: num(it.price) || num(m.price), cost: num(m.cost) }
+        : { productId: -(i + 1), name: it.name, type: "Заказ с сайта", qty, price: num(it.price), cost: 0, custom: true };
+    });
+    if (!items.length) { window.notify?.("В заказе нет позиций", "error"); return; }
+    setCart(items);
+    setActiveOnlineOrderId(o.id);
+    try { await post(`/online-orders/${o.id}/status`, { status: "accepted" }); } catch { /* ignore */ }
+    setOrdersModal(false);
+    await refreshOrders();
+    window.notify?.("Заказ загружен в кассу — проверьте и пробейте", "success");
+  };
+
+  const rejectOrder = async (o) => {
+    if (!window.confirm(`Отклонить заказ${o.customerName ? ` от ${o.customerName}` : ""}?`)) return;
+    try { await post(`/online-orders/${o.id}/status`, { status: "rejected" }); } catch { /* ignore */ }
+    if (activeOnlineOrderId === o.id) setActiveOnlineOrderId(null);
+    await refreshOrders();
+  };
+
+  const rotateIntakeKey = async () => {
+    if (!window.confirm("Перевыпустить ключ? Старый перестанет работать — на сайте надо будет вписать новый.")) return;
+    setKeyBusy(true);
+    try {
+      const k = await post("/online-orders/key/rotate", {});
+      setIntakeKey(k?.key || "");
+      window.notify?.("Новый ключ создан — обновите его на сайте", "success");
+    } catch (e) {
+      window.notify?.(e?.message || "Не удалось перевыпустить ключ", "error");
+    } finally {
+      setKeyBusy(false);
+    }
+  };
 
   // Кассовые движения — защита от двойного тапа (ref синхронный) + показ ошибки.
   const [shiftBusy, setShiftBusy] = useState(false);
@@ -807,6 +890,12 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       }));
 
       saleClientRef.current = ""; // успех — следующий чек получит новый ключ
+      // Если пробили заказ с сайта — закрываем его (уходит из «Заказов»).
+      if (activeOnlineOrderId) {
+        try { await post(`/online-orders/${activeOnlineOrderId}/status`, { status: "done" }); } catch { /* ignore */ }
+        setActiveOnlineOrderId(null);
+        refreshOrders();
+      }
       await resetSale();
       window.notify?.(mode === "debt" ? "Долг сохранён" : "Продажа сохранена", "success");
     } catch (e) {
@@ -847,6 +936,17 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             {pendingCount > 0 && (
               <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
                 {pendingCount > 99 ? "99+" : pendingCount}
+              </span>
+            )}
+          </button>
+          <button type="button" onClick={openOrders}
+            aria-label="Заказы с сайта" title="Заказы с сайта"
+            className={`relative flex h-11 shrink-0 items-center gap-2 rounded-2xl border px-3 font-black transition active:scale-95 ${ordersCount > 0 ? "border-pink-400/40 bg-pink-500/15 text-pink-200 hover:bg-pink-500/25" : "border-indigo-400/25 bg-indigo-500/10 text-indigo-200 hover:bg-indigo-500/20"}`}>
+            <ClipboardList size={18} strokeWidth={2.4} />
+            <span className="hidden sm:inline">Заказы</span>
+            {ordersCount > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
+                {ordersCount > 99 ? "99+" : ordersCount}
               </span>
             )}
           </button>
@@ -904,6 +1004,82 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       )}
 
       {pendingModal && <PendingPaymentsModal onClose={() => { setPendingModal(false); refreshPendingCount(); }} />}
+
+      {ordersModal && (
+        <Modal title="Заказы с сайта" section={`Новых: ${ordersCount}`} onClose={() => setOrdersModal(false)} legacyLight={false}>
+          <div className="space-y-3">
+            {!isWorker && (
+              <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-3">
+                <p className="text-[11px] font-black uppercase tracking-wide text-indigo-300/80">Ключ приёма заказов (для сайта)</p>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <code className="min-w-0 flex-1 truncate rounded-lg bg-slate-950/60 px-2.5 py-2 text-[12px] font-bold text-slate-200">{intakeKey || "…"}</code>
+                  <button type="button" onClick={() => { if (intakeKey) { navigator.clipboard?.writeText(intakeKey); window.notify?.("Ключ скопирован", "success"); } }}
+                    aria-label="Скопировать ключ" title="Скопировать"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-300 transition hover:bg-white/10"><Copy size={15} strokeWidth={2.4} /></button>
+                  <button type="button" onClick={rotateIntakeKey} disabled={keyBusy}
+                    aria-label="Перевыпустить ключ" title="Перевыпустить"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-300 transition hover:bg-white/10 disabled:opacity-50"><RefreshCw size={15} strokeWidth={2.4} /></button>
+                </div>
+                <p className="mt-1.5 text-[11px] font-bold text-slate-400">Вставьте этот ключ на сайте меню, чтобы заказы падали сюда.</p>
+              </div>
+            )}
+
+            {ordersLoading ? (
+              <div className="py-10 text-center text-sm font-bold text-slate-400">Загружаю заказы…</div>
+            ) : orders.length === 0 ? (
+              <div className="flex flex-col items-center py-8 text-center">
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-slate-500"><ClipboardList size={26} strokeWidth={1.8} /></div>
+                <p className="font-black text-white">Заказов нет</p>
+                <p className="mt-1 text-sm font-bold text-slate-400">Новые заказы с сайта появятся здесь.</p>
+              </div>
+            ) : (
+              <div className="max-h-[56vh] space-y-2.5 overflow-y-auto pr-1">
+                {orders.map((o) => {
+                  const items = Array.isArray(o.items) ? o.items : [];
+                  const time = String(o.createdAt || "").slice(11, 16);
+                  const isNew = o.status === "new";
+                  return (
+                    <div key={o.id} className={`rounded-2xl border p-3 ${isNew ? "border-pink-400/30 bg-pink-500/[0.07]" : "border-white/10 bg-white/[0.04]"}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black ${isNew ? "bg-pink-500/20 text-pink-200" : "bg-white/10 text-slate-300"}`}>{isNew ? "НОВЫЙ" : "В работе"}</span>
+                            <span className="shrink-0 text-xs font-black text-slate-400">{time || ""}</span>
+                          </div>
+                          <p className="mt-1 truncate text-[13px] font-black text-white">{o.customerName || "Клиент"}{o.customerPhone ? ` · ${o.customerPhone}` : ""}</p>
+                        </div>
+                        <span className="shrink-0 text-base font-black text-emerald-300">{formatMoney(o.total)}</span>
+                      </div>
+                      <div className="mt-2 space-y-0.5 border-t border-white/5 pt-2">
+                        {items.map((it, i) => (
+                          <div key={i} className="flex items-center justify-between gap-2 text-[12px] font-bold text-slate-300">
+                            <span className="min-w-0 truncate">{it.name} <span className="text-slate-500">× {num(it.qty)}</span></span>
+                            <span className="shrink-0 text-slate-400">{formatMoney(num(it.price) * num(it.qty))}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {o.comment && <p className="mt-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold text-amber-200">💬 {o.comment}</p>}
+                      {o.address && <p className="mt-1 text-[11px] font-bold text-slate-400">📍 {o.address}</p>}
+                      <div className="mt-2.5 flex gap-2">
+                        <button type="button" onClick={() => acceptOrder(o)}
+                          className="flex-1 rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 px-3 py-2 text-xs font-black text-white shadow-lg transition active:scale-95">
+                          Принять в кассу
+                        </button>
+                        <button type="button" onClick={() => rejectOrder(o)}
+                          className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs font-black text-red-300 transition hover:bg-red-500/20 active:scale-95">
+                          Отклонить
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <button type="button" onClick={() => setOrdersModal(false)} className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">Закрыть</button>
+          </div>
+        </Modal>
+      )}
 
       <div className="flex flex-col gap-4 md:min-h-0 md:flex-1 md:flex-row">
         <div className="flex flex-col gap-3 md:min-h-0 md:flex-1">

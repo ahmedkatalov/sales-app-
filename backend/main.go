@@ -42,7 +42,7 @@ func main() {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Owner-Account-ID", "X-Data-Account-ID", "X-Super-Token", "X-Requested-With"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Owner-Account-ID", "X-Data-Account-ID", "X-Super-Token", "X-Requested-With", "X-Order-Key"},
 		AllowCredentials: true,
 	}))
 
@@ -53,6 +53,9 @@ func main() {
 	r.POST("/auth/login", login)
 	r.POST("/auth/login-otp/request", requestLoginOTP)
 	r.POST("/auth/login-otp/confirm", confirmLoginOTP)
+
+	// Публичный приём заказов с сайта меню (по ключу приёма, без логина).
+	r.POST("/public/orders", receiveOnlineOrder)
 
 	// ---------------------------------------------------------------------------
 	// Super-admin маршруты — защищены токеном SUPER_ADMIN_TOKEN из .env
@@ -164,6 +167,12 @@ func main() {
 	auth.POST("/pending-sales", createPendingSale)
 	auth.POST("/pending-sales/:id/confirm", confirmPendingSale)
 	auth.DELETE("/pending-sales/:id", deletePendingSale)
+
+	// Онлайн-заказы с сайта: касса читает/меняет статус; ключ приёма — владельцу.
+	auth.GET("/online-orders", getOnlineOrders)
+	auth.POST("/online-orders/:id/status", setOnlineOrderStatus)
+	auth.GET("/online-orders/key", getOnlineOrderKey)
+	auth.POST("/online-orders/key/rotate", rotateOnlineOrderKey)
 	auth.GET("/debt-customers", getDebtCustomers)
 	auth.GET("/debts", getDebts)
 	auth.POST("/debts/:id/close", closeDebt)
