@@ -76,6 +76,12 @@ export default function ProfilePage({
   // Ключ приёма заказов с сайта (для настройки сайта меню).
   const [intakeKey, setIntakeKey] = useState("");
   const [keyBusy, setKeyBusy] = useState(false);
+  // Настройки ИИ (ключ/модель/базовый URL провайдера нейросети).
+  const [ai, setAi] = useState({ model: "", baseUrl: "", hasKey: false, keyMasked: "" });
+  const [aiKeyInput, setAiKeyInput] = useState("");
+  const [aiSaving, setAiSaving] = useState(false);
+  const [aiTesting, setAiTesting] = useState(false);
+  const [aiTest, setAiTest] = useState(null); // { ok, msg }
   const [workspaces,      setWorkspaces]      = useState([]);
   const [workspaceUsers,  setWorkspaceUsers]  = useState([]);
   const [workspaceAccess, setWorkspaceAccess] = useState([]);
@@ -189,7 +195,38 @@ export default function ProfilePage({
     get("/online-orders/key")
       .then((r) => setIntakeKey(r?.key || ""))
       .catch(() => setIntakeKey(""));
+    get("/settings/ai")
+      .then((r) => setAi({ model: r?.model || "", baseUrl: r?.baseUrl || "", hasKey: !!r?.hasKey, keyMasked: r?.keyMasked || "" }))
+      .catch(() => {});
   }, [workspace?.dataAccountId]);
+
+  const saveAI = async () => {
+    setAiSaving(true);
+    setAiTest(null);
+    try {
+      await put("/settings/ai", { apiKey: aiKeyInput, model: ai.model, baseUrl: ai.baseUrl });
+      setAiKeyInput("");
+      const r = await get("/settings/ai");
+      setAi({ model: r?.model || "", baseUrl: r?.baseUrl || "", hasKey: !!r?.hasKey, keyMasked: r?.keyMasked || "" });
+      window.notify?.("Настройки ИИ сохранены", "success");
+    } catch (e) {
+      window.notify?.(e?.message || "Не удалось сохранить", "error");
+    } finally {
+      setAiSaving(false);
+    }
+  };
+  const testAI = async () => {
+    setAiTesting(true);
+    setAiTest(null);
+    try {
+      const r = await post("/settings/ai/test", {});
+      setAiTest(r?.ok ? { ok: true, msg: `Работает · модель ${r.model}` } : { ok: false, msg: r?.error || "Нейросеть не ответила" });
+    } catch (e) {
+      setAiTest({ ok: false, msg: e?.message || "Ошибка проверки" });
+    } finally {
+      setAiTesting(false);
+    }
+  };
 
   const rotateIntakeKey = async () => {
     if (!window.confirm("Перевыпустить ключ? Старый перестанет работать — на сайте надо будет вписать новый.")) return;
@@ -609,6 +646,58 @@ export default function ProfilePage({
                   </div>
                   <p className="mt-2 text-[11px] font-bold text-slate-500">
                     Эндпоинт для сайта: <span className="text-slate-300">https://okvionsales.ru/api/public/orders</span>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {(isOwner || isBranchAdmin) && (
+              <div className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
+                <div className="flex items-center gap-2 text-violet-400">
+                  <Bot size={16} strokeWidth={2.4} />
+                  <p className="text-sm font-bold">Искусственный интеллект</p>
+                </div>
+                <h3 className="mt-1 text-xl font-black text-white">Нейросеть (API)</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-400">
+                  Ключ, модель и адрес провайдера ИИ (OpenRouter, odirouter, OpenAI…). Применяется сразу, без перезапуска сервера.
+                </p>
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-black text-slate-300">Базовый URL</label>
+                    <input value={ai.baseUrl} onChange={(e) => setAi((p) => ({ ...p, baseUrl: e.target.value }))}
+                      placeholder="https://api.odirouter.ai/v1"
+                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60" />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-black text-slate-300">Модель</label>
+                    <input value={ai.model} onChange={(e) => setAi((p) => ({ ...p, model: e.target.value }))}
+                      placeholder="напр. gpt-4o-mini или anthropic/claude-sonnet-4"
+                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60" />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-black text-slate-300">API-ключ</label>
+                    <input type="password" value={aiKeyInput} onChange={(e) => setAiKeyInput(e.target.value)}
+                      autoComplete="off"
+                      placeholder={ai.hasKey ? `сохранён (${ai.keyMasked}) — пусто = не менять` : "вставьте ключ провайдера"}
+                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60" />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={saveAI} disabled={aiSaving}
+                      className="rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-5 py-3 font-black text-white shadow-lg transition hover:scale-[1.01] disabled:opacity-60">
+                      {aiSaving ? "Сохраняю…" : "Сохранить"}
+                    </button>
+                    <button type="button" onClick={testAI} disabled={aiTesting}
+                      className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-slate-100 transition hover:bg-white/10 disabled:opacity-60">
+                      {aiTesting ? "Проверяю…" : "Проверить"}
+                    </button>
+                  </div>
+                  {aiTest && (
+                    <p className={`text-sm font-black ${aiTest.ok ? "text-emerald-300" : "text-red-300"}`}>
+                      {aiTest.ok ? "✓ " : "✕ "}{aiTest.msg}
+                    </p>
+                  )}
+                  <p className="text-[11px] font-bold text-slate-500">
+                    Для odirouter: Базовый URL — <span className="text-slate-300">https://api.odirouter.ai/v1</span>, ключ из odirouter.ai, модель — как в их списке. «Проверить» делает тестовый запрос.
                   </p>
                 </div>
               </div>

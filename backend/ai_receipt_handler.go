@@ -186,7 +186,8 @@ func callReceiptVisionParser(req receiptParseRequest) (receiptResult, error) {
 Подсказка пользователя (может быть пустой): %s`, string(itemsJSON), strings.TrimSpace(req.Hint))
 
 	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("OPENROUTER_BASE_URL")), "/")
-	useOpenRouter := strings.Contains(apiKey, "sk-or-") || strings.Contains(baseURL, "openrouter")
+	// Кастомный базовый URL (OpenRouter / odirouter / свой релей) = OpenAI-совместимый.
+	useOpenRouter := baseURL != "" || strings.Contains(apiKey, "sk-or-")
 	if baseURL == "" {
 		baseURL = "https://api.openai.com/v1"
 	}

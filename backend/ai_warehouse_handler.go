@@ -246,7 +246,10 @@ func callOpenAIWarehouseParser(req aiWarehouseParseRequest) (aiWarehouseParseRes
 %s`, schema, string(itemsJSON), req.Text)
 
 	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("OPENROUTER_BASE_URL")), "/")
-	useOpenRouter := strings.Contains(apiKey, "sk-or-") || strings.Contains(baseURL, "openrouter")
+	// Любой кастомный базовый URL (OpenRouter / odirouter / свой релей) — это
+	// OpenAI-СОВМЕСТИМЫЙ /chat/completions. Эндпоинт /responses оставляем ТОЛЬКО
+	// для прямого api.openai.com (когда базовый URL не задан).
+	useOpenRouter := baseURL != "" || strings.Contains(apiKey, "sk-or-")
 	if baseURL == "" {
 		baseURL = "https://api.openai.com/v1"
 	}
@@ -915,7 +918,10 @@ func callOpenAIExpenseParser(text string) (aiExpenseParseResult, error) {
 func callAIJSON[T any](prompt, model, apiKey, title string) (T, error) {
 	var zero T
 	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("OPENROUTER_BASE_URL")), "/")
-	useOpenRouter := strings.Contains(apiKey, "sk-or-") || strings.Contains(baseURL, "openrouter")
+	// Любой кастомный базовый URL (OpenRouter / odirouter / свой релей) — это
+	// OpenAI-СОВМЕСТИМЫЙ /chat/completions. Эндпоинт /responses оставляем ТОЛЬКО
+	// для прямого api.openai.com (когда базовый URL не задан).
+	useOpenRouter := baseURL != "" || strings.Contains(apiKey, "sk-or-")
 	if baseURL == "" {
 		baseURL = "https://api.openai.com/v1"
 	}

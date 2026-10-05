@@ -516,6 +516,10 @@ func createTables() {
 		// точку класть заказ. Уникален; храним в настройках точки.
 		`ALTER TABLE account_settings ADD COLUMN order_intake_key TEXT DEFAULT ''`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_account_intake_key ON account_settings(order_intake_key) WHERE order_intake_key != ''`,
+		// Настройки ИИ прямо из приложения (ключ/модель/базовый URL) — чтобы менять
+		// провайдера (OpenRouter/odirouter/OpenAI) без правки .env на сервере. Одна
+		// строка (id=1) на весь сервер; значения перекрывают переменные окружения.
+		`CREATE TABLE IF NOT EXISTS ai_settings (id INTEGER PRIMARY KEY, api_key TEXT DEFAULT '', model TEXT DEFAULT '', base_url TEXT DEFAULT '', updated_at TEXT DEFAULT '')`,
 	}
 
 	for _, q := range migrations {

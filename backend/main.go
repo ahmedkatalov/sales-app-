@@ -33,6 +33,7 @@ func main() {
 	}
 
 	createTables()
+	applyAISettingsFromDB() // настройки ИИ из БД перекрывают переменные окружения
 	initEmailJS()
 
 	r := gin.Default()
@@ -104,6 +105,10 @@ func main() {
 	auth.PUT("/settings/appearance", setAppearanceSettings)
 	auth.GET("/settings/business-day", getBusinessDaySettings)
 	auth.PUT("/settings/business-day", setBusinessDaySettings)
+	// Настройки ИИ (ключ/модель/базовый URL) — только владелец/админ.
+	auth.GET("/settings/ai", getAISettings)
+	auth.PUT("/settings/ai", setAISettings)
+	auth.POST("/settings/ai/test", testAISettings)
 
 	// BI-аналитика по продавцам (управленческий отчёт)
 	auth.GET("/analytics/employees", getEmployeeAnalytics)
