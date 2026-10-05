@@ -1,14 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeftRight,
   BadgeCheck,
   Hash,
   Package,
-  Percent,
-  Tag,
   TrendingDown,
   TrendingUp,
-  Wallet,
 } from "lucide-react";
 import {
   Bar,
@@ -333,16 +329,12 @@ export default function AnalyticsPage() {
     { title: "Общая выручка", value: formatMoney(totals.revenue), icon: "₽", tone: "from-blue-600/25 to-blue-950/10", text: "text-blue-200" },
     { title: "Чистая прибыль", value: formatMoney(totals.cleanProfit), icon: TrendingUp, tone: "from-emerald-500/25 to-emerald-950/10", text: "text-emerald-200" },
     { title: "Расходы", value: formatMoney(totals.totalExpenses), icon: TrendingDown, tone: "from-red-500/25 to-red-950/10", text: "text-red-200" },
-    { title: "Выручка − расходы", value: formatMoney(totals.revenueAfterExpenses), icon: Wallet, tone: "from-violet-500/25 to-violet-950/10", text: "text-violet-200" },
-    { title: "Прибыль − расходы", value: formatMoney(totals.afterExpenses), icon: BadgeCheck, tone: "from-cyan-500/25 to-cyan-950/10", text: "text-cyan-200" },
+    { title: "Чистыми на руки", value: formatMoney(totals.afterExpenses), icon: BadgeCheck, tone: "from-cyan-500/25 to-cyan-950/10", text: "text-cyan-200" },
   ];
 
   const extraCards = [
     { title: "Кол-во продаж", value: totals.qty, icon: Hash, tone: "from-slate-500/20 to-slate-950/10", text: "text-slate-200" },
     { title: "Сумма закупа", value: formatMoney(totals.purchaseTotal), icon: Package, tone: "from-orange-500/25 to-orange-950/10", text: "text-orange-200" },
-    { title: "Продажи по прайсу", value: formatMoney(totals.salePriceTotal), icon: Tag, tone: "from-blue-500/25 to-blue-950/10", text: "text-blue-200" },
-    { title: "Изменение цены продажи", value: formatMoney(totals.salePriceChange), icon: ArrowLeftRight, tone: "from-indigo-500/25 to-indigo-950/10", text: "text-indigo-200" },
-    { title: "Изменение маржи", value: formatMoney(totals.marginChange), icon: Percent, tone: "from-emerald-500/25 to-emerald-950/10", text: "text-emerald-200" },
   ];
 
   const StatBox = ({ card, className = "" }) => (

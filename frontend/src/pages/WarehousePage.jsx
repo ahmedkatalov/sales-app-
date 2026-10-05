@@ -283,13 +283,13 @@ export default function WarehousePage() {
 
   const validateForm = () => {
     if (!form.name.trim()) {
-      setError("Введите название сырья");
+      fail("Введите название сырья");
       return false;
     }
 
     const computed = computeWarehouseAmount(form);
     if (computed.quantity <= 0) {
-      setError("Введите количество закупки больше 0");
+      fail("Введите количество закупки больше 0");
       return false;
     }
 

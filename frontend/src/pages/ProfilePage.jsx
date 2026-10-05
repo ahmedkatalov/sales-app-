@@ -33,16 +33,18 @@ const ALL_PAGES = [
 
 const ownerTabs = [
   { id: "overview",     label: "Обзор" },
+  { id: "settings",     label: "Настройки точки" },
   { id: "branches",     label: "Точки" },
-  { id: "access",       label: "Доступы" },
-  { id: "permissions",  label: "Права" },
   { id: "accounts",     label: "Логины" },
   { id: "employees",    label: "Продавцы" },
+  { id: "access",       label: "Доступ к точкам" },
+  { id: "permissions",  label: "Права на страницы" },
   { id: "cards",        label: "Карты" },
 ];
 
 const adminTabs = [
   { id: "overview",   label: "Обзор" },
+  { id: "settings",   label: "Настройки точки" },
   { id: "employees",  label: "Продавцы" },
   { id: "accounts",   label: "Логины" },
   { id: "cards",      label: "Карты" },
@@ -529,12 +531,12 @@ export default function ProfilePage({
 
         {/* Табы */}
         <section className="mb-5 rounded-3xl border border-white/10 bg-[#0f172a]/80 p-2 shadow-2xl backdrop-blur">
-          <div role="tablist" className="no-scrollbar -mx-0.5 flex gap-2 overflow-x-auto px-0.5 sm:flex-wrap">
+          <div role="tablist" className="flex flex-wrap gap-2">
             {tabs.map((tab) => (
               <button key={tab.id} type="button" role="tab"
                 aria-selected={activeTab === tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`shrink-0 rounded-2xl px-4 py-2.5 text-sm font-black transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 sm:px-5 sm:py-3 ${
+                className={`rounded-2xl px-4 py-2.5 text-sm font-black transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 sm:px-5 sm:py-3 ${
                   activeTab === tab.id
                     ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg"
                     : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"
@@ -591,7 +593,11 @@ export default function ProfilePage({
                 </div>
               </div>
             )}
+          </section>
+        )}
 
+        {activeTab === "settings" && (isOwner || isBranchAdmin) && (
+          <section className="grid gap-5 xl:grid-cols-2">
             {(isOwner || isBranchAdmin) && (
               <div className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
                 <div className="flex items-center gap-2 text-blue-400">
@@ -655,9 +661,9 @@ export default function ProfilePage({
               <div className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
                 <div className="flex items-center gap-2 text-violet-400">
                   <Bot size={16} strokeWidth={2.4} />
-                  <p className="text-sm font-bold">Искусственный интеллект</p>
+                  <p className="text-sm font-bold">Нейросеть</p>
                 </div>
-                <h3 className="mt-1 text-xl font-black text-white">Нейросеть (API)</h3>
+                <h3 className="mt-1 text-xl font-black text-white">Подключение нейросети</h3>
                 <p className="mt-1 text-sm leading-6 text-slate-400">
                   Ключ, модель и адрес провайдера ИИ (OpenRouter, odirouter, OpenAI…). Применяется сразу, без перезапуска сервера.
                 </p>
@@ -848,7 +854,7 @@ export default function ProfilePage({
                   <div className="mt-auto grid gap-2 pt-5">
                     <button type="button" onClick={() => openManageProfiles(u)}
                       className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white transition hover:brightness-110">
-                      Продавцы логина
+                      Продавцы под логином
                     </button>
                     <button type="button" onClick={() => removeWorkspaceUser(u.id)}
                       className="rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm font-black text-red-300 transition hover:bg-red-500/20">
@@ -873,7 +879,7 @@ export default function ProfilePage({
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="text-2xl font-black">Продавцы</h3>
-                <p className="mt-1 max-w-xl text-sm text-slate-400">Имена продавцов — на кого записывается продажа. Пароль не нужен. Отметьте, кто сейчас за кассой.</p>
+                <p className="mt-1 max-w-xl text-sm text-slate-400">Имена продавцов — на кого записывается продажа. Пароль можно задать по желанию (тогда продавец вводит его, вставая за кассу). Отметьте, кто сейчас за кассой.</p>
               </div>
               <button type="button" onClick={() => setModal("employee")} className="btn-blue shrink-0">+ Добавить продавца</button>
             </div>

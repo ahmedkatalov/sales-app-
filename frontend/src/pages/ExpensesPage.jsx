@@ -304,10 +304,10 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
   const createExpense = async () => {
     setError("");
-    if (!form.category) return setError("Выбери категорию расхода");
-    if (!form.type) return setError("Выбери тип расхода");
-    if (!form.name.trim()) return setError("Напиши, за что оплатили");
-    if (num(form.amount) <= 0) return setError("Укажи сумму расхода");
+    if (!form.category) return window.notify?.("Выберите категорию расхода", "error");
+    if (!form.type) return window.notify?.("Выберите тип расхода", "error");
+    if (!form.name.trim()) return window.notify?.("Напишите, за что заплатили", "error");
+    if (num(form.amount) <= 0) return window.notify?.("Укажите сумму расхода", "error");
     await guarded(async () => {
       const created = await post("/global-expenses", {
         employeeId: currentProfile?.id || 0,
@@ -563,7 +563,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         </div>
 
         {/* Разбивка расходов по источнику оплаты (за период) */}
-        <div className="mb-4 grid grid-cols-3 gap-2.5 sm:gap-3">
+        <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-3">
           <div className="min-w-0 rounded-2xl border border-emerald-400/15 bg-emerald-500/[0.07] px-4 py-3">
             <p className="flex min-w-0 items-center gap-1.5 truncate text-[11px] font-black uppercase tracking-wide text-emerald-300/80"><Banknote size={14} strokeWidth={2.4} /> Из кассы</p>
             <p className="mt-1 truncate text-base font-black tabular-nums text-white sm:text-xl">{formatMoney(bySource.cash)}</p>

@@ -1099,7 +1099,7 @@ export default function WorkPage() {
 
         <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:justify-end">
           {/* Второстепенные действия — компактный горизонтальный ряд на телефоне */}
-          <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 sm:mx-0 sm:px-0 sm:flex-wrap sm:justify-end">
+          <div className="flex flex-wrap gap-2 sm:justify-end">
             <button
               onClick={() => setStructureModal(true)}
               className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 backdrop-blur transition hover:bg-white/10 sm:rounded-2xl sm:px-4 sm:py-3 sm:font-black sm:text-base sm:text-slate-100"

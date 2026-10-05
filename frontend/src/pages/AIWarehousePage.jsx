@@ -2132,14 +2132,14 @@ export default function AIWarehousePage() {
                     <button
                       onClick={confirmPendingPurchase}
                       disabled={loading}
-                      className="flex-1 rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 px-3 py-2 text-xs font-black text-white shadow-lg transition active:scale-95 disabled:opacity-50"
+                      className="flex-1 min-h-[44px] rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 px-3 py-3 text-sm font-black text-white shadow-lg transition active:scale-95 disabled:opacity-50"
                     >
                       Да, записать
                     </button>
                     <button
                       onClick={cancelPendingPurchase}
                       disabled={loading}
-                      className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-slate-200 transition active:scale-95 hover:bg-white/10 disabled:opacity-50"
+                      className="flex-1 min-h-[44px] rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm font-black text-slate-200 transition active:scale-95 hover:bg-white/10 disabled:opacity-50"
                     >
                       Отмена
                     </button>

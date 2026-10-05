@@ -984,7 +984,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
   return (
     <div
-      className="relative flex min-h-0 flex-1 flex-col overflow-y-auto p-3 text-white sm:p-4 md:overflow-hidden"
+      className="relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden p-3 text-white sm:p-4 md:overflow-hidden"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -1038,7 +1038,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             aria-label="К оплате — отложенные чеки" title="К оплате — отложенные чеки"
             className="relative flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-amber-400/25 bg-amber-500/10 px-3.5 font-black text-amber-200 transition hover:bg-amber-500/20 active:scale-95">
             <Clock size={18} strokeWidth={2.4} />
-            К оплате
+            Отложенные
             {pendingCount > 0 && (
               <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black leading-none text-white">
                 {pendingCount > 99 ? "99+" : pendingCount}
@@ -1061,7 +1061,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             title="Проверить кассу — сколько наличных должно быть сейчас"
             className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-3.5 font-black text-emerald-200 transition hover:bg-emerald-500/20 active:scale-95">
             <Wallet size={18} strokeWidth={2.4} />
-            Наличные
+            Касса
           </button>
           <button type="button" onClick={openCardModal}
             aria-label="Карты для оплаты переводом — добавить или удалить"

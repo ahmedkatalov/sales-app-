@@ -273,7 +273,7 @@ export default function DebtsPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 sm:gap-3 xl:min-w-[560px]">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3 xl:min-w-[560px] [@media(max-width:400px)]:grid-cols-1">
                       <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 sm:rounded-2xl sm:px-4 sm:py-3">
                         <p className="text-[11px] font-black uppercase text-slate-400 sm:text-xs">Взял в долг</p>
                         <p className="text-base font-black text-white sm:text-xl">{formatMoney(customer.borrowed || 0)}</p>
