@@ -18,10 +18,10 @@ services:
   frontend:
     build: ./frontend
     restart: unless-stopped
+    # Внутри контейнера теперь nginx (порт 80), а не vite preview (был 5173).
+    # Хост-nginx проксирует сюда (8081 → 80). Volume'ы с исходниками убраны —
+    # контейнер отдаёт уже собранный dist, монтировать ./frontend не нужно.
     ports:
-      - "8081:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "8081:80"
     depends_on:
       - backend

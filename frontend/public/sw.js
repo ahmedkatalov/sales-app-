@@ -11,7 +11,7 @@
  *
  * Чтобы принудительно обновить кэш у всех — поднимите VERSION.
  */
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = `okvion-sales-${VERSION}`;
 const SHELL = ['/', '/manifest.webmanifest', '/pwa-192.png', '/pwa-512.png', '/apple-touch-icon.png'];
 
