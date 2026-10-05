@@ -993,35 +993,65 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       </div>
       <div className="relative z-10 flex flex-col md:min-h-0 md:flex-1">
       {/* Шапка кассы (режим киоска): выход + продавец/смена */}
-      <div className="mb-3 flex shrink-0 items-center justify-between gap-2 sm:gap-3">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <button type="button" onClick={onExit} aria-label="Выйти из кассы" title="Выйти из кассы"
-            className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-3 font-black text-slate-200 transition hover:bg-white/10 active:scale-95 sm:px-3.5">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-            <span className="hidden sm:inline">Выйти</span>
-          </button>
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold text-blue-400 sm:text-sm">Касса</p>
-            <h2 className="truncate text-base font-black leading-none text-white sm:text-xl">Магазин</h2>
+      <div className="mb-3 shrink-0 space-y-2">
+        {/* Ряд 1: выход + заголовок + продавец */}
+        <div className="flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+            <button type="button" onClick={onExit} aria-label="Выйти из кассы" title="Выйти из кассы"
+              className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-3 font-black text-slate-200 transition hover:bg-white/10 active:scale-95 sm:px-3.5">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+              <span className="hidden sm:inline">Выйти</span>
+            </button>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-blue-400 sm:text-sm">Касса</p>
+              <h2 className="truncate text-base font-black leading-none text-white sm:text-xl">Магазин</h2>
+            </div>
           </div>
+
+          {isWorker ? (
+            <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-[#0f172a]/80 px-2 py-1.5 shadow-lg backdrop-blur">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-blue-600 to-violet-600 text-xs font-black text-white">
+                {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
+              </div>
+              <select value={currentProfile?.id || ""} onChange={(e) => onProfileChange?.(e.target.value)}
+                className="max-w-[38vw] rounded-lg bg-transparent py-1 pr-6 text-sm font-black text-blue-300 outline-none [color-scheme:dark] sm:max-w-none">
+                <option value="">Сотрудник…</option>
+                {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </div>
+          ) : (
+            <div className="flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#0f172a]/80 px-2.5 py-2 shadow-lg backdrop-blur sm:px-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-violet-600 text-sm font-black text-white">
+                {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
+              </div>
+              <div className="hidden min-w-0 pr-1 sm:block">
+                <p className="text-[11px] font-black uppercase leading-none text-slate-400">Сейчас работает</p>
+                <p className="truncate text-sm font-black leading-tight text-white">{activeWorkerName}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Ряд 2: действия — горизонтальная прокрутка на телефоне, с подписями */}
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-none" style={{ scrollbarWidth: "none" }}>
           <button type="button" onClick={() => setPendingModal(true)}
             aria-label="К оплате — отложенные чеки" title="К оплате — отложенные чеки"
-            className="relative flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-amber-400/25 bg-amber-500/10 px-3 font-black text-amber-200 transition hover:bg-amber-500/20 active:scale-95">
+            className="relative flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-amber-400/25 bg-amber-500/10 px-3.5 font-black text-amber-200 transition hover:bg-amber-500/20 active:scale-95">
             <Clock size={18} strokeWidth={2.4} />
-            <span className="hidden sm:inline">К оплате</span>
+            К оплате
             {pendingCount > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black leading-none text-white">
                 {pendingCount > 99 ? "99+" : pendingCount}
               </span>
             )}
           </button>
           <button type="button" onClick={openOrders}
             aria-label="Заказы с сайта" title="Заказы с сайта"
-            className={`relative flex h-11 shrink-0 items-center gap-2 rounded-2xl border px-3 font-black transition active:scale-95 ${ordersCount > 0 ? "border-pink-400/40 bg-pink-500/15 text-pink-200 hover:bg-pink-500/25" : "border-indigo-400/25 bg-indigo-500/10 text-indigo-200 hover:bg-indigo-500/20"}`}>
+            className={`relative flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border px-3.5 font-black transition active:scale-95 ${ordersCount > 0 ? "border-pink-400/40 bg-pink-500/15 text-pink-200 hover:bg-pink-500/25" : "border-indigo-400/25 bg-indigo-500/10 text-indigo-200 hover:bg-indigo-500/20"}`}>
             <ClipboardList size={18} strokeWidth={2.4} />
-            <span className="hidden sm:inline">Заказы</span>
+            Заказы
             {ordersCount > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-black leading-none text-white">
                 {ordersCount > 99 ? "99+" : ordersCount}
               </span>
             )}
@@ -1029,48 +1059,25 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           <button type="button" onClick={openCashCheck}
             aria-label="Проверить кассу — сколько наличных должно быть сейчас"
             title="Проверить кассу — сколько наличных должно быть сейчас"
-            className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-3 font-black text-emerald-200 transition hover:bg-emerald-500/20 active:scale-95">
+            className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-3.5 font-black text-emerald-200 transition hover:bg-emerald-500/20 active:scale-95">
             <Wallet size={18} strokeWidth={2.4} />
-            <span className="hidden sm:inline">Наличные</span>
+            Наличные
           </button>
           <button type="button" onClick={openCardModal}
             aria-label="Карты для оплаты переводом — добавить или удалить"
             title="Карты для оплаты переводом — добавить или удалить"
-            className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3 font-black text-sky-200 transition hover:bg-sky-500/20 active:scale-95">
+            className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3.5 font-black text-sky-200 transition hover:bg-sky-500/20 active:scale-95">
             <CreditCard size={18} strokeWidth={2.4} />
-            <span className="hidden sm:inline">Карты</span>
+            Карты
           </button>
           <button type="button" onClick={openReceipts}
             aria-label="Чеки за сегодня — что пробили"
             title="Чеки за сегодня — что пробили"
-            className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3 font-black text-violet-200 transition hover:bg-violet-500/20 active:scale-95">
+            className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3.5 font-black text-violet-200 transition hover:bg-violet-500/20 active:scale-95">
             <Receipt size={18} strokeWidth={2.4} />
-            <span className="hidden sm:inline">Чеки</span>
+            Чеки
           </button>
         </div>
-
-        {isWorker ? (
-          <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-[#0f172a]/80 px-2 py-1.5 shadow-lg backdrop-blur">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-blue-600 to-violet-600 text-xs font-black text-white">
-              {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
-            </div>
-            <select value={currentProfile?.id || ""} onChange={(e) => onProfileChange?.(e.target.value)}
-              className="max-w-[42vw] rounded-lg bg-transparent py-1 pr-6 text-sm font-black text-blue-300 outline-none [color-scheme:dark] sm:max-w-none">
-              <option value="">Сотрудник…</option>
-              {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-            </select>
-          </div>
-        ) : (
-          <div className="flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#0f172a]/80 px-2.5 py-2 shadow-lg backdrop-blur sm:px-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-violet-600 text-sm font-black text-white">
-              {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
-            </div>
-            <div className="hidden min-w-0 pr-1 sm:block">
-              <p className="text-[11px] font-black uppercase leading-none text-slate-400">Сейчас работает</p>
-              <p className="truncate text-sm font-black leading-tight text-white">{activeWorkerName}</p>
-            </div>
-          </div>
-        )}
       </div>
 
       {error && (
