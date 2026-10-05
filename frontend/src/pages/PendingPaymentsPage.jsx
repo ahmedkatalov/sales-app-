@@ -61,7 +61,7 @@ export default function PendingPaymentsPage() {
   };
 
   const cancel = async (id) => {
-    if (!window.confirm("Убрать этот чек из ожидания?")) return;
+    if (!window.confirm("Отменить этот чек?")) return;
     await del(`/pending-sales/${id}`);
     await load();
   };
@@ -161,7 +161,7 @@ export default function PendingPaymentsPage() {
                     onClick={() => cancel(s.id)}
                     className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 font-black text-red-300 transition hover:bg-red-500/20"
                   >
-                    Убрать
+                    Отменить чек
                   </button>
                 </div>
               </div>

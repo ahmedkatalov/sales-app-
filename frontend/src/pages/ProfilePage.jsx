@@ -31,6 +31,9 @@ const ALL_PAGES = [
   { path: "/analytics",      label: "Аналитика",          icon: TrendingUp },
 ];
 
+// Логины, которым владелец настраивает доступ к страницам (владелец и администратор видят всё всегда).
+const isAssignable = (u) => u.role === "worker" || u.role === "workspace";
+
 const ownerTabs = [
   { id: "overview",     label: "Обзор" },
   { id: "settings",     label: "Настройки точки" },
@@ -461,6 +464,7 @@ export default function ProfilePage({
       await post("/cards", { name: cardName.trim(), owner: cardOwner.trim() });
       setCardName("");
       setCardOwner("");
+      setModal(null);
       await load();
     } catch (e) {
       setError(e?.message || "Не удалось создать карту");
@@ -560,11 +564,11 @@ export default function ProfilePage({
               <div className="grid gap-4 p-5 sm:grid-cols-2">
                 <div className="rounded-3xl bg-white/5 p-5">
                   <p className="text-sm font-bold text-slate-400">Текущая точка</p>
-                  <p className="mt-1 text-2xl font-black text-white">{workspace?.name || "Основная точка"}</p>
+                  <p className="mt-1 break-words text-2xl font-black text-white">{workspace?.name || "Основная точка"}</p>
                 </div>
                 <div className="rounded-3xl bg-blue-500/10 p-5">
                   <p className="text-sm font-bold text-slate-400">{isOwner ? "Владелец" : "Сейчас работает"}</p>
-                  <p className="mt-1 text-2xl font-black text-blue-300">{isOwner ? (ownerName || currentWorker) : currentWorker}</p>
+                  <p className="mt-1 break-words text-2xl font-black text-blue-300">{isOwner ? (ownerName || currentWorker) : currentWorker}</p>
                 </div>
               </div>
             </div>
@@ -669,7 +673,7 @@ export default function ProfilePage({
                 </p>
                 <div className="mt-4 space-y-3">
                   <div>
-                    <label className="mb-1.5 block text-sm font-black text-slate-300">Базовый URL</label>
+                    <label className="mb-1.5 block text-sm font-black text-slate-300">Адрес провайдера (URL)</label>
                     <input value={ai.baseUrl} onChange={(e) => setAi((p) => ({ ...p, baseUrl: e.target.value }))}
                       placeholder="https://api.odirouter.ai/v1"
                       className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60" />
@@ -703,7 +707,7 @@ export default function ProfilePage({
                     </p>
                   )}
                   <p className="text-[11px] font-bold text-slate-500">
-                    Для odirouter: Базовый URL — <span className="text-slate-300">https://api.odirouter.ai/v1</span>, ключ из odirouter.ai, модель — как в их списке. «Проверить» делает тестовый запрос.
+                    Для odirouter: адрес провайдера —<span className="text-slate-300">https://api.odirouter.ai/v1</span>, ключ из odirouter.ai, модель — как в их списке. «Проверить» делает тестовый запрос.
                   </p>
                 </div>
               </div>
@@ -736,7 +740,7 @@ export default function ProfilePage({
                     <p className={`text-xs font-black uppercase tracking-wide ${active ? "text-blue-100" : "text-blue-400"}`}>{w.isMain ? "Основная точка" : "Филиал"}</p>
                     {active && <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-black">Активна</span>}
                   </div>
-                  <h4 className="mt-1.5 text-2xl font-black">{w.name}</h4>
+                  <h4 className="mt-1.5 break-words text-2xl font-black">{w.name}</h4>
                   <p className={`mt-3 text-sm ${active ? "text-blue-100/80" : "text-slate-400"}`}>Логинов: {(usersByWorkspace[String(w.id)] || []).length}</p>
                 </button>
                 );
@@ -794,8 +798,8 @@ export default function ProfilePage({
                           </td>
                           <td className="px-4 py-3 text-right">
                             <button type="button" onClick={() => revokeAccess(a.id)}
-                              className="rounded-xl bg-red-500/10 px-3 py-1.5 text-xs font-black text-red-400 hover:bg-red-500/20">
-                              Убрать
+                              className="min-h-[40px] rounded-xl bg-red-500/10 px-3 py-2.5 text-xs font-black text-red-400 hover:bg-red-500/20">
+                              Убрать доступ
                             </button>
                           </td>
                         </tr>
@@ -909,7 +913,7 @@ export default function ProfilePage({
                     <button type="button" onClick={() => removeEmployee(e.id)}
                       aria-label="Удалить продавца" title="Удалить продавца"
                       className={`flex items-center justify-center rounded-2xl px-4 py-3 font-black transition focus:outline-none ${
-                        active ? "bg-white/15 text-white hover:bg-white/25" : "bg-red-500/10 text-red-300 hover:bg-red-500/20"
+                        active ? "bg-red-500/25 text-red-100 hover:bg-red-500/35" : "bg-red-500/10 text-red-300 hover:bg-red-500/20"
                       }`}>
                       <Trash2 size={16} />
                     </button>
@@ -937,14 +941,14 @@ export default function ProfilePage({
               </p>
             </div>
 
-            {safe_workspaceUsers.filter(u => u.role === "worker" || u.role === "branch_admin").length === 0 ? (
+            {safe_workspaceUsers.filter(isAssignable).length === 0 ? (
               <div className="rounded-3xl border border-dashed border-white/10 p-10 text-center">
                 <p className="text-lg font-black text-white">Логинов пока нет</p>
                 <p className="mt-1 text-sm text-slate-400">Создайте логин в разделе «Логины».</p>
               </div>
             ) : (
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {safe_workspaceUsers.filter(u => u.role === "worker" || u.role === "workspace" || u.role === "branch_admin").map((u) => {
+                {safe_workspaceUsers.filter(isAssignable).map((u) => {
                   const perms = safe_permissions.find(p => p.userId === u.id);
                   const pages = perms?.pages
                     ? (typeof perms.pages === "string" ? JSON.parse(perms.pages) : perms.pages)
@@ -953,12 +957,12 @@ export default function ProfilePage({
                   return (
                     <article key={u.id} className="rounded-3xl border border-white/10 bg-[#111827] p-5">
                       <div className="mb-3 flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-black text-white">{u.username}</p>
+                        <div className="min-w-0">
+                          <p className="truncate font-black text-white">{u.username}</p>
                           <p className="text-xs text-slate-400">{u.workspaceName}</p>
                         </div>
                         <button type="button" onClick={() => openEditPerms(u)}
-                          className="shrink-0 rounded-xl bg-blue-500/20 px-3 py-1.5 text-xs font-black text-blue-300 hover:bg-blue-500/30">
+                          className="min-h-[40px] shrink-0 rounded-xl bg-blue-500/20 px-4 py-2.5 text-sm font-black text-blue-300 hover:bg-blue-500/30">
                           Настроить
                         </button>
                       </div>
@@ -990,23 +994,15 @@ export default function ProfilePage({
                 <h3 className="text-2xl font-black">Карты</h3>
                 <p className="mt-1 text-sm text-slate-400">Карты для учёта переводов и расходов.</p>
               </div>
-            </div>
-            <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
-              <input value={cardName} onChange={(e) => setCardName(e.target.value)}
-                placeholder="Название карты / банка"
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
-              <input value={cardOwner} onChange={(e) => setCardOwner(e.target.value)}
-                placeholder="Владелец"
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
-              <button type="button" onClick={createCard} className="btn-blue">+ Добавить карту</button>
+              <button type="button" onClick={() => { setError(""); setModal("card"); }} className="btn-blue shrink-0">+ Добавить карту</button>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {safe_cards.map((card) => (
                 <article key={card.id} className="rounded-3xl border border-white/10 bg-[#111827] p-5 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xl font-black text-white">{card.name}</p>
-                      <p className="mt-1 text-sm font-bold text-slate-400">{card.owner || "Владелец не указан"}</p>
+                    <div className="min-w-0">
+                      <p className="break-words text-xl font-black text-white">{card.name}</p>
+                      <p className="mt-1 break-words text-sm font-bold text-slate-400">{card.owner || "Владелец не указан"}</p>
                     </div>
                     <button type="button" onClick={() => removeCard(card.id)}
                       className="shrink-0 rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm font-black text-red-300 transition hover:bg-red-500/20">
@@ -1053,9 +1049,9 @@ export default function ProfilePage({
             <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
               <span className="text-sm font-bold text-slate-400">Выбрано страниц: {editingPerms.pages.length} из {ALL_PAGES.length}</span>
               <button type="button" onClick={() => setEditingPerms(p => ({...p, pages: ALL_PAGES.map(x => x.path)}))}
-                className="ml-auto rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white hover:bg-white/15">Выбрать все</button>
-              <button type="button" onClick={() => setEditingPerms(p => ({...p, pages: ["/pos"]}))}
-                className="rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white hover:bg-white/15">Сбросить</button>
+                className="ml-auto min-h-[40px] rounded-xl bg-white/10 px-3 py-2.5 text-xs font-black text-white hover:bg-white/15">Выбрать все</button>
+              <button type="button" onClick={() => setEditingPerms(p => ({...p, pages: ["/pos", "/pending-payments"]}))}
+                className="min-h-[40px] rounded-xl bg-white/10 px-3 py-2.5 text-xs font-black text-white hover:bg-white/15">По умолчанию</button>
             </div>
             <div className="mt-6 flex gap-3">
               <button type="button" onClick={() => setModal(null)} className="btn-white flex-1">Отмена</button>
@@ -1166,6 +1162,28 @@ export default function ProfilePage({
             <div className="mt-6 flex gap-3">
               <button type="button" onClick={() => setModal(null)} className="btn-white flex-1">Отмена</button>
               <button type="button" onClick={createEmployee} className="btn-blue flex-1">Создать</button>
+            </div>
+          </Modal>
+        )}
+
+        {modal === "card" && (
+          <Modal title="Новая карта" legacyLight={false} onClose={() => setModal(null)}>
+            <label className="block">
+              <span className="mb-2 block text-sm font-black text-slate-400">Название карты или банка</span>
+              <input value={cardName} onChange={(e) => setCardName(e.target.value)}
+                placeholder="Например: Сбербанк" autoFocus
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+            </label>
+            <label className="mt-3 block">
+              <span className="mb-2 block text-sm font-black text-slate-400">Владелец <span className="font-bold text-slate-500">(необязательно)</span></span>
+              <input value={cardOwner} onChange={(e) => setCardOwner(e.target.value)}
+                placeholder="Например: Ахмед"
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+            </label>
+            {error && <p role="alert" className="mt-3 text-sm font-bold text-red-400">{error}</p>}
+            <div className="mt-6 flex gap-3">
+              <button type="button" onClick={() => setModal(null)} className="btn-white flex-1">Отмена</button>
+              <button type="button" onClick={createCard} className="btn-blue flex-1">Создать</button>
             </div>
           </Modal>
         )}

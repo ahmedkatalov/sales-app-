@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeftRight, Banknote, Percent, Plus, Receipt, Trophy } from "lucide-react";
+import { ArrowLeftRight, Banknote, Calculator, Percent, Plus, Receipt, Trophy } from "lucide-react";
 import { get } from "../api";
 import { formatMoney, localISO, businessISO } from "../utils/format";
 
@@ -34,7 +34,7 @@ function StatCard({ title, value, subtitle, icon: Icon, tone = "blue", className
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 sm:text-xs">{title}</p>
-          <p className="mt-1.5 truncate text-xl font-black text-white sm:mt-3 sm:text-4xl">{value}</p>
+          <p className="mt-1.5 break-words text-lg font-black leading-tight text-white sm:mt-3 sm:text-4xl">{value}</p>
           {subtitle && <p className="mt-1 truncate text-[11px] font-bold text-slate-400 sm:mt-2 sm:text-xs">{subtitle}</p>}
         </div>
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-base shadow-inner shadow-white/10 sm:h-12 sm:w-12 sm:rounded-2xl sm:text-xl">
@@ -107,7 +107,7 @@ export default function SalesAnalyticsPage() {
               Продажи
             </h2>
             <p className="mt-4 max-w-2xl text-sm font-medium leading-6 text-slate-400 sm:text-base">
-              Продажи по датам, скидки, наличка, переводы, популярные товары и последние чеки.
+              Продажи по датам, скидки, наличные, переводы, популярные товары и последние чеки.
             </p>
           </div>
 
@@ -186,12 +186,13 @@ export default function SalesAnalyticsPage() {
           )}
         </div>
 
-        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <StatCard title="Выручка" value={moneyValue(stats.totalRevenue)} subtitle="общая сумма" icon="₽" tone="blue" />
+          <StatCard title="Чеки" value={Number(stats.salesCount || 0)} subtitle="кол-во продаж" icon={Receipt} tone="purple" />
+          <StatCard title="Средний чек" value={moneyValue(avgCheck)} subtitle="на один чек" icon={Calculator} tone="blue" />
+          <StatCard title="Наличные" value={moneyValue(stats.cashTotal)} subtitle="оплата наличными" icon={Banknote} tone="green" />
+          <StatCard title="Переводы" value={moneyValue(stats.transferTotal)} subtitle="оплата переводом" icon={ArrowLeftRight} tone="amber" />
           <StatCard title="Скидки" value={moneyValue(stats.totalDiscount)} subtitle="за период" icon={Percent} tone="red" />
-          <StatCard title="Продаж" value={Number(stats.salesCount || 0)} subtitle="чеков" icon={Receipt} tone="purple" />
-          <StatCard title="Наличные" value={moneyValue(stats.cashTotal)} subtitle="оплата наличкой" icon={Banknote} tone="green" />
-          <StatCard title="Переводы" value={moneyValue(stats.transferTotal)} subtitle={`средний чек ${moneyValue(avgCheck)}`} icon={ArrowLeftRight} tone="amber" className="col-span-2 xl:col-span-1" />
         </div>
 
         <div className="grid gap-5 lg:grid-cols-2">

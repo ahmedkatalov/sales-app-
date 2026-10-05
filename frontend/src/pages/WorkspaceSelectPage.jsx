@@ -32,7 +32,7 @@ export default function WorkspaceSelectPage({ session, onSelect }) {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-600 text-white shadow-2xl shadow-blue-600/30">
             <Store size={30} strokeWidth={2} />
           </div>
-          <h1 className="text-3xl font-black text-white">Выберите заведение</h1>
+          <h1 className="text-3xl font-black text-white">Выберите точку</h1>
           <p className="mt-2 text-slate-400">
             Здравствуйте, <span className="font-black text-white">{session?.username}</span>! Выберите точку для работы.
           </p>

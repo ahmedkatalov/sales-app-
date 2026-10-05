@@ -326,7 +326,7 @@ export default function AnalyticsPage() {
   }, [analytics]);
 
   const statCards = [
-    { title: "Общая выручка", value: formatMoney(totals.revenue), icon: "₽", tone: "from-blue-600/25 to-blue-950/10", text: "text-blue-200" },
+    { title: "Выручка", value: formatMoney(totals.revenue), icon: "₽", tone: "from-blue-600/25 to-blue-950/10", text: "text-blue-200" },
     { title: "Чистая прибыль", value: formatMoney(totals.cleanProfit), icon: TrendingUp, tone: "from-emerald-500/25 to-emerald-950/10", text: "text-emerald-200" },
     { title: "Расходы", value: formatMoney(totals.totalExpenses), icon: TrendingDown, tone: "from-red-500/25 to-red-950/10", text: "text-red-200" },
     { title: "Чистыми на руки", value: formatMoney(totals.afterExpenses), icon: BadgeCheck, tone: "from-cyan-500/25 to-cyan-950/10", text: "text-cyan-200" },
@@ -342,7 +342,7 @@ export default function AnalyticsPage() {
       <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
       <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
-          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400 sm:text-[11px] sm:tracking-[0.18em]">{card.title}</p>
+          <p className="text-[10px] font-black uppercase leading-tight tracking-[0.06em] text-slate-400 sm:text-[11px] sm:tracking-[0.1em]">{card.title}</p>
           <p title={card.value} className="mt-1.5 break-words text-lg font-black leading-tight tabular-nums text-white sm:mt-3 sm:text-3xl">{card.value}</p>
         </div>
         <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-base font-black sm:h-11 sm:w-11 sm:rounded-2xl sm:text-xl ${card.text}`}>
@@ -407,9 +407,10 @@ export default function AnalyticsPage() {
             <div className="flex flex-1 flex-wrap items-center gap-2">
               {[
                 ["month", "Этот месяц", () => { const m = currentMonth(); setPeriodMode("month"); setFrom(m); setTo(m); }],
+                ["range", "Другой период", () => { setPeriodMode("range"); setFilterOpen(true); }],
                 ["all",   "Всё время",  () => { setPeriodMode("all"); }],
               ].map(([key, label, action]) => {
-                const active = key === "month" ? periodMode === "month" && from === defaultMonth : periodMode === "all";
+                const active = key === "month" ? periodMode === "month" && from === defaultMonth : periodMode === key;
                 return (
                   <button key={key} type="button" onClick={action}
                     className={active
@@ -462,15 +463,6 @@ export default function AnalyticsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">Период</span>
-                  <select value={periodMode} onChange={(e) => setPeriodMode(e.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400">
-                    <option value="month">Месяц</option>
-                    <option value="range">Диапазон</option>
-                    <option value="all">Всё время</option>
-                  </select>
-                </label>
                 {periodMode !== "all" && (
                   <label className="block">
                     <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">
@@ -519,12 +511,14 @@ export default function AnalyticsPage() {
           </>
         ) : (
           <>
+        <h3 className="mb-2 text-sm font-black uppercase tracking-wide text-slate-400">Главное</h3>
         <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
           {statCards.map((card, i) => (
             <StatBox key={card.title} card={card} className={i === statCards.length - 1 && statCards.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""} />
           ))}
         </div>
 
+        <h3 className="mb-2 text-sm font-black uppercase tracking-wide text-slate-400">Детали</h3>
         <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
           {extraCards.map((card, i) => (
             <StatBox key={card.title} card={card} className={i === extraCards.length - 1 && extraCards.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""} />
@@ -543,7 +537,7 @@ export default function AnalyticsPage() {
                 <Line type="monotone" dataKey="revenue" name="Выручка" stroke="#3b82f6" strokeWidth={3} dot={false} />
                 <Line type="monotone" dataKey="cleanProfit" name="Чистая прибыль" stroke="#10b981" strokeWidth={3} dot={false} />
                 <Line type="monotone" dataKey="totalExpenses" name="Расходы" stroke="#ef4444" strokeWidth={3} dot={false} />
-                <Line type="monotone" dataKey="afterExpenses" name="После расходов" stroke="#8b5cf6" strokeWidth={3} dot={false} />
+                <Line type="monotone" dataKey="afterExpenses" name="Чистыми на руки" stroke="#8b5cf6" strokeWidth={3} dot={false} />
               </LineChart>
             </ResponsiveContainer>
             {!loading && !analytics.length && (
@@ -640,7 +634,7 @@ export default function AnalyticsPage() {
                     "Чистая прибыль",
                     "Расходы",
                     "Выручка − расходы",
-                    "Прибыль − расходы",
+                    "Чистыми на руки",
                     "Сумма закупа",
                     "Продажи по прайсу",
                   ].map((h) => (
@@ -676,7 +670,10 @@ export default function AnalyticsPage() {
                     <p className="truncate text-lg font-black text-white">{m.label || m.month}</p>
                     <p className="text-sm font-bold text-slate-400">Кол-во: {m.qty}</p>
                   </div>
-                  <p className="shrink-0 text-lg font-black text-emerald-300">{formatMoney(m.afterExpenses)}</p>
+                  <div className="shrink-0 text-right">
+                    <p className="text-[10px] font-bold uppercase text-slate-400">Чистыми</p>
+                    <p className="text-lg font-black text-emerald-300">{formatMoney(m.afterExpenses)}</p>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-3"><p className="text-slate-400">Выручка</p><b className="text-white">{formatMoney(m.revenue)}</b></div>

@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus, Trash2, Warehouse, Pencil, Check, Camera, Images } from "lucide-react";
+import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus, Trash2, Warehouse, Pencil, Check, Camera, Images, Bot, MapPin, ArrowLeft } from "lucide-react";
 import { del, get, getCurrentWorkspace, getSession, post } from "../api";
 import { formatMoney, num } from "../utils/format";
 import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
@@ -238,7 +238,22 @@ const payloadFromForm = (sourceForm) => {
 
 const AI_WELCOME_MESSAGE = {
   role: "bot",
-  text: "Привет! Я Claude — AI-ассистент твоего бизнеса 👋\n\nМогу помочь со складом, меню, продажами, долгами, расходами. Или просто поговорим — спрашивай что угодно: калорийность, советы по бизнесу, рецепты. Пиши как обычно.",
+  text: "Здравствуйте! Я AI-ассистент вашего бизнеса.\n\nМогу помочь со складом, меню, продажами, долгами, расходами. Или просто поговорим — спрашивайте что угодно: калорийность, советы по бизнесу, рецепты. Пишите как обычно.",
+};
+
+// Прежний текст приветствия (в «ты» и с эмодзи): у тех, кто уже открывал чат, он лежит
+// в localStorage. Отбрасываем его при загрузке, иначе рядом с новым появится дубль.
+const LEGACY_WELCOME_TEXTS = [
+  "Привет! Я Claude — AI-ассистент твоего бизнеса 👋\n\nМогу помочь со складом, меню, продажами, долгами, расходами. Или просто поговорим — спрашивай что угодно: калорийность, советы по бизнесу, рецепты. Пиши как обычно.",
+];
+
+// Склонение «позиция» по числу: forms = [1, 2–4, 5+]. «Нужно уточнить 5 позиций», а не «5 позиции».
+const pluralPositions = (n, forms) => {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return forms[0];
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return forms[1];
+  return forms[2];
 };
 
 const DEFAULT_SIDE_PANELS = {
@@ -291,6 +306,7 @@ const loadAIChatState = (storageKey) => {
   let hasWelcome = false;
   for (const msg of savedMessages) {
     if (!msg?.text) continue;
+    if (msg.role === "bot" && LEGACY_WELCOME_TEXTS.includes(msg.text)) continue;
     const isWelcome = msg.role === "bot" && msg.text === welcomeText;
     if (isWelcome) {
       if (hasWelcome) continue;
@@ -709,7 +725,7 @@ const shortQuestionForPending = (pending) => {
   const form = pending?.form || {};
   if (!form.purchaseQuantity) return `Сколько купили товара «${name}»?`;
   if (!form.price) return `За сколько купили «${name}»?`;
-  return `Уточни данные по товару «${name}».`;
+  return `Уточните данные по товару «${name}».`;
 };
 
 // Текстовая часть ответа-уточнения (возможное название/вид), без чисел/единиц/денег.
@@ -862,9 +878,12 @@ function exportTextToPdf(text) {
 const Message = memo(function Message({ msg, idx, onCancelCard, onAttachPhoto, onDismissPhoto, onOpenImage }) {
   const isUser = msg.role === "user";
   const showPdf = msg.role === "bot" && msg.text && msg.text !== AI_WELCOME_MESSAGE.text && msg.text.length > 120;
+  // Сообщение с фото накладной: маркер-эмодзи из старых сохранённых чатов заменяем иконкой.
+  const isPhotoMsg = isUser && (Boolean(msg.image) || /^📷/.test(msg.text || ""));
+  const userText = isUser ? String(msg.text || "").replace(/^📷\s*/, "") : "";
   return (
     <div className={`flex gap-2 sm:gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
-      {!isUser && <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-sm shadow-lg shadow-blue-600/30 sm:flex">🤖</div>}
+      {!isUser && <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 sm:flex"><Bot size={18} strokeWidth={2.2} /></div>}
       <div className={`max-w-[90%] rounded-3xl px-4 py-3 text-[13px] font-bold leading-6 shadow-lg sm:max-w-[78%] ${isUser ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white" : "border border-white/10 bg-white/[0.08] text-slate-100 backdrop-blur"}`}>
         {msg.image && (
           <button type="button" onClick={() => onOpenImage?.(msg.image)} title="Открыть фото"
@@ -872,7 +891,9 @@ const Message = memo(function Message({ msg, idx, onCancelCard, onAttachPhoto, o
             <img src={msg.image} alt="Отправленное фото" className="max-h-56 w-full object-cover" />
           </button>
         )}
-        {isUser ? <p className="whitespace-pre-line">{msg.text}</p> : <RichText text={msg.text} />}
+        {isUser
+          ? <p className="whitespace-pre-line">{isPhotoMsg && <Camera size={14} strokeWidth={2.4} className="mr-1.5 -mt-0.5 inline-block align-middle" />}{userText}</p>
+          : <RichText text={msg.text} />}
         {msg.cards?.length > 0 && (
           <div className="mt-3 space-y-2">
             {msg.cards.map((card, i) => (
@@ -1403,7 +1424,7 @@ export default function AIWarehousePage() {
       const questions = stillWaiting.map((x, i) => `${i + 1}) ${shortQuestionForPending(x)}`).join("\n");
       setMessages((p) => [...p, {
         role: "bot",
-        text: `${savedText}Осталось уточнить:\n${questions}\n\nОтвечай только по этим позициям. Например: “стаканчики 250мл для кофе за 200, яблоки за 200”.`,
+        text: `${savedText}Осталось уточнить:\n${questions}\n\nОтвечайте только по этим позициям. Например: “стаканчики 250мл для кофе за 200, яблоки за 200”.`,
       }]);
       await load();
       return;
@@ -1438,8 +1459,8 @@ export default function AIWarehousePage() {
       setMessages((p) => [...p, {
         role: "bot",
         text: activeNames
-          ? `Какой товар склада сделать ${wantHidden ? "неактивным" : "активным"}? Напиши только название. Сейчас вижу: ${activeNames}.`
-          : "Какой товар склада изменить? Напиши точное название товара.",
+          ? `Какой товар склада сделать ${wantHidden ? "неактивным" : "активным"}? Напишите только название. Сейчас вижу: ${activeNames}.`
+          : "Какой товар склада изменить? Напишите точное название товара.",
       }]);
       return true;
     }
@@ -1528,8 +1549,8 @@ export default function AIWarehousePage() {
     } catch (e) {
       const cause = e?.cause?.name;
       const friendly = cause === "AbortError"
-        ? "Ответ занял слишком долго. Давай попробуем ещё раз через минуту."
-        : "Не получилось записать закупку. Попробуй ещё раз.";
+        ? "Ответ занял слишком долго. Попробуйте ещё раз через минуту."
+        : "Не получилось записать закупку. Попробуйте ещё раз.";
       setMessages((prev) => [...prev, { role: "bot", text: friendly }]);
     } finally {
       setLoading(false);
@@ -1560,7 +1581,7 @@ export default function AIWarehousePage() {
     setAttachedPhoto(null);
     purchasePhotoRef.current = null;
     setZoomImage(null);
-    setMessages([AI_WELCOME_MESSAGE, { role: "bot", text: "Готово — очистила чат. Начнём заново 🙂" }]);
+    setMessages([AI_WELCOME_MESSAGE, { role: "bot", text: "Готово — очистила чат. Начнём заново." }]);
     try { localStorage.removeItem(storageKey); } catch { /* приватный режим */ }
   }, [storageKey]);
 
@@ -1684,7 +1705,7 @@ export default function AIWarehousePage() {
   // готовые — в подтверждение, неполные — в уточнения.
   const runPurchaseItems = (parsedItems, originalText) => {
     if (!parsedItems.length) {
-      setMessages((p) => [...p, { role: "bot", text: "Не понял что купили. Напиши например: «апельсин 3кг за 400р»" }]);
+      setMessages((p) => [...p, { role: "bot", text: "Не понял, что купили. Напишите, например: «апельсин 3кг за 400р»" }]);
       return;
     }
     const waiting = parsedItems.filter((p) => (p.questions || []).length > 0);
@@ -1717,9 +1738,9 @@ export default function AIWarehousePage() {
       }).join("\n");
       const anyAssumed = prepared.some((x) => x.result?.assumedWeight);
       const assumedHint = anyAssumed ? "\n\nГде вес не был указан — взяла средний (жёлтая пометка). Можно уточнить нужные позиции, остальные оставить как есть." : "";
-      setMessages((prev) => [...prev, { role: "bot", text: `Проверь закупку перед записью${targetName ? ` на точку «${targetName}»` : ""}:\n${lines}${assumedHint}\n\nЗаписать? Нажми «Да, записать» или «Отмена».` }]);
+      setMessages((prev) => [...prev, { role: "bot", text: `Проверьте закупку перед записью${targetName ? ` на точку «${targetName}»` : ""}:\n${lines}${assumedHint}\n\nЗаписать? Нажмите «Да, записать» или «Отмена».` }]);
     } else if (waiting.length === 0) {
-      setMessages((prev) => [...prev, { role: "bot", text: "Не понял что купили. Напиши например: «апельсин 3кг за 400р»" }]);
+      setMessages((prev) => [...prev, { role: "bot", text: "Не понял, что купили. Напишите, например: «апельсин 3кг за 400р»" }]);
     }
   };
 
@@ -1745,7 +1766,7 @@ export default function AIWarehousePage() {
     // кладём лёгкое превью, а не тяжёлый оригинал — иначе забьётся квота.
     let preview = photo;
     try { preview = await shrinkDataURL(photo, { maxEdge: 480, quality: 0.6 }); } catch { preview = photo; }
-    setMessages((p) => [...p, { role: "user", text: hint ? `📷 Накладная — ${hint}` : "📷 Накладная (фото)", image: preview }]);
+    setMessages((p) => [...p, { role: "user", text: hint ? `Накладная — ${hint}` : "Накладная (фото)", image: preview }]);
     try {
       // Запуск в фоне: POST мгновенно возвращает jobId, результат забираем опросом,
       // чтобы долгий vision-запрос не рвался на прокси (это давало 503).
@@ -1816,11 +1837,11 @@ export default function AIWarehousePage() {
 
       // 1b. Ждём подтверждения закупки — «да»/«нет» текстом трактуем как кнопки.
       if (pendingPurchaseConfirmation?.items?.length) {
-        if (/^(да|ага|верно|подтвержда\w*|записывай|запиши|ок|окей|сохрани|сохраняй|давай)\b/i.test(lower(rawText))) {
+        if (/^(да|ага|верно|подтвержда[а-яё]*|записывай|запиши|ок|окей|сохрани|сохраняй|давай)(?=[\s,.!)]|$)/i.test(lower(rawText))) {
           await confirmPendingPurchase();
           return;
         }
-        if (/^(нет|отмена|отмени|не\s+надо|не\s+нужно|не\s+записывай|стоп)\b/i.test(lower(rawText))) {
+        if (/^(нет|отмена|отмени|не\s+надо|не\s+нужно|не\s+записывай|стоп)(?=[\s,.!)]|$)/i.test(lower(rawText))) {
           cancelPendingPurchase();
           return;
         }
@@ -1829,8 +1850,8 @@ export default function AIWarehousePage() {
       // 2. Уточнение к незакрытым закупкам
       const looksLikeClarification = /\d/.test(rawText) || /(кг|г|л|мл|шт|руб|р\b|₽|за\s)/i.test(rawText);
       if (pendingItems.length > 0) {
-        if (!looksLikeClarification && /\?|^(а\s|сколько|что|как|какие|кто|почему|где|когда)\b/i.test(rawText)) {
-          setMessages((p) => [...p, { role: "bot", text: `Сейчас жду ответ по закупке (${pendingItems.map((x) => normalizeProductEntityName(x.result?.name || x.payload?.name || x.form?.name || "товар")).join(", ")}). Это ответ по закупке — или новый вопрос? Чтобы задать новый вопрос, нажмите «Отменить уточнения».` }]);
+        if (!looksLikeClarification && /\?|^(а\s|сколько|что|как|какие|кто|почему|где|когда)(?=[\s,.!?]|$)/i.test(rawText)) {
+          setMessages((p) => [...p, { role: "bot", text: `Сейчас жду ответ по закупке (${pendingItems.map((x) => normalizeProductEntityName(x.result?.name || x.payload?.name || x.form?.name || "товар")).join(", ")}). Это ответ по закупке — или новый вопрос? Чтобы задать новый вопрос, нажмите «Отменить».` }]);
           return;
         }
         await updatePendingPurchases(rawText);
@@ -1867,7 +1888,7 @@ export default function AIWarehousePage() {
           if (!exp) { setMessages((p) => [...p, { role: "bot", text: "Не понял расход." }]); break; }
           const qs = (exp.questions || []).join("\n");
           if (qs) { setMessages((p) => [...p, { role: "bot", text: qs }]); break; }
-          if (!exp.name || num(exp.amount) <= 0) { setMessages((p) => [...p, { role: "bot", text: "Не понял расход. Напиши что и сколько." }]); break; }
+          if (!exp.name || num(exp.amount) <= 0) { setMessages((p) => [...p, { role: "bot", text: "Не понял расход. Напишите, что и сколько." }]); break; }
           const createdExp = await gPost("/global-expenses", { category: exp.category || "household", type: exp.type || "Прочее", name: exp.name, amount: num(exp.amount), comment: exp.comment || "" });
           setMessages((p) => [...p, {
             role: "bot",
@@ -1883,7 +1904,7 @@ export default function AIWarehousePage() {
           if (!cash) { setMessages((p) => [...p, { role: "bot", text: "Не понял, сколько внести в кассу." }]); break; }
           const qs = (cash.questions || []).join("\n");
           if (qs) { setMessages((p) => [...p, { role: "bot", text: qs }]); break; }
-          if (num(cash.amount) <= 0) { setMessages((p) => [...p, { role: "bot", text: "Не понял сумму. Напиши, например: «пополни кассу на 5000»." }]); break; }
+          if (num(cash.amount) <= 0) { setMessages((p) => [...p, { role: "bot", text: "Не понял сумму. Напишите, например: «пополни кассу на 5000»." }]); break; }
           try {
             await gPost("/finance/owner", { kind: "contribution", amount: num(cash.amount), note: cash.note || "Пополнение кассы (ИИ)" });
             setMessages((p) => [...p, { role: "bot", text: `Готово — пополнила кассу точки «${targetName}» на ${formatMoney(cash.amount)}${cash.note ? ` (${cash.note})` : ""}. Видно в «Расходы → Расчёты с владельцем» и в финотчёте.` }]);
@@ -1960,10 +1981,10 @@ export default function AIWarehousePage() {
       // «AI не ответил: …») показываем как есть — это реальная причина для диагностики.
       const friendly =
         cause === "AbortError"
-          ? "Ответ занял слишком долго. Давай попробуем ещё раз через минуту."
+          ? "Ответ занял слишком долго. Попробуйте ещё раз через минуту."
           : cause === "TypeError" || e instanceof TypeError
-          ? "Пропала связь. Проверь интернет и попробуй ещё раз."
-          : (e?.message || "Не получилось получить ответ. Попробуй ещё раз через минуту.");
+          ? "Пропала связь. Проверьте интернет и попробуйте ещё раз."
+          : (e?.message || "Не получилось получить ответ. Попробуйте ещё раз через минуту.");
       setMessages((p) => [...p, { role: "bot", text: friendly }]);
     } finally {
       setLoading(false);
@@ -1982,28 +2003,32 @@ export default function AIWarehousePage() {
             <div className="flex shrink-0 items-center justify-between gap-1.5 border-b border-white/10 px-2.5 py-2 sm:gap-2 sm:px-3 sm:py-2.5">
               <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
                 <button onClick={goBack} aria-label="Назад" title="Назад"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15 sm:h-10 sm:w-10">
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
-                <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm shadow-lg shadow-blue-600/30 sm:flex">
-                  🤖
+                <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 sm:flex">
+                  <Bot size={18} strokeWidth={2.2} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-black leading-tight">AI-ассистент</p>
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
-                    <p className="shrink-0 text-[11px] font-bold text-emerald-300">Онлайн</p>
-                    {targetName && (
-                      <span className="min-w-0 truncate text-[11px] font-bold text-slate-400">· 📍 {targetName}</span>
-                    )}
-                  </div>
+                  {targetName && (
+                    <div className="flex min-w-0 items-center gap-1">
+                      <MapPin size={11} strokeWidth={2.4} className="shrink-0 text-slate-400" />
+                      <span className="min-w-0 truncate text-[11px] font-bold text-slate-400">{targetName}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1 sm:gap-2">
                 {lastUIPanel && !sidePanels[lastUIPanel] && (
                   <button
                     type="button"
-                    onClick={() => { setSidePanels((prev) => ({ ...prev, [lastUIPanel]: true })); setLastUIPanel(""); }}
+                    onClick={() => {
+                      // Вернули панель — если остались другие скрытые, предлагаем вернуть и их следующей.
+                      const next = { ...sidePanels, [lastUIPanel]: true };
+                      setSidePanels(next);
+                      setLastUIPanel(Object.keys(DEFAULT_SIDE_PANELS).find((k) => !next[k]) || "");
+                    }}
                     title="Вернуть скрытую панель"
                     className="hidden shrink-0 items-center rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white transition hover:bg-white/15 xl:inline-flex"
                   >
@@ -2011,14 +2036,14 @@ export default function AIWarehousePage() {
                   </button>
                 )}
                 <span className="hidden rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-black text-emerald-300 sm:inline">
-                  AUTO SAVE
+                  Автосохранение
                 </span>
-                <button onClick={load} aria-label="Обновить" title="Обновить" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15 sm:h-10 sm:w-10"><RefreshCw size={16} strokeWidth={2.4} /></button>
+                <button onClick={load} aria-label="Обновить" title="Обновить" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15"><RefreshCw size={16} strokeWidth={2.4} /></button>
                 <button onClick={() => { if (window.confirm("Очистить весь чат? История переписки удалится.")) clearChat(); }}
                   aria-label="Очистить чат" title="Очистить чат"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition hover:bg-red-500/20 hover:text-red-300 sm:h-10 sm:w-10"><Trash2 size={16} strokeWidth={2.4} /></button>
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition hover:bg-red-500/20 hover:text-red-300"><Trash2 size={16} strokeWidth={2.4} /></button>
                 <Link to="/warehouse" aria-label="Склад" title="Склад"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-black text-white transition hover:bg-white/15 sm:h-10 sm:w-auto sm:px-3">
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-black text-white transition hover:bg-white/15 sm:w-auto sm:px-3">
                   <Warehouse size={16} strokeWidth={2.4} className="sm:hidden" />
                   <span className="hidden sm:inline">Склад →</span>
                 </Link>
@@ -2040,13 +2065,13 @@ export default function AIWarehousePage() {
                         aria-pressed={active}
                         disabled={loading}
                         title={`Записывать в точку «${p.name}»`}
-                        className={`flex shrink-0 items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-black transition active:scale-95 disabled:opacity-50 ${
+                        className={`flex min-h-[40px] shrink-0 items-center gap-1 rounded-full px-3.5 py-2 text-xs font-black transition active:scale-95 disabled:opacity-50 ${
                           active
                             ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-600/30"
                             : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
                         }`}
                       >
-                        📍 {p.name}
+                        <MapPin size={13} strokeWidth={2.4} className="shrink-0" /> {p.name}
                       </button>
                     );
                   })}
@@ -2058,9 +2083,6 @@ export default function AIWarehousePage() {
               ref={messagesRef}
               className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3 sm:p-4"
             >
-              <div className="mx-auto w-fit rounded-full bg-white/5 px-4 py-2 text-xs font-black text-slate-400">
-                Сегодня
-              </div>
               {messages.map((msg, i) => (
                 <Message key={i} idx={i} msg={msg} onCancelCard={cancelPurchaseCard} onAttachPhoto={onAttachPhoto} onDismissPhoto={onDismissPhoto} onOpenImage={setZoomImage} />
               ))}
@@ -2069,16 +2091,16 @@ export default function AIWarehousePage() {
             </div>
 
             <div className="shrink-0 border-t border-white/10 bg-slate-950/50 px-3 py-2">
-              <div className="mb-2 flex justify-end lg:hidden">
-                <Link to="/work" className="flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-300 transition">
-                  <X size={13} strokeWidth={2.4} /> Завершить чат
+              <div className="mb-1 flex justify-end lg:hidden">
+                <Link to="/work" className="flex min-h-[40px] items-center gap-1 px-2 text-xs font-bold text-slate-500 hover:text-slate-300 transition">
+                  <ArrowLeft size={13} strokeWidth={2.4} /> К кассе
                 </Link>
               </div>
               {pendingPurchaseConfirmation?.items?.length > 0 && (
                 <div className="mb-2 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <p className="min-w-0 text-xs font-black text-blue-200">
-                      Проверь закупку{pendingPurchaseConfirmation.wsName || wsName ? ` — запишу на точку «${pendingPurchaseConfirmation.wsName || wsName}»` : ""}
+                      Проверьте закупку{pendingPurchaseConfirmation.wsName || wsName ? ` — запишу на точку «${pendingPurchaseConfirmation.wsName || wsName}»` : ""}
                     </p>
                     {pendingPhoto && (
                       <button type="button" onClick={() => setZoomImage(pendingPhoto)}
@@ -2148,18 +2170,18 @@ export default function AIWarehousePage() {
               )}
               {pendingItems.length > 0 && (
                 <div className="mb-2 flex items-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2">
-                  <span className="min-w-0 flex-1 truncate text-xs font-black text-amber-200">
-                    Нужно уточнить {pendingItems.filter((x) => !x.resolved).length} {pendingItems.filter((x) => !x.resolved).length === 1 ? "позицию" : "позиции"}
+                  <span className="min-w-0 flex-1 text-xs font-black leading-snug text-amber-200">
+                    Нужно уточнить {pendingItems.filter((x) => !x.resolved).length} {pluralPositions(pendingItems.filter((x) => !x.resolved).length, ["позицию", "позиции", "позиций"])}
                   </span>
                   <button
                     onClick={() => setClarifyModalOpen(true)}
-                    className="shrink-0 rounded-full bg-amber-500/25 px-3 py-1 text-[11px] font-black text-amber-100 transition active:scale-95 hover:bg-amber-500/35"
+                    className="min-h-[40px] shrink-0 rounded-full bg-amber-500/25 px-3 py-2 text-xs font-black text-amber-100 transition active:scale-95 hover:bg-amber-500/35"
                   >
-                    Открыть
+                    Заполнить
                   </button>
                   <button
                     onClick={() => { clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation }); setClarifyDraft({}); setClarifyOpen({}); setPendingPhoto(null); setMessages((p) => [...p, { role: "bot", text: "Ок, закрыла уточнения. Что дальше?" }]); }}
-                    className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-200 transition active:scale-95 hover:bg-white/10"
+                    className="min-h-[40px] shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-slate-200 transition active:scale-95 hover:bg-white/10"
                   >
                     Отменить
                   </button>
@@ -2196,7 +2218,7 @@ export default function AIWarehousePage() {
                   <button type="button" title="Фото накладной" aria-label="Прикрепить фото"
                     disabled={loading || photoParsing}
                     onClick={() => setPhotoMenuOpen((v) => !v)}
-                    className={`flex h-9 w-9 items-center justify-center rounded-full text-slate-400 outline-none transition hover:bg-white/10 hover:text-blue-300 focus:outline-none focus-visible:outline-none ${(loading || photoParsing) ? "pointer-events-none opacity-50" : ""}`}>
+                    className={`flex h-10 w-10 items-center justify-center rounded-full text-slate-400 outline-none transition hover:bg-white/10 hover:text-blue-300 focus:outline-none focus-visible:outline-none ${(loading || photoParsing) ? "pointer-events-none opacity-50" : ""}`}>
                     {photoParsing ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <ImagePlus size={20} strokeWidth={2.2} />}
                   </button>
                   {photoMenuOpen && (
@@ -2228,7 +2250,7 @@ export default function AIWarehousePage() {
                       send();
                     }
                   }}
-                  placeholder={attachedPhoto ? "Комментарий к накладной (необязательно)…" : "Напиши или прикрепи фото накладной…"}
+                  placeholder={attachedPhoto ? "Комментарий к накладной (необязательно)…" : "Напишите или прикрепите фото накладной…"}
                   rows={1}
                   className="flex-1 resize-none bg-transparent text-sm font-medium leading-5 text-white outline-none placeholder:text-slate-500 focus:outline-none focus-visible:outline-none"
                   style={{minHeight: "24px", maxHeight: "120px"}}
@@ -2253,9 +2275,18 @@ export default function AIWarehousePage() {
             >
               {sidePanels.recent && (
                 <div className="flex min-h-0 shrink-0 flex-col overflow-hidden rounded-[1.25rem] border border-white/10 bg-white/[0.06] p-4">
-                  <div className="mb-4 flex shrink-0 items-center justify-between">
+                  <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
                     <h3 className="text-lg font-black">Последние добавления</h3>
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSidePanels((prev) => ({ ...prev, recent: false }));
+                        setLastUIPanel("recent");
+                      }}
+                      className="rounded-full bg-white/5 px-2 py-1 text-[11px] font-black text-slate-400 hover:bg-white/10 hover:text-white"
+                    >
+                      убрать
+                    </button>
                   </div>
                   <div className="max-h-[240px] space-y-3 overflow-y-auto overscroll-contain pr-1">
                     {recentAdded.map((m, i) => (
@@ -2318,7 +2349,19 @@ export default function AIWarehousePage() {
 
               {sidePanels.suggestions && (
                 <div className="shrink-0 rounded-[1.25rem] border border-white/10 bg-white/[0.06] p-4">
-                  <p className="text-xs font-black uppercase text-slate-500">Можно спросить</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-black uppercase text-slate-500">Можно спросить</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSidePanels((prev) => ({ ...prev, suggestions: false }));
+                        setLastUIPanel("suggestions");
+                      }}
+                      className="rounded-full bg-white/5 px-2 py-1 text-[11px] font-black text-slate-400 hover:bg-white/10 hover:text-white"
+                    >
+                      убрать
+                    </button>
+                  </div>
                   <div className="mt-3 space-y-2 text-sm font-bold text-slate-300">
                     <p>• что заканчивается?</p>
                     <p>• продажи сегодня</p>
@@ -2349,7 +2392,7 @@ export default function AIWarehousePage() {
               <div className="min-w-0">
                 <p className="text-sm font-black text-white">Нужно уточнить</p>
                 <p className="truncate text-[11px] font-bold text-amber-300">
-                  {pendingItems.filter((x) => !x.resolved).length} {pendingItems.filter((x) => !x.resolved).length === 1 ? "позиция" : "позиции"} · остальное запишу сразу
+                  {pendingItems.filter((x) => !x.resolved).length} {pluralPositions(pendingItems.filter((x) => !x.resolved).length, ["позиция", "позиции", "позиций"])} · остальное запишу сразу
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">

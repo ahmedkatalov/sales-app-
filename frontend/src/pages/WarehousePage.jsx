@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Package, Eye, AlertTriangle, ChevronDown, RefreshCw, Trash2, Ban, History, Wallet, Plus } from "lucide-react";
+import { Package, Eye, EyeOff, AlertTriangle, ChevronDown, RefreshCw, Trash2, Ban, History, Wallet, Plus, MapPin, Sparkles } from "lucide-react";
 import { del, get, post, getCurrentWorkspace } from "../api";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import Modal from "../components/Modal";
@@ -12,6 +12,19 @@ import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
 // (981.4599999999999 → «981,46», 966.6666666 → «966,667», целые → «981»).
 const fmtQty = (value) =>
   num(value).toLocaleString("ru-RU", { maximumFractionDigits: 3 });
+
+// Единые тёмные токены полей и кнопок для модалок склада (Modal legacyLight={false}):
+// глобальные .input/.btn-white/.btn-blue светлые, поэтому здесь задаём тёмные явно.
+const WH_INPUT =
+  "w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10";
+const WH_SELECT =
+  "w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10";
+const WH_BTN_GHOST =
+  "rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-black text-white transition hover:bg-white/15";
+const WH_BTN_PRIMARY =
+  "rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-5 py-3 font-black text-white shadow-[0_14px_36px_rgba(37,99,235,.30)] transition hover:brightness-110";
+const WH_BTN_DANGER =
+  "rounded-2xl bg-red-600 px-5 py-3 font-black text-white shadow-sm transition hover:bg-red-500";
 
 const SMART_UNIT_SETTINGS = {
   g: { controlMode: "approximate", lossPercent: "3", inventoryMethod: "average", packagingQuantity: "1", hint: "Для граммов система считает расход приблизительно и добавляет небольшой запас на потери." },
@@ -166,7 +179,7 @@ export default function WarehousePage() {
   const [writeOffForm, setWriteOffForm] = useState({
     warehouseItemId: "",
     quantity: "",
-    reason: "Утиль",
+    reason: "Негодно / утиль",
     note: "",
   });
 
@@ -446,7 +459,7 @@ export default function WarehousePage() {
     setWriteOffForm({
       warehouseItemId: itemId ? String(itemId) : "",
       quantity: "",
-      reason: "Утиль",
+      reason: "Негодно / утиль",
       note: "",
     });
     setWriteOffModal(true);
@@ -597,18 +610,18 @@ export default function WarehousePage() {
               setPurchaseTargetItem(null);
               setAddModal(true);
             }}
-            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-4 py-3 text-sm font-black text-white shadow-[0_14px_36px_rgba(37,99,235,.35)] transition hover:scale-[1.01] whitespace-nowrap xl:flex-none"
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-4 py-3 text-sm font-black text-white shadow-[0_14px_36px_rgba(37,99,235,.35)] transition hover:scale-[1.01] xl:flex-none"
           >
-            <Plus size={18} strokeWidth={2.4} />
-            <span>Добавить закупку</span>
+            <Plus size={18} strokeWidth={2.4} className="shrink-0" />
+            <span className="truncate">Добавить закупку</span>
           </button>
 
           {/* Второстепенные действия — компактные иконки (с подписями для доступности) */}
           <button
             type="button"
             onClick={() => openWriteOff()}
-            aria-label="Утиль / списание"
-            title="Утиль / списание"
+            aria-label="Списание сырья"
+            title="Списание сырья"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
           ><Ban size={18} strokeWidth={2.2} /></button>
 
@@ -706,11 +719,12 @@ export default function WarehousePage() {
               onClick={() => setShowHidden((p) => !p)}
               className={
                 showHidden
-                  ? "rounded-xl border border-blue-400/40 bg-blue-500/20 px-3 py-2.5 text-sm font-black text-blue-100 whitespace-nowrap"
-                  : "rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2.5 text-sm font-black text-white whitespace-nowrap"
+                  ? "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/20 px-3 py-2.5 text-sm font-black text-blue-100 whitespace-nowrap"
+                  : "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2.5 text-sm font-black text-white whitespace-nowrap"
               }
             >
-              {showHidden ? "Скрытые показаны" : "Показать скрытые"}
+              {showHidden ? <EyeOff size={16} strokeWidth={2.2} /> : <Eye size={16} strokeWidth={2.2} />}
+              {showHidden ? "Скрыть скрытые" : "Показать скрытые"}
             </button>
           </div>
         </div>
@@ -719,21 +733,21 @@ export default function WarehousePage() {
           <table className="w-full min-w-[1180px] table-fixed text-left text-xs">
             <colgroup>
               <col className="w-[20%]" />
-              <col className="w-[6%]" />
+              <col className="w-[7%]" />
+              <col className="w-[11%]" />
               <col className="w-[10%]" />
-              <col className="w-[8%]" />
+              <col className="w-[12%]" />
               <col className="w-[10%]" />
-              <col className="w-[10%]" />
-              <col className="w-[26%]" />
+              <col className="w-[30%]" />
             </colgroup>
 
             <thead className="border-y border-white/10 bg-slate-950/45 text-[11px] uppercase tracking-[0.14em] text-slate-400">
               <tr>
                 <th className="px-3 py-2">Сырьё</th>
-                <th className="px-3 py-2">Ед.</th>
+                <th className="px-3 py-2" title="Единица измерения">Ед. изм.</th>
                 <th className="px-3 py-2">Остаток</th>
-                <th className="px-3 py-2">Мин.</th>
-                <th className="px-3 py-2">Сумма</th>
+                <th className="px-3 py-2" title="Минимальный остаток">Мин. остаток</th>
+                <th className="px-3 py-2" title="Стоимость текущего остатка (количество × себестоимость)">Стоимость остатка</th>
                 <th className="px-3 py-2">Поставщик</th>
                 <th className="px-3 py-2 text-center">Действия</th>
               </tr>
@@ -799,7 +813,7 @@ export default function WarehousePage() {
                     </td>
 
                     <td className="px-3 py-2 align-middle font-bold text-slate-300">
-                      {min} {unit}
+                      {fmtQty(min)} {unit}
                     </td>
 
                     <td className="px-3 py-2 align-middle font-black text-white">
@@ -844,10 +858,10 @@ export default function WarehousePage() {
                         <button
                           type="button"
                           onClick={() => openInventory(item)}
-                          title="Указать фактический остаток (инвентаризация)"
+                          title="Пересчёт: указать фактический остаток (инвентаризация)"
                           className="h-9 rounded-xl border border-amber-400/20 bg-amber-400/10 px-2 text-[11px] font-black text-amber-300 transition hover:bg-amber-400/20"
                         >
-                          Факт
+                          Пересчёт
                         </button>
 
                         <button
@@ -951,14 +965,14 @@ export default function WarehousePage() {
                         onClick={() => openInventory(item)}
                         className="flex-1 rounded-xl bg-amber-500/15 px-3 py-2.5 text-sm font-black text-amber-300 transition active:scale-95 hover:bg-amber-500/25"
                       >
-                        Факт. остаток
+                        Пересчёт
                       </button>
                     </div>
 
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                      <button type="button" onClick={() => openHistory(item)} className="flex min-h-[44px] items-center justify-center gap-1 rounded-lg bg-white/[0.04] px-2 font-black text-slate-300 transition active:scale-95 hover:bg-white/10"><History size={13} strokeWidth={2.2} />История</button>
-                      <button type="button" onClick={() => openWriteOff(item.id)} className="min-h-[44px] rounded-lg bg-white/[0.04] px-2 font-black text-slate-300 transition active:scale-95 hover:bg-white/10">Списать</button>
-                      <button type="button" onClick={() => toggleHidden(item)} className="min-h-[44px] rounded-lg bg-white/[0.04] px-2 font-black text-slate-300 transition active:scale-95 hover:bg-white/10">{hidden ? "Показать" : "Скрыть"}</button>
+                    <div className="mt-2 grid grid-cols-3 gap-1.5 text-xs">
+                      <button type="button" onClick={() => openHistory(item)} className="flex min-h-[44px] min-w-0 items-center justify-center gap-1 rounded-lg bg-white/[0.04] px-2 font-black text-slate-300 transition active:scale-95 hover:bg-white/10"><History size={13} strokeWidth={2.2} className="shrink-0" /><span className="min-w-0 truncate">История</span></button>
+                      <button type="button" onClick={() => openWriteOff(item.id)} className="min-h-[44px] min-w-0 rounded-lg bg-white/[0.04] px-2 font-black text-slate-300 transition active:scale-95 hover:bg-white/10"><span className="block min-w-0 truncate">Списать</span></button>
+                      <button type="button" onClick={() => toggleHidden(item)} className="min-h-[44px] min-w-0 rounded-lg bg-white/[0.04] px-2 font-black text-slate-300 transition active:scale-95 hover:bg-white/10"><span className="block min-w-0 truncate">{hidden ? "Показать" : "Скрыть"}</span></button>
                     </div>
                     <button type="button" onClick={() => openDeleteModal(item)} className="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 px-2 text-xs font-black text-red-400/90 transition active:scale-95 hover:bg-red-500/20">Удалить</button>
                   </div>
@@ -1039,8 +1053,8 @@ export default function WarehousePage() {
       </div>
 
       {deleteModal && (
-        <Modal title={`Удалить товар: ${deleteTargetItem?.name || "сырьё"}`} wide onClose={() => setDeleteModal(false)}>
-          <div className="rounded-3xl bg-red-50 p-4 text-red-800">
+        <Modal title={`Удалить товар: ${deleteTargetItem?.name || "сырьё"}`} wide onClose={() => setDeleteModal(false)} legacyLight={false}>
+          <div className="rounded-3xl border border-red-400/20 bg-red-500/10 p-4 text-red-200">
             <p className="font-black">Товар уйдёт из активного склада, но останется в истории удалений.</p>
             <p className="mt-1 text-sm font-bold">
               Остаток на момент удаления: {fmtQty(deleteTargetItem?.quantity)} {unitLabel(deleteTargetItem?.unit)} · сумма {formatMoney(num(deleteTargetItem?.quantity) * getUnitCost(deleteTargetItem || {}))}
@@ -1051,7 +1065,7 @@ export default function WarehousePage() {
             <select
               value={deleteReason}
               onChange={(e) => setDeleteReason(e.target.value)}
-              className="input"
+              className={`${WH_SELECT} sm:col-span-2`}
             >
               <option>Дубль / ошибочно добавили</option>
               <option>Больше не используем</option>
@@ -1060,19 +1074,21 @@ export default function WarehousePage() {
               <option>Другая причина</option>
             </select>
 
-            <input
+            <textarea
+              rows={2}
               value={deleteNote}
               onChange={(e) => setDeleteNote(e.target.value)}
               placeholder="Объяснение для истории"
-              className="input"
+              aria-label="Объяснение для истории"
+              className={`${WH_INPUT} resize-none leading-5 sm:col-span-2`}
             />
           </div>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <button type="button" onClick={() => setDeleteModal(false)} className="btn-white flex-1">
+            <button type="button" onClick={() => setDeleteModal(false)} className={`${WH_BTN_GHOST} flex-1`}>
               Отмена
             </button>
-            <button type="button" onClick={deleteItem} disabled={submitting} className="flex-1 rounded-2xl bg-red-600 px-5 py-3 font-black text-white shadow-sm transition hover:bg-red-700 disabled:opacity-60">
+            <button type="button" onClick={deleteItem} disabled={submitting} className={`${WH_BTN_DANGER} flex-1 disabled:opacity-60`}>
               {submitting ? "Удаляю…" : "Удалить и записать в историю"}
             </button>
           </div>
@@ -1080,14 +1096,14 @@ export default function WarehousePage() {
       )}
 
       {deletedModal && (
-        <Modal title="История удалённых товаров" wide onClose={() => setDeletedModal(false)}>
-          <div className="rounded-3xl bg-slate-50 p-4 text-sm font-bold text-slate-600">
+        <Modal title="История удалённых товаров" wide onClose={() => setDeletedModal(false)} legacyLight={false}>
+          <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4 text-sm font-bold text-slate-300">
             Здесь видно, что удалили, когда, какой был остаток и почему. Это не смешивается со скрытыми товарами.
           </div>
 
           <div className="mt-4 hidden overflow-x-auto rounded-3xl border border-white/10 lg:block">
             <table className="w-full min-w-[840px] text-left text-sm">
-              <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="bg-slate-950/45 text-xs uppercase tracking-wide text-slate-400">
                 <tr>
                   <th className="px-3 py-2">Дата удаления</th>
                   <th className="px-3 py-2">Товар</th>
@@ -1099,18 +1115,18 @@ export default function WarehousePage() {
               </thead>
               <tbody>
                 {safe_deletedItems.map((item) => (
-                  <tr key={item.id} className="border-t border-slate-100">
-                    <td className="p-3 font-bold text-slate-700">{String(item.deletedAt || "").slice(0, 16).replace("T", " ") || "—"}</td>
-                    <td className="p-3 font-black text-slate-950">{item.name}</td>
-                    <td className="p-3 font-black text-red-600">{fmtQty(item.quantity)} {unitLabel(item.unit)}</td>
-                    <td className="p-3 font-black">{formatMoney(item.totalValue || num(item.quantity) * num(item.unitCost))}</td>
-                    <td className="p-3 font-bold text-slate-700">{item.deleteReason || "—"}</td>
-                    <td className="p-3 text-slate-600">{item.deleteNote || item.note || "—"}</td>
+                  <tr key={item.id} className="border-t border-white/10">
+                    <td className="p-3 font-bold text-slate-300">{String(item.deletedAt || "").slice(0, 16).replace("T", " ") || "—"}</td>
+                    <td className="p-3 font-black text-white">{item.name}</td>
+                    <td className="p-3 font-black text-red-300">{fmtQty(item.quantity)} {unitLabel(item.unit)}</td>
+                    <td className="p-3 font-black text-white">{formatMoney(item.totalValue || num(item.quantity) * num(item.unitCost))}</td>
+                    <td className="p-3 font-bold text-slate-300">{item.deleteReason || "—"}</td>
+                    <td className="p-3 text-slate-400">{item.deleteNote || item.note || "—"}</td>
                   </tr>
                 ))}
                 {!safe_deletedItems.length && (
                   <tr>
-                    <td colSpan="6" className="p-8 text-center text-slate-500">Удалённых товаров пока нет</td>
+                    <td colSpan="6" className="p-8 text-center text-slate-400">Удалённых товаров пока нет</td>
                   </tr>
                 )}
               </tbody>
@@ -1134,29 +1150,29 @@ export default function WarehousePage() {
               </div>
             ))}
             {!safe_deletedItems.length && (
-              <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-500">Удалённых товаров пока нет</div>
+              <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-400">Удалённых товаров пока нет</div>
             )}
           </div>
 
           <div className="mt-6 flex justify-end">
-            <button type="button" onClick={() => setDeletedModal(false)} className="btn-blue">Закрыть</button>
+            <button type="button" onClick={() => setDeletedModal(false)} className={WH_BTN_PRIMARY}>Закрыть</button>
           </div>
         </Modal>
       )}
 
       {historyModal && (
-        <Modal title={`История закупок: ${historyItem?.name || "сырьё"}`} wide onClose={() => setHistoryModal(false)}>
-          <div className="mb-4 rounded-3xl bg-slate-50 p-4">
-            <p className="text-sm font-bold text-slate-500">Текущий остаток</p>
-            <p className="mt-1 text-2xl font-black text-slate-950">
-              {num(historyItem?.quantity)} {unitLabel(historyItem?.unit)} ·
+        <Modal title={`История закупок: ${historyItem?.name || "сырьё"}`} wide onClose={() => setHistoryModal(false)} legacyLight={false}>
+          <div className="mb-4 rounded-3xl border border-white/10 bg-slate-950/40 p-4">
+            <p className="text-sm font-bold text-slate-400">Текущий остаток</p>
+            <p className="mt-1 text-2xl font-black text-white">
+              {fmtQty(historyItem?.quantity)} {unitLabel(historyItem?.unit)} ·
               средняя цена {formatMoney(getUnitCost(historyItem || {}))}
             </p>
           </div>
 
           <div className="hidden overflow-x-auto rounded-3xl border border-white/10 lg:block">
             <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="bg-slate-950/45 text-xs uppercase tracking-wide text-slate-400">
                 <tr>
                   <th className="px-3 py-2">Дата</th>
                   <th className="px-3 py-2">Купили</th>
@@ -1171,27 +1187,27 @@ export default function WarehousePage() {
 
               <tbody>
                 {safe_historyBatches.map((b) => (
-                  <tr key={b.id} className="border-t border-slate-100">
-                    <td className="p-3 font-bold text-slate-700">
+                  <tr key={b.id} className="border-t border-white/10">
+                    <td className="p-3 font-bold text-slate-300">
                       {String(b.createdAt || "").slice(0, 10) || "—"}
                     </td>
-                    <td className="p-3 font-black">
+                    <td className="p-3 font-black text-white">
                       {fmtQty(b.quantity)} {unitLabel(historyItem?.unit)}
                     </td>
-                    <td className="p-3 font-black text-emerald-600">
+                    <td className="p-3 font-black text-emerald-300">
                       {fmtQty(b.remainingQuantity)}{" "}
                       {unitLabel(historyItem?.unit)}
                     </td>
-                    <td className="p-3 font-black">
+                    <td className="p-3 font-black text-white">
                       {formatMoney(b.purchasePrice)}
                     </td>
-                    <td className="p-3 font-bold">
+                    <td className="p-3 font-bold text-slate-200">
                       {formatMoney(b.unitCost)}
                     </td>
-                    <td className="p-3 text-slate-600">
+                    <td className="p-3 text-slate-300">
                       {b.supplier || "—"}
                     </td>
-                    <td className="p-3 text-slate-600">{b.note || "—"}</td>
+                    <td className="p-3 text-slate-300">{b.note || "—"}</td>
                     <td className="p-3 text-right">
                       <button type="button" onClick={() => cancelPurchase(b)} title="Отменить закупку"
                         className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1.5 text-xs font-black text-red-300 transition hover:bg-red-500/20 active:scale-95">
@@ -1203,7 +1219,7 @@ export default function WarehousePage() {
 
                 {!safe_historyBatches.length && (
                   <tr>
-                    <td colSpan="8" className="p-8 text-center text-slate-500">
+                    <td colSpan="8" className="p-8 text-center text-slate-400">
                       Истории закупок пока нет
                     </td>
                   </tr>
@@ -1234,7 +1250,7 @@ export default function WarehousePage() {
               </div>
             ))}
             {!safe_historyBatches.length && (
-              <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-500">Истории закупок пока нет</div>
+              <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-400">Истории закупок пока нет</div>
             )}
           </div>
 
@@ -1242,7 +1258,7 @@ export default function WarehousePage() {
             <button
               type="button"
               onClick={() => setHistoryModal(false)}
-              className="btn-blue"
+              className={WH_BTN_PRIMARY}
             >
               Закрыть
             </button>
@@ -1251,8 +1267,8 @@ export default function WarehousePage() {
       )}
 
       {duplicateModal && (
-        <Modal title="Похожий товар уже есть" wide onClose={() => setDuplicateModal(false)}>
-          <div className="rounded-3xl bg-yellow-50 p-4 text-yellow-800">
+        <Modal title="Похожий товар уже есть" wide onClose={() => setDuplicateModal(false)} legacyLight={false}>
+          <div className="rounded-3xl border border-amber-400/20 bg-amber-500/10 p-4 text-amber-200">
             <p className="font-black">Защита от дублей</p>
             <p className="mt-1 text-sm font-bold">
               Вы вводите «{form.name}». Возможно, это уже есть на складе.
@@ -1265,14 +1281,14 @@ export default function WarehousePage() {
             {safe_duplicateSuggestions.map((item) => (
               <div
                 key={item.id}
-                className="flex flex-col gap-3 rounded-3xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div>
-                  <p className="text-xl font-black text-slate-950">
+                <div className="min-w-0">
+                  <p className="text-xl font-black text-white">
                     {item.name}
                   </p>
-                  <p className="text-sm font-bold text-slate-500">
-                    Остаток: {num(item.quantity)} {unitLabel(item.unit)} ·
+                  <p className="text-sm font-bold text-slate-400">
+                    Остаток: {fmtQty(item.quantity)} {unitLabel(item.unit)} ·
                     похожесть {Math.round(num(item.score) * 100)}%
                   </p>
                 </div>
@@ -1280,7 +1296,7 @@ export default function WarehousePage() {
                 <button
                   type="button"
                   onClick={() => addPurchaseToExisting(item)}
-                  className="btn-blue"
+                  className={WH_BTN_PRIMARY}
                 >
                   Добавить закупку сюда
                 </button>
@@ -1292,7 +1308,7 @@ export default function WarehousePage() {
             <button
               type="button"
               onClick={() => setDuplicateModal(false)}
-              className="btn-white flex-1"
+              className={`${WH_BTN_GHOST} flex-1`}
             >
               Вернуться
             </button>
@@ -1300,7 +1316,7 @@ export default function WarehousePage() {
             <button
               type="button"
               onClick={createNewItemAnyway}
-              className="flex-1 rounded-2xl bg-red-600 px-5 py-3 font-black text-white shadow-sm transition hover:bg-red-700"
+              className={`${WH_BTN_DANGER} flex-1`}
             >
               Всё равно создать новый
             </button>
@@ -1309,17 +1325,15 @@ export default function WarehousePage() {
       )}
 
       {addModal && (
-        <Modal title={purchaseTargetItem ? `Новая закупка: ${purchaseTargetItem.name}` : "Добавить закупку вручную"} wide onClose={() => { setAddModal(false); resetForm(); }}>
+        <Modal title={purchaseTargetItem ? `Новая закупка: ${purchaseTargetItem.name}` : "Добавить закупку вручную"} wide onClose={() => { setAddModal(false); resetForm(); }} legacyLight={false}>
           <div className="mb-3 flex items-center gap-2 rounded-2xl border border-blue-400/25 bg-blue-500/10 px-3.5 py-2.5 text-sm font-black text-blue-200">
-            📍 Склад точки: <span className="truncate text-white">{getCurrentWorkspace()?.name || "текущая"}</span>
+            <MapPin size={16} strokeWidth={2.2} className="shrink-0" />
+            <span className="shrink-0">Склад точки:</span> <span className="truncate text-white">{getCurrentWorkspace()?.name || "текущая"}</span>
           </div>
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-4 sm:p-5">
-            <div className="mb-4 rounded-3xl bg-blue-50 p-4">
-              <p className="text-sm font-black text-blue-700">Ручной режим склада</p>
-              <p className="mt-1 text-sm font-bold leading-6 text-blue-900/70">
-                AI-чат теперь находится на отдельной странице “AI-склад”. Здесь обычное добавление закупки вручную.
-              </p>
-            </div>
+          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-4 sm:p-5">
+            <p className="mb-4 text-sm font-bold leading-6 text-slate-400">
+              Заполните поля ниже — система сама посчитает остаток и себестоимость.
+            </p>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <input
@@ -1332,13 +1346,14 @@ export default function WarehousePage() {
                   }))
                 }
                 placeholder="Зерно, рис, курица, молоко..."
-                className="input sm:col-span-2"
+                className={`${WH_INPUT} sm:col-span-2`}
               />
 
               {(nameAiLoading || nameAiSuggestions.length > 0) && (
                 <div className="sm:col-span-2 -mt-1 flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-bold text-violet-300">
-                    {nameAiLoading ? "✨ AI подбирает название…" : "✨ Правильнее:"}
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-violet-300">
+                    <Sparkles size={14} strokeWidth={2.2} className="shrink-0" />
+                    {nameAiLoading ? "AI подбирает название…" : "Правильнее:"}
                   </span>
                   {nameAiSuggestions.map((s) => (
                     <button
@@ -1361,7 +1376,7 @@ export default function WarehousePage() {
                 placeholder="Сколько купили"
                 type="number"
                 inputMode="decimal"
-                className="input"
+                className={WH_INPUT}
               />
 
               <select
@@ -1381,7 +1396,7 @@ export default function WarehousePage() {
                     };
                   });
                 }}
-                className="input"
+                className={WH_SELECT}
               >
                 <option value="g">Закупаю граммами</option>
                 <option value="kg">Закупаю килограммами</option>
@@ -1401,7 +1416,7 @@ export default function WarehousePage() {
                     placeholder="Сколько шт внутри"
                     type="number"
                     inputMode="numeric"
-                    className="input"
+                    className={WH_INPUT}
                   />
 
                   <input
@@ -1410,13 +1425,13 @@ export default function WarehousePage() {
                     placeholder={`Сколько ${unitLabel(form.unit)} в 1 штуке`}
                     type="number"
                     inputMode="decimal"
-                    className="input"
+                    className={WH_INPUT}
                   />
 
                   <select
                     value={form.unit}
                     onChange={(e) => applySmartUnit(e.target.value)}
-                    className="input sm:col-span-2"
+                    className={`${WH_SELECT} sm:col-span-2`}
                   >
                     <option value="g">Хранить/списывать граммами</option>
                     <option value="ml">Хранить/списывать миллилитрами</option>
@@ -1432,7 +1447,7 @@ export default function WarehousePage() {
                 type="number"
                 min="0"
                 inputMode="decimal"
-                className="input"
+                className={WH_INPUT}
               />
 
               <div className="sm:col-span-2">
@@ -1442,9 +1457,9 @@ export default function WarehousePage() {
                   placeholder={`Мин. остаток, ${unitLabel(form.unit)}`}
                   type="number"
                   inputMode="decimal"
-                  className="input w-full"
+                  className={WH_INPUT}
                 />
-                <p className="mt-1 text-xs font-bold text-slate-500">
+                <p className="mt-1 text-xs font-bold text-slate-400">
                   В единицах хранения — {unitLabel(form.unit) || "г/мл"}. Ниже этого остатка сырьё пометится как «Низкий остаток».
                 </p>
               </div>
@@ -1453,32 +1468,33 @@ export default function WarehousePage() {
                 value={form.supplier}
                 onChange={(e) => setForm((p) => ({ ...p, supplier: e.target.value }))}
                 placeholder="Поставщик"
-                className="input"
+                className={WH_INPUT}
               />
 
               <input
                 value={form.expiryDate}
                 onChange={(e) => setForm((p) => ({ ...p, expiryDate: e.target.value }))}
                 type="date"
-                className="input"
+                aria-label="Срок годности"
+                className={`${WH_INPUT} [color-scheme:dark]`}
               />
 
               <input
                 value={form.note}
                 onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))}
                 placeholder="Комментарий / партия"
-                className="input sm:col-span-2"
+                className={`${WH_INPUT} sm:col-span-2`}
               />
             </div>
 
-            <div className="mt-4 rounded-3xl bg-slate-50 p-4">
-              <p className="text-sm font-bold text-slate-500">Проверка перед сохранением</p>
-              <p className="mt-1 text-xl font-black text-slate-950">{computedPurchase.text}</p>
+            <div className="mt-4 rounded-3xl border border-white/10 bg-slate-950/40 p-4">
+              <p className="text-sm font-bold text-slate-400">Проверка перед сохранением</p>
+              <p className="mt-1 text-xl font-black text-white">{computedPurchase.text}</p>
               {computedPurchase.detail && (
-                <p className="mt-1 text-sm font-bold text-slate-500">{computedPurchase.detail}</p>
+                <p className="mt-1 text-sm font-bold text-slate-400">{computedPurchase.detail}</p>
               )}
-              <p className="mt-3 text-sm font-bold text-slate-500">Себестоимость 1 {unitLabel(computedPurchase.unit)}</p>
-              <p className="text-2xl font-black text-blue-600">{formatMoney(computedPurchase.unitCost)}</p>
+              <p className="mt-3 text-sm font-bold text-slate-400">Себестоимость 1 {unitLabel(computedPurchase.unit)}</p>
+              <p className="text-2xl font-black text-blue-300">{formatMoney(computedPurchase.unitCost)}</p>
             </div>
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -1488,7 +1504,7 @@ export default function WarehousePage() {
                   setAddModal(false);
                   resetForm();
                 }}
-                className="btn-white flex-1"
+                className={`${WH_BTN_GHOST} flex-1`}
               >
                 Закрыть
               </button>
@@ -1501,7 +1517,7 @@ export default function WarehousePage() {
                     : checkDuplicatesAndCreate()
                 }
                 disabled={submitting}
-                className="btn-blue flex-1 disabled:cursor-not-allowed disabled:opacity-60"
+                className={`${WH_BTN_PRIMARY} flex-1 disabled:cursor-not-allowed disabled:opacity-60`}
               >
                 {submitting ? "Сохраняю…" : "Сохранить закупку"}
               </button>
@@ -1515,7 +1531,7 @@ export default function WarehousePage() {
         // Выбранное сырьё — чтобы показать единицу у поля количества и предпросмотр «останется».
         const woSelected = items.find((i) => String(i.id) === String(writeOffForm.warehouseItemId));
         return (
-        <Modal title="Утиль / списание" onClose={() => setWriteOffModal(false)}>
+        <Modal title="Списание сырья" onClose={() => setWriteOffModal(false)} legacyLight={false}>
           <div className="space-y-3">
             <select
               value={writeOffForm.warehouseItemId}
@@ -1525,14 +1541,14 @@ export default function WarehousePage() {
                   warehouseItemId: e.target.value,
                 }))
               }
-              className="input w-full"
+              className={WH_SELECT}
             >
               <option value="">Выберите сырьё</option>
               {items
                 .filter((item) => !isHidden(item))
                 .map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.name} — остаток {num(item.quantity)}{" "}
+                    {item.name} — остаток {fmtQty(item.quantity)}{" "}
                     {unitLabel(item.unit)}
                   </option>
                 ))}
@@ -1549,7 +1565,7 @@ export default function WarehousePage() {
               placeholder={woSelected ? `Сколько списать, ${unitLabel(woSelected.unit)}` : "Количество списания"}
               type="number"
               inputMode="decimal"
-              className="input w-full"
+              className={WH_INPUT}
             />
 
             {woSelected && writeOffForm.quantity !== "" && (() => {
@@ -1571,9 +1587,9 @@ export default function WarehousePage() {
                   reason: e.target.value,
                 }))
               }
-              className="input w-full"
+              className={WH_SELECT}
             >
-              <option value="Утиль">Утиль</option>
+              <option value="Негодно / утиль">Негодно / утиль</option>
               <option value="Просрочилось">Просрочилось</option>
               <option value="Брак">Брак</option>
               <option value="Потеря">Потеря</option>
@@ -1589,7 +1605,7 @@ export default function WarehousePage() {
                 }))
               }
               placeholder="Комментарий"
-              className="input w-full"
+              className={WH_INPUT}
             />
           </div>
 
@@ -1597,7 +1613,7 @@ export default function WarehousePage() {
             <button
               type="button"
               onClick={() => setWriteOffModal(false)}
-              className="btn-white flex-1"
+              className={`${WH_BTN_GHOST} flex-1`}
             >
               Отмена
             </button>
@@ -1606,7 +1622,7 @@ export default function WarehousePage() {
               type="button"
               onClick={writeOffItem}
               disabled={submitting}
-              className="flex-1 rounded-2xl bg-red-600 px-5 py-3 font-black text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className={`${WH_BTN_DANGER} flex-1 disabled:cursor-not-allowed disabled:opacity-60`}
             >
               {submitting ? "Списываю…" : "Списать"}
             </button>
@@ -1616,14 +1632,14 @@ export default function WarehousePage() {
       })()}
 
       {inventoryModal && inventoryForm.item && (
-        <Modal title="Фактический остаток" section="Инвентаризация" onClose={() => setInventoryModal(false)}>
+        <Modal title="Пересчёт остатка" section="Инвентаризация" onClose={() => setInventoryModal(false)} legacyLight={false}>
           <p className="mb-4 text-sm text-slate-400">
             Пересчитали по факту? Укажите, сколько реально на складе — система сама проведёт недостачу или излишек.
           </p>
           <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
             <div className="min-w-0">
               <p className="truncate text-base font-black text-white">{inventoryForm.item.name}</p>
-              <p className="text-xs text-slate-400">По учёту: {num(inventoryForm.item.quantity)} {unitLabel(inventoryForm.item.unit)}</p>
+              <p className="text-xs text-slate-400">По учёту: {fmtQty(inventoryForm.item.quantity)} {unitLabel(inventoryForm.item.unit)}</p>
             </div>
           </div>
           <label className="block">
@@ -1633,7 +1649,7 @@ export default function WarehousePage() {
               onChange={(e) => setInventoryForm((p) => ({ ...p, actual: e.target.value }))}
               placeholder="Сколько реально на складе"
               type="number" inputMode="decimal" autoFocus
-              className="input w-full"
+              className={WH_INPUT}
             />
           </label>
           {inventoryForm.actual !== "" && (
@@ -1654,11 +1670,11 @@ export default function WarehousePage() {
               value={inventoryForm.note}
               onChange={(e) => setInventoryForm((p) => ({ ...p, note: e.target.value }))}
               placeholder="Например: пересчёт смены"
-              className="input w-full"
+              className={WH_INPUT}
             />
           </label>
           <div className="mt-6 flex gap-3">
-            <button type="button" onClick={() => setInventoryModal(false)} className="btn-white flex-1">Отмена</button>
+            <button type="button" onClick={() => setInventoryModal(false)} className={`${WH_BTN_GHOST} flex-1`}>Отмена</button>
             <button
               type="button"
               onClick={doInventory}

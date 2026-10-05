@@ -144,17 +144,17 @@ export default function ShopPage() {
     if (submitting) return;
 
     if (!employeeId) {
-      alert("Выберите сотрудника");
+      window.notify?.("Выберите сотрудника", "error");
       return;
     }
 
     if (!safe_cart.length) {
-      alert("Корзина пустая");
+      window.notify?.("Корзина пустая", "error");
       return;
     }
 
     if (paymentType === "transfer" && !cardId) {
-      alert("Выберите карту для перевода");
+      window.notify?.("Выберите карту для перевода", "error");
       return;
     }
 
@@ -163,7 +163,7 @@ export default function ShopPage() {
       String(cashGiven).trim() !== "" &&
       Number(cashGiven) < total
     ) {
-      alert("Клиент дал меньше суммы к оплате");
+      window.notify?.("Клиент дал меньше суммы к оплате", "error");
       return;
     }
 
@@ -183,7 +183,7 @@ export default function ShopPage() {
       });
 
       saleClientRef.current = ""; // успех — следующий чек получит новый ключ
-      alert("Продажа завершена");
+      window.notify?.("Продажа завершена", "success");
 
       setCart([]);
       setCashGiven("");
@@ -191,7 +191,7 @@ export default function ShopPage() {
       setCardId("");
       setCartOpen(false);
     } catch (e) {
-      alert(e?.message || "Не удалось провести продажу");
+      window.notify?.(e?.message || "Не удалось провести продажу", "error");
     } finally {
       setSubmitting(false);
     }
@@ -212,10 +212,7 @@ export default function ShopPage() {
       <div className="border-b border-white/10 px-5 py-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300">
-              POS корзина
-            </p>
-            <h2 className="mt-0.5 text-xl font-black text-white">Заказ</h2>
+            <h2 className="text-xl font-black text-white">Заказ</h2>
             <p className="mt-0.5 text-xs font-semibold text-slate-400">
               {currentEmployee ? currentEmployee.name : "Сотрудник не выбран"}
             </p>
@@ -305,6 +302,20 @@ export default function ShopPage() {
 
       <div className="space-y-3 border-t border-white/10 bg-black/20 p-4">
         <select
+          value={employeeId}
+          onChange={(e) => setEmployeeId(e.target.value)}
+          aria-label="Сотрудник"
+          className="min-h-[44px] w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-cyan-400"
+        >
+          <option value="">Выберите сотрудника</option>
+          {safe_employees.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.name}
+            </option>
+          ))}
+        </select>
+
+        <select
           value={paymentType}
           onChange={(e) => setPaymentType(e.target.value)}
           className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-cyan-400"
@@ -389,7 +400,7 @@ export default function ShopPage() {
           disabled={submitting || !safe_cart.length}
           className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-4 text-lg font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {submitting ? "Провожу…" : "Подтвердить покупку"}
+          {submitting ? "Провожу…" : "Провести продажу"}
         </button>
       </div>
     </aside>
@@ -410,20 +421,21 @@ export default function ShopPage() {
         >
           <div className="shrink-0 border-b border-white/10 p-4 sm:p-6">
             <div className="flex items-center justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-300">
                   Быстрая продажа
                 </p>
                 <h1 className="mt-1 text-3xl font-black leading-none sm:text-5xl">
-                  Магазин
+                  Касса
                 </h1>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 shrink items-center gap-2">
                 <select
                   value={employeeId}
                   onChange={(e) => setEmployeeId(e.target.value)}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-cyan-400"
+                  aria-label="Сотрудник"
+                  className="min-h-[40px] min-w-0 max-w-[45vw] shrink truncate rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-cyan-400"
                 >
                   <option value="">Сотрудник</option>
                   {safe_employees.map((e) => (
@@ -458,7 +470,7 @@ export default function ShopPage() {
                   key={category}
                   type="button"
                   onClick={() => setActiveCategory(category)}
-                  className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-black transition ${
+                  className={`min-h-[36px] shrink-0 rounded-xl px-3.5 py-2 text-sm font-black transition ${
                     activeCategory === category
                       ? "bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-500/20"
                       : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
@@ -548,7 +560,7 @@ export default function ShopPage() {
             className="absolute inset-x-2 overflow-hidden rounded-t-3xl"
             style={{
               bottom: "calc(env(safe-area-inset-bottom,0px))",
-              height: "86vh",
+              height: "86dvh",
             }}
             onClick={(e) => e.stopPropagation()}
           >

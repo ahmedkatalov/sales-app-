@@ -40,7 +40,8 @@ function Row({ label, value, hint, tone = "", strong = false, indent = false, pr
               type="button"
               onClick={() => setOpen((o) => !o)}
               aria-expanded={open}
-              className="ml-1 align-middle text-[11px] text-slate-500 hover:text-slate-300"
+              aria-label="Пояснение"
+              className="ml-1 -my-3 inline-flex h-10 w-10 items-center justify-center align-middle text-sm text-slate-500 hover:text-slate-300"
             >
               ⓘ
             </button>
@@ -71,20 +72,20 @@ function Card({ title, subtitle, children }) {
 function Kpi({ label, value, note, hint, cardClass = "border-white/10 bg-white/[0.05]", labelClass = "text-slate-300/80", valueClass = "text-white" }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className={`relative rounded-2xl border px-4 py-3 ${cardClass}`}>
+    <div className={`relative min-w-0 rounded-2xl border px-4 py-3 ${cardClass}`}>
       {hint ? (
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-label="Пояснение"
-          className="absolute right-2 top-2 text-[11px] text-slate-500 hover:text-slate-300"
+          className="absolute right-0 top-0 inline-flex h-10 w-10 items-center justify-center text-[11px] text-slate-500 hover:text-slate-300"
         >
           ⓘ
         </button>
       ) : null}
       <p className={`text-[11px] font-black uppercase tracking-wide ${labelClass}`}>{label}</p>
-      <p className={`mt-1 text-2xl font-black ${valueClass}`}>{value}</p>
+      <p className={`mt-1 break-words text-xl font-black sm:text-2xl ${valueClass}`}>{value}</p>
       {open && hint ? (
         <p className="mt-1 text-[11px] font-medium leading-snug text-slate-500">{hint}</p>
       ) : note ? (
@@ -428,7 +429,7 @@ export default function FinanceReportPage() {
       </div>
 
       {openingModal && openingForm && (
-        <Modal title="Стартовые балансы" wide onClose={() => setOpeningModal(false)}>
+        <Modal title="Стартовые балансы" wide legacyLight={false} onClose={() => setOpeningModal(false)}>
           <div className="grid gap-3">
             <p className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold leading-snug text-slate-300">
               Введите состояние бизнеса на дату, с которой начинаете вести учёт в приложении. Это точка отсчёта, а не транзакции — в отчёте они не появятся как операции.

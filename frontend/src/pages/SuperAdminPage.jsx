@@ -292,7 +292,7 @@ export default function SuperAdminPage() {
                     </p>
                   </div>
                   <span className="rounded-xl border border-white/10 bg-slate-950 px-3 py-1.5 text-xs font-black text-slate-300">
-                    {acc.userCount} owner
+                    {acc.userCount} вл.
                   </span>
                 </div>
 

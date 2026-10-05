@@ -16,7 +16,7 @@ const notify = (m, t) => window.notify?.(m, t);
 // ── маленькие переиспользуемые контролы ──────────────────────────────
 function Segmented({ value, onChange, options, size = "md" }) {
   return (
-    <div className="no-scrollbar flex gap-1.5 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1">
+    <div className="flex flex-wrap gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1">
       {options.map((o) => (
         <button key={o.value} type="button" onClick={() => onChange(o.value)}
           className={`shrink-0 rounded-xl font-black transition ${size === "sm" ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm"} ${
@@ -186,7 +186,7 @@ export default function AppearancePage() {
               <Upload size={16} /> Импорт
             </button>
             <button type="button" onClick={onReset} aria-label="Сбросить оформление" className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10" title="Сбросить оформление">
-              <RotateCcw size={16} />
+              <RotateCcw size={16} /> <span className="hidden sm:inline">Сбросить</span>
             </button>
           </div>
         </header>
@@ -263,7 +263,7 @@ export default function AppearancePage() {
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           {/* Базовая тема + акценты */}
-          <Section icon={Palette} title="Цвета" desc="Акцент и статусные цвета перекрашивают всё приложение">
+          <Section icon={Palette} title="Цвета" desc="Главный цвет и цвета успеха/ошибки меняют вид всего приложения">
             <Row label="Базовая тема">
               <Segmented value={mode} onChange={(v) => setTheme(v)} options={[
                 { value: "dark", label: (<span className="flex items-center gap-1.5"><Moon size={13} /> Тёмная</span>) },
@@ -275,7 +275,7 @@ export default function AppearancePage() {
                 <div className="flex flex-wrap justify-end gap-1.5">
                   {ACCENTS.map((c) => (
                     <button key={c} type="button" onClick={() => update({ accent: c })} title={c}
-                      className={`h-9 w-9 rounded-full border-2 transition ${(ap.accent || "").toLowerCase() === c ? "scale-110 border-white" : "border-white/20 hover:scale-105"}`}
+                      className={`h-10 w-10 rounded-full border-2 transition ${(ap.accent || "").toLowerCase() === c ? "scale-110 border-white" : "border-white/20 hover:scale-105"}`}
                       style={{ background: c }} />
                   ))}
                 </div>
@@ -283,15 +283,15 @@ export default function AppearancePage() {
                   className="h-8 w-full cursor-pointer rounded-lg border border-white/10 bg-transparent p-0" />
               </div>
             </Row>
-            <Row label="Второй цвет" hint="Второй край градиента">
-              <input type="color" value={ap.accent2 || "#8b5cf6"} onChange={(e) => update({ accent2: e.target.value })} aria-label="Второй цвет"
+            <Row label="Дополнительный цвет" hint="Второй цвет в градиенте кнопок">
+              <input type="color" value={ap.accent2 || "#8b5cf6"} onChange={(e) => update({ accent2: e.target.value })} aria-label="Дополнительный цвет"
                 className="h-9 w-full cursor-pointer rounded-lg border border-white/10 bg-transparent p-0" />
             </Row>
             <div className="mt-3 grid gap-2">
               <ColorField label="Успех" value={ap.success} fallback="#10b981" onChange={(v) => update({ success: v })} />
               <ColorField label="Внимание" value={ap.warning} fallback="#f59e0b" onChange={(v) => update({ warning: v })} />
               <ColorField label="Ошибка" value={ap.error} fallback="#ef4444" onChange={(v) => update({ error: v })} />
-              <ColorField label="Инфо" value={ap.info} fallback="#0ea5e9" onChange={(v) => update({ info: v })} />
+              <ColorField label="Информация"value={ap.info} fallback="#0ea5e9" onChange={(v) => update({ info: v })} />
             </div>
           </Section>
 
@@ -321,7 +321,7 @@ export default function AppearancePage() {
 
           {/* Типографика */}
           <Section title="Шрифт" desc="Гарнитура и размер текста">
-            <Row label="Гарнитура">
+            <Row label="Вид шрифта">
               <Segmented value={ap.font} onChange={(v) => update({ font: v })} size="sm"
                 options={Object.keys(FONT_LABELS).map((k) => ({ value: k, label: FONT_LABELS[k] }))} />
             </Row>
@@ -362,7 +362,7 @@ export default function AppearancePage() {
                       {dots.map((c, i) => <span key={i} className="h-6 w-6 rounded-full border-2 border-slate-900" style={{ background: c }} />)}
                     </span>
                     <input defaultValue={t.name} onBlur={(e) => e.target.value.trim() && e.target.value !== t.name && renameTheme(t.id, e.target.value)}
-                      className="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 text-sm font-black text-white outline-none focus:bg-white/5" />
+                      className="min-w-0 w-full basis-full rounded-lg bg-transparent px-1 py-1 text-sm font-black text-white outline-none focus:bg-white/5 sm:w-auto sm:flex-1 sm:basis-auto" />
                     <button type="button" onClick={() => applyCustom(t)} className="rounded-xl bg-blue-500/15 px-3 py-1.5 text-xs font-black text-blue-300 transition hover:bg-blue-500/25">
                       <Check size={14} className="inline" /> Применить
                     </button>

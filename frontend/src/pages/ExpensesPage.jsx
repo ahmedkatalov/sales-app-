@@ -214,11 +214,11 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   const srcMeta = (e) => SRC_META[e?.paymentSource] || SRC_META.cash;
 
   const OWNER_KIND = {
-    contribution: { label: "Вклад в кассу", prefix: "+", sign: "text-emerald-300", cta: "Владелец внёс в кассу",
+    contribution: { label: "Вклад в кассу", prefix: "+", sign: "text-emerald-300", cta: "Внести в кассу",
       hint: "Владелец кладёт личные деньги в кассу. Касса вырастет, и бизнес будет должен владельцу эту сумму." },
     reimbursement: { label: "Возврат владельцу", prefix: "−", sign: "text-blue-300", cta: "Вернуть владельцу",
       hint: "Бизнес возвращает владельцу из кассы. Касса уменьшится, и долг перед владельцем уменьшится." },
-    withdrawal: { label: "Изъятие прибыли", prefix: "−", sign: "text-slate-300", cta: "Изъятие прибыли",
+    withdrawal: { label: "Изъятие прибыли", prefix: "−", sign: "text-slate-300", cta: "Изъять прибыль",
       hint: "Владелец забирает прибыль из кассы для себя. Касса уменьшится, долг перед владельцем НЕ меняется." },
   };
   const owedOwner = ownerFin ? ownerFin.owed : owedToOwner;
@@ -393,8 +393,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                   key={key}
                   onClick={action}
                   className={active
-                    ? "rounded-xl bg-linear-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg"
-                    : "rounded-xl border border-white/10 bg-white/8 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-white/15"}
+                    ? "min-h-10 rounded-xl bg-linear-to-r from-blue-600 to-violet-600 px-3 py-2 text-xs font-black text-white shadow-lg sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm"
+                    : "min-h-10 rounded-xl border border-white/10 bg-white/8 px-3 py-2 text-xs font-black text-slate-300 transition hover:bg-white/15 sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm"}
                 >
                   {label}
                 </button>
@@ -412,7 +412,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           {/* Кнопка открытия расширенного фильтра */}
           <button
             onClick={() => setFilterOpen((v) => !v)}
-            className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-black transition ${
+            className={`flex min-h-10 shrink-0 basis-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-black transition sm:basis-auto sm:justify-start ${
               filterOpen
                 ? "border-blue-400/40 bg-blue-500/15 text-blue-200"
                 : "border-white/10 bg-white/8 text-slate-300 hover:bg-white/15"
@@ -533,6 +533,70 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         </div>
       </div>
 
+      {/* Расчёты с владельцем — отдельная карточка, только владельцу/админу (эндпоинт вернул данные) */}
+      {ownerFin && (
+        <div className="mb-5 rounded-[2rem] border border-amber-400/20 bg-gradient-to-br from-amber-500/[0.08] to-orange-500/[0.04] p-5 shadow-2xl backdrop-blur-xl sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-black text-amber-100">Расчёты с владельцем</p>
+              <p className="mt-0.5 text-xs font-bold text-slate-400">Личные деньги владельца в бизнесе</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[11px] font-black uppercase tracking-wide text-amber-200/70">Бизнес должен владельцу</p>
+              <p className="text-2xl font-black text-amber-100 sm:text-3xl">{formatMoney(owedOwner)}</p>
+              {ownerFin.openingOwed > 0 && (
+                <p className="text-[11px] font-bold text-amber-200/50">в т.ч. на старте {formatMoney(ownerFin.openingOwed)}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+            <div className="rounded-xl bg-white/[0.04] px-3 py-2"><span className="text-slate-400">Расходы владельца</span><br /><b className="text-white">{formatMoney(ownerFin.fromExpenses)}</b></div>
+            <div className="rounded-xl bg-white/[0.04] px-3 py-2"><span className="text-slate-400">Вклады в кассу</span><br /><b className="text-emerald-300">+{formatMoney(ownerFin.contributions)}</b></div>
+            <div className="rounded-xl bg-white/[0.04] px-3 py-2"><span className="text-slate-400">Возвраты владельцу</span><br /><b className="text-blue-300">−{formatMoney(ownerFin.reimbursements)}</b></div>
+            <div className="rounded-xl bg-white/[0.04] px-3 py-2" title="Изъятие прибыли не уменьшает долг перед владельцем."><span className="text-slate-400">Изъятия прибыли</span><br /><b className="text-slate-200">{formatMoney(ownerFin.withdrawals)}</b></div>
+          </div>
+
+          {!workerMode && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {Object.entries(OWNER_KIND).map(([kind, m]) => (
+                <button key={kind} onClick={() => { setOwnerForm({ amount: "", note: "", date: "" }); setError(""); setOwnerModal(kind); }}
+                  className="rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-2.5 text-xs font-black text-white transition hover:bg-white/10">
+                  {m.cta}
+                </button>
+              ))}
+              <button onClick={openOpeningModal}
+                className="ml-auto flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-xs font-black text-slate-300 transition hover:bg-white/10"
+                title="Начальное финансовое состояние при переходе с другой системы">
+                <Settings size={14} strokeWidth={2.2} /> Остатки на начало учёта
+              </button>
+            </div>
+          )}
+
+          {ownerFin.entries?.length > 0 && (
+            <div className="mt-3 divide-y divide-white/5 border-t border-white/5 pt-1">
+              {ownerFin.entries.slice(0, 6).map((en) => {
+                const m = OWNER_KIND[en.kind] || { label: en.kind, prefix: "", sign: "text-white" };
+                return (
+                  <div key={en.id} className="flex items-center justify-between gap-2 py-2 text-xs">
+                    <div className="min-w-0">
+                      <span className="font-black text-white">{m.label}</span>
+                      <span className="text-slate-500"> {en.note ? `· ${en.note} ` : ""}· {String(en.createdAt || "").slice(0, 10)}{en.employeeName ? ` · ${en.employeeName}` : ""}</span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <b className={m.sign}>{m.prefix}{formatMoney(en.amount)}</b>
+                      {!workerMode && (
+                        <button onClick={() => deleteOwnerEntry(en.id)} aria-label="Удалить" title="Удалить" className="flex h-10 w-10 items-center justify-center rounded-md text-slate-500 transition hover:bg-white/10 hover:text-red-300"><Trash2 size={16} /></button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.06] shadow-2xl backdrop-blur-xl">
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
@@ -555,15 +619,11 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             >
               + Добавить расход
             </button>
-            <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-white">
-              <p className="text-sm text-red-200">Итого</p>
-              <p className="text-2xl font-black">{formatMoney(total)}</p>
-            </div>
           </div>
         </div>
 
         {/* Разбивка расходов по источнику оплаты (за период) */}
-        <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-3">
+        <div className="mb-4 grid grid-cols-1 gap-2.5 px-5 sm:grid-cols-3 sm:gap-3 sm:px-6">
           <div className="min-w-0 rounded-2xl border border-emerald-400/15 bg-emerald-500/[0.07] px-4 py-3">
             <p className="flex min-w-0 items-center gap-1.5 truncate text-[11px] font-black uppercase tracking-wide text-emerald-300/80"><Banknote size={14} strokeWidth={2.4} /> Из кассы</p>
             <p className="mt-1 truncate text-base font-black tabular-nums text-white sm:text-xl">{formatMoney(bySource.cash)}</p>
@@ -581,78 +641,14 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           </div>
         </div>
 
-        {/* Расчёты с владельцем — только владельцу/админу (эндпоинт вернул данные) */}
-        {ownerFin && (
-          <div className="mb-4 rounded-3xl border border-amber-400/20 bg-gradient-to-br from-amber-500/[0.08] to-orange-500/[0.04] p-4 sm:p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-black text-amber-100">Расчёты с владельцем</p>
-                <p className="mt-0.5 text-xs font-bold text-slate-400">Личные деньги владельца в бизнесе</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[11px] font-black uppercase tracking-wide text-amber-200/70">Бизнес должен владельцу</p>
-                <p className="text-2xl font-black text-amber-100 sm:text-3xl">{formatMoney(owedOwner)}</p>
-                {ownerFin.openingOwed > 0 && (
-                  <p className="text-[11px] font-bold text-amber-200/50">в т.ч. на старте {formatMoney(ownerFin.openingOwed)}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-              <div className="rounded-xl bg-white/[0.04] px-3 py-2"><span className="text-slate-400">Расходы владельца</span><br /><b className="text-white">{formatMoney(ownerFin.fromExpenses)}</b></div>
-              <div className="rounded-xl bg-white/[0.04] px-3 py-2"><span className="text-slate-400">Вклады в кассу</span><br /><b className="text-emerald-300">+{formatMoney(ownerFin.contributions)}</b></div>
-              <div className="rounded-xl bg-white/[0.04] px-3 py-2"><span className="text-slate-400">Возвраты владельцу</span><br /><b className="text-blue-300">−{formatMoney(ownerFin.reimbursements)}</b></div>
-              <div className="rounded-xl bg-white/[0.04] px-3 py-2" title="Изъятие прибыли не уменьшает долг перед владельцем."><span className="text-slate-400">Изъятия прибыли</span><br /><b className="text-slate-200">{formatMoney(ownerFin.withdrawals)}</b></div>
-            </div>
-
-            {!workerMode && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {Object.entries(OWNER_KIND).map(([kind, m]) => (
-                  <button key={kind} onClick={() => { setOwnerForm({ amount: "", note: "" }); setError(""); setOwnerModal(kind); }}
-                    className="rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-2.5 text-xs font-black text-white transition hover:bg-white/10">
-                    {m.cta}
-                  </button>
-                ))}
-                <button onClick={openOpeningModal}
-                  className="ml-auto flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-xs font-black text-slate-300 transition hover:bg-white/10"
-                  title="Начальное финансовое состояние при переходе с другой системы">
-                  <Settings size={14} strokeWidth={2.2} /> Стартовые балансы
-                </button>
-              </div>
-            )}
-
-            {ownerFin.entries?.length > 0 && (
-              <div className="mt-3 divide-y divide-white/5 border-t border-white/5 pt-1">
-                {ownerFin.entries.slice(0, 6).map((en) => {
-                  const m = OWNER_KIND[en.kind] || { label: en.kind, prefix: "", sign: "text-white" };
-                  return (
-                    <div key={en.id} className="flex items-center justify-between gap-2 py-2 text-xs">
-                      <div className="min-w-0">
-                        <span className="font-black text-white">{m.label}</span>
-                        <span className="text-slate-500"> {en.note ? `· ${en.note} ` : ""}· {String(en.createdAt || "").slice(0, 10)}{en.employeeName ? ` · ${en.employeeName}` : ""}</span>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <b className={m.sign}>{m.prefix}{formatMoney(en.amount)}</b>
-                        {!workerMode && (
-                          <button onClick={() => deleteOwnerEntry(en.id)} aria-label="Удалить" title="Удалить" className="flex h-9 w-9 items-center justify-center rounded-md text-slate-500 transition hover:bg-white/10 hover:text-red-300"><Trash2 size={16} /></button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
         <div className="hidden overflow-x-auto xl:block">
           <table className="w-full min-w-[1050px] text-left text-sm">
             <thead className="border-y border-white/10 bg-slate-950/50 text-xs uppercase tracking-wide text-slate-400">
               <tr>
                 <th className="p-4">Дата</th>
                 <th className="p-4">Категория</th>
-                <th className="p-4">Тип</th>
-                <th className="p-4">Назначение</th>
+                <th className="p-4">Тип расхода</th>
+                <th className="p-4">За что заплатили</th>
                 <th className="p-4">Комментарий</th>
                 <th className="p-4">Сумма</th>
                 <th className="p-4">Кто добавил</th>
@@ -671,7 +667,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                     <span className={`ml-2 inline-block rounded-md border px-1.5 py-0.5 align-middle text-[10px] font-black ${srcMeta(e).cls}`}>{srcMeta(e).label}</span>
                     {e.hasPhoto && (
                       <button onClick={() => openPhotoView(e)} title="Открыть фото накладной"
-                        className="ml-2 inline-flex items-center gap-1 rounded-md border border-blue-400/25 bg-blue-500/10 px-1.5 py-0.5 align-middle text-[10px] font-black text-blue-200 transition hover:bg-blue-500/20">
+                        className="ml-2 inline-flex min-h-[32px] items-center gap-1 rounded-md border border-blue-400/25 bg-blue-500/10 px-2 py-1.5 align-middle text-xs font-black text-blue-200 transition hover:bg-blue-500/20">
                         <Paperclip size={11} strokeWidth={2.6} /> накладная
                       </button>
                     )}
@@ -724,7 +720,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 <span className={`mt-1 inline-block rounded-md border px-1.5 py-0.5 text-[10px] font-black ${srcMeta(e).cls}`}>{srcMeta(e).label}</span>
                 {e.hasPhoto && (
                   <button onClick={() => openPhotoView(e)}
-                    className="ml-1.5 mt-1 inline-flex items-center gap-1 rounded-md border border-blue-400/25 bg-blue-500/10 px-1.5 py-0.5 align-top text-[10px] font-black text-blue-200 transition hover:bg-blue-500/20">
+                    className="ml-1.5 mt-1 inline-flex min-h-[32px] items-center gap-1 rounded-md border border-blue-400/25 bg-blue-500/10 px-2 py-1.5 align-top text-xs font-black text-blue-200 transition hover:bg-blue-500/20">
                     <Paperclip size={11} strokeWidth={2.6} /> накладная
                   </button>
                 )}
@@ -784,7 +780,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             </label>
 
             <label>
-              <span className="mb-2 block text-sm font-black text-slate-300">Тип</span>
+              <span className="mb-2 block text-sm font-black text-slate-300">Тип расхода</span>
               <select
                 value={form.type}
                 onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
@@ -797,7 +793,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             </label>
 
             <label>
-              <span className="mb-2 block text-sm font-black text-slate-300">Назначение</span>
+              <span className="mb-2 block text-sm font-black text-slate-300">За что заплатили</span>
               <input
                 value={form.name}
                 onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
@@ -869,7 +865,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                   <span className="flex-1 text-sm font-black text-emerald-300">Фото готово к загрузке</span>
                   <button type="button" onClick={() => setForm((p) => ({ ...p, photo: null }))}
                     aria-label="Убрать фото"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-red-300">
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-red-300">
                     <X size={16} />
                   </button>
                 </div>
@@ -984,7 +980,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
       )}
 
       {openingModal && (
-        <Modal title="Стартовые балансы" wide onClose={() => setOpeningModal(false)}>
+        <Modal title="Остатки на начало учёта" wide onClose={() => setOpeningModal(false)}>
           <div className="grid gap-3">
             <p className="rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-bold leading-snug text-blue-100">
               Начальное состояние при переходе с другой системы. Это <b>не</b> транзакции — это точка отсчёта. Заполните то, что знаете на дату старта; остальное можно оставить нулём и уточнить позже.

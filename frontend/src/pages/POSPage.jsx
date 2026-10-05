@@ -6,7 +6,7 @@ import PendingPaymentsModal from "../components/PendingPaymentsModal";
 import { formatMoney, money, num, businessISO } from "../utils/format";
 import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
-import { FolderOpen, ChevronLeft, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt, ClipboardList } from "lucide-react";
+import { FolderOpen, ChevronLeft, LogOut, Sparkles, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt, ClipboardList } from "lucide-react";
 
 // Бизнес-дата на N дней назад (0 = сегодня) с учётом времени открытия точки.
 // Вне компонента — eslint (react-hooks/purity) не любит Date.now/new Date в теле.
@@ -164,11 +164,11 @@ function SmartIngredientInputPOS({ value, onChange, warehouseItems = [], onSelec
   return (
     <div className="relative sm:col-span-1" ref={wrapRef}>
       <div className="relative flex items-center">
-        <span className="pointer-events-none absolute left-3 text-sm">✨</span>
+        <Sparkles size={14} strokeWidth={2.4} className="pointer-events-none absolute left-3 text-violet-300" />
         <input ref={inputRef} type="text" value={value}
           onChange={(e) => { onChange(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          placeholder="Введи название — AI найдёт правильное..."
+          placeholder="Введите название — AI найдёт правильное..."
           className="w-full rounded-2xl border border-violet-400/30 bg-violet-500/8 py-2.5 pl-8 pr-8 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60 focus:ring-2 focus:ring-violet-500/20"
         />
         {aiLoading && <span className="absolute right-3"><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" /></span>}
@@ -802,7 +802,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   const createCategory = async () => {
     setError("");
 
-    if (!newCategory.sectionId) return setError("Выбери раздел меню");
+    if (!newCategory.sectionId) return setError("Выберите раздел меню");
     if (!newCategory.name.trim()) return setError("Введите название категории");
 
     try {
@@ -834,7 +834,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   const createProduct = async () => {
     setError("");
 
-    if (!newProduct.categoryId) return setError("Выбери категорию");
+    if (!newProduct.categoryId) return setError("Выберите категорию");
     if (!newProduct.name.trim()) return setError("Введите название позиции");
 
     if (savingProductRef.current) return; // не даём двойным тапом создать дубль позиции
@@ -925,7 +925,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       // Заметный тост: у работника openProfile — no-op, а баннер ошибки легко не заметить,
       // из-за чего кажется, что кнопка «не работает». Указываем, где выбрать продавца.
       window.notify?.("Сначала выберите продавца смены — вверху кассы", "error");
-      return setError("Выбери сотрудника смены");
+      return setError("Выберите сотрудника смены");
     }
 
     if (!safe_cart.length) {
@@ -950,7 +950,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       if (mode === "pending") {
         await post("/pending-sales", salePayload());
         await resetSale();
-        window.notify?.("Чек отправлен в ожидание оплаты", "success");
+        window.notify?.("Чек отложен — он в разделе «Отложенные»", "success");
         return;
       }
 
@@ -999,12 +999,12 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button type="button" onClick={onExit} aria-label="Выйти из кассы" title="Выйти из кассы"
               className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-3 font-black text-slate-200 transition hover:bg-white/10 active:scale-95 sm:px-3.5">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-              <span className="hidden sm:inline">Выйти</span>
+              <LogOut size={18} strokeWidth={2.4} />
+              <span>Выход</span>
             </button>
             <div className="min-w-0">
               <p className="text-[11px] font-bold text-blue-400 sm:text-sm">Касса</p>
-              <h2 className="truncate text-base font-black leading-none text-white sm:text-xl">Магазин</h2>
+              <h2 className="hidden truncate text-base font-black leading-none text-white sm:block sm:text-xl">Магазин</h2>
             </div>
           </div>
 
@@ -1064,11 +1064,11 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             Касса
           </button>
           <button type="button" onClick={openCardModal}
-            aria-label="Карты для оплаты переводом — добавить или удалить"
-            title="Карты для оплаты переводом — добавить или удалить"
+            aria-label="Счета для оплаты переводом — добавить или удалить"
+            title="Счета для оплаты переводом — добавить или удалить"
             className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3.5 font-black text-sky-200 transition hover:bg-sky-500/20 active:scale-95">
             <CreditCard size={18} strokeWidth={2.4} />
-            Карты
+            Счета
           </button>
           <button type="button" onClick={openReceipts}
             aria-label="Чеки за сегодня — что пробили"
@@ -1234,7 +1234,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-blue-400/50"
                   />
                   <button onClick={() => { createSection(); setInlineSection(false); }} className="shrink-0 rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-black text-white hover:bg-blue-500">Добавить</button>
-                  <button onClick={() => setInlineSection(false)} aria-label="Закрыть" title="Закрыть" className="shrink-0 rounded-lg px-2 py-1 leading-none text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
+                  <button onClick={() => setInlineSection(false)} aria-label="Закрыть" title="Закрыть" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
                 </div>
               ) : (
                 <button onClick={() => setInlineSection(true)} title="Большая группа меню — Бар, Кухня"
@@ -1271,7 +1271,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-violet-400/50"
                   />
                   <button onClick={() => { createCategory(); setInlineCategory(false); }} className="shrink-0 rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-black text-white hover:bg-violet-500">Добавить</button>
-                  <button onClick={() => setInlineCategory(false)} aria-label="Закрыть" title="Закрыть" className="shrink-0 rounded-lg px-2 py-1 leading-none text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
+                  <button onClick={() => setInlineCategory(false)} aria-label="Закрыть" title="Закрыть" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
                 </div>
               ) : (
                 <button onClick={() => { setNewCategory(p => ({ ...p, sectionId: selectedSectionId !== "all" ? selectedSectionId : "" })); setInlineCategory(true); }} title="Группа товаров внутри раздела — Коктейли, Чаи"
@@ -1359,7 +1359,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     Категорий пока нет
                   </p>
                   <p className="mt-2 text-slate-400">
-                    Создай категорию, например “Холодные напитки”.
+                    Создайте категорию, например “Холодные напитки”.
                   </p>
                 </div>
               )}
@@ -1388,7 +1388,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     В этой категории пока нет товаров
                   </p>
                   <p className="mt-2 text-slate-400">
-                    Добавь позицию внутрь категории “{openedCategory.name}”.
+                    Добавьте позицию внутрь категории “{openedCategory.name}”.
                   </p>
                 </div>
               )}
@@ -1406,7 +1406,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <div className="mb-3 flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300"><Plus size={15} strokeWidth={3} /></span>
               <div>
-                <p className="text-sm font-black text-white leading-tight">Доп. товары</p>
+                <p className="text-sm font-black text-white leading-tight">Быстрые допы</p>
                 <p className="text-[11px] text-slate-400 leading-tight">Стаканчик, лёд и т.п. — в доходах отдельно</p>
               </div>
             </div>
@@ -1423,21 +1423,21 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         )}
 
         <div className="flex flex-col rounded-3xl border border-white/10 bg-[#0f172a]/90 p-3.5 shadow-2xl backdrop-blur sm:p-4 md:min-h-0 md:flex-1">
-          <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
+          <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
             <h3 className="text-base font-black sm:text-lg">Корзина</h3>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => { setCustomForm({ name: "", price: "", qty: "1" }); setError(""); setCustomModal(true); }}
-                title="Свободная продажа: название и цена"
-                className="inline-flex items-center gap-1 rounded-2xl bg-blue-500/15 px-3 py-2 text-sm font-black text-blue-200 transition hover:bg-blue-500/25 active:scale-95"
+                title="Произвольная продажа: название и цена"
+                className="inline-flex min-h-10 items-center gap-1 whitespace-nowrap rounded-2xl bg-blue-500/15 px-3 py-2 text-sm font-black text-blue-200 transition hover:bg-blue-500/25 active:scale-95"
               >
-                <span className="text-base leading-none">＋</span> Доп. позиция
+                <Plus size={16} strokeWidth={2.6} /> Произвольная продажа
               </button>
             {safe_cart.length > 0 && (
               <button
                 onClick={() => { if (!window.confirm(`Очистить всю корзину (${safe_cart.length} поз.)?`)) return; setCart([]); setDiscount(""); setPaidAmount(""); setCardId(""); }}
-                className="rounded-2xl bg-red-500/10 px-3 py-2 text-sm font-black text-red-300"
+                className="min-h-10 rounded-2xl bg-red-500/10 px-3 py-2 text-sm font-black text-red-300"
               >
                 Очистить
               </button>
@@ -1543,18 +1543,18 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 <p className="text-[11px] font-black uppercase tracking-wide text-violet-300/80">Работа за сегодня</p>
                 {cashCheckLoading && <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />}
               </div>
-              <div className="mt-2.5 grid grid-cols-3 gap-2">
+              <div className="mt-2.5 grid grid-cols-2 gap-2">
                 <div className="rounded-2xl bg-white/[0.05] px-2.5 py-2.5 text-center">
                   <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Продаж</p>
                   <p className="mt-0.5 text-2xl font-black tabular-nums text-white">{num(todayStats?.salesCount)}</p>
                 </div>
                 <div className="rounded-2xl bg-white/[0.05] px-2.5 py-2.5 text-center">
                   <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Выручка</p>
-                  <p className="mt-0.5 text-lg font-black tabular-nums text-white sm:text-xl">{formatMoney(num(todayStats?.totalRevenue))}</p>
+                  <p className="mt-0.5 text-base font-black tabular-nums text-white sm:text-lg">{formatMoney(num(todayStats?.totalRevenue))}</p>
                 </div>
-                <div className="rounded-2xl bg-emerald-500/10 px-2.5 py-2.5 text-center">
+                <div className="col-span-2 rounded-2xl bg-emerald-500/10 px-2.5 py-2.5 text-center">
                   <p className="text-[10px] font-black uppercase tracking-wide text-emerald-300/80">Налом</p>
-                  <p className="mt-0.5 text-lg font-black tabular-nums text-emerald-300 sm:text-xl">{formatMoney(num(todayStats?.cashTotal))}</p>
+                  <p className="mt-0.5 text-base font-black tabular-nums text-emerald-300 sm:text-lg">{formatMoney(num(todayStats?.cashTotal))}</p>
                 </div>
               </div>
               <p className="mt-2 text-[11px] font-bold leading-snug text-slate-500">
@@ -1611,21 +1611,21 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               )}
 
               {/* Действия по смене — здесь, а не постоянной панелью в кассе. */}
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button type="button"
                   onClick={() => { setCashCheckModal(false); setShiftInput(""); setShiftNote(""); setShiftModal("in"); }}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-emerald-300 transition hover:bg-white/10 active:scale-95">+ Внести</button>
+                  className="min-h-11 rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-emerald-300 transition hover:bg-white/10 active:scale-95">+ Внести</button>
                 <button type="button"
                   onClick={() => { setCashCheckModal(false); setShiftInput(""); setShiftNote(""); setShiftModal("out"); }}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-red-300 transition hover:bg-white/10 active:scale-95">− Изъять</button>
+                  className="min-h-11 rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-red-300 transition hover:bg-white/10 active:scale-95">− Изъять</button>
                 <button type="button"
                   onClick={() => { setCashCheckModal(false); setShiftInput(""); setShiftNote(""); setShiftModal("close"); }}
-                  className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-2 py-2.5 text-sm font-black leading-tight text-white transition hover:brightness-110 active:scale-95">Закрыть смену</button>
+                  className="col-span-2 min-h-11 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-2 py-2.5 text-sm font-black leading-tight text-white transition hover:brightness-110 active:scale-95">Закрыть смену</button>
               </div>
 
               <button type="button" onClick={() => setCashCheckModal(false)}
                 className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">
-                Понятно
+                Закрыть
               </button>
             </div>
           ) : (
@@ -1678,7 +1678,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       )}
 
       {cardModal && (
-        <Modal title="Карты" section="Оплата переводом" onClose={() => setCardModal(false)} legacyLight={false} zIndex={60}>
+        <Modal title="Счета" section="Оплата переводом" onClose={() => setCardModal(false)} legacyLight={false} zIndex={60}>
           <div className="space-y-4">
             <p className="text-sm text-slate-400">Карты и счета, на которые принимаете переводы. Новую можно добавить прямо здесь — она сразу появится при оплате переводом.</p>
 
@@ -1743,7 +1743,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               onClick={() => setCardModal(false)}
               className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10"
             >
-              Готово
+              Закрыть
             </button>
           </div>
         </Modal>
@@ -1826,7 +1826,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               </>
               );
             })()}
-            <button type="button" onClick={() => setReceiptsModal(false)} className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">Готово</button>
+            <button type="button" onClick={() => setReceiptsModal(false)} className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">Закрыть</button>
           </div>
         </Modal>
       )}
@@ -1834,7 +1834,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       {(shiftModal === "in" || shiftModal === "out") && (
         <Modal title={shiftModal === "in" ? "Внести в кассу" : "Изъять из кассы"} onClose={() => setShiftModal(null)}>
           <p className="mb-4 text-sm text-slate-400">
-            {shiftModal === "in" ? "Деньги, которые кладёшь в кассу (не продажа)." : "Деньги, которые забираешь из кассы (выплата, инкассация, такси и т.п.)."}
+            {shiftModal === "in" ? "Деньги, которые вы кладёте в кассу (не продажа)." : "Деньги, которые вы забираете из кассы (выплата, инкассация, такси и т.п.)."}
           </p>
           <input type="number" value={shiftInput} autoFocus onChange={(e) => setShiftInput(e.target.value)}
             placeholder="Сумма, ₽" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
@@ -1862,7 +1862,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             </div>
             <div className="mt-1 text-[11px] text-slate-500">размен {formatMoney(cashShift.openingCash)} + налом {formatMoney(cashShift.cashSales)} + внесено {formatMoney(cashShift.cashIn)} − изъято {formatMoney(cashShift.cashOut)}{cashShift.cashExpenses > 0 ? <> − расходы {formatMoney(cashShift.cashExpenses)}</> : null}{cashShift.ownerCash ? <> {cashShift.ownerCash > 0 ? "+ владелец " : "− владельцу "}{formatMoney(Math.abs(cashShift.ownerCash))}</> : null}</div>
           </div>
-          <p className="mb-2 mt-4 text-sm font-bold text-slate-300">Пересчитай деньги в кассе и впиши фактическую сумму:</p>
+          <p className="mb-2 mt-4 text-sm font-bold text-slate-300">Пересчитайте деньги в кассе и впишите фактическую сумму:</p>
           <input type="number" value={shiftInput} autoFocus onChange={(e) => setShiftInput(e.target.value)}
             placeholder="Фактически в кассе, ₽" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
           {shiftInput !== "" && (
@@ -1893,14 +1893,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           <div className={`mt-4 rounded-2xl p-4 text-center font-black ${Math.abs(shiftResult.difference) < 0.005 ? "bg-emerald-500/15 text-emerald-300" : shiftResult.difference < 0 ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300"}`}>
             {Math.abs(shiftResult.difference) < 0.005 ? <><Check size={14} className="inline"/> Касса сошлась</> : shiftResult.difference < 0 ? `Недостача ${formatMoney(-shiftResult.difference)}` : `Излишек ${formatMoney(shiftResult.difference)}`}
           </div>
-          <button type="button" onClick={() => setShiftResult(null)} className="btn-blue mt-6 w-full">Готово</button>
+          <button type="button" onClick={() => setShiftResult(null)} className="btn-blue mt-6 w-full">Закрыть</button>
         </Modal>
       )}
 
       {customModal && (
-        <Modal title="Доп. позиция" section="Касса" onClose={() => setCustomModal(false)}>
+        <Modal title="Произвольная продажа" section="Касса" onClose={() => setCustomModal(false)}>
           <div className="space-y-3">
-            <p className="text-sm font-bold text-slate-400">Свободная продажа — впишите название и цену. Позиция не привязана к меню и не списывает склад.</p>
+            <p className="text-sm font-bold text-slate-400">Произвольная продажа — впишите название и цену. Позиция не привязана к меню и не списывает склад.</p>
             <label className="block">
               <span className="mb-1.5 block text-xs font-black text-slate-400">Название</span>
               <input autoFocus value={customForm.name} onChange={(e) => setCustomForm((f) => ({ ...f, name: e.target.value }))}
@@ -1964,14 +1964,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               Перевод
             </button>
             <button
-              onClick={() => setPaymentType("pending")}
-              className={paymentType === "pending" ? "btn-blue" : "btn-white"}
-            >
-              Ожидание оплаты
-            </button>
-            <button
               onClick={() => setPaymentType("debt")}
-              className={paymentType === "debt" ? "btn-blue" : "btn-white"}
+              className={`col-span-2 ${paymentType === "debt" ? "btn-blue" : "btn-white"}`}
             >
               В долг
             </button>
@@ -2009,7 +2003,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     onChange={(e) => setCardId(e.target.value)}
                     className="w-full flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
                   >
-                    <option value="">Выбери карту</option>
+                    <option value="">Выберите карту</option>
                     {safe_cards.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
@@ -2068,13 +2062,29 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             </div>
           )}
 
+          {/* «Отложить чек» — не способ оплаты, а отложенный чек: отделено от способов */}
+          <div className="mt-5 border-t border-white/10 pt-4">
+            <button
+              type="button"
+              onClick={() => setPaymentType("pending")}
+              className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border px-4 py-2.5 font-black transition active:scale-95 ${
+                paymentType === "pending"
+                  ? "border-amber-400/60 bg-amber-500/25 text-amber-100"
+                  : "border-amber-400/25 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
+              }`}
+            >
+              <Clock size={18} strokeWidth={2.4} /> Отложить чек
+            </button>
+            <p className="mt-1.5 text-center text-[11px] font-bold text-slate-500">Оплатят позже — чек появится в «Отложенные»</p>
+          </div>
+
           <div className="mt-6 flex gap-3">
             <button onClick={() => setPaymentModal(false)} className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-slate-200 transition hover:bg-white/10">
               Назад
             </button>
             <button onClick={() => submitSale(paymentType)} disabled={submitting}
               className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60">
-              {submitting ? "Проводим…" : paymentType === "pending" ? "В ожидание" : "Подтвердить"}
+              {submitting ? "Проводим…" : paymentType === "pending" ? "Отложить чек" : "Подтвердить"}
             </button>
           </div>
         </Modal>
@@ -2093,7 +2103,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               }
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 sm:col-span-2"
             >
-              <option value="">Выбери категорию</option>
+              <option value="">Выберите категорию</option>
               {safe_categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.typeName || c.type} / {c.name}
@@ -2102,20 +2112,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             </select>
 
             <div className="sm:col-span-2 flex flex-col gap-2">
-              <div className="relative">
-                <input
-                  value={newProduct.name}
-                  onChange={(e) => {
-                    setNewProduct((p) => ({ ...p, name: e.target.value }));
-                    if (aiAdvisorEnabled) {
-                      clearTimeout(aiDebounceRef.current);
-                      aiDebounceRef.current = setTimeout(() => analyzeProductName(e.target.value), 800);
-                    }
-                  }}
-                  placeholder="Название позиции..."
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 pr-36 font-bold text-white outline-none placeholder:text-slate-500"
-                />
-                {/* AI советник — переключатель */}
+              {/* AI советник — переключатель отдельной строкой над полем */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-black text-slate-400">Название позиции</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -2124,7 +2123,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     if (!next) setAiSuggestion(null);
                     else if (newProduct.name?.trim().length >= 3) analyzeProductName(newProduct.name);
                   }}
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition ${
+                  className={`flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition ${
                     aiAdvisorEnabled
                       ? "bg-violet-500/20 text-violet-300 border border-violet-400/30"
                       : "bg-white/5 text-slate-500 border border-white/10"
@@ -2132,10 +2131,22 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 >
                   {aiSuggestionLoading
                     ? <><span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400" /> Думаю...</>
-                    : <>{aiAdvisorEnabled ? "✨ AI вкл" : "✨ AI выкл"}</>
+                    : <><Sparkles size={14} strokeWidth={2.4} /> {aiAdvisorEnabled ? "Подсказки AI: вкл" : "Подсказки AI: выкл"}</>
                   }
                 </button>
               </div>
+              <input
+                value={newProduct.name}
+                onChange={(e) => {
+                  setNewProduct((p) => ({ ...p, name: e.target.value }));
+                  if (aiAdvisorEnabled) {
+                    clearTimeout(aiDebounceRef.current);
+                    aiDebounceRef.current = setTimeout(() => analyzeProductName(e.target.value), 800);
+                  }
+                }}
+                placeholder="Название позиции..."
+                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
+              />
             </div>
 
             {/* AI предложение */}
@@ -2143,12 +2154,12 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               <div className="sm:col-span-2 rounded-2xl border border-violet-400/20 bg-linear-to-br from-violet-500/10 to-blue-500/5 p-4">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-wide text-violet-300">✨ AI предлагает</p>
+                    <p className="text-xs font-black uppercase tracking-wide text-violet-300"><Sparkles size={13} strokeWidth={2.4} className="mr-1 inline" />AI предлагает</p>
                     <p className="mt-1 text-base font-black text-white">{aiSuggestion.displayName}</p>
                     <p className="text-sm text-slate-400">{aiSuggestion.description}</p>
                   </div>
                   <button type="button" onClick={() => setAiSuggestion(null)} aria-label="Закрыть" title="Закрыть"
-                    className="shrink-0 rounded-lg px-2 py-1 text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
                 </div>
 
                 <div className="flex gap-3 mb-3 text-sm">
@@ -2188,8 +2199,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 )}
 
                 <button type="button" onClick={applyAiSuggestion}
-                  className="w-full rounded-xl bg-linear-to-r from-violet-600 to-blue-600 py-2.5 font-black text-white text-sm hover:opacity-90 transition">
-                  ✨ Применить всё — заполнить состав и цены
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-linear-to-r from-violet-600 to-blue-600 py-2.5 font-black text-white text-sm hover:opacity-90 transition">
+                  <Sparkles size={15} strokeWidth={2.4} /> Применить всё — заполнить состав и цены
                 </button>
               </div>
             )}
@@ -2221,7 +2232,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               <div>
                 <h3 className="text-xl font-black">Состав / рецепт</h3>
                 <p className="text-sm text-slate-400">
-                  Опционально. Укажи сколько сырья уходит на 1 позицию. Например: эспрессо — зерно 20 г, капучино — зерно 18 г и молоко 180 мл.
+                  Опционально. Укажите, сколько сырья уходит на 1 позицию. Например: эспрессо — зерно 20 г, капучино — зерно 18 г и молоко 180 мл.
                 </p>
               </div>
 
@@ -2254,7 +2265,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                       <button type="button"
                         onClick={() => { updateRecipeRow(index, "mode", "manual"); updateRecipeRow(index, "warehouseItemId", ""); }}
                         className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 min-h-[40px] text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
-                        ✨ Вручную (AI)
+                        <Sparkles size={13} strokeWidth={2.5} /> Вручную (AI)
                       </button>
                       <button type="button" onClick={() => removeRecipeRow(index)}
                         aria-label="Удалить ингредиент" title="Удалить ингредиент"
@@ -2286,7 +2297,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                           }}
                           className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none"
                         >
-                          <option value="">Выбери сырьё со склада</option>
+                          <option value="">Выберите сырьё со склада</option>
                           {safe_warehouseItems.map((item) => (
                             <option key={item.id} value={item.id}>
                               {item.name} — остаток {item.quantity} {UNIT_LABELS[item.unit] || item.unit}
@@ -2311,7 +2322,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     </div>
 
                     {isManual && row.ingredientName && !row.warehouseItemId && (
-                      <p className="text-xs font-bold text-yellow-500"><AlertTriangle size={14} className="inline"/> Добавь на склад — привяжется автоматически</p>
+                      <p className="text-xs font-bold text-yellow-500"><AlertTriangle size={14} className="inline"/> Добавьте на склад — привяжется автоматически</p>
                     )}
                     {isManual && row.warehouseItemId && (
                       <p className="text-xs font-bold text-emerald-400"><Check size={14} className="inline"/> Найден и привязан к складу</p>
@@ -2333,7 +2344,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
               {!safe_warehouseItems.length && (
                 <p className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 text-sm font-bold text-yellow-300">
-                  На складе пока нет сырья. Сначала добавь зерно, молоко, курицу, рис и т.д. на странице “Склад”.
+                  На складе пока нет сырья. Сначала добавьте зерно, молоко, курицу, рис и т.д. на странице “Склад”.
                 </p>
               )}
             </div>
@@ -2346,8 +2357,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               </button>
               <button type="button"
                 onClick={() => addRecipeRow("manual")}
-                className="flex-1 rounded-2xl border border-violet-400/20 bg-violet-500/8 px-4 py-3 font-black text-violet-200 transition hover:bg-violet-500/15">
-                ✨ Вручную (AI)
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-violet-400/20 bg-violet-500/8 px-4 py-3 font-black text-violet-200 transition hover:bg-violet-500/15">
+                <Sparkles size={15} strokeWidth={2.4} /> Вручную (AI)
               </button>
             </div>
           </div>

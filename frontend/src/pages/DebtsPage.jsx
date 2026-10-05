@@ -198,10 +198,10 @@ export default function DebtsPage() {
             <button
               onClick={clearHistory}
               disabled={submitting}
-              className="flex h-12 items-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 font-black text-red-300 shadow-xl transition hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-12 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 font-black text-slate-300 shadow-xl transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg>
-              <span>Убрать погашенных</span>
+              <span>Скрыть оплаченных</span>
             </button>
           </div>
         </div>
@@ -226,24 +226,19 @@ export default function DebtsPage() {
           </div>
 
           <div className="col-span-2 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 shadow-2xl sm:col-span-1 sm:rounded-[28px] sm:p-5">
-            <p className="text-[11px] font-black uppercase tracking-wide text-blue-200 sm:text-xs">Клиентов / записей</p>
-            <p className="mt-1.5 text-2xl font-black text-white sm:mt-3 sm:text-4xl">{customerGroups.length}/{totalRecords}</p>
-            <p className="mt-1 text-[11px] font-bold text-slate-400 sm:text-sm">в истории долгов</p>
+            <p className="text-[11px] font-black uppercase tracking-wide text-blue-200 sm:text-xs">Клиентов</p>
+            <p className="mt-1.5 text-2xl font-black text-white sm:mt-3 sm:text-4xl">{customerGroups.length}</p>
+            <p className="mt-1 text-[11px] font-bold text-slate-400 sm:text-sm">записей: {totalRecords}</p>
           </div>
         </div>
 
         <div className="mb-5 rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-4 shadow-2xl backdrop-blur sm:p-5">
-          <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Найти клиента"
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
-            />
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 font-black text-white">
-              Остаток: <span className="text-red-300">{formatMoney(totalOpen)}</span>
-            </div>
-          </div>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Найти клиента"
+            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
+          />
         </div>
 
         <div className="space-y-4">
@@ -271,6 +266,9 @@ export default function DebtsPage() {
                           Покупок в долг: {customer.records.length} · погашений: {customer.payments.length}
                         </p>
                       </div>
+                      <span className="ml-auto shrink-0 text-slate-400" aria-hidden="true">
+                        {isOpen ? <ChevronUp size={22} /> : <ChevronDown size={22} />}
+                      </span>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 sm:gap-3 xl:min-w-[560px] [@media(max-width:400px)]:grid-cols-1">
@@ -284,12 +282,9 @@ export default function DebtsPage() {
                         <p className="text-base font-black text-emerald-300 sm:text-xl">{formatMoney(customer.paid || 0)}</p>
                       </div>
 
-                      <div className="flex items-center justify-between rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 sm:rounded-2xl sm:px-4 sm:py-3">
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-black uppercase text-slate-400 sm:text-xs">Остаток</p>
-                          <p className="text-base font-black text-red-300 sm:text-xl">{formatMoney(customer.remaining || 0)}</p>
-                        </div>
-                        <span className="shrink-0 text-slate-400">{isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}</span>
+                      <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 sm:rounded-2xl sm:px-4 sm:py-3">
+                        <p className="text-[11px] font-black uppercase text-slate-400 sm:text-xs">Остаток</p>
+                        <p className="text-base font-black text-red-300 sm:text-xl">{formatMoney(customer.remaining || 0)}</p>
                       </div>
                     </div>
                   </div>

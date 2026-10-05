@@ -264,12 +264,12 @@ export default function HomePage() {
             </NavLink>
             <NavLink
               to="/sales-analytics"
-              aria-label="Отчёты"
-              title="Отчёты"
+              aria-label="Продажи"
+              title="Продажи"
               className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 font-black text-slate-200 transition hover:bg-white/10 active:scale-[0.98]"
             >
               <BarChart3 size={18} strokeWidth={2.4} />
-              <span className="hidden sm:inline">Отчёты</span>
+              <span className="hidden sm:inline">Продажи</span>
             </NavLink>
           </div>
         </header>
@@ -363,7 +363,7 @@ export default function HomePage() {
                 <MonthRow label="Скидки" value={formatMoney(num(m.totalDiscount))} accent="text-slate-300" />
               </div>
               <NavLink to="/analytics" className="mt-4 flex items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] py-2.5 text-sm font-black text-slate-300 transition hover:bg-white/10">
-                Подробная аналитика <ArrowRight size={16} />
+                Аналитика <ArrowRight size={16} />
               </NavLink>
             </section>
           )}
@@ -383,8 +383,8 @@ export default function HomePage() {
                     <div key={`${p.name}-${i}`} className="flex items-center gap-3 py-2.5">
                       <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-black ${i === 0 ? "bg-amber-500/20 text-amber-300" : "bg-white/[0.06] text-slate-400"}`}>{i + 1}</span>
                       <span className="min-w-0 flex-1 truncate font-bold text-white">{p.name}</span>
-                      <span className="shrink-0 text-sm font-semibold text-slate-400">{num(p.qty).toLocaleString("ru-RU")} шт</span>
-                      <span className="shrink-0 text-right text-sm font-black text-emerald-300">{formatMoney(num(p.revenue))}</span>
+                      <span className="w-16 shrink-0 text-right text-sm font-semibold tabular-nums text-slate-400">{num(p.qty).toLocaleString("ru-RU")} шт</span>
+                      <span className="w-24 shrink-0 text-right text-sm font-black tabular-nums text-emerald-300 sm:w-28">{formatMoney(num(p.revenue))}</span>
                     </div>
                   ))}
                 </div>

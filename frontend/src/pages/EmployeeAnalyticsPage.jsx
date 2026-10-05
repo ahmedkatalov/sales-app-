@@ -173,7 +173,7 @@ export default function EmployeeAnalyticsPage() {
       <div className="pointer-events-none absolute -top-24 left-1/4 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
       <div className="pointer-events-none absolute right-0 top-16 h-80 w-80 rounded-full bg-violet-700/15 blur-3xl" />
 
-      <div className="relative mx-auto w-full max-w-[1500px]">
+      <div className="relative mx-auto w-full max-w-[1500px] px-3 sm:px-6 lg:px-8">
         {/* Заголовок + период */}
         <header className="mb-5 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
@@ -245,7 +245,7 @@ export default function EmployeeAnalyticsPage() {
             <KpiTile label="Чеки" value={num(totals.orders).toLocaleString("ru-RU")} sub={`${num(totals.activeEmployees)} продавцов`} tone="violet" />
             <KpiTile label="Средний чек" value={money(totals.aov)} sub="на один чек" tone="emerald" />
             <KpiTile label="Товаров продано" value={num(totals.itemsSold).toLocaleString("ru-RU")} sub="штук" tone="amber" />
-            <KpiTile label="Скидки" value={money(totals.discounts)} sub={`нал. ${money(totals.cash)} · пер. ${money(totals.transfer)}`} tone="slate" className="col-span-2 md:col-span-1" />
+            <KpiTile label="Скидки" value={money(totals.discounts)} sub="за период" tone="slate" className="col-span-2 lg:col-span-1" />
           </div>
         )}
 
@@ -275,7 +275,7 @@ export default function EmployeeAnalyticsPage() {
             <ChartCard title="Рейтинг продавцов" subtitle="Нажмите на продавца, чтобы раскрыть детали"
               right={
                 <div className="no-scrollbar flex min-w-0 items-center gap-1.5 overflow-x-auto rounded-xl border border-white/10 bg-white/[0.03] p-1">
-                  {[["revenue", "Выручка"], ["orders", "Чеки"], ["aov", "Ср. чек"], ["items", "Товары"]].map(([k, l]) => (
+                  {[["revenue", "Выручка"], ["orders", "Чеки"], ["aov", "Средний чек"], ["items", "Товары"]].map(([k, l]) => (
                     <button key={k} onClick={() => setSort(k)}
                       className={`flex min-h-[40px] shrink-0 items-center rounded-lg px-2.5 py-2 text-xs font-black transition ${sort === k ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white" : "text-slate-400 hover:text-white"}`}>{l}</button>
                   ))}
