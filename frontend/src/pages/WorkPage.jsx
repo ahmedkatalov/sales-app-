@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, Boxes, Check, Copy, Crown, FileUp, Lightbulb, MoreHorizontal, Package, PackageX, Pencil, Search, Settings, SlidersHorizontal, Sparkles, Trash2, TrendingDown, TrendingUp, Wallet, X, Zap } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Boxes, Check, Copy, Crown, FileUp, Lightbulb, MoreHorizontal, Package, PackageX, Pencil, Search, Settings, SlidersHorizontal, Sparkles, Trash2, TrendingDown, Wallet, X, Zap } from "lucide-react";
 import { del, get, post, put, getSession } from "../api";
 import Modal from "../components/Modal";
 import MenuTransferModal from "../components/MenuTransferModal";
 import MenuPdfImportModal from "../components/MenuPdfImportModal";
 import EmptyState from "../components/EmptyState";
-import { useMediaQuery } from "../hooks/useMediaQuery";
 import { formatMoney, money, num, businessISO } from "../utils/format";
 import { getWarehouseUnitCost } from "../utils/menu";
 import { csvCell, csvNum, downloadCsv } from "../utils/csv";
@@ -211,23 +210,100 @@ const marginToneCls = (m) =>
   m < 0 ? "text-rose-300" : m >= MARGIN_GOOD ? "text-emerald-300" : m >= MARGIN_LOW ? "text-amber-300" : "text-orange-300";
 
 const TONE = {
-  emerald: { bl: "border-l-emerald-400/70", text: "text-emerald-300", bar: "from-emerald-500 to-emerald-400", chip: "border-emerald-400/30 bg-emerald-500/15 text-emerald-300" },
-  amber: { bl: "border-l-amber-400/70", text: "text-amber-300", bar: "from-amber-500 to-amber-400", chip: "border-amber-400/30 bg-amber-500/15 text-amber-300" },
-  orange: { bl: "border-l-orange-400/70", text: "text-orange-300", bar: "from-orange-500 to-orange-400", chip: "border-orange-400/30 bg-orange-500/15 text-orange-300" },
-  rose: { bl: "border-l-rose-500/70", text: "text-rose-300", bar: "from-rose-500 to-rose-400", chip: "border-rose-400/30 bg-rose-500/15 text-rose-300" },
-  slate: { bl: "border-l-slate-500/60", text: "text-slate-300", bar: "from-slate-500 to-slate-400", chip: "border-white/10 bg-slate-600/30 text-slate-300" },
+  emerald: { bl: "border-l-emerald-400/70", text: "text-emerald-300", bar: "from-emerald-500 to-emerald-400", chip: "border-emerald-400/30 bg-emerald-500/15 text-emerald-300", ring: "stroke-emerald-400" },
+  amber: { bl: "border-l-amber-400/70", text: "text-amber-300", bar: "from-amber-500 to-amber-400", chip: "border-amber-400/30 bg-amber-500/15 text-amber-300", ring: "stroke-amber-400" },
+  orange: { bl: "border-l-orange-400/70", text: "text-orange-300", bar: "from-orange-500 to-orange-400", chip: "border-orange-400/30 bg-orange-500/15 text-orange-300", ring: "stroke-orange-400" },
+  rose: { bl: "border-l-rose-500/70", text: "text-rose-300", bar: "from-rose-500 to-rose-400", chip: "border-rose-400/30 bg-rose-500/15 text-rose-300", ring: "stroke-rose-400" },
+  slate: { bl: "border-l-slate-500/60", text: "text-slate-300", bar: "from-slate-500 to-slate-400", chip: "border-white/10 bg-slate-600/30 text-slate-300", ring: "stroke-slate-500" },
 };
 
-function MarginBadge({ row, size = "sm" }) {
-  const t = TONE[row.tone] || TONE.slate;
+// Тинты аватара по категории (хэш → палитра, НЕ пересекается с health-тонами выше).
+const CAT_TINTS = [
+  "bg-blue-500/20 text-blue-200", "bg-indigo-500/20 text-indigo-200", "bg-violet-500/20 text-violet-200",
+  "bg-fuchsia-500/20 text-fuchsia-200", "bg-cyan-500/20 text-cyan-200", "bg-sky-500/20 text-sky-200",
+  "bg-teal-500/20 text-teal-200", "bg-pink-500/20 text-pink-200",
+];
+const catTint = (key) => {
+  const s = String(key || "?");
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 997;
+  return CAT_TINTS[h % CAT_TINTS.length];
+};
+const initialsOf = (name) => {
+  const w = String(name || "?").trim().split(/\s+/).filter(Boolean);
+  const s = w.length >= 2 ? w[0][0] + w[1][0] : String(name || "?").slice(0, 2);
+  return s.toUpperCase();
+};
+
+function CategoryAvatar({ name, category, type, size = 44 }) {
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 font-black tabular-nums ${t.chip} ${size === "lg" ? "text-sm" : "text-xs"}`}
-      title={row.markupPct != null ? `Наценка +${Math.round(row.markupPct)}%` : "Себестоимость неизвестна"}
-    >
-      {row.lossmaking && <TrendingDown size={12} />}
-      {Math.round(row.marginPct)}%{row.marginIsPotential && <span className="font-bold opacity-60">·потенц.</span>}
+    <span className={`grid shrink-0 place-items-center rounded-2xl font-black ${catTint(category || type)}`}
+      style={{ width: size, height: size, fontSize: size * 0.32 }}>
+      {initialsOf(name)}
     </span>
+  );
+}
+
+// Кольцо маржи на чистом SVG (r=18 → длина окружности ≈113.1).
+function MarginRing({ marginPct, tone = "slate", potential = false, size = 48 }) {
+  const t = TONE[tone] || TONE.slate;
+  const pct = Math.min(100, Math.max(0, num(marginPct)));
+  const C = 113.097;
+  return (
+    <span className="relative inline-grid shrink-0 place-items-center" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 44 44" width={size} height={size} className="-rotate-90">
+        <circle cx="22" cy="22" r="18" fill="none" strokeWidth="4" className="stroke-white/10" />
+        <circle cx="22" cy="22" r="18" fill="none" strokeWidth="4" strokeLinecap="round"
+          className={`${t.ring} transition-[stroke-dashoffset] duration-500`} strokeDasharray={C} strokeDashoffset={C * (1 - pct / 100)} />
+      </svg>
+      <span className={`absolute text-center text-[11px] font-black leading-none tabular-nums ${t.text}`}>
+        {Math.round(num(marginPct))}%{potential && <span className="block text-[7px] font-bold opacity-60">потенц.</span>}
+      </span>
+    </span>
+  );
+}
+
+function ProductCard({ p, onEdit, onDuplicate, onDelete }) {
+  const t = TONE[p.tone] || TONE.slate;
+  return (
+    <div className={`group relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06] hover:shadow-xl hover:shadow-black/30 ${p.lossmaking ? "ring-1 ring-rose-500/30" : ""} ${p.hidden ? "opacity-60" : ""}`}>
+      <div className={`absolute inset-x-5 top-0 h-[3px] rounded-b-full bg-gradient-to-r ${t.bar}`} />
+      <div className="flex items-start justify-between gap-3">
+        <CategoryAvatar name={p.name} category={p.category} type={p.typeName || p.type} size={44} />
+        <MarginRing marginPct={p.marginPct} tone={p.tone} potential={p.marginIsPotential} size={48} />
+      </div>
+
+      <div className="mt-3 min-w-0">
+        <p className="line-clamp-2 text-[15px] font-black leading-tight text-white">{p.name}</p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <span className="rounded-lg bg-white/5 px-2 py-0.5 text-[10px] font-bold text-slate-400">{p.typeName || p.type} · {p.category}</span>
+          <StatusPills p={p} />
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-end justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-2xl font-black tabular-nums text-white">{formatMoney(p.price)}</p>
+          <p className="truncate text-[11px] font-semibold text-slate-500">с/с {formatMoney(p.cost)}{p.incompleteCost && <span className="text-amber-400"> · неполн.</span>}</p>
+        </div>
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-white/5 px-2 py-1 text-xs font-bold text-slate-300"><Boxes size={13} /> ×{num(p.quantity)}</span>
+        <div className="shrink-0 text-right">
+          <p className={`text-sm font-black tabular-nums ${p.cleanProfit < 0 ? "text-rose-300" : "text-emerald-400"}`}>{formatMoney(p.cleanProfit)}</p>
+          <p className="text-[10px] font-semibold text-slate-500">прибыль</p>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <ProfitShareBar row={p} />
+        <p className="mt-1 text-[10px] font-bold text-slate-500">{Math.round(num(p.profitShare))}% прибыли меню</p>
+      </div>
+
+      <div className="mt-3 flex justify-end gap-1.5 opacity-100 transition sm:absolute sm:bottom-3 sm:right-3 sm:mt-0 sm:opacity-0 sm:group-hover:opacity-100">
+        <button onClick={() => onEdit(p)} aria-label="Изменить" title="Изменить" className="grid h-8 w-8 place-items-center rounded-lg bg-blue-500/15 text-blue-300 transition hover:bg-blue-500/25"><Pencil size={15} /></button>
+        <button onClick={() => onDuplicate(p)} aria-label="Дублировать" title="Дублировать" className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-slate-300 transition hover:bg-white/20"><Copy size={15} /></button>
+        <button onClick={() => onDelete(p.id)} aria-label="Удалить" title="Удалить" className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-slate-300 transition hover:bg-rose-500/20 hover:text-rose-300"><Trash2 size={15} /></button>
+      </div>
+    </div>
   );
 }
 
@@ -259,26 +335,6 @@ function ProfitShareBar({ row }) {
   );
 }
 
-const STAT_TONES = {
-  blue: "bg-blue-500/15 text-blue-400",
-  emerald: "bg-emerald-500/15 text-emerald-400",
-  slate: "bg-slate-500/20 text-slate-300",
-  amber: "bg-amber-500/15 text-amber-300",
-};
-
-function StatCard({ icon: Icon, label, value, tone = "blue", sub, accent }) {
-  return (
-    <div className={`min-w-0 rounded-2xl border p-3 backdrop-blur sm:p-4 ${accent ? "border-emerald-500/20 bg-emerald-500/[0.07]" : "border-white/10 bg-white/[0.04]"}`}>
-      <div className="flex items-center gap-1.5 sm:gap-2.5">
-        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${STAT_TONES[tone]}`}><Icon size={16} strokeWidth={2.4} /></span>
-        <p className="min-w-0 truncate text-[10px] font-bold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-xs">{label}</p>
-      </div>
-      <p className={`mt-2 truncate text-lg font-black tabular-nums sm:text-2xl ${accent ? "text-emerald-400" : "text-white"}`}>{value}</p>
-      {sub && <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">{sub}</p>}
-    </div>
-  );
-}
-
 function ProblemChip({ active, onClick, icon: Icon, label, count, tone = "slate" }) {
   const t = TONE[tone] || TONE.slate;
   const dim = count === 0 && !active;
@@ -294,18 +350,6 @@ function ProblemChip({ active, onClick, icon: Icon, label, count, tone = "slate"
       <Icon size={13} /> {label}
       {count != null && <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-black/25" : "bg-white/10"}`}>{count}</span>}
     </button>
-  );
-}
-
-function SortTh({ label, k, sortKey, sortDir, onSort, align = "left" }) {
-  const activeSort = sortKey === k;
-  const Icon = !activeSort ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
-  return (
-    <th className={`p-4 ${align === "right" ? "text-right" : "text-left"}`}>
-      <button type="button" onClick={() => onSort(k)} className={`inline-flex items-center gap-1 font-bold transition hover:text-white ${activeSort ? "text-white" : ""}`}>
-        {label} <Icon size={13} className={activeSort ? "text-blue-400" : "text-slate-600"} />
-      </button>
-    </th>
   );
 }
 
@@ -372,7 +416,6 @@ export default function WorkPage() {
   const loadSeqRef = useRef(0);     // защита от гонки: устаревший ответ не затирает свежий
   const modalOpenRef = useRef(false); // открыта ли модалка — тогда поллинг паузим (замыкание видит актуальное через ref)
   const sigRef = useRef({}); // подписи слайсов: setState только если данные реально изменились
-  const isXl = useMediaQuery("(min-width: 1280px)");
 
   // Ставим состояние ТОЛЬКО когда данные реально поменялись. Иначе ссылка массива
   // остаётся прежней → React бейлит рендер, а цепочка useMemo (salesStatsByProduct →
@@ -658,7 +701,7 @@ export default function WorkPage() {
       const barPct = Math.max(0, (num(p.cleanProfit) / maxProfit) * 100);
       let tone;
       if (lossmaking) tone = "rose";
-      else if (noRecipe) tone = "slate";
+      else if (noRecipe && cost <= 0) tone = "slate"; // себестоимость правда неизвестна
       else if (marginPct >= MARGIN_GOOD) tone = "emerald";
       else if (marginPct >= MARGIN_LOW) tone = "amber";
       else tone = "orange";
@@ -1286,10 +1329,6 @@ export default function WorkPage() {
     }
   };
 
-  const toggleSort = (k) => {
-    if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(k); setSortDir(k === "name" ? "asc" : "desc"); }
-  };
   const SORT_LABELS = { profit: "По прибыли", margin: "По марже", qty: "По продажам", revenue: "По выручке", name: "По названию" };
   const avgMarginShown = displayTotals.revenue > 0 ? (displayTotals.cleanProfit / displayTotals.revenue) * 100 : null;
 
@@ -1346,39 +1385,66 @@ export default function WorkPage() {
         </div>
       </div>
 
-      {/* P&L статы меню за месяц */}
-      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-        <StatCard icon={Boxes} label="Продано / мес" value={num(monthTotals.quantity).toLocaleString("ru-RU")} tone="blue" sub={`${productRows.length} позиций`} />
-        <StatCard icon={Wallet} label="Выручка" value={formatMoney(monthTotals.revenue)} tone="blue" />
-        <StatCard icon={PackageX} label="Себестоимость" value={formatMoney(monthTotals.cost)} tone="slate" />
-        <StatCard icon={TrendingUp} label="Чистая прибыль" value={formatMoney(monthTotals.cleanProfit)} tone="emerald" accent
-          sub={menuHealth.avgMargin != null ? `средняя маржа ${Math.round(menuHealth.avgMargin)}%` : "продаж ещё нет"} />
-      </div>
+      {/* Герой: чистая прибыль + KPI-лента + якорь + проблемы */}
+      <div className="relative mb-4 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-600/[0.18] via-violet-600/[0.12] to-transparent p-5 shadow-2xl shadow-black/20 backdrop-blur sm:p-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="relative">
+          <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">Чистая прибыль · месяц</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2.5">
+            <p className={`text-3xl font-black leading-none tabular-nums sm:text-5xl ${monthTotals.cleanProfit < 0 ? "text-rose-400" : "text-emerald-400"}`}>{formatMoney(monthTotals.cleanProfit)}</p>
+            {menuHealth.avgMargin != null && (
+              <span className="rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-sm font-black text-emerald-300">ср. маржа {Math.round(menuHealth.avgMargin)}%</span>
+            )}
+          </div>
 
-      {/* Инсайты: якорь прибыли + клики-фильтры по проблемам */}
-      <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:p-4">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-500/15 text-amber-300"><Crown size={16} strokeWidth={2.4} /></span>
-          {menuHealth.anchor ? (
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Якорь прибыли</p>
-              <p className="truncate text-sm font-black text-white">{menuHealth.anchor.name} <span className="font-black text-emerald-300">· {Math.round(menuHealth.anchorShare)}% прибыли</span></p>
+          {/* KPI-лента */}
+          <div className="mt-4 grid grid-cols-3 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+            {[
+              { Ic: Boxes, label: `Продано · ${productRows.length} поз.`, value: num(monthTotals.quantity).toLocaleString("ru-RU"), tint: "bg-blue-500/15 text-blue-300" },
+              { Ic: Wallet, label: "Выручка", value: formatMoney(monthTotals.revenue), tint: "bg-blue-500/15 text-blue-300" },
+              { Ic: PackageX, label: "Себест.", value: formatMoney(monthTotals.cost), tint: "bg-slate-500/20 text-slate-300" },
+            ].map(({ Ic, label, value, tint }) => (
+              <div key={label} className="min-w-0 px-3 py-2.5">
+                <div className="flex items-center gap-1.5">
+                  <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${tint}`}><Ic size={14} strokeWidth={2.4} /></span>
+                  <p className="truncate text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
+                </div>
+                <p className="mt-1 truncate text-base font-black tabular-nums text-white sm:text-lg">{value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Якорь прибыли */}
+          {menuHealth.anchor && (
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.08] p-3">
+              <span className="relative shrink-0">
+                <CategoryAvatar name={menuHealth.anchor.name} category={menuHealth.anchor.category} type={menuHealth.anchor.typeName || menuHealth.anchor.type} size={40} />
+                <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-amber-500 text-slate-950 ring-2 ring-[#0b1120]"><Crown size={11} strokeWidth={2.6} /></span>
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-300/80">Якорь прибыли</p>
+                <p className="truncate text-sm font-black text-white">{menuHealth.anchor.name}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-lg font-black tabular-nums text-emerald-300">{Math.round(menuHealth.anchorShare)}%</p>
+                <p className="text-[10px] font-semibold text-slate-400">доли прибыли</p>
+              </div>
             </div>
-          ) : (
-            <p className="text-sm font-bold text-slate-400">Продаж за месяц ещё нет</p>
           )}
-        </div>
-        <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 sm:mx-0 sm:flex-wrap sm:justify-end sm:overflow-visible sm:px-0">
-          {menuHealth.problemTotal === 0 ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-2 text-xs font-black text-emerald-300"><Check size={13} /> Меню в порядке</span>
-          ) : (
-            <>
-              <ProblemChip active={problemFilter === "loss"} onClick={() => setProblemFilter((f) => (f === "loss" ? "all" : "loss"))} icon={TrendingDown} label="Убыточные" count={menuHealth.counts.lossmaking} tone="rose" />
-              <ProblemChip active={problemFilter === "noRecipe"} onClick={() => setProblemFilter((f) => (f === "noRecipe" ? "all" : "noRecipe"))} icon={PackageX} label="Без состава" count={menuHealth.counts.noRecipe} tone="slate" />
-              <ProblemChip active={problemFilter === "incomplete"} onClick={() => setProblemFilter((f) => (f === "incomplete" ? "all" : "incomplete"))} icon={AlertTriangle} label="Неполная с/с" count={menuHealth.counts.incompleteCost} tone="amber" />
-              <ProblemChip active={problemFilter === "notSelling"} onClick={() => setProblemFilter((f) => (f === "notSelling" ? "all" : "notSelling"))} icon={Package} label="Не продаётся" count={menuHealth.counts.notSelling} tone="slate" />
-            </>
-          )}
+
+          {/* Проблемы — лента чипов (клик-фильтры) */}
+          <div className="no-scrollbar -mx-5 mt-4 flex gap-2 overflow-x-auto px-5 sm:mx-0 sm:flex-wrap sm:px-0">
+            {menuHealth.problemTotal === 0 ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-2 text-xs font-black text-emerald-300"><Check size={13} /> Меню в порядке</span>
+            ) : (
+              <>
+                <ProblemChip active={problemFilter === "loss"} onClick={() => setProblemFilter((f) => (f === "loss" ? "all" : "loss"))} icon={TrendingDown} label="Убыточные" count={menuHealth.counts.lossmaking} tone="rose" />
+                <ProblemChip active={problemFilter === "noRecipe"} onClick={() => setProblemFilter((f) => (f === "noRecipe" ? "all" : "noRecipe"))} icon={PackageX} label="Без состава" count={menuHealth.counts.noRecipe} tone="slate" />
+                <ProblemChip active={problemFilter === "incomplete"} onClick={() => setProblemFilter((f) => (f === "incomplete" ? "all" : "incomplete"))} icon={AlertTriangle} label="Неполная с/с" count={menuHealth.counts.incompleteCost} tone="amber" />
+                <ProblemChip active={problemFilter === "notSelling"} onClick={() => setProblemFilter((f) => (f === "notSelling" ? "all" : "notSelling"))} icon={Package} label="Не продаётся" count={menuHealth.counts.notSelling} tone="slate" />
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1388,8 +1454,8 @@ export default function WorkPage() {
         </div>
       )}
 
-      <div className="rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-2xl shadow-black/20 backdrop-blur-xl overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-white/10 p-4 sm:p-5">
+      <div className="space-y-4">
+        <div className="sticky top-2 z-20 flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-lg shadow-black/30 backdrop-blur-xl sm:p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <h3 className="truncate text-lg font-black leading-tight text-white sm:text-xl">
@@ -1471,155 +1537,37 @@ export default function WorkPage() {
           </div>
         </div>
 
-        {isXl && (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1080px] text-left text-sm">
-            <thead className="bg-white/[0.03] text-slate-400">
-              <tr>
-                <SortTh label="Товар" k="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortTh label="Маржа" k="margin" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <th className="p-4 text-right">Цена / себест.</th>
-                <SortTh label="Продано" k="qty" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <SortTh label="Выручка" k="revenue" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <SortTh label="Чистая прибыль" k="profit" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <th className="p-4"></th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {displayRows.map((p) => {
-                const t = TONE[p.tone] || TONE.slate;
-                return (
-                <tr key={p.id} className={`border-t border-l-4 border-white/10 ${t.bl} align-top transition hover:bg-white/[0.03]`}>
-                  <td className="p-4">
-                    <p className="font-black text-white">{p.name}</p>
-                    <p className="mt-0.5 text-xs text-slate-400">{p.typeName || p.type} · {p.category}</p>
-                    <div className="mt-1.5"><StatusPills p={p} /></div>
-                  </td>
-                  <td className="p-4 text-right">
-                    <MarginBadge row={p} />
-                    {p.markupPct != null && <p className="mt-1 text-[10px] text-slate-500">наценка +{Math.round(p.markupPct)}%</p>}
-                  </td>
-                  <td className="p-4 text-right">
-                    <p className="font-black tabular-nums text-white">{formatMoney(p.price)}</p>
-                    <p className="text-xs tabular-nums text-slate-400">{formatMoney(p.cost)}{p.incompleteCost && <span className="text-amber-400"> · неполн.</span>}</p>
-                  </td>
-                  <td className="p-4 text-right font-black tabular-nums text-white">{p.quantity}</td>
-                  <td className="p-4 text-right font-black tabular-nums text-slate-200">{formatMoney(p.revenue)}</td>
-                  <td className="p-4 text-right">
-                    <p className={`font-black tabular-nums ${p.cleanProfit < 0 ? "text-rose-300" : "text-emerald-400"}`}>{formatMoney(p.cleanProfit)}</p>
-                    <div className="ml-auto mt-1.5 w-28"><ProfitShareBar row={p} /></div>
-                    <p className="mt-1 text-[10px] text-slate-500">{Math.round(p.profitShare)}% прибыли</p>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEditProduct(p)} className="inline-flex items-center gap-1 rounded-xl bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-400 hover:bg-blue-500/20"><Pencil size={14} /> Изменить</button>
-                      <button onClick={() => duplicateProduct(p)} aria-label="Дублировать" title="Дублировать" className="rounded-xl bg-white/5 px-3 py-2 font-black text-slate-300 transition hover:bg-white/10"><Copy size={16} /></button>
-                      <button onClick={() => deleteProduct(p.id)} aria-label="Удалить" title="Удалить" className="rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-400 hover:bg-red-500/20"><Trash2 size={16} /></button>
-                    </div>
-                  </td>
-                </tr>
-                );
-              })}
-
-              {!displayRows.length && (
-                <tr>
-                  <td colSpan="7" className="p-8 text-center text-slate-400">
-                    {problemFilter !== "all" ? "Под фильтр ничего не попало" : (search ? "Ничего не найдено" : "Товаров пока нет")}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-
-            <tfoot className="bg-[#070b1a] font-black text-white">
-              <tr>
-                <td className="p-4">Итого по выбранным</td>
-                <td className="p-4 text-right">{avgMarginShown != null ? <span className={`tabular-nums ${marginToneCls(avgMarginShown)}`}>{Math.round(avgMarginShown)}%</span> : <span className="text-slate-500">—</span>}</td>
-                <td className="p-4 text-right text-slate-400">{formatMoney(displayTotals.cost)}</td>
-                <td className="p-4 text-right">{displayTotals.quantity}</td>
-                <td className="p-4 text-right">{formatMoney(displayTotals.revenue)}</td>
-                <td className="p-4 text-right text-emerald-400">{formatMoney(displayTotals.cleanProfit)}</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        )}
-
-        {!isXl && (
-        <div className="divide-y divide-white/10">
-          {displayRows.map((p) => {
-            const t = TONE[p.tone] || TONE.slate;
-            return (
-            <div key={p.id} className={`border-l-4 p-3.5 ${t.bl}`}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate text-base font-black text-white">{p.name}</p>
-                    <MarginBadge row={p} />
-                  </div>
-                  <p className="mt-0.5 truncate text-xs text-slate-400">{p.typeName || p.type} · {p.category}</p>
-                  <div className="mt-1.5"><StatusPills p={p} /></div>
-                </div>
-
-                <div className="flex shrink-0 gap-1.5">
-                  <button onClick={() => openEditProduct(p)} aria-label="Изменить" title="Изменить" className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition hover:bg-blue-500/20"><Pencil size={16} /></button>
-                  <button onClick={() => duplicateProduct(p)} aria-label="Дублировать" title="Дублировать" className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 text-slate-300 transition hover:bg-white/10"><Copy size={16} /></button>
-                  <button onClick={() => deleteProduct(p.id)} aria-label="Удалить" title="Удалить" className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-500/10 font-black text-red-400 transition hover:bg-red-500/20"><Trash2 size={16} /></button>
-                </div>
-              </div>
-
-              <div className="mt-3 flex items-stretch gap-2">
-                <div className="flex-1 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-[11px] text-slate-500">Цена</span>
-                    <span className="text-sm font-black tabular-nums text-white">{formatMoney(p.price)}</span>
-                  </div>
-                  <div className="mt-1 flex items-baseline justify-between gap-2">
-                    <span className="text-[11px] text-slate-500">Себест.</span>
-                    <span className="text-sm font-black tabular-nums text-slate-300">{formatMoney(p.cost)}{p.incompleteCost && <span className="text-amber-400"> ·неполн.</span>}</span>
-                  </div>
-                </div>
-                <div className="flex-1 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.08] px-3 py-2">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-[11px] text-slate-500">Продано</span>
-                    <span className="text-sm font-black tabular-nums text-white">{p.quantity}</span>
-                  </div>
-                  <div className="mt-1 flex items-baseline justify-between gap-2">
-                    <span className="text-[11px] text-emerald-300/80">Прибыль</span>
-                    <span className={`text-sm font-black tabular-nums ${p.cleanProfit < 0 ? "text-rose-300" : "text-emerald-400"}`}>{formatMoney(p.cleanProfit)}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-2.5">
-                <ProfitShareBar row={p} />
-                <p className="mt-1 text-[10px] font-bold text-slate-500">{Math.round(p.profitShare)}% прибыли меню</p>
-              </div>
-            </div>
-          );
-          })}
-
-          {!displayRows.length && (
-            <div className="p-4">
-              <EmptyState
-                title={problemFilter !== "all" ? "Под фильтр ничего не попало" : (search ? "Ничего не найдено" : "Товаров пока нет")}
-                text={problemFilter !== "all" ? "Сбросьте быстрый фильтр, чтобы увидеть остальные товары." : (search ? "Попробуйте изменить запрос." : "Добавьте первый товар в меню — из него будут складываться продажи и себестоимость.")}
-                actionLabel={problemFilter !== "all" ? "Сбросить фильтр" : (search ? undefined : "+ Добавить товар")}
-                onAction={problemFilter !== "all" ? () => setProblemFilter("all") : (search ? undefined : openProductModal)}
-              />
-            </div>
-          )}
-
-          <div className="bg-[#070b1a] p-4 font-black text-white">
-            <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-slate-400">Итого по выбранным</p>
-            <div className="flex justify-between"><span>Кол-во</span><span>{displayTotals.quantity}</span></div>
-            <div className="flex justify-between"><span>Выручка</span><span>{formatMoney(displayTotals.revenue)}</span></div>
-            <div className="flex justify-between"><span>Чистая прибыль</span><span className="text-emerald-400">{formatMoney(displayTotals.cleanProfit)}</span></div>
-            {avgMarginShown != null && <div className="flex justify-between"><span>Средняя маржа</span><span className={marginToneCls(avgMarginShown)}>{Math.round(avgMarginShown)}%</span></div>}
+        {displayRows.length > 0 ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+            {displayRows.map((p) => (
+              <ProductCard key={p.id} p={p} onEdit={openEditProduct} onDuplicate={duplicateProduct} onDelete={deleteProduct} />
+            ))}
           </div>
-        </div>
+        ) : (
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
+            <EmptyState
+              title={problemFilter !== "all" ? "Под фильтр ничего не попало" : (search ? "Ничего не найдено" : "Товаров пока нет")}
+              text={problemFilter !== "all" ? "Сбросьте быстрый фильтр, чтобы увидеть остальные товары." : (search ? "Попробуйте изменить запрос." : "Добавьте первый товар в меню — из него будут складываться продажи и себестоимость.")}
+              actionLabel={problemFilter !== "all" ? "Сбросить фильтр" : (search ? undefined : "+ Добавить товар")}
+              onAction={problemFilter !== "all" ? () => setProblemFilter("all") : (search ? undefined : openProductModal)}
+            />
+          </div>
         )}
+
+        {/* Итого по выбранным */}
+        {displayRows.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
+            <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Итого по выбранным</p>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm font-semibold">
+              <span className="text-slate-400">Продано <b className="tabular-nums text-white">{displayTotals.quantity}</b></span>
+              <span className="text-slate-400">Выручка <b className="tabular-nums text-white">{formatMoney(displayTotals.revenue)}</b></span>
+              <span className="text-slate-400">Себест. <b className="tabular-nums text-slate-200">{formatMoney(displayTotals.cost)}</b></span>
+              <span className="text-slate-400">Чистая прибыль <b className="tabular-nums text-emerald-400">{formatMoney(displayTotals.cleanProfit)}</b></span>
+              {avgMarginShown != null && <span className="text-slate-400">Ср. маржа <b className={`tabular-nums ${marginToneCls(avgMarginShown)}`}>{Math.round(avgMarginShown)}%</b></span>}
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* Резерв под плавающую кнопку, чтобы она не перекрывала итог/последнюю карточку на телефоне */}
