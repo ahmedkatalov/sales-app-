@@ -162,6 +162,7 @@ func main() {
 	auth.POST("/sales", createSale)
 	auth.GET("/sales", getSales)
 	auth.GET("/sales/stats", getSalesStats)
+	auth.GET("/sales/daily", getSalesDaily)
 
 	// Денежная касса (смена)
 	auth.GET("/cash/shift/current", getCurrentCashShift)

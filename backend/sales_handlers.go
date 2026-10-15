@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -824,4 +825,79 @@ func getSalesStats(c *gin.Context) {
 
 	stats["topProducts"] = topProducts
 	c.JSON(http.StatusOK, stats)
+}
+
+// GET /sales/daily?days=7 — дневные агрегаты (выручка/прибыль/чеки) за последние N дней
+// по рабочему дню точки. Для спарклайна и дельты «сегодня vs вчера» на главной —
+// один вызов вместо N. Возвращает только дни, где были продажи; фронт заполняет пропуски.
+func getSalesDaily(c *gin.Context) {
+	accID := accountID(c)
+	off := dayOffset(accID)
+
+	days := 7
+	if q := c.Query("days"); q != "" {
+		if n, err := strconv.Atoi(q); err == nil && n > 0 {
+			days = n
+		}
+	}
+	if days > 62 {
+		days = 62
+	}
+	back := fmt.Sprintf(",'-%d days'", days-1)
+
+	// revenue + count по дням
+	revByDay := map[string][2]float64{} // date -> [revenue, count]
+	rows, err := db.Query(`
+		SELECT date(created_at, 'localtime'`+off+`) d,
+		       IFNULL(SUM(total), 0),
+		       COUNT(*)
+		FROM sales
+		WHERE account_id = ? AND date(created_at, 'localtime'`+off+`) >= date('now','localtime'`+off+back+`)
+		GROUP BY d
+	`, accID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	for rows.Next() {
+		var d string
+		var rev, cnt float64
+		if rows.Scan(&d, &rev, &cnt) == nil {
+			revByDay[d] = [2]float64{rev, cnt}
+		}
+	}
+	rows.Close()
+
+	// себестоимость по дням
+	costByDay := map[string]float64{}
+	crows, cerr := db.Query(`
+		SELECT date(s.created_at, 'localtime'`+off+`) d,
+		       IFNULL(SUM(IFNULL(si.cost, IFNULL(mp.cost, 0)) * si.qty), 0)
+		FROM sale_items si
+		JOIN sales s ON s.id = si.sale_id
+		LEFT JOIN menu_products mp ON mp.id = si.product_id AND mp.account_id = s.account_id
+		WHERE s.account_id = ? AND date(s.created_at, 'localtime'`+off+`) >= date('now','localtime'`+off+back+`)
+		GROUP BY d
+	`, accID)
+	if cerr == nil {
+		for crows.Next() {
+			var d string
+			var cost float64
+			if crows.Scan(&d, &cost) == nil {
+				costByDay[d] = cost
+			}
+		}
+		crows.Close()
+	}
+
+	out := []gin.H{}
+	for d, rc := range revByDay {
+		out = append(out, gin.H{
+			"date":       d,
+			"revenue":    rc[0],
+			"salesCount": rc[1],
+			"profit":     rc[0] - costByDay[d],
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"days": out})
 }
