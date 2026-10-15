@@ -161,12 +161,14 @@ export default function AppearancePage() {
   const update = (partial) => setAp(setAppearance(partial));
 
   const applyPreset = (p) => {
-    setAp(setAppearance({ ...DEFAULT_APPEARANCE, ...p.appearance }));
+    // Сбрасываем свой цвет фона/блоков к прозрачному — чтобы «стеклянные»
+    // пресеты оставались стеклянными. «Стандарт» вернёт сплошной цвет сам.
+    setAp(setAppearance({ ...DEFAULT_APPEARANCE, bg: null, surface: null, ...p.appearance }));
     if (p.mode) { setTheme(p.mode); }
     notify(`Тема «${p.name}» применена`, "success");
   };
 
-  const applyCustom = (t) => { setAp(setAppearance({ ...DEFAULT_APPEARANCE, ...t.appearance })); notify(`Тема «${t.name}» применена`, "success"); };
+  const applyCustom = (t) => { setAp(setAppearance({ ...DEFAULT_APPEARANCE, bg: null, surface: null, ...t.appearance })); notify(`Тема «${t.name}» применена`, "success"); };
 
   const onSurprise = () => { setAp(setAppearance(randomAppearance())); notify("Случайная тема применена", "success"); };
 

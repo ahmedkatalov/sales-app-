@@ -25,8 +25,8 @@ export const DEFAULT_APPEARANCE = {
   warning: null,
   error: null,
   info: null,
-  bg: null,          // цвет фона приложения (null = родной тёмный)
-  surface: null,     // цвет блоков/карточек (null = полупрозрачный по умолчанию)
+  bg: "#0a0e17",     // цвет фона приложения — глубокий тёмный (плоский премиум-вид)
+  surface: "#141a28", // цвет блоков/карточек — сплошной, без стекла (разделение держат бордеры)
   radius: 1,         // множитель скругления (0 = острые, 1.8 = «таблетка»)
   glass: false,      // стеклянные поверхности (backdrop-blur) — по умолчанию выкл (плоский вид)
   blur: 1,           // множитель силы размытия стекла
@@ -386,6 +386,7 @@ export function randomAppearance() {
   const [accent, accent2] = pick(RANDOM_PAIRS);
   return {
     ...DEFAULT_APPEARANCE,
+    bg: null, surface: null,
     accent, accent2,
     radius: pick([0.6, 0.9, 1, 1.1, 1.2, 1.35]),
     glass: Math.random() > 0.3,
