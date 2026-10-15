@@ -40,11 +40,11 @@ export default function Modal({ title, section, children, wide, onClose, legacyL
       <style>{`
         .smart-modal-panel {
           background:
-            radial-gradient(circle at 10% 0%, rgba(37, 99, 235, 0.18), transparent 32%),
-            radial-gradient(circle at 90% 0%, rgba(124, 58, 237, 0.18), transparent 34%),
-            linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
-          border: 1px solid rgba(148, 163, 184, 0.18);
-          box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            radial-gradient(circle at 12% 0%, rgba(37, 99, 235, 0.10), transparent 36%),
+            radial-gradient(circle at 88% 0%, rgba(124, 58, 237, 0.10), transparent 38%),
+            linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.99));
+          border: 1px solid rgba(148, 163, 184, 0.16);
+          box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
         }
         .smart-modal-panel.legacy-light .bg-white,
         .smart-modal-panel.legacy-light .bg-slate-50,
@@ -151,36 +151,36 @@ export default function Modal({ title, section, children, wide, onClose, legacyL
         onClick={handleBackdrop}
       >
         <div
-          className={`animate-sheet smart-modal-panel ${legacyLight ? "legacy-light" : ""} flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-[1.75rem] sm:rounded-4xl ${
-            wide ? "max-w-[920px]" : "max-w-[520px]"
+          className={`animate-sheet smart-modal-panel ${legacyLight ? "legacy-light" : ""} flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-3xl ${
+            wide ? "max-w-[760px]" : "max-w-[460px]"
           }`}
         >
-          <div className="flex-none border-b border-white/10 bg-slate-950/60 px-5 py-4 backdrop-blur-xl sm:px-6 sm:py-5">
+          <div className="flex-none border-b border-white/10 bg-slate-950/60 px-5 py-3.5 backdrop-blur-xl sm:py-4">
             {onClose ? (
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Закрыть"
-                className="mx-auto mb-3.5 flex h-6 w-16 items-center justify-center sm:hidden"
+                className="mx-auto mb-3 flex h-5 w-16 items-center justify-center sm:hidden"
               >
                 <span className="h-1 w-10 rounded-full bg-white/25" />
               </button>
             ) : (
-              <div className="mb-3.5 flex justify-center sm:hidden">
+              <div className="mb-3 flex justify-center sm:hidden">
                 <div className="h-1 w-10 rounded-full bg-white/25" />
               </div>
             )}
             <div className="flex items-start justify-between gap-3">
-              <div>
-                {section && <p className="text-[11px] font-black uppercase tracking-[0.22em] text-blue-300/80">{section}</p>}
-                <h2 className={`text-2xl font-black leading-tight text-white sm:text-3xl ${section ? "mt-0.5" : ""}`}>{title}</h2>
+              <div className="min-w-0">
+                {section && <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300/80">{section}</p>}
+                <h2 className={`text-lg font-black leading-tight text-white sm:text-xl ${section ? "mt-0.5" : ""}`}>{title}</h2>
               </div>
               {onClose && (
                 <button
                   type="button"
                   onClick={onClose}
                   aria-label="Закрыть"
-                  className="hidden shrink-0 rounded-xl p-2 text-slate-400 transition hover:bg-white/5 hover:text-white sm:block"
+                  className="hidden shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-white/5 hover:text-white sm:block"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -188,7 +188,7 @@ export default function Modal({ title, section, children, wide, onClose, legacyL
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 text-slate-200 sm:px-6 sm:py-6">
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 text-slate-200 sm:py-5">
             {children}
           </div>
         </div>

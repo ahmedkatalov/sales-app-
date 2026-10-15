@@ -2056,7 +2056,7 @@ export default function WorkPage() {
             <button
               type="button"
               onClick={() => setProductForm((p) => ({ ...p, isExtra: !p.isExtra }))}
-              className={`col-span-2 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+              className={`sm:col-span-2 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
                 productForm.isExtra
                   ? "border-amber-400/40 bg-amber-500/10"
                   : "border-white/10 bg-white/5 hover:bg-white/10"
@@ -2074,7 +2074,7 @@ export default function WorkPage() {
             <button
               type="button"
               onClick={() => setProductForm((p) => ({ ...p, hidden: !p.hidden }))}
-              className={`col-span-2 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+              className={`sm:col-span-2 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
                 productForm.hidden
                   ? "border-white/10 bg-white/5 hover:bg-white/10"
                   : "border-emerald-400/40 bg-emerald-500/10"
