@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Banknote, CreditCard, User, Tag, Settings, Hash, List, Trash2, Paperclip, Camera, X } from "lucide-react";
+import { ArrowDownWideNarrow, Banknote, CalendarDays, CreditCard, Crown, Flame, Hash, Settings, Trash2, TrendingDown, Paperclip, Camera, User, X } from "lucide-react";
 import { del, get, post, put, fetchBlobUrl } from "../api";
 import { compressImageToDataURL } from "../utils/image";
 import Modal from "../components/Modal";
@@ -32,6 +32,29 @@ const HOUSEHOLD_TYPES = [
 
 const BASE_PRODUCT_TYPES = ["Общий продуктовый расход"];
 
+// Цвет источника оплаты (касса/карта/личные владельца) — единый сигнал.
+const SRC_RAIL = { cash: "border-l-emerald-400/70", card: "border-l-blue-400/70", owner: "border-l-amber-400/70" };
+const catDot = (c) => (c === "products" ? "bg-emerald-400" : "bg-blue-400");
+
+function MetricTile({ icon: Icon, label, value, sub, tone = "slate" }) {
+  const tones = {
+    red: "border-red-400/25 bg-red-500/[0.08] text-red-300",
+    blue: "border-blue-400/25 bg-blue-500/[0.08] text-blue-300",
+    violet: "border-violet-400/25 bg-violet-500/[0.08] text-violet-300",
+    slate: "border-white/10 bg-white/[0.05] text-slate-300",
+  };
+  return (
+    <div className={`min-w-0 rounded-2xl border p-3.5 backdrop-blur-xl sm:p-4 ${tones[tone]}`}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="truncate text-[10px] font-black uppercase tracking-wide opacity-90">{label}</p>
+        <Icon size={16} className="shrink-0 opacity-70" />
+      </div>
+      <p className="mt-2 truncate text-xl font-black tabular-nums text-white sm:text-2xl">{value}</p>
+      {sub && <p className="truncate text-[11px] font-semibold text-slate-500">{sub}</p>}
+    </div>
+  );
+}
+
 export default function ExpensesPage({ currentProfile, workerMode }) {
   const [types, setTypes] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -40,6 +63,9 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   const [fromDate, setFromDate] = useState(monthStart());
   const [toDate, setToDate] = useState(monthEnd());
   const [filterOpen, setFilterOpen] = useState(false);
+  const [sortBy, setSortBy] = useState("date"); // date | amount
+  const [showAllTypes, setShowAllTypes] = useState(false);
+  const [todayStr] = useState(() => today());
   const [expenseModal, setExpenseModal] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState(null);
   const [error, setError] = useState("");
@@ -196,6 +222,46 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
     }
     return acc;
   }, [visibleExpenses]);
+
+  // ── «Куда уходят деньги»: производные (без бэкенда) ──
+  const periodDays = useMemo(() => {
+    if (fromDate && toDate) {
+      const end = toDate > todayStr ? todayStr : toDate;
+      return Math.max(1, Math.round((new Date(end) - new Date(fromDate)) / 864e5) + 1);
+    }
+    const ds = visibleExpenses.map((e) => String(e.createdAt || "").slice(0, 10)).filter(Boolean).sort();
+    return ds.length ? Math.max(1, Math.round((new Date(ds[ds.length - 1]) - new Date(ds[0])) / 864e5) + 1) : 1;
+  }, [fromDate, toDate, visibleExpenses, todayStr]);
+  const avgPerDay = periodDays > 0 ? total / periodDays : 0;
+  const largest = useMemo(() => visibleExpenses.reduce((m, e) => (num(e.amount) > num(m?.amount || 0) ? e : m), null), [visibleExpenses]);
+  const withPhoto = useMemo(() => visibleExpenses.filter((e) => e.hasPhoto).length, [visibleExpenses]);
+
+  const byType = useMemo(() => {
+    const m = new Map();
+    for (const e of visibleExpenses) {
+      const k = e.type || "Прочее";
+      const c = m.get(k) || { type: k, category: e.category, amount: 0, count: 0 };
+      c.amount += num(e.amount);
+      c.count += 1;
+      m.set(k, c);
+    }
+    const arr = [...m.values()].sort((a, b) => b.amount - a.amount);
+    const max = arr[0]?.amount || 1;
+    return arr.map((r) => ({ ...r, share: total > 0 ? (r.amount / total) * 100 : 0, barPct: (r.amount / max) * 100 }));
+  }, [visibleExpenses, total]);
+
+  const sortedExpenses = useMemo(() => {
+    const arr = [...visibleExpenses];
+    if (sortBy === "amount") return arr.sort((a, b) => num(b.amount) - num(a.amount));
+    return arr.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  }, [visibleExpenses, sortBy]);
+
+  const pct = (x) => (total > 0 ? (x / total) * 100 : 0);
+  const drillType = (row) => {
+    setFilterCategory(row.category || "all");
+    setFilterType(row.type);
+    if (typeof document !== "undefined") document.getElementById("expenses-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // «Бизнес должен владельцу» — накопительно по всем расходам из личных денег владельца
   // (возвраты владельцу появятся в следующей фазе и будут уменьшать эту сумму).
@@ -503,35 +569,63 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-        <div className="rounded-2xl border border-red-400/25 bg-red-500/[0.08] p-3 backdrop-blur-xl sm:p-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-500/20 text-red-300 sm:h-9 sm:w-9 sm:rounded-xl">₽</span>
-            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-red-200/90 sm:text-[11px]">Итого расходов</p>
-          </div>
-          <p className="mt-2 text-xl font-black tabular-nums text-white sm:text-2xl">{formatMoney(total)}</p>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-500/15 text-slate-300 sm:h-9 sm:w-9 sm:rounded-xl"><Hash className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Записей</p>
-          </div>
-          <p className="mt-2 text-xl font-black text-white sm:text-2xl">{visibleExpenses.length}</p>
-        </div>
-        <div className="rounded-2xl border border-blue-400/20 bg-blue-500/[0.08] p-3 backdrop-blur-xl sm:p-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 text-blue-300 sm:h-9 sm:w-9 sm:rounded-xl"><Tag className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-blue-200/90 sm:text-[11px]">Категория</p>
-          </div>
-          <p className="mt-2 truncate text-base font-black text-white sm:text-xl">{filterCategory === "all" ? "Все" : categoryLabel(filterCategory)}</p>
-        </div>
-        <div className="rounded-2xl border border-violet-400/20 bg-violet-500/[0.08] p-3 backdrop-blur-xl sm:p-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-violet-300 sm:h-9 sm:w-9 sm:rounded-xl"><List className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-violet-200/90 sm:text-[11px]">Тип</p>
-          </div>
-          <p className="mt-2 truncate text-base font-black text-white sm:text-xl">{filterType === "all" ? "Все типы" : filterType}</p>
-        </div>
+        <MetricTile icon={TrendingDown} label="Итого расходов" value={formatMoney(total)} sub="за период" tone="red" />
+        <MetricTile icon={CalendarDays} label="Средний в день" value={formatMoney(Math.round(avgPerDay))} sub={`≈ ${periodDays} ${periodDays === 1 ? "день" : periodDays < 5 ? "дня" : "дней"} в периоде`} tone="blue" />
+        <MetricTile icon={Flame} label="Крупнейший" value={largest ? formatMoney(largest.amount) : "—"} sub={largest ? largest.name : "—"} tone="violet" />
+        <MetricTile icon={Hash} label="Записей" value={visibleExpenses.length} sub={withPhoto ? `${withPhoto} с фото` : "за период"} tone="slate" />
       </div>
+
+      {/* ── Куда уходят деньги ── */}
+      {visibleExpenses.length > 0 && (
+        <div className="mb-5 rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-2xl backdrop-blur-xl sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-black text-white sm:text-xl">Куда уходят деньги</h3>
+              <p className="text-xs font-semibold text-slate-400">Крупнейшие статьи за период</p>
+            </div>
+          </div>
+
+          {/* топ статей по типу */}
+          <div className="space-y-3">
+            {(showAllTypes ? byType : byType.slice(0, 6)).map((r, i) => (
+              <button key={r.type} type="button" onClick={() => drillType(r)} className="block w-full text-left">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${catDot(r.category)}`} />
+                    <span className="truncate font-black text-white">{r.type}</span>
+                    {i === 0 && <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-300"><Crown size={11} /><span className="hidden sm:inline">Крупнейшая</span></span>}
+                    <span className="hidden shrink-0 text-xs text-slate-500 sm:inline">{r.count} {r.count === 1 ? "запись" : r.count < 5 ? "записи" : "записей"}</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums font-black text-white">{formatMoney(r.amount)} <span className="font-bold text-slate-500">· {Math.round(r.share)}%</span></span>
+                </div>
+                <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-white/10">
+                  <div className={`h-full rounded-full bg-gradient-to-r transition-[width] duration-500 ${i === 0 ? "from-amber-400 to-amber-500" : "from-blue-500/80 to-violet-500/80"}`} style={{ width: `${Math.max(4, r.barPct)}%` }} />
+                </div>
+              </button>
+            ))}
+            {byType.length > 6 && (
+              <button type="button" onClick={() => setShowAllTypes((v) => !v)} className="text-xs font-black text-blue-300 hover:text-blue-200">
+                {showAllTypes ? "Свернуть" : `+${byType.length - 6} других статей · показать`}
+              </button>
+            )}
+          </div>
+
+          {/* сплит-бар источников */}
+          <div className="mt-5 border-t border-white/10 pt-4">
+            <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-slate-400">Из какого кармана</p>
+            <div className="flex h-3 w-full overflow-hidden rounded-full bg-white/10">
+              <div className="bg-emerald-400/85" style={{ width: `${pct(bySource.cash)}%` }} />
+              <div className="bg-blue-400/85" style={{ width: `${pct(bySource.card)}%` }} />
+              <div className="bg-amber-400/85" style={{ width: `${pct(bySource.owner)}%` }} />
+            </div>
+            <div className="mt-2.5 grid grid-cols-3 gap-2 text-xs">
+              <div className="min-w-0"><p className="flex items-center gap-1.5 font-black text-emerald-300"><Banknote size={14} /> Из кассы</p><p className="truncate tabular-nums text-white">{formatMoney(bySource.cash)} <span className="text-slate-500">· {Math.round(pct(bySource.cash))}%</span></p></div>
+              <div className="min-w-0"><p className="flex items-center gap-1.5 font-black text-blue-300"><CreditCard size={14} /> С карты</p><p className="truncate tabular-nums text-white">{formatMoney(bySource.card)} <span className="text-slate-500">· {Math.round(pct(bySource.card))}%</span></p></div>
+              <div className="min-w-0"><p className="flex items-center gap-1.5 font-black text-amber-300"><User size={14} /> Личные</p><p className="truncate tabular-nums text-white">{formatMoney(bySource.owner)} <span className="text-slate-500">· {Math.round(pct(bySource.owner))}%</span></p></div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Расчёты с владельцем — отдельная карточка, только владельцу/админу (эндпоинт вернул данные) */}
       {ownerFin && (
@@ -597,11 +691,12 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.06] shadow-2xl backdrop-blur-xl">
+      <div id="expenses-list" className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.06] shadow-2xl backdrop-blur-xl">
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-bold text-blue-300">
               {filterCategory === "all" ? "Все расходы" : categoryLabel(filterCategory)}
+              {filterType !== "all" ? ` · ${filterType}` : ""}
             </p>
             <h3 className="text-2xl font-black text-white sm:text-3xl">Список расходов</h3>
             <p className="mt-1 text-sm text-slate-400">
@@ -611,33 +706,20 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             </p>
           </div>
 
-          {/* На телефоне добавление — плавающей кнопкой снизу, итог — в карточке сверху */}
-          <div className="hidden gap-3 sm:flex sm:items-center">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="relative">
+              <ArrowDownWideNarrow size={16} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 pl-8 pr-3 text-sm font-bold text-white outline-none">
+                <option value="date" className="bg-slate-900">Сначала новые</option>
+                <option value="amount" className="bg-slate-900">По сумме</option>
+              </select>
+            </div>
             <button
               onClick={() => setExpenseModal(true)}
-              className="rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)]"
+              className="hidden rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] sm:block"
             >
               + Добавить расход
             </button>
-          </div>
-        </div>
-
-        {/* Разбивка расходов по источнику оплаты (за период) */}
-        <div className="mb-4 grid grid-cols-1 gap-2.5 px-5 sm:grid-cols-3 sm:gap-3 sm:px-6">
-          <div className="min-w-0 rounded-2xl border border-emerald-400/15 bg-emerald-500/[0.07] px-4 py-3">
-            <p className="flex min-w-0 items-center gap-1.5 truncate text-[11px] font-black uppercase tracking-wide text-emerald-300/80"><Banknote size={14} strokeWidth={2.4} /> Из кассы</p>
-            <p className="mt-1 truncate text-base font-black tabular-nums text-white sm:text-xl">{formatMoney(bySource.cash)}</p>
-            <p className="hidden text-[11px] font-bold text-slate-500 sm:block">уменьшили наличные</p>
-          </div>
-          <div className="min-w-0 rounded-2xl border border-blue-400/15 bg-blue-500/[0.07] px-4 py-3">
-            <p className="flex min-w-0 items-center gap-1.5 truncate text-[11px] font-black uppercase tracking-wide text-blue-300/80"><CreditCard size={14} strokeWidth={2.4} /> С карты</p>
-            <p className="mt-1 truncate text-base font-black tabular-nums text-white sm:text-xl">{formatMoney(bySource.card)}</p>
-            <p className="hidden text-[11px] font-bold text-slate-500 sm:block">перевод/карта</p>
-          </div>
-          <div className="min-w-0 rounded-2xl border border-amber-400/15 bg-amber-500/[0.07] px-4 py-3">
-            <p className="flex min-w-0 items-center gap-1.5 truncate text-[11px] font-black uppercase tracking-wide text-amber-300/80"><User size={14} strokeWidth={2.4} /> Личные владельца</p>
-            <p className="mt-1 truncate text-base font-black tabular-nums text-white sm:text-xl">{formatMoney(bySource.owner)}</p>
-            <p className="hidden text-[11px] font-bold text-slate-500 sm:block">за период · кассу не трогали</p>
           </div>
         </div>
 
@@ -657,8 +739,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             </thead>
 
             <tbody>
-              {visibleExpenses.map((e) => (
-                <tr key={e.id} className="border-b border-white/10 bg-slate-950/20 transition hover:bg-white/[0.05]">
+              {sortedExpenses.map((e) => (
+                <tr key={e.id} className={`border-b border-l-4 border-white/10 bg-slate-950/20 transition hover:bg-white/[0.05] ${SRC_RAIL[e.paymentSource] || SRC_RAIL.cash}`}>
                   <td className="p-4 font-bold text-slate-400">{String(e.createdAt || "").slice(0, 10) || "—"}</td>
                   <td className="p-4 font-black text-white">{categoryLabel(e.category)}</td>
                   <td className="p-4 text-slate-300">{e.type || "—"}</td>
@@ -712,8 +794,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         </div>
 
         <div className="divide-y divide-white/10 xl:hidden">
-          {visibleExpenses.map((e) => (
-            <div key={e.id} className="flex items-start justify-between gap-3 p-3.5">
+          {sortedExpenses.map((e) => (
+            <div key={e.id} className={`flex items-start justify-between gap-3 border-l-4 p-3.5 ${SRC_RAIL[e.paymentSource] || SRC_RAIL.cash}`}>
               <div className="min-w-0">
                 <p className="truncate text-base font-black text-white">{e.name}</p>
                 <p className="truncate text-xs text-slate-400">{categoryLabel(e.category)} · {e.type || "—"}</p>
