@@ -3,6 +3,8 @@ import {
   BarChart3, Bot, Briefcase, Clock, FileText, Lightbulb,
   Package, ShoppingCart, Trash2, TrendingUp, Wallet,
   ClipboardList, Copy, RefreshCw,
+  LayoutDashboard, SlidersHorizontal, Building2, KeyRound, Users, Share2,
+  ShieldCheck, CreditCard, ChevronRight, LogOut, UserRound, Settings2, Pencil, Store,
 } from "lucide-react";
 import {
   del,
@@ -35,27 +37,27 @@ const ALL_PAGES = [
 const isAssignable = (u) => u.role === "worker" || u.role === "workspace";
 
 const ownerTabs = [
-  { id: "overview",     label: "Обзор" },
-  { id: "settings",     label: "Настройки точки" },
-  { id: "branches",     label: "Точки" },
-  { id: "accounts",     label: "Логины" },
-  { id: "employees",    label: "Продавцы" },
-  { id: "access",       label: "Доступ к точкам" },
-  { id: "permissions",  label: "Права на страницы" },
-  { id: "cards",        label: "Карты" },
+  { id: "overview",     label: "Обзор",              icon: LayoutDashboard },
+  { id: "settings",     label: "Настройки точки",    icon: SlidersHorizontal },
+  { id: "branches",     label: "Точки",              icon: Building2 },
+  { id: "accounts",     label: "Логины",             icon: KeyRound },
+  { id: "employees",    label: "Продавцы",           icon: Users },
+  { id: "access",       label: "Доступ к точкам",    icon: Share2 },
+  { id: "permissions",  label: "Права на страницы",  icon: ShieldCheck },
+  { id: "cards",        label: "Карты",              icon: CreditCard },
 ];
 
 const adminTabs = [
-  { id: "overview",   label: "Обзор" },
-  { id: "settings",   label: "Настройки точки" },
-  { id: "employees",  label: "Продавцы" },
-  { id: "accounts",   label: "Логины" },
-  { id: "cards",      label: "Карты" },
+  { id: "overview",   label: "Обзор",           icon: LayoutDashboard },
+  { id: "settings",   label: "Настройки точки", icon: SlidersHorizontal },
+  { id: "employees",  label: "Продавцы",        icon: Users },
+  { id: "accounts",   label: "Логины",          icon: KeyRound },
+  { id: "cards",      label: "Карты",           icon: CreditCard },
 ];
 
 const workerTabs = [
-  { id: "overview",   label: "Обзор" },
-  { id: "employees",  label: "Продавцы" },
+  { id: "overview",   label: "Обзор",    icon: LayoutDashboard },
+  { id: "employees",  label: "Продавцы", icon: Users },
 ];
 
 export default function ProfilePage({
@@ -72,6 +74,11 @@ export default function ProfilePage({
   const tabs = isOwner ? ownerTabs : isBranchAdmin ? adminTabs : workerTabs;
 
   const [activeTab, setActiveTab] = useState("overview");
+  const activePillRef = useRef(null);
+  // Автоцентрирование активной вкладки в мобильной ленте (косметика).
+  useEffect(() => {
+    try { activePillRef.current?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" }); } catch { /* ignore */ }
+  }, [activeTab]);
   const [ownerName, setOwnerName] = useState(session?.ownerName || "");
   const [ownerSaving, setOwnerSaving] = useState(false);
   const [ownerSaved, setOwnerSaved] = useState(false);
@@ -507,75 +514,130 @@ export default function ProfilePage({
       </div>
 
       <div className="relative z-10">
-        <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-blue-400">{accountTypeLabel}</p>
-            <h2 className="text-3xl font-black leading-none text-white sm:text-5xl">Настройки</h2>
-            <p className="mt-2 text-sm text-slate-400 sm:text-base">
-              {isOwner
-                ? "Точки, логины для входа и продавцы."
-                : "Выбор продавца и управление текущей точкой."}
-            </p>
+        <header className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-lg shadow-blue-900/30">
+              <Settings2 size={22} strokeWidth={2.4} className="text-white" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-black uppercase tracking-wider text-blue-400">{accountTypeLabel}</p>
+              <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">Настройки</h2>
+              <p className="mt-1 truncate text-sm text-slate-400">
+                {isOwner ? "Точки, логины и продавцы" : "Продавцы и текущая точка"}
+              </p>
+            </div>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
-            <ThemeToggle variant="full" className="w-full sm:w-auto" />
+          <div className="flex w-full gap-2 lg:w-auto">
+            <ThemeToggle variant="full" className="flex-1 lg:flex-none" />
             <button type="button" onClick={logout}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-500/25 bg-red-500/10 px-5 py-3 font-black text-red-300 transition hover:bg-red-500/20 sm:w-auto lg:w-auto">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-              Выйти
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-red-500/25 bg-red-500/10 px-5 py-3 font-black text-red-300 transition hover:bg-red-500/20 lg:flex-none">
+              <LogOut size={16} strokeWidth={2.4} /> Выйти
             </button>
           </div>
         </header>
 
-        <div className="mb-5"><InstallAppCard /></div>
+        <div className="mb-4"><InstallAppCard /></div>
 
         {error && (
           <div role="alert" className="mb-4 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 font-bold text-red-300">{error}</div>
         )}
 
-        {/* Табы */}
-        <section className="mb-5 rounded-3xl border border-white/10 bg-[#0f172a]/80 p-2 shadow-2xl backdrop-blur">
-          <div role="tablist" className="flex flex-wrap gap-2">
-            {tabs.map((tab) => (
-              <button key={tab.id} type="button" role="tab"
-                aria-selected={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`rounded-2xl px-4 py-2.5 text-sm font-black transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 sm:px-5 sm:py-3 ${
-                  activeTab === tab.id
-                    ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg"
-                    : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"
-                }`}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </section>
+        {/* Навигация (боковой рейл на десктопе, лента на телефоне) + контент */}
+        <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[256px_1fr]">
+          <aside className="lg:sticky lg:top-4 lg:self-start">
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] shadow-lg backdrop-blur">
+              {/* Мобильная лента вкладок */}
+              <nav role="tablist" aria-label="Разделы настроек"
+                className="flex gap-2 overflow-x-auto p-2 lg:hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                {tabs.map((tab) => {
+                  const active = activeTab === tab.id;
+                  return (
+                    <button key={tab.id} ref={active ? activePillRef : null} type="button" role="tab" aria-selected={active}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex shrink-0 snap-start items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
+                        active ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg" : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"
+                      }`}>
+                      <tab.icon size={16} strokeWidth={2.4} /> <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+              {/* Десктоп-рейл */}
+              <nav role="tablist" aria-label="Разделы настроек" className="hidden lg:flex lg:flex-col lg:gap-1 lg:p-3">
+                <p className="px-3.5 pb-2 pt-1 text-[11px] font-black uppercase tracking-wider text-slate-500">Разделы</p>
+                {tabs.map((tab) => {
+                  const active = activeTab === tab.id;
+                  return (
+                    <button key={tab.id} type="button" role="tab" aria-selected={active}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`group relative flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-black transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
+                        active ? "bg-gradient-to-r from-blue-600/20 to-violet-600/15 text-white" : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-100"
+                      }`}>
+                      {active && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-full bg-gradient-to-b from-blue-400 to-violet-400" />}
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition ${active ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/40" : "bg-white/5 text-slate-400 group-hover:text-slate-200"}`}>
+                        <tab.icon size={18} strokeWidth={2.4} />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-left">{tab.label}</span>
+                      {active && <ChevronRight size={15} className="shrink-0 text-blue-300" />}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+          </aside>
 
-        {loading && <div className="mb-4 rounded-2xl border border-blue-500/25 bg-blue-500/10 px-4 py-3 font-bold text-blue-300">Загрузка…</div>}
+          <div className="min-w-0 space-y-5">
+            {loading && <div className="rounded-2xl border border-blue-500/25 bg-blue-500/10 px-4 py-3 font-bold text-blue-300">Загрузка…</div>}
 
         {/* ── Обзор ── */}
         {activeTab === "overview" && (
           <section className="grid gap-5 xl:grid-cols-3">
-            <div className="overflow-hidden rounded-[32px] border border-white/10 bg-[#0f172a]/80 shadow-2xl backdrop-blur xl:col-span-2">
-              <div className="bg-gradient-to-r from-blue-600 to-violet-600 p-5 text-white sm:p-6">
-                <p className="text-sm font-bold uppercase text-blue-100">{accountTypeLabel}</p>
-                <h3 className="mt-1 break-all text-xl font-black sm:text-3xl">{session?.username}</h3>
+            {/* Идентичность + статистика */}
+            <div className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] backdrop-blur xl:col-span-2">
+              <div className="relative bg-gradient-to-br from-blue-600/20 via-violet-600/[0.12] to-transparent p-5 sm:p-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-2xl font-black text-white shadow-lg shadow-blue-900/40 sm:h-20 sm:w-20 sm:text-3xl">
+                    {(session?.username || "?").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="break-all text-xl font-black text-white sm:text-2xl">{session?.username}</h3>
+                    <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-3 py-1 text-xs font-black text-blue-300">
+                      <ShieldCheck size={13} strokeWidth={2.6} /> {accountTypeLabel}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="grid gap-4 p-5 sm:grid-cols-2">
-                <div className="rounded-3xl bg-white/5 p-5">
-                  <p className="text-sm font-bold text-slate-400">Текущая точка</p>
-                  <p className="mt-1 break-words text-2xl font-black text-white">{workspace?.name || "Основная точка"}</p>
+              <div className="grid grid-cols-2 gap-3 p-4 sm:p-5">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5"><Building2 size={16} className="text-slate-300" /></span>
+                  <p className="mt-2 text-xs font-bold text-slate-400">Текущая точка</p>
+                  <p className="mt-0.5 break-words text-lg font-black text-white sm:text-2xl">{workspace?.name || "Основная точка"}</p>
                 </div>
-                <div className="rounded-3xl bg-blue-500/10 p-5">
-                  <p className="text-sm font-bold text-slate-400">{isOwner ? "Владелец" : "Сейчас работает"}</p>
-                  <p className="mt-1 break-words text-2xl font-black text-blue-300">{isOwner ? (ownerName || currentWorker) : currentWorker}</p>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5"><UserRound size={16} className="text-slate-300" /></span>
+                  <p className="mt-2 text-xs font-bold text-slate-400">{isOwner ? "Владелец" : "Сейчас работает"}</p>
+                  <p className="mt-0.5 break-words text-lg font-black text-blue-300 sm:text-2xl">{isOwner ? (ownerName || currentWorker) : currentWorker}</p>
                 </div>
+                {isOwner && (
+                  <>
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5"><Store size={16} className="text-slate-300" /></span>
+                      <p className="mt-2 text-xs font-bold text-slate-400">Точек</p>
+                      <p className="mt-0.5 text-lg font-black text-white sm:text-2xl">{safe_workspaces.length}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5"><KeyRound size={16} className="text-slate-300" /></span>
+                      <p className="mt-2 text-xs font-bold text-slate-400">Логинов</p>
+                      <p className="mt-0.5 text-lg font-black text-white sm:text-2xl">{safe_workspaceUsers.length}</p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
             {isOwner && (
-              <div className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
-                <p className="text-sm font-bold text-blue-400">Владелец</p>
+              <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 shadow-lg backdrop-blur">
+                <div className="flex items-center gap-2 text-blue-400"><Pencil size={15} strokeWidth={2.4} /><p className="text-sm font-bold">Владелец</p></div>
                 <h3 className="mt-1 text-xl font-black text-white">Имя владельца</h3>
                 <p className="mt-1 text-sm leading-6 text-slate-400">Показывается в приветствии и отчётах. Можно указать имя человека или название компании.</p>
                 <div className="mt-4 flex flex-col gap-2.5">
@@ -603,7 +665,7 @@ export default function ProfilePage({
         {activeTab === "settings" && (isOwner || isBranchAdmin) && (
           <section className="grid gap-5 xl:grid-cols-2">
             {(isOwner || isBranchAdmin) && (
-              <div className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
+              <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
                 <div className="flex items-center gap-2 text-blue-400">
                   <Clock size={16} strokeWidth={2.4} />
                   <p className="text-sm font-bold">Рабочий день точки</p>
@@ -634,7 +696,7 @@ export default function ProfilePage({
             )}
 
             {(isOwner || isBranchAdmin) && (
-              <div className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
+              <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
                 <div className="flex items-center gap-2 text-indigo-400">
                   <ClipboardList size={16} strokeWidth={2.4} />
                   <p className="text-sm font-bold">Заказы с сайта</p>
@@ -662,7 +724,7 @@ export default function ProfilePage({
             )}
 
             {(isOwner || isBranchAdmin) && (
-              <div className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
+              <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
                 <div className="flex items-center gap-2 text-violet-400">
                   <Bot size={16} strokeWidth={2.4} />
                   <p className="text-sm font-bold">Нейросеть</p>
@@ -717,11 +779,15 @@ export default function ProfilePage({
 
         {/* ── Точки (owner) ── */}
         {activeTab === "branches" && isOwner && (
-          <section className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
+          <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-black">Точки и филиалы</h3>
-                <p className="mt-1 max-w-xl text-sm text-slate-400">Каждая точка — отдельный магазин со своими товарами, складом и продажами. Нажмите на точку, чтобы переключиться на неё.</p>
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/15 text-blue-300"><Building2 size={18} strokeWidth={2.4} /></span>
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-wider text-blue-400">Точки</p>
+                  <h3 className="text-xl font-black text-white sm:text-2xl">Точки и филиалы</h3>
+                  <p className="mt-1 max-w-xl text-sm text-slate-400">Каждая точка — отдельный магазин со своими товарами, складом и продажами. Нажмите на точку, чтобы переключиться на неё.</p>
+                </div>
               </div>
               <button type="button" onClick={() => setModal("workspace")} className="btn-blue shrink-0">+ Новая точка</button>
             </div>
@@ -751,13 +817,17 @@ export default function ProfilePage({
 
         {/* ── Доступы (owner) ── */}
         {activeTab === "access" && isOwner && (
-          <section className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
+          <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-black">Доступы к точкам</h3>
-                <p className="mt-1 text-sm text-slate-400">
-                  Дайте одному пользователю доступ к нескольким точкам. Например, сделайте Ахмеда администратором и «Okvion Sales», и «Ресторана Адол».
-                </p>
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/15 text-blue-300"><Share2 size={18} strokeWidth={2.4} /></span>
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-wider text-blue-400">Доступ</p>
+                  <h3 className="text-xl font-black text-white sm:text-2xl">Доступы к точкам</h3>
+                  <p className="mt-1 text-sm text-slate-400">
+                    Дайте одному пользователю доступ к нескольким точкам. Например, сделайте Ахмеда администратором и «Okvion Sales», и «Ресторана Адол».
+                  </p>
+                </div>
               </div>
               <button type="button" onClick={() => setModal("grantAccess")} className="btn-blue shrink-0">
                 + Добавить доступ
@@ -837,11 +907,15 @@ export default function ProfilePage({
 
         {/* ── Аккаунты точек ── */}
         {activeTab === "accounts" && (isOwner || isBranchAdmin) && (
-          <section className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
+          <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-black">Логины для входа</h3>
-                <p className="mt-1 max-w-xl text-sm text-slate-400">Логин и пароль, под которым сотрудники заходят в приложение. У каждого логина своя точка и роль — кассир или администратор.</p>
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/15 text-blue-300"><KeyRound size={18} strokeWidth={2.4} /></span>
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-wider text-blue-400">Логины</p>
+                  <h3 className="text-xl font-black text-white sm:text-2xl">Логины для входа</h3>
+                  <p className="mt-1 max-w-xl text-sm text-slate-400">Логин и пароль, под которым сотрудники заходят в приложение. У каждого логина своя точка и роль — кассир или администратор.</p>
+                </div>
               </div>
               <button type="button" onClick={() => setModal("workerAccount")} className="btn-blue shrink-0">+ Создать логин</button>
             </div>
@@ -879,11 +953,15 @@ export default function ProfilePage({
 
         {/* ── Работники ── */}
         {activeTab === "employees" && (isOwner || isBranchAdmin) && (
-          <section className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
+          <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-black">Продавцы</h3>
-                <p className="mt-1 max-w-xl text-sm text-slate-400">Имена продавцов — на кого записывается продажа. Пароль можно задать по желанию (тогда продавец вводит его, вставая за кассу). Отметьте, кто сейчас за кассой.</p>
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/15 text-blue-300"><Users size={18} strokeWidth={2.4} /></span>
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-wider text-blue-400">Продавцы</p>
+                  <h3 className="text-xl font-black text-white sm:text-2xl">Продавцы</h3>
+                  <p className="mt-1 max-w-xl text-sm text-slate-400">Имена продавцов — на кого записывается продажа. Пароль можно задать по желанию (тогда продавец вводит его, вставая за кассу). Отметьте, кто сейчас за кассой.</p>
+                </div>
               </div>
               <button type="button" onClick={() => setModal("employee")} className="btn-blue shrink-0">+ Добавить продавца</button>
             </div>
@@ -933,12 +1011,16 @@ export default function ProfilePage({
 
         {/* ── Права на страницы ── */}
         {activeTab === "permissions" && isOwner && (
-          <section className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
-            <div className="mb-5">
-              <h3 className="text-2xl font-black">Права на страницы</h3>
-              <p className="mt-1 text-sm text-slate-400">
-                Выберите пользователя и настройте, какие страницы он видит. Владелец и администратор всегда имеют полный доступ.
-              </p>
+          <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
+            <div className="mb-5 flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/15 text-blue-300"><ShieldCheck size={18} strokeWidth={2.4} /></span>
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase tracking-wider text-blue-400">Права</p>
+                <h3 className="text-xl font-black text-white sm:text-2xl">Права на страницы</h3>
+                <p className="mt-1 text-sm text-slate-400">
+                  Выберите пользователя и настройте, какие страницы он видит. Владелец и администратор всегда имеют полный доступ.
+                </p>
+              </div>
             </div>
 
             {safe_workspaceUsers.filter(isAssignable).length === 0 ? (
@@ -955,7 +1037,7 @@ export default function ProfilePage({
                     : ["/pos", "/pending-payments"];
                   const hasFullAccess = pages.includes("*");
                   return (
-                    <article key={u.id} className="rounded-3xl border border-white/10 bg-[#111827] p-5">
+                    <article key={u.id} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate font-black text-white">{u.username}</p>
@@ -988,17 +1070,21 @@ export default function ProfilePage({
 
         {/* ── Карты ── */}
         {activeTab === "cards" && (isOwner || isBranchAdmin) && (
-          <section className="rounded-[32px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur">
+          <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-black">Карты</h3>
-                <p className="mt-1 text-sm text-slate-400">Карты для учёта переводов и расходов.</p>
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/15 text-blue-300"><CreditCard size={18} strokeWidth={2.4} /></span>
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-wider text-blue-400">Карты</p>
+                  <h3 className="text-xl font-black text-white sm:text-2xl">Карты</h3>
+                  <p className="mt-1 text-sm text-slate-400">Карты для учёта переводов и расходов.</p>
+                </div>
               </div>
               <button type="button" onClick={() => { setError(""); setModal("card"); }} className="btn-blue shrink-0">+ Добавить карту</button>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {safe_cards.map((card) => (
-                <article key={card.id} className="rounded-3xl border border-white/10 bg-[#111827] p-5 shadow-sm">
+                <article key={card.id} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="break-words text-xl font-black text-white">{card.name}</p>
@@ -1020,10 +1106,13 @@ export default function ProfilePage({
           </section>
         )}
 
+          </div>
+        </div>
+
         {/* ════ Модалки ════ */}
 
         {modal === "editPerms" && editingPerms && (
-          <Modal title={`Права: ${editingPerms.username}`} wide onClose={() => setModal(null)}>
+          <Modal title={`Права: ${editingPerms.username}`} wide legacyLight={false} onClose={() => setModal(null)}>
             <p className="mb-4 text-sm text-slate-400">
               Выберите страницы, к которым у этого пользователя будет доступ.
             </p>
@@ -1061,7 +1150,7 @@ export default function ProfilePage({
         )}
 
         {modal === "grantAccess" && (
-          <Modal title="Добавить доступ к точке" wide onClose={() => setModal(null)}>
+          <Modal title="Добавить доступ к точке" wide legacyLight={false} onClose={() => setModal(null)}>
             <div className="mb-4 flex items-start gap-2 rounded-2xl border border-violet-400/20 bg-violet-500/10 p-4 text-sm text-violet-200">
               <Lightbulb size={16} className="mt-0.5 shrink-0" />
               <span>Например: Ахмед уже есть как аккаунт «Okvion Sales» — дай ему доступ ещё и к «Ресторану Адол».</span>
@@ -1104,7 +1193,7 @@ export default function ProfilePage({
         )}
 
         {modal === "manageProfiles" && (
-          <Modal title="Продавцы под логином" wide onClose={() => setModal(null)}>
+          <Modal title="Продавцы под логином" wide legacyLight={false} onClose={() => setModal(null)}>
             <div className="mb-4 rounded-3xl bg-gradient-to-r from-blue-600 to-violet-600 p-4 text-white">
               <p className="text-sm text-blue-100">Логин для входа</p>
               <p className="break-words text-2xl font-black">{managedAccount?.username}</p>
@@ -1146,7 +1235,7 @@ export default function ProfilePage({
         )}
 
         {modal === "employee" && (
-          <Modal title="Новый продавец" onClose={() => setModal(null)}>
+          <Modal title="Новый продавец" legacyLight={false} onClose={() => setModal(null)}>
             <label className="block">
               <span className="mb-2 block text-sm font-black text-slate-400">Имя продавца</span>
               <input value={employeeName} onChange={(e) => setEmployeeName(e.target.value)}
@@ -1189,7 +1278,7 @@ export default function ProfilePage({
         )}
 
         {pwPrompt && (
-          <Modal title="Пароль продавца" onClose={() => { setPwPrompt(null); setPwInput(""); setError(""); }}>
+          <Modal title="Пароль продавца" legacyLight={false} onClose={() => { setPwPrompt(null); setPwInput(""); setError(""); }}>
             <p className="mb-4 text-sm text-slate-400">
               Введите пароль продавца <b className="text-white">{pwPrompt.employee?.name}</b>, чтобы встать за кассу.
             </p>
@@ -1207,7 +1296,7 @@ export default function ProfilePage({
         )}
 
         {modal === "workspace" && (
-          <Modal title="Новая точка" onClose={() => setModal(null)}>
+          <Modal title="Новая точка" legacyLight={false} onClose={() => setModal(null)}>
             <label className="block">
               <span className="mb-2 block text-sm font-black text-slate-400">Название точки</span>
               <input value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)}
@@ -1222,7 +1311,7 @@ export default function ProfilePage({
         )}
 
         {modal === "workerAccount" && (
-          <Modal title="Новый логин для входа" wide onClose={() => setModal(null)}>
+          <Modal title="Новый логин для входа" wide legacyLight={false} onClose={() => setModal(null)}>
             <div className="space-y-3">
               {isOwner && (
                 <label className="block">
