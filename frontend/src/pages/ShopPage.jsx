@@ -425,7 +425,7 @@ export default function ShopPage() {
                 <p className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-300">
                   Быстрая продажа
                 </p>
-                <h1 className="mt-1 text-3xl font-black leading-none sm:text-5xl">
+                <h1 className="mt-1 text-2xl font-black leading-none sm:text-3xl">
                   Касса
                 </h1>
               </div>

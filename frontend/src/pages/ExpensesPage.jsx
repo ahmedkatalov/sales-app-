@@ -426,7 +426,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           <span className="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_15px_rgba(96,165,250,.9)]" />
           Расходы
         </div>
-        <h2 className="text-3xl font-black leading-none text-white drop-shadow sm:text-5xl">
+        <h2 className="text-2xl font-black leading-none text-white drop-shadow sm:text-3xl">
           Расходы точки
         </h2>
         <p className="mt-2.5 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">

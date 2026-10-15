@@ -691,7 +691,7 @@ export default function WarehousePage() {
         <div className="max-w-2xl">
           <p className="inline-flex rounded-full border border-blue-400/20 bg-blue-500/10 px-2.5 py-1 text-xs font-black text-blue-300">Склад</p>
 
-          <h2 className="mt-2 text-3xl font-black leading-none tracking-tight text-white sm:text-4xl">
+          <h2 className="mt-2 text-2xl font-black leading-none tracking-tight text-white sm:text-3xl">
             Склад сырья
           </h2>
 

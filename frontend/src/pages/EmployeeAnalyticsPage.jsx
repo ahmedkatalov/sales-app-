@@ -211,7 +211,7 @@ export default function EmployeeAnalyticsPage() {
         <header className="mb-5 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-bold text-blue-400 sm:text-sm">Аналитика</p>
-            <h1 className="text-2xl font-black leading-tight tracking-[-0.02em] text-white sm:text-4xl">Сотрудники</h1>
+            <h1 className="text-2xl font-black leading-tight tracking-[-0.02em] text-white sm:text-3xl">Сотрудники</h1>
             <p className="mt-1 text-sm font-medium text-slate-400">Кто сколько заработал, чеки, средний чек, наличные и переводы — в одном месте.</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">

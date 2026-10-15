@@ -378,7 +378,7 @@ export default function AnalyticsPage() {
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.9)]" />
               Сводный отчёт по точкам
             </div>
-            <h2 className="mt-3 text-3xl font-black leading-none text-white sm:mt-4 sm:text-6xl">Аналитика</h2>
+            <h2 className="mt-3 text-2xl font-black leading-none text-white sm:mt-4 sm:text-3xl">Аналитика</h2>
             <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-400 sm:mt-3 sm:text-base">
               Смотрите текущую точку, все филиалы или конкретный филиал. Графики, прибыль, расходы и детализация в одном месте.
             </p>

@@ -196,7 +196,7 @@ export default function PendingPaymentsPage() {
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-bold text-blue-400">Касса</p>
-          <h2 className="text-3xl font-black leading-none text-white sm:text-4xl">Ожидают оплаты</h2>
+          <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">Ожидают оплаты</h2>
           {queue.length > 0 ? (
             <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-slate-400">
               <span><b className="text-white">{queue.length}</b> {plural(queue.length, ["чек", "чека", "чеков"])} на <b className="tabular-nums text-emerald-300">{formatMoney(totalWaiting)}</b></span>

@@ -227,7 +227,7 @@ export default function SalesAnalyticsPage() {
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,1)]" />
               Отчёт о прибыли
             </div>
-            <h2 className="text-4xl font-black leading-none tracking-[-0.05em] text-white sm:text-6xl">Продажи</h2>
+            <h2 className="text-2xl font-black leading-none tracking-[-0.05em] text-white sm:text-3xl">Продажи</h2>
             <p className="mt-4 max-w-2xl text-sm font-medium leading-6 text-slate-400 sm:text-base">
               Сколько заработали, как шли продажи по дням, чем платили и что покупают.
             </p>
@@ -326,7 +326,7 @@ export default function SalesAnalyticsPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-200/70">Чистая прибыль {periodLabel}</p>
-                    <p className="mt-1.5 break-words text-4xl font-black leading-none tabular-nums text-white sm:text-6xl">{money(m.profit)}</p>
+                    <p className="mt-1.5 break-words text-4xl font-black leading-none tabular-nums text-white sm:text-5xl">{money(m.profit)}</p>
                     <p className="mt-3 text-sm font-semibold text-slate-400">
                       из выручки <span className="font-black text-white">{money(m.revenue)}</span>
                       {m.hasCost

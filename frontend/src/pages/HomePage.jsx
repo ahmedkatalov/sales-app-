@@ -345,7 +345,7 @@ export default function HomePage() {
         <header className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-bold capitalize text-blue-400 sm:text-sm">{todayLabel}</p>
-            <h1 className="mt-1 text-[26px] font-black leading-tight tracking-[-0.02em] text-white sm:text-4xl">
+            <h1 className="mt-1 text-2xl font-black leading-tight tracking-[-0.02em] text-white sm:text-3xl">
               {hello}{firstName ? `, ${firstName}` : ""}
             </h1>
             <p className="mt-1.5 flex items-center gap-1.5 text-sm font-semibold text-slate-400">

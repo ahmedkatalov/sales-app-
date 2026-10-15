@@ -1340,7 +1340,7 @@ export default function WorkPage() {
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-sm font-bold text-blue-400">Работа</p>
-          <h2 className="text-3xl font-black leading-none text-white sm:text-4xl">Меню товаров</h2>
+          <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">Меню товаров</h2>
           <p className="mt-2 text-sm text-slate-400">Прибыльность меню за месяц · количество из продаж</p>
         </div>
 

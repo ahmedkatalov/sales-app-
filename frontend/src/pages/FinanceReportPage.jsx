@@ -543,7 +543,7 @@ export default function FinanceReportPage() {
         <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-300">
           <span className="h-2 w-2 rounded-full bg-emerald-400" /> Финансы
         </div>
-        <h1 className="text-3xl font-black tracking-tight sm:text-5xl">Финансовый отчёт</h1>
+        <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Финансовый отчёт</h1>
         <p className="mt-2 max-w-2xl text-sm font-medium text-slate-400">
           История ваших денег за период: сколько заработали, сколько осело в кассе и сколько стоит бизнес.
         </p>
@@ -603,7 +603,7 @@ export default function FinanceReportPage() {
               <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
                 <div className="min-w-0 text-center sm:text-left">
                   <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">Чистая прибыль за период</p>
-                  <p className={`mt-1 break-words text-5xl font-black leading-none tabular-nums sm:text-6xl ${num(p.netProfit) < 0 ? "text-red-300" : "text-white"}`}>
+                  <p className={`mt-1 break-words text-4xl font-black leading-none tabular-nums sm:text-5xl ${num(p.netProfit) < 0 ? "text-red-300" : "text-white"}`}>
                     {formatMoney(p.netProfit)}
                   </p>
                   <p className="mt-2.5 text-sm font-bold text-slate-400">из выручки <b className="text-white">{rub(p.revenue)}</b></p>

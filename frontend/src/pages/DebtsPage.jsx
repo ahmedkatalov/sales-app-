@@ -222,7 +222,7 @@ export default function DebtsPage() {
         <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="text-sm font-bold text-blue-400">Клиенты</p>
-            <h2 className="text-3xl font-black leading-none text-white sm:text-4xl">Долги</h2>
+            <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">Долги</h2>
             {debtorsCount > 0 ? (
               <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-slate-400">
                 <span><b className="text-white">{debtorsCount}</b> {plural(debtorsCount, ["должник", "должника", "должников"])} на <b className="tabular-nums text-red-300">{formatMoney(totalOpen)}</b></span>
