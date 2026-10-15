@@ -360,7 +360,7 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [desktopNavMode, setDesktopNavMode] = useState(() => localStorage.getItem("sales_app_desktop_nav_mode") || "header");
+  const [desktopNavMode, setDesktopNavMode] = useState(() => localStorage.getItem("sales_app_desktop_nav_mode") || "sidebar");
   const location = useLocation();
   const navigate = useNavigate();
   const isAIWarehouseRoute = location.pathname === "/ai-warehouse";
@@ -603,79 +603,84 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-slate-100">
+    <div className="flex h-screen overflow-hidden bg-[#0a0e17] text-slate-100">
       {!useHeaderNav && !isImmersive && (
-        <aside className={`hidden h-screen shrink-0 flex-col overflow-y-auto border-r border-white/10 bg-slate-950 p-4 text-white transition-all duration-300 lg:flex ${sidebarOpen ? "w-80" : "w-24"}`}>
-          <button type="button" onClick={() => setSidebarOpen((p) => !p)}
-            className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-slate-300 transition hover:bg-blue-600 hover:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20 ${sidebarOpen ? "self-end" : "self-center"}`}>
-            <Menu size={23} strokeWidth={2.4} />
-          </button>
-
-          <div className={`mb-7 flex items-center ${sidebarOpen ? "gap-3" : "justify-center"}`}>
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 shadow-xl shadow-blue-600/25">
-              <ShoppingCart size={30} strokeWidth={2.6} />
+        <aside className={`hidden h-screen shrink-0 flex-col border-r border-white/10 bg-[#0c111d] text-white transition-all duration-300 lg:flex ${sidebarOpen ? "w-[260px]" : "w-[76px]"}`}>
+          {/* Бренд / точка + сворачивание */}
+          {sidebarOpen ? (
+            <div className="flex items-center gap-2.5 border-b border-white/10 px-3 py-3.5">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-lg shadow-blue-900/30"><ShoppingCart size={20} strokeWidth={2.6} /></span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-black leading-tight text-white">{currentWorkspace?.name || "Okvion Sales"}</p>
+                <p className="truncate text-[11px] font-bold text-slate-400">{isOwner ? "Главный аккаунт" : isAdmin ? "Админ точки" : "Рабочий аккаунт"}</p>
+              </div>
+              <button type="button" onClick={() => setSidebarOpen(false)} aria-label="Свернуть меню"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-white/5 hover:text-white"><Menu size={18} strokeWidth={2.4} /></button>
             </div>
-            {sidebarOpen && <div className="min-w-0"><h1 className="truncate text-2xl font-black tracking-tight">Sales App</h1><p className="truncate text-sm text-slate-400">Касса и продажи</p></div>}
-          </div>
+          ) : (
+            <button type="button" onClick={() => setSidebarOpen(true)} aria-label="Развернуть меню"
+              className="flex justify-center border-b border-white/10 py-3.5 transition hover:bg-white/[0.03]">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-lg shadow-blue-900/30"><ShoppingCart size={20} strokeWidth={2.6} /></span>
+            </button>
+          )}
 
-          <div className="mb-5 rounded-[1.7rem] bg-slate-900 p-4">
+          {/* Профиль смены (кассир) */}
+          {sidebarOpen && isWorker && (
+            <div className="border-b border-white/10 px-3 py-3">
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-400">Профиль смены</span>
+                <select value={profile?.id || ""} onChange={(e) => handleProfileChange(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-black text-blue-300 outline-none transition [color-scheme:dark] focus:border-blue-400/60">
+                  <option value="">Выберите сотрудника</option>
+                  {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+                </select>
+              </label>
+            </div>
+          )}
+
+          {/* Меню */}
+          <nav className="flex-1 space-y-1 overflow-y-auto px-2.5 py-3" aria-label="Главное меню">
+            {sidebarOpen && <p className="px-2 pb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500">Меню</p>}
+            {links.map(([to, label, Icon, badge]) => {
+              const hasBadge = (badge === "pending" && pendingCount > 0) || (badge === "debt" && debtCount > 0);
+              const badgeN = badge === "debt" ? debtCount : pendingCount;
+              return (
+                <NavLink key={to} to={to} title={!sidebarOpen ? label : undefined}
+                  className={({ isActive }) => `group relative flex items-center rounded-xl font-black transition focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${sidebarOpen ? "gap-3 px-2.5 py-2.5" : "justify-center px-2 py-2.5"} ${isActive ? "bg-gradient-to-r from-blue-600/20 to-violet-600/15 text-white" : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-100"}`}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && sidebarOpen && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-full bg-gradient-to-b from-blue-400 to-violet-400" />}
+                      <span className={`relative grid h-9 w-9 shrink-0 place-items-center rounded-lg transition ${isActive ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/40" : "bg-white/5 text-slate-400 group-hover:text-slate-200"}`}>
+                        <Icon size={18} strokeWidth={2.4} />
+                        {!sidebarOpen && hasBadge && <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-[#0c111d] ${badge === "debt" ? "bg-red-500" : "bg-blue-500"}`} />}
+                      </span>
+                      {sidebarOpen && <span className="min-w-0 flex-1 truncate text-sm">{label}</span>}
+                      {sidebarOpen && hasBadge && <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-black text-white ${badge === "debt" ? "bg-red-600" : "bg-blue-500"}`}>{badgeN > 99 ? "99+" : badgeN}</span>}
+                    </>
+                  )}
+                </NavLink>
+              );
+            })}
+          </nav>
+
+          {/* Низ: тема + выход */}
+          <div className="border-t border-white/10 p-2.5">
             {sidebarOpen ? (
-              <>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                  {isOwner ? "Главный аккаунт" : isAdmin ? "Админ точки" : "Рабочий аккаунт"}
-                </p>
-                <p className="mt-1 truncate font-black text-white">{session.username}</p>
-                {/* ── Название активной точки ── */}
-                {currentWorkspace?.name && (
-                  <div className="mt-2 flex items-center gap-1.5 rounded-xl bg-blue-500/15 px-2.5 py-1.5">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
-                    <span className="truncate text-xs font-black text-blue-300">{currentWorkspace.name}</span>
-                  </div>
-                )}
-                {isWorker ? (
-                  <div className="mt-4 rounded-3xl bg-slate-950 p-4">
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-bold text-slate-400">Профиль смены</span>
-                      <select value={profile?.id || ""} onChange={(e) => handleProfileChange(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 font-black text-blue-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20">
-                        <option value="">Выберите сотрудника</option>
-                        {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-                      </select>
-                    </label>
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-3xl bg-slate-950 p-4">
-                    <p className="text-sm text-slate-400">Хорошей работы</p>
-                    <p className="mt-1 truncate text-xl font-black text-blue-400">{workerName}</p>
-                  </div>
-                )}
-              </>
+              <div className="space-y-2">
+                <ThemeToggle variant="full" className="w-full" />
+                <button onClick={logout} className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2.5 text-sm font-black text-red-300 transition hover:bg-red-500/20">
+                  <LogOut size={16} strokeWidth={2.4} /> Выйти
+                </button>
+              </div>
             ) : (
-              <div className="flex justify-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-blue-400">
-                  {isWorker ? <Users size={23} /> : <Settings size={23} />}
-                </div>
+              <div className="flex flex-col items-center gap-2">
+                <ThemeToggle variant="icon" />
+                <button onClick={logout} title="Выйти" aria-label="Выйти" className="grid h-10 w-10 place-items-center rounded-xl border border-red-500/25 bg-red-500/10 text-red-300 transition hover:bg-red-500/20">
+                  <LogOut size={18} strokeWidth={2.4} />
+                </button>
               </div>
             )}
           </div>
-
-          <nav className="space-y-3" aria-label="Главное меню">
-            {links.map(([to, label, Icon, badge]) => (
-              <NavLink key={to} to={to} title={!sidebarOpen ? label : undefined}
-                className={({ isActive }) => `group flex items-center rounded-[1.4rem] font-black transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-500/20 ${sidebarOpen ? "gap-4 px-4 py-4" : "justify-center px-3 py-4"} ${isActive ? "bg-blue-600 text-white shadow-xl shadow-blue-600/25" : "bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/5 transition group-hover:bg-white/10"><Icon size={23} strokeWidth={2.4} /></span>
-                {sidebarOpen && <span className="min-w-0 flex-1 truncate">{label}</span>}
-                {badge === "pending" && pendingCount > 0 && <span className="ml-auto rounded-full bg-blue-500 px-2 py-1 text-xs font-black text-white">{pendingCount > 99 ? "99+" : pendingCount}</span>}
-                {badge === "debt" && debtCount > 0 && <span className="ml-auto rounded-full bg-red-600 px-2 py-1 text-xs font-black text-white">{debtCount > 99 ? "99+" : debtCount}</span>}
-              </NavLink>
-            ))}
-          </nav>
-
-          <button onClick={logout} title={!sidebarOpen ? "Выйти" : undefined}
-            className={`mt-5 flex w-full items-center rounded-[1.4rem] border border-white/10 bg-slate-950 font-black text-slate-300 transition hover:border-red-500/40 hover:bg-red-600 hover:text-white focus:outline-none focus:ring-4 focus:ring-red-500/20 ${sidebarOpen ? "justify-center gap-3 px-4 py-4" : "justify-center px-3 py-4"}`}>
-            <LogOut size={22} strokeWidth={2.4} />
-            {sidebarOpen && <span>Выйти</span>}
-          </button>
         </aside>
       )}
 
