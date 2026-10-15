@@ -326,7 +326,7 @@ export default function SalesAnalyticsPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-200/70">Чистая прибыль {periodLabel}</p>
-                    <p className="mt-1.5 break-words text-4xl font-black leading-none tabular-nums text-white sm:text-5xl">{money(m.profit)}</p>
+                    <p className="mt-1.5 text-3xl font-black leading-none tabular-nums text-white sm:text-4xl xl:text-5xl">{money(m.profit)}</p>
                     <p className="mt-3 text-sm font-semibold text-slate-400">
                       из выручки <span className="font-black text-white">{money(m.revenue)}</span>
                       {m.hasCost

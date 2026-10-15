@@ -603,7 +603,7 @@ export default function FinanceReportPage() {
               <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
                 <div className="min-w-0 text-center sm:text-left">
                   <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">Чистая прибыль за период</p>
-                  <p className={`mt-1 break-words text-4xl font-black leading-none tabular-nums sm:text-5xl ${num(p.netProfit) < 0 ? "text-red-300" : "text-white"}`}>
+                  <p className={`mt-1 text-3xl font-black leading-none tabular-nums sm:text-4xl xl:text-5xl ${num(p.netProfit) < 0 ? "text-red-300" : "text-white"}`}>
                     {formatMoney(p.netProfit)}
                   </p>
                   <p className="mt-2.5 text-sm font-bold text-slate-400">из выручки <b className="text-white">{rub(p.revenue)}</b></p>

@@ -278,7 +278,7 @@ export default function EmployeeAnalyticsPage() {
             <div className="mb-4 grid gap-4 rounded-[2rem] border border-blue-400/20 app-aurora bg-white/[0.04] bg-gradient-to-br from-blue-500/[0.10] to-violet-600/[0.05] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:p-6 lg:grid-cols-[1.4fr_1fr]">
               <div className="min-w-0">
                 <p className="text-[11px] font-black uppercase tracking-wide text-blue-300/80">Выручка за период</p>
-                <p className="mt-1 break-words text-4xl font-black leading-none tabular-nums text-white sm:text-5xl">{money(totals.revenue)}</p>
+                <p className="mt-1 text-3xl font-black leading-none tabular-nums text-white sm:text-4xl xl:text-5xl">{money(totals.revenue)}</p>
                 <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-slate-400">
                   <span><b className="text-white">{num(totals.orders).toLocaleString("ru-RU")}</b> чеков</span>
                   <span className="text-slate-600">·</span>
