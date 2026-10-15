@@ -1333,7 +1333,7 @@ export default function WorkPage() {
   const avgMarginShown = displayTotals.revenue > 0 ? (displayTotals.cleanProfit / displayTotals.revenue) * 100 : null;
 
   return (
-    <div className="relative -m-4 bg-[radial-gradient(circle_at_top_right,rgba(124,58,237,0.25),transparent_35%),linear-gradient(135deg,#020617,#0f172a_45%,#111827)] px-3 pb-nav pt-4 text-slate-100 sm:-m-6 sm:p-6 sm:pb-10">
+    <div className="relative -m-4 bg-[linear-gradient(135deg,#020617,#0f172a_45%,#111827)] px-3 pb-nav pt-4 text-slate-100 sm:-m-6 sm:p-6 sm:pb-10">
       <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
       <div className="pointer-events-none absolute left-1/3 top-20 h-64 w-64 rounded-full bg-violet-600/10 blur-3xl" />
       <div className="relative">

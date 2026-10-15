@@ -419,7 +419,9 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
   return (
     <div className="pb-nav text-slate-100 sm:pb-10">
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_0%,rgba(37,99,235,.22),transparent_30%),radial-gradient(circle_at_88%_8%,rgba(124,58,237,.22),transparent_30%),linear-gradient(135deg,#050914_0%,#071128_45%,#10194a_100%)]" />
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[linear-gradient(135deg,#050914_0%,#071128_45%,#0a1124_100%)]" />
+      <div className="pointer-events-none fixed left-[-120px] top-[-100px] -z-10 h-[340px] w-[340px] rounded-full bg-blue-600/20 blur-3xl" />
+      <div className="pointer-events-none fixed right-[-120px] top-[6%] -z-10 h-[340px] w-[340px] rounded-full bg-violet-600/20 blur-3xl" />
 
       <div className="mb-6 max-w-3xl">
         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-300 shadow-[0_0_25px_rgba(37,99,235,.22)]">

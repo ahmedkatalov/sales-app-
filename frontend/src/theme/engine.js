@@ -26,14 +26,14 @@ export const DEFAULT_APPEARANCE = {
   error: null,
   info: null,
   radius: 1,         // множитель скругления (0 = острые, 1.8 = «таблетка»)
-  glass: true,       // стеклянные поверхности (backdrop-blur)
+  glass: false,      // стеклянные поверхности (backdrop-blur) — по умолчанию выкл (плоский вид)
   blur: 1,           // множитель силы размытия стекла
   shadow: "soft",    // soft | none | strong(glow)
   font: "system",    // system | rounded | serif | mono
   fontScale: 1,      // масштаб шрифта (0.9 … 1.15)
   density: "normal", // compact | normal | comfortable
   motion: true,      // анимации/переходы вкл/выкл
-  glow: true,        // декоративное фоновое свечение (blur-пятна)
+  glow: false,       // декоративное фоновое свечение (blur-пятна) — по умолчанию выкл
 };
 
 export const FONT_STACKS = {
