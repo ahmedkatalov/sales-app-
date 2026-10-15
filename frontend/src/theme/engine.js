@@ -25,6 +25,8 @@ export const DEFAULT_APPEARANCE = {
   warning: null,
   error: null,
   info: null,
+  bg: null,          // цвет фона приложения (null = родной тёмный)
+  surface: null,     // цвет блоков/карточек (null = полупрозрачный по умолчанию)
   radius: 1,         // множитель скругления (0 = острые, 1.8 = «таблетка»)
   glass: false,      // стеклянные поверхности (backdrop-blur) — по умолчанию выкл (плоский вид)
   blur: 1,           // множитель силы размытия стекла
@@ -230,6 +232,20 @@ export function buildCss(appearanceInput) {
   // Декоративное фоновое свечение выкл — гасим blur-пятна (они все pointer-events-none)
   if (a.glow === false) {
     blocks.push(`.pointer-events-none[class*="blur-3xl"],.pointer-events-none[class*="blur-2xl"]{opacity:0!important;}`);
+  }
+
+  // Цвет фона приложения: красим body и гасим страничные градиент-подложки.
+  if (a.bg) {
+    blocks.push(`body{background-color:${a.bg}!important;}`);
+    blocks.push(`[class*="bg-[linear-gradient"],[class*="bg-[radial-gradient"]{background-image:none!important;background-color:${a.bg}!important;}`);
+  }
+
+  // Цвет блоков/карточек: переопределяем «карточные» полупрозрачные поверхности
+  // (bg-white/[0.0X] — именно карточки; bg-white/5 и /10 — это кнопки/чипы, их не трогаем).
+  if (a.surface) {
+    const sel = ["0.02", "0.03", "0.04", "0.045", "0.05", "0.06", "0.07", "0.08"]
+      .map((o) => `[class*="bg-white/[${o}]"]`).join(",");
+    blocks.push(`${sel}{background-color:${a.surface}!important;}`);
   }
 
   return blocks.join("\n");

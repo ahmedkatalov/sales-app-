@@ -80,6 +80,33 @@ function ColorField({ label, value, fallback, onChange }) {
   );
 }
 
+// Переопределение цвета с возможностью сброса к значению по умолчанию (null).
+function ColorOverride({ label, hint, value, defaultHex, onChange }) {
+  const active = value != null && value !== "";
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-slate-200">{label}</p>
+          {hint && <p className="text-xs text-slate-500">{hint}</p>}
+        </div>
+        {active ? (
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="hidden font-mono text-xs text-slate-500 sm:inline">{value}</span>
+            <input type="color" value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}
+              className="h-8 w-10 cursor-pointer rounded-lg border border-white/10 bg-transparent p-0" />
+            <button type="button" onClick={() => onChange(null)} title="Сбросить"
+              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-black text-slate-300 transition hover:bg-white/10">Сброс</button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => onChange(defaultHex)}
+            className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-slate-200 transition hover:bg-white/10">Задать цвет</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Row({ label, hint, children }) {
   return (
     <div className="flex flex-col gap-2 border-b border-white/[0.06] py-3 last:border-0 last:pb-0 first:pt-0 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
@@ -435,6 +462,14 @@ export default function AppearancePage() {
             <Row label="Анимации" hint="Плавные переходы и эффекты">
               <div className="flex justify-end"><Toggle checked={ap.motion} onChange={(v) => update({ motion: v })} /></div>
             </Row>
+          </Section>
+
+          {/* Фон и блоки — свои цвета */}
+          <Section icon={Palette} title="Фон и блоки" desc="Свой цвет фона и карточек. Чтобы убрать стекло полностью — задайте цвет блоков и выключите «Матовое стекло».">
+            <div className="grid gap-2">
+              <ColorOverride label="Фон приложения" hint="Задний фон страниц" value={ap.bg} defaultHex="#0b1120" onChange={(v) => update({ bg: v })} />
+              <ColorOverride label="Цвет блоков" hint="Фон карточек и панелей (сплошной = без стекла)" value={ap.surface} defaultHex="#131a2c" onChange={(v) => update({ surface: v })} />
+            </div>
           </Section>
         </div>
 
