@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, Boxes, Check, Copy, FileUp, Lightbulb, Package, PackageX, Pencil, Settings, Sparkles, Trash2, TrendingUp, Wallet, X, Zap } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, Boxes, Check, Copy, Crown, FileUp, Lightbulb, MoreHorizontal, Package, PackageX, Pencil, Search, Settings, SlidersHorizontal, Sparkles, Trash2, TrendingDown, TrendingUp, Wallet, X, Zap } from "lucide-react";
 import { del, get, post, put, getSession } from "../api";
 import Modal from "../components/Modal";
 import MenuTransferModal from "../components/MenuTransferModal";
@@ -203,6 +203,112 @@ const needsBackendGuess = (inputUnit, storageUnit, packagingQuantity = 0) => {
 // таблицу ИЛИ карточки, а не обе сразу: вдвое меньше DOM-узлов и реконсиляции,
 // особенно заметно при 5-секундном поллинге на планшете.
 
+// ── P&L-пороги и тон прибыльности ─────────────────────────────────────
+const MARGIN_GOOD = 55;
+const MARGIN_LOW = 30;
+
+const marginToneCls = (m) =>
+  m < 0 ? "text-rose-300" : m >= MARGIN_GOOD ? "text-emerald-300" : m >= MARGIN_LOW ? "text-amber-300" : "text-orange-300";
+
+const TONE = {
+  emerald: { bl: "border-l-emerald-400/70", text: "text-emerald-300", bar: "from-emerald-500 to-emerald-400", chip: "border-emerald-400/30 bg-emerald-500/15 text-emerald-300" },
+  amber: { bl: "border-l-amber-400/70", text: "text-amber-300", bar: "from-amber-500 to-amber-400", chip: "border-amber-400/30 bg-amber-500/15 text-amber-300" },
+  orange: { bl: "border-l-orange-400/70", text: "text-orange-300", bar: "from-orange-500 to-orange-400", chip: "border-orange-400/30 bg-orange-500/15 text-orange-300" },
+  rose: { bl: "border-l-rose-500/70", text: "text-rose-300", bar: "from-rose-500 to-rose-400", chip: "border-rose-400/30 bg-rose-500/15 text-rose-300" },
+  slate: { bl: "border-l-slate-500/60", text: "text-slate-300", bar: "from-slate-500 to-slate-400", chip: "border-white/10 bg-slate-600/30 text-slate-300" },
+};
+
+function MarginBadge({ row, size = "sm" }) {
+  const t = TONE[row.tone] || TONE.slate;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 font-black tabular-nums ${t.chip} ${size === "lg" ? "text-sm" : "text-xs"}`}
+      title={row.markupPct != null ? `Наценка +${Math.round(row.markupPct)}%` : "Себестоимость неизвестна"}
+    >
+      {row.lossmaking && <TrendingDown size={12} />}
+      {Math.round(row.marginPct)}%{row.marginIsPotential && <span className="font-bold opacity-60">·потенц.</span>}
+    </span>
+  );
+}
+
+function StatusPills({ p }) {
+  const hasRecipe = Array.isArray(p.recipe) && p.recipe.length > 0;
+  const unlinked = hasRecipe ? p.recipe.filter((r) => r.unlinked).length : 0;
+  return (
+    <span className="flex flex-wrap items-center gap-1.5">
+      {hasRecipe ? (
+        unlinked > 0 ? (
+          <span className="inline-flex items-center gap-1 rounded-lg bg-amber-500/15 px-2 py-0.5 text-[10px] font-black text-amber-300"><AlertTriangle size={11} /> {unlinked} не на складе</span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/15 px-2 py-0.5 text-[10px] font-black text-emerald-300"><Check size={11} /> {p.recipe.length} ингр.</span>
+        )
+      ) : (
+        <span className="inline-flex items-center gap-1 rounded-lg bg-slate-600/30 px-2 py-0.5 text-[10px] font-black text-slate-300"><PackageX size={11} /> без состава</span>
+      )}
+      {p.hidden && <span className="inline-flex items-center rounded-lg bg-slate-500/20 px-2 py-0.5 text-[10px] font-black text-slate-300">Скрыт в кассе</span>}
+    </span>
+  );
+}
+
+function ProfitShareBar({ row }) {
+  const t = TONE[row.tone] || TONE.slate;
+  return (
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+      <div className={`h-full rounded-full bg-gradient-to-r ${t.bar}`} style={{ width: `${Math.max(2, Math.min(100, row.barPct))}%` }} />
+    </div>
+  );
+}
+
+const STAT_TONES = {
+  blue: "bg-blue-500/15 text-blue-400",
+  emerald: "bg-emerald-500/15 text-emerald-400",
+  slate: "bg-slate-500/20 text-slate-300",
+  amber: "bg-amber-500/15 text-amber-300",
+};
+
+function StatCard({ icon: Icon, label, value, tone = "blue", sub, accent }) {
+  return (
+    <div className={`min-w-0 rounded-2xl border p-3 backdrop-blur sm:p-4 ${accent ? "border-emerald-500/20 bg-emerald-500/[0.07]" : "border-white/10 bg-white/[0.04]"}`}>
+      <div className="flex items-center gap-1.5 sm:gap-2.5">
+        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${STAT_TONES[tone]}`}><Icon size={16} strokeWidth={2.4} /></span>
+        <p className="min-w-0 truncate text-[10px] font-bold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-xs">{label}</p>
+      </div>
+      <p className={`mt-2 truncate text-lg font-black tabular-nums sm:text-2xl ${accent ? "text-emerald-400" : "text-white"}`}>{value}</p>
+      {sub && <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">{sub}</p>}
+    </div>
+  );
+}
+
+function ProblemChip({ active, onClick, icon: Icon, label, count, tone = "slate" }) {
+  const t = TONE[tone] || TONE.slate;
+  const dim = count === 0 && !active;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={dim}
+      className={`inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-black transition ${
+        active ? t.chip : dim ? "border-white/10 bg-white/[0.02] text-slate-600" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+      }`}
+    >
+      <Icon size={13} /> {label}
+      {count != null && <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-black/25" : "bg-white/10"}`}>{count}</span>}
+    </button>
+  );
+}
+
+function SortTh({ label, k, sortKey, sortDir, onSort, align = "left" }) {
+  const activeSort = sortKey === k;
+  const Icon = !activeSort ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <th className={`p-4 ${align === "right" ? "text-right" : "text-left"}`}>
+      <button type="button" onClick={() => onSort(k)} className={`inline-flex items-center gap-1 font-bold transition hover:text-white ${activeSort ? "text-white" : ""}`}>
+        {label} <Icon size={13} className={activeSort ? "text-blue-400" : "text-slate-600"} />
+      </button>
+    </th>
+  );
+}
+
 export default function WorkPage() {
   const [types, setTypes] = useState([]);
   const [folders, setFolders] = useState([]);
@@ -234,6 +340,12 @@ export default function WorkPage() {
   const [editProduct, setEditProduct] = useState(null);
   const [editRecipe, setEditRecipe] = useState([]);
   const [editCostMode, setEditCostMode] = useState("auto"); // auto | manual
+
+  // Сортировка и быстрые фильтры-проблемы (P&L-редизайн списка).
+  const [sortKey, setSortKey] = useState("profit"); // profit | margin | qty | revenue | name
+  const [sortDir, setSortDir] = useState("desc");    // desc | asc
+  const [problemFilter, setProblemFilter] = useState("all"); // all|top|noRecipe|incomplete|notSelling|loss|hidden
+  const [moreOpen, setMoreOpen] = useState(false);   // меню «Ещё» (вторичные действия)
 
   const [newTypeName, setNewTypeName] = useState("");
   const [newFolderName, setNewFolderName] = useState("");
@@ -525,6 +637,83 @@ export default function WorkPage() {
       }
     );
   }, [productRows]);
+
+  // ── P&L: обогащение строк (маржа, наценка, доля, тон, проблемы) ──
+  const enriched = useMemo(() => {
+    const maxProfit = Math.max(1, ...productRows.map((p) => Math.max(0, num(p.cleanProfit))));
+    return productRows.map((p) => {
+      const price = money(p.price);
+      const cost = money(p.cost);
+      const hasRecipe = Array.isArray(p.recipe) && p.recipe.length > 0;
+      const incompleteCost = hasRecipe && p.recipe.some((r) => r.unlinked);
+      const noRecipe = !hasRecipe;
+      const notSelling = num(p.quantity) === 0;
+      const lossmaking = (price > 0 && price <= cost) || num(p.cleanProfit) < 0;
+      const marginPct = num(p.revenue) > 0
+        ? (p.cleanProfit / p.revenue) * 100
+        : (price > 0 ? ((price - cost) / price) * 100 : 0);
+      const marginIsPotential = num(p.revenue) <= 0;
+      const markupPct = cost > 0 ? ((price - cost) / cost) * 100 : null;
+      const profitShare = totals.cleanProfit > 0 ? (p.cleanProfit / totals.cleanProfit) * 100 : 0;
+      const barPct = Math.max(0, (num(p.cleanProfit) / maxProfit) * 100);
+      let tone;
+      if (lossmaking) tone = "rose";
+      else if (noRecipe) tone = "slate";
+      else if (marginPct >= MARGIN_GOOD) tone = "emerald";
+      else if (marginPct >= MARGIN_LOW) tone = "amber";
+      else tone = "orange";
+      return { ...p, hasRecipe, incompleteCost, noRecipe, notSelling, lossmaking, marginPct, marginIsPotential, markupPct, profitShare, barPct, tone };
+    });
+  }, [productRows, totals.cleanProfit]);
+
+  const menuHealth = useMemo(() => {
+    const counts = { noRecipe: 0, incompleteCost: 0, notSelling: 0, lossmaking: 0, hidden: 0 };
+    let anchor = null;
+    enriched.forEach((p) => {
+      if (p.noRecipe) counts.noRecipe++;
+      if (p.incompleteCost) counts.incompleteCost++;
+      if (p.notSelling) counts.notSelling++;
+      if (p.lossmaking) counts.lossmaking++;
+      if (p.hidden) counts.hidden++;
+      if (num(p.cleanProfit) > 0 && (!anchor || p.cleanProfit > anchor.cleanProfit)) anchor = p;
+    });
+    const avgMargin = totals.revenue > 0 ? (totals.cleanProfit / totals.revenue) * 100 : null;
+    const anchorShare = anchor && totals.cleanProfit > 0 ? (anchor.cleanProfit / totals.cleanProfit) * 100 : 0;
+    const problemTotal = counts.noRecipe + counts.incompleteCost + counts.notSelling + counts.lossmaking;
+    return { counts, anchor, anchorShare, avgMargin, problemTotal };
+  }, [enriched, totals.cleanProfit, totals.revenue]);
+
+  const displayRows = useMemo(() => {
+    let rows = enriched;
+    if (problemFilter === "top") rows = rows.filter((p) => num(p.cleanProfit) > 0);
+    else if (problemFilter === "noRecipe") rows = rows.filter((p) => p.noRecipe);
+    else if (problemFilter === "incomplete") rows = rows.filter((p) => p.incompleteCost);
+    else if (problemFilter === "notSelling") rows = rows.filter((p) => p.notSelling);
+    else if (problemFilter === "loss") rows = rows.filter((p) => p.lossmaking);
+    else if (problemFilter === "hidden") rows = rows.filter((p) => p.hidden);
+    const key = problemFilter === "top" ? "profit" : sortKey;
+    const dir = sortDir === "asc" ? 1 : -1;
+    const metric = (p) =>
+      key === "margin" ? p.marginPct :
+      key === "qty" ? num(p.quantity) :
+      key === "revenue" ? num(p.revenue) :
+      num(p.cleanProfit);
+    return [...rows].sort((a, b) =>
+      key === "name"
+        ? dir * String(a.name || "").localeCompare(String(b.name || ""), "ru")
+        : dir * (metric(a) - metric(b))
+    );
+  }, [enriched, problemFilter, sortKey, sortDir]);
+
+  const displayTotals = useMemo(() =>
+    displayRows.reduce((acc, p) => {
+      acc.quantity += num(p.quantity);
+      acc.cost += num(p.totalCost);
+      acc.revenue += num(p.revenue);
+      acc.cleanProfit += num(p.cleanProfit);
+      return acc;
+    }, { quantity: 0, cost: 0, revenue: 0, cleanProfit: 0 }),
+  [displayRows]);
 
   const createType = async () => {
     setError("");
@@ -1097,131 +1286,100 @@ export default function WorkPage() {
     }
   };
 
+  const toggleSort = (k) => {
+    if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(k); setSortDir(k === "name" ? "asc" : "desc"); }
+  };
+  const SORT_LABELS = { profit: "По прибыли", margin: "По марже", qty: "По продажам", revenue: "По выручке", name: "По названию" };
+  const avgMarginShown = displayTotals.revenue > 0 ? (displayTotals.cleanProfit / displayTotals.revenue) * 100 : null;
+
   return (
     <div className="relative -m-4 bg-[radial-gradient(circle_at_top_right,rgba(124,58,237,0.25),transparent_35%),linear-gradient(135deg,#020617,#0f172a_45%,#111827)] px-3 pb-nav pt-4 text-slate-100 sm:-m-6 sm:p-6 sm:pb-10">
       <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
       <div className="pointer-events-none absolute left-1/3 top-20 h-64 w-64 rounded-full bg-violet-600/10 blur-3xl" />
       <div className="relative">
-      <div className="mb-5 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div>
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="min-w-0">
           <p className="text-sm font-bold text-blue-400">Работа</p>
-          <h2 className="text-3xl font-black leading-none text-white sm:text-5xl">
-            Меню товаров
-          </h2>
-          <p className="mt-2 text-sm text-slate-400 sm:text-base">
-            Текущие товары, продажи, количество и чистая прибыль
-          </p>
+          <h2 className="text-3xl font-black leading-none text-white sm:text-4xl">Меню товаров</h2>
+          <p className="mt-2 text-sm text-slate-400">Прибыльность меню за месяц · количество из продаж</p>
         </div>
 
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:justify-end">
-          {/* Второстепенные действия — компактный горизонтальный ряд на телефоне */}
-          <div className="flex flex-wrap gap-2 sm:justify-end">
+        <div className="flex shrink-0 items-center gap-2.5">
+          <div className="relative">
             <button
-              onClick={() => setStructureModal(true)}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 backdrop-blur transition hover:bg-white/10 sm:rounded-2xl sm:px-4 sm:py-3 sm:font-black sm:text-base sm:text-slate-100"
+              onClick={() => setMoreOpen((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-black text-slate-100 backdrop-blur transition hover:bg-white/10 sm:px-4 sm:py-3"
             >
-              <Settings size={16} /> Типы и папки
+              <MoreHorizontal size={18} /> <span className="hidden sm:inline">Ещё</span>
             </button>
-
-            {isOwner && (
-              <button
-                onClick={() => setTransferModal(true)}
-                title="Скопировать меню в другую точку"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 backdrop-blur transition hover:bg-white/10 sm:rounded-2xl sm:px-4 sm:py-3 sm:font-black sm:text-base sm:text-slate-100"
-              >
-                <Copy size={16} /> Перенос в точку
-              </button>
+            {moreOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
+                <div className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-2xl border border-white/10 bg-[#0b1020] p-1.5 shadow-2xl backdrop-blur-xl">
+                  {[
+                    { Ic: Settings, label: "Типы и папки", on: () => setStructureModal(true) },
+                    isOwner && { Ic: Copy, label: "Перенос в точку", on: () => setTransferModal(true) },
+                    { Ic: FileUp, label: "Импорт из PDF", on: () => setPdfImportModal(true) },
+                    { Ic: FileUp, label: "Импорт Excel", on: () => setImportModal(true) },
+                    { Ic: FileUp, label: "Экспорт Excel", on: exportExcel },
+                  ].filter(Boolean).map(({ Ic, label, on }) => (
+                    <button
+                      key={label}
+                      onClick={() => { setMoreOpen(false); on(); }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-slate-200 transition hover:bg-white/10"
+                    >
+                      <Ic size={16} className="text-slate-400" /> {label}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
-
-            <button
-              onClick={() => setPdfImportModal(true)}
-              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-blue-400/30 bg-blue-500/15 px-3 py-2 text-sm font-bold text-blue-100 backdrop-blur transition hover:bg-blue-500/25 sm:rounded-2xl sm:px-4 sm:py-3 sm:font-black sm:text-base"
-            >
-              <FileUp size={16} strokeWidth={2.4} /> Импорт из PDF
-            </button>
-
-            <button
-              onClick={() => setImportModal(true)}
-              className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 backdrop-blur transition hover:bg-white/10 sm:rounded-2xl sm:px-4 sm:py-3 sm:font-black sm:text-base sm:text-slate-100"
-            >
-              Импорт Excel
-            </button>
-
-            <button
-              onClick={exportExcel}
-              className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-slate-200 backdrop-blur transition hover:bg-white/10 sm:rounded-2xl sm:px-4 sm:py-3 sm:font-black sm:text-base sm:text-slate-100"
-            >
-              Экспорт Excel
-            </button>
           </div>
 
           <button
             onClick={openProductModal}
-            className="hidden rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] sm:block"
+            className="hidden rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] sm:block"
           >
             + Товар
           </button>
         </div>
       </div>
 
-      {/* Сводные метрики — как на макете */}
-      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4">
-        <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur sm:p-5">
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-400 sm:h-10 sm:w-10 sm:rounded-xl">
-              <Boxes size={16} strokeWidth={2.4} />
-            </span>
-            <p className="min-w-0 text-[10px] font-bold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-xs">Продано / мес</p>
-          </div>
-          <p className="mt-2.5 text-base font-black tabular-nums text-white sm:mt-3 sm:text-3xl">{num(monthTotals.quantity)}</p>
-        </div>
-
-        <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur sm:p-5">
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-400 sm:h-10 sm:w-10 sm:rounded-xl">
-              <Wallet size={16} strokeWidth={2.4} />
-            </span>
-            <p className="min-w-0 text-[10px] font-bold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-xs">Выручка</p>
-          </div>
-          <p className="mt-2.5 text-base font-black tabular-nums text-white sm:mt-3 sm:text-3xl">{formatMoney(monthTotals.revenue)}</p>
-        </div>
-
-        <div className="col-span-2 min-w-0 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.07] p-3 backdrop-blur sm:col-span-1 sm:p-5">
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400 sm:h-10 sm:w-10 sm:rounded-xl">
-              <TrendingUp size={16} strokeWidth={2.4} />
-            </span>
-            <p className="min-w-0 text-[10px] font-bold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-xs">Чистая прибыль</p>
-          </div>
-          <p className="mt-2.5 text-base font-black tabular-nums text-emerald-400 sm:mt-3 sm:text-3xl">{formatMoney(monthTotals.cleanProfit)}</p>
-        </div>
+      {/* P&L статы меню за месяц */}
+      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+        <StatCard icon={Boxes} label="Продано / мес" value={num(monthTotals.quantity).toLocaleString("ru-RU")} tone="blue" sub={`${productRows.length} позиций`} />
+        <StatCard icon={Wallet} label="Выручка" value={formatMoney(monthTotals.revenue)} tone="blue" />
+        <StatCard icon={PackageX} label="Себестоимость" value={formatMoney(monthTotals.cost)} tone="slate" />
+        <StatCard icon={TrendingUp} label="Чистая прибыль" value={formatMoney(monthTotals.cleanProfit)} tone="emerald" accent
+          sub={menuHealth.avgMargin != null ? `средняя маржа ${Math.round(menuHealth.avgMargin)}%` : "продаж ещё нет"} />
       </div>
 
-      {/* Фильтр по типам — горизонтальные пилюли, как на макете */}
-      <div className="no-scrollbar mb-4 flex gap-2 overflow-x-auto pb-1">
-        <button
-          onClick={() => setSelectedTypeId("")}
-          className={`shrink-0 rounded-full px-4 py-2.5 text-sm font-black transition ${
-            selectedTypeId === ""
-              ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-950/40"
-              : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
-          }`}
-        >
-          Все
-        </button>
-        {safeTypes.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setSelectedTypeId(String(t.id))}
-            className={`shrink-0 rounded-full px-4 py-2.5 text-sm font-black transition ${
-              String(selectedTypeId) === String(t.id)
-                ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-950/40"
-                : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
-            }`}
-          >
-            {t.name}
-          </button>
-        ))}
+      {/* Инсайты: якорь прибыли + клики-фильтры по проблемам */}
+      <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:p-4">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-500/15 text-amber-300"><Crown size={16} strokeWidth={2.4} /></span>
+          {menuHealth.anchor ? (
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Якорь прибыли</p>
+              <p className="truncate text-sm font-black text-white">{menuHealth.anchor.name} <span className="font-black text-emerald-300">· {Math.round(menuHealth.anchorShare)}% прибыли</span></p>
+            </div>
+          ) : (
+            <p className="text-sm font-bold text-slate-400">Продаж за месяц ещё нет</p>
+          )}
+        </div>
+        <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 sm:mx-0 sm:flex-wrap sm:justify-end sm:overflow-visible sm:px-0">
+          {menuHealth.problemTotal === 0 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-2 text-xs font-black text-emerald-300"><Check size={13} /> Меню в порядке</span>
+          ) : (
+            <>
+              <ProblemChip active={problemFilter === "loss"} onClick={() => setProblemFilter((f) => (f === "loss" ? "all" : "loss"))} icon={TrendingDown} label="Убыточные" count={menuHealth.counts.lossmaking} tone="rose" />
+              <ProblemChip active={problemFilter === "noRecipe"} onClick={() => setProblemFilter((f) => (f === "noRecipe" ? "all" : "noRecipe"))} icon={PackageX} label="Без состава" count={menuHealth.counts.noRecipe} tone="slate" />
+              <ProblemChip active={problemFilter === "incomplete"} onClick={() => setProblemFilter((f) => (f === "incomplete" ? "all" : "incomplete"))} icon={AlertTriangle} label="Неполная с/с" count={menuHealth.counts.incompleteCost} tone="amber" />
+              <ProblemChip active={problemFilter === "notSelling"} onClick={() => setProblemFilter((f) => (f === "notSelling" ? "all" : "notSelling"))} icon={Package} label="Не продаётся" count={menuHealth.counts.notSelling} tone="slate" />
+            </>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -1231,43 +1389,83 @@ export default function WorkPage() {
       )}
 
       <div className="rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-2xl shadow-black/20 backdrop-blur-xl overflow-hidden">
-        <div className="flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm font-bold text-blue-400">
-              {selectedType?.name || "Все типы"}
-            </p>
+        <div className="flex flex-col gap-3 border-b border-white/10 p-4 sm:p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <h3 className="truncate text-lg font-black leading-tight text-white sm:text-xl">
+                {selectedFolder?.name || (selectedType ? `Все: ${selectedType.name}` : "Все товары")}
+              </h3>
+              <p className="text-xs font-semibold text-slate-400">
+                {selectedType?.name || "Все типы"} · {displayRows.length} поз.{problemFilter !== "all" ? " · фильтр" : ""}
+              </p>
+            </div>
 
-            <h3 className="text-2xl font-black leading-none sm:text-3xl">
-              {selectedFolder?.name ||
-                (selectedType ? `Все: ${selectedType.name}` : "Все товары")}
-            </h3>
-
-            <p className="mt-2 text-sm text-slate-400 sm:text-base">
-              Кол-во берётся из продаж и обновляется автоматически
-            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative">
+                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Найти товар"
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-2.5 pl-9 pr-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 sm:w-64"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setFilterModal(true)}
+                  className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 font-black text-slate-100 backdrop-blur transition hover:bg-white/10 sm:flex-none"
+                >
+                  <SlidersHorizontal size={16} /> Фильтр
+                </button>
+                <button
+                  onClick={openProductModal}
+                  className="hidden rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 font-black text-white shadow-lg transition hover:scale-[1.01] sm:block"
+                >
+                  + Товар
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Найти товар"
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none shadow-inner shadow-black/10 placeholder:text-slate-500 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 sm:w-72"
-            />
-
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            {/* Чипы типов */}
+            <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
               <button
-                onClick={() => setFilterModal(true)}
-                className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 backdrop-blur transition hover:bg-white/10 sm:flex-none"
+                onClick={() => setSelectedTypeId("")}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${selectedTypeId === "" ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-950/40" : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
               >
-                Фильтр
+                Все
               </button>
+              {safeTypes.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setSelectedTypeId(String(t.id))}
+                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${String(selectedTypeId) === String(t.id) ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-950/40" : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
 
-              <button
-                onClick={openProductModal}
-                className="hidden rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] sm:flex sm:flex-none sm:items-center sm:justify-center"
+            {/* Сортировка */}
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="hidden text-[11px] font-bold uppercase tracking-wide text-slate-500 sm:inline">Сортировка</span>
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value)}
+                className="min-h-[40px] rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-white outline-none focus:border-blue-400/60"
               >
-                + Товар
+                {Object.entries(SORT_LABELS).map(([k, l]) => (
+                  <option key={k} value={k} className="bg-slate-900">{l}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                aria-label="Направление сортировки"
+                title={sortDir === "asc" ? "По возрастанию" : "По убыванию"}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10"
+              >
+                {sortDir === "asc" ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
               </button>
             </div>
           </div>
@@ -1275,92 +1473,59 @@ export default function WorkPage() {
 
         {isXl && (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1050px] text-left">
-            <thead className="bg-white/5 text-slate-300">
+          <table className="w-full min-w-[1080px] text-left text-sm">
+            <thead className="bg-white/[0.03] text-slate-400">
               <tr>
-                <th className="p-4">Название</th>
-                <th className="p-4">Тип</th>
-                <th className="p-4">Папка</th>
-                <th className="p-4">Себестоимость</th>
-                <th className="p-4">Цена продажи</th>
-                <th className="p-4">Кол-во</th>
-                <th className="p-4">Выручка</th>
-                <th className="p-4">Чистая прибыль</th>
+                <SortTh label="Товар" k="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortTh label="Маржа" k="margin" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <th className="p-4 text-right">Цена / себест.</th>
+                <SortTh label="Продано" k="qty" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <SortTh label="Выручка" k="revenue" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <SortTh label="Чистая прибыль" k="profit" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" />
                 <th className="p-4"></th>
               </tr>
             </thead>
 
             <tbody>
-              {productRows.map((p) => {
-                const hasRecipe = Array.isArray(p.recipe) && p.recipe.length > 0;
-                const hasUnlinked = hasRecipe && p.recipe.some(r => r.unlinked);
+              {displayRows.map((p) => {
+                const t = TONE[p.tone] || TONE.slate;
                 return (
-                <tr key={p.id} className="border-t border-white/10">
+                <tr key={p.id} className={`border-t border-l-4 border-white/10 ${t.bl} align-top transition hover:bg-white/[0.03]`}>
                   <td className="p-4">
-                    <p className="font-black">
-                      {p.name}
-                      {p.hidden && <span className="ml-2 inline-flex items-center gap-1 rounded-lg bg-slate-500/20 px-2 py-0.5 align-middle text-[10px] font-black text-slate-300">Скрыт в кассе</span>}
-                    </p>
-                    {hasRecipe ? (
-                      <span className={`mt-0.5 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-black ${hasUnlinked ? "bg-yellow-500/15 text-yellow-300" : "bg-emerald-500/15 text-emerald-300"}`}>
-                        {hasUnlinked ? (
-                          <><AlertTriangle size={12} /> {p.recipe.filter(r => r.unlinked).length} не на складе</>
-                        ) : (
-                          <><Check size={12} /> {p.recipe.length} ингр.</>
-                        )}
-                      </span>
-                    ) : (
-                      <span className="mt-0.5 inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-black bg-slate-700/50 text-slate-400">
-                        без состава
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-4">{p.typeName || p.type}</td>
-                  <td className="p-4">{p.category}</td>
-                  <td className="p-4">
-                    {formatMoney(p.cost)}
-                    {hasUnlinked && <p className="text-[10px] text-yellow-400">неполная</p>}
-                  </td>
-                  <td className="p-4">{formatMoney(p.price)}</td>
-                  <td className="p-4 font-black">{p.quantity}</td>
-                  <td className="p-4 font-black">{formatMoney(p.revenue)}</td>
-                  <td className="p-4 font-black text-emerald-400">
-                    {formatMoney(p.cleanProfit)}
+                    <p className="font-black text-white">{p.name}</p>
+                    <p className="mt-0.5 text-xs text-slate-400">{p.typeName || p.type} · {p.category}</p>
+                    <div className="mt-1.5"><StatusPills p={p} /></div>
                   </td>
                   <td className="p-4 text-right">
+                    <MarginBadge row={p} />
+                    {p.markupPct != null && <p className="mt-1 text-[10px] text-slate-500">наценка +{Math.round(p.markupPct)}%</p>}
+                  </td>
+                  <td className="p-4 text-right">
+                    <p className="font-black tabular-nums text-white">{formatMoney(p.price)}</p>
+                    <p className="text-xs tabular-nums text-slate-400">{formatMoney(p.cost)}{p.incompleteCost && <span className="text-amber-400"> · неполн.</span>}</p>
+                  </td>
+                  <td className="p-4 text-right font-black tabular-nums text-white">{p.quantity}</td>
+                  <td className="p-4 text-right font-black tabular-nums text-slate-200">{formatMoney(p.revenue)}</td>
+                  <td className="p-4 text-right">
+                    <p className={`font-black tabular-nums ${p.cleanProfit < 0 ? "text-rose-300" : "text-emerald-400"}`}>{formatMoney(p.cleanProfit)}</p>
+                    <div className="ml-auto mt-1.5 w-28"><ProfitShareBar row={p} /></div>
+                    <p className="mt-1 text-[10px] text-slate-500">{Math.round(p.profitShare)}% прибыли</p>
+                  </td>
+                  <td className="p-4">
                     <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => openEditProduct(p)}
-                        className="inline-flex items-center gap-1 rounded-xl bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-400 hover:bg-blue-500/20"
-                      >
-                        <Pencil size={14} /> Изменить
-                      </button>
-                      <button
-                        onClick={() => duplicateProduct(p)}
-                        aria-label="Дублировать"
-                        title="Дублировать"
-                        className="rounded-xl bg-white/5 px-3 py-2 font-black text-slate-300 transition hover:bg-white/10"
-                      >
-                        <Copy size={16} />
-                      </button>
-                      <button
-                        onClick={() => deleteProduct(p.id)}
-                        aria-label="Удалить"
-                        title="Удалить"
-                        className="rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-400"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <button onClick={() => openEditProduct(p)} className="inline-flex items-center gap-1 rounded-xl bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-400 hover:bg-blue-500/20"><Pencil size={14} /> Изменить</button>
+                      <button onClick={() => duplicateProduct(p)} aria-label="Дублировать" title="Дублировать" className="rounded-xl bg-white/5 px-3 py-2 font-black text-slate-300 transition hover:bg-white/10"><Copy size={16} /></button>
+                      <button onClick={() => deleteProduct(p.id)} aria-label="Удалить" title="Удалить" className="rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-400 hover:bg-red-500/20"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
                 );
               })}
 
-              {!productRows.length && (
+              {!displayRows.length && (
                 <tr>
-                  <td colSpan="9" className="p-8 text-center text-slate-400">
-                    Товаров пока нет
+                  <td colSpan="7" className="p-8 text-center text-slate-400">
+                    {problemFilter !== "all" ? "Под фильтр ничего не попало" : (search ? "Ничего не найдено" : "Товаров пока нет")}
                   </td>
                 </tr>
               )}
@@ -1368,14 +1533,12 @@ export default function WorkPage() {
 
             <tfoot className="bg-[#070b1a] font-black text-white">
               <tr>
-                <td className="p-4" colSpan="3">
-                  Итого по выбранным
-                </td>
-                <td className="p-4">{formatMoney(totals.cost)}</td>
-                <td className="p-4 text-slate-500">—</td>
-                <td className="p-4">{totals.quantity}</td>
-                <td className="p-4">{formatMoney(totals.revenue)}</td>
-                <td className="p-4">{formatMoney(totals.cleanProfit)}</td>
+                <td className="p-4">Итого по выбранным</td>
+                <td className="p-4 text-right">{avgMarginShown != null ? <span className={`tabular-nums ${marginToneCls(avgMarginShown)}`}>{Math.round(avgMarginShown)}%</span> : <span className="text-slate-500">—</span>}</td>
+                <td className="p-4 text-right text-slate-400">{formatMoney(displayTotals.cost)}</td>
+                <td className="p-4 text-right">{displayTotals.quantity}</td>
+                <td className="p-4 text-right">{formatMoney(displayTotals.revenue)}</td>
+                <td className="p-4 text-right text-emerald-400">{formatMoney(displayTotals.cleanProfit)}</td>
                 <td></td>
               </tr>
             </tfoot>
@@ -1385,52 +1548,24 @@ export default function WorkPage() {
 
         {!isXl && (
         <div className="divide-y divide-white/10">
-          {productRows.map((p) => {
-            const hasRecipe = Array.isArray(p.recipe) && p.recipe.length > 0;
-            const hasUnlinked = hasRecipe && p.recipe.some(r => r.unlinked);
+          {displayRows.map((p) => {
+            const t = TONE[p.tone] || TONE.slate;
             return (
-            <div key={p.id} className="p-3.5">
+            <div key={p.id} className={`border-l-4 p-3.5 ${t.bl}`}>
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-base font-black text-white">
-                    {p.name}
-                    {p.hidden && <span className="ml-2 inline-flex items-center gap-1 rounded-lg bg-slate-500/20 px-2 py-0.5 align-middle text-[10px] font-black text-slate-300">Скрыт</span>}
-                  </p>
-                  <p className="truncate text-xs text-slate-400">
-                    {p.typeName || p.type} · {p.category}
-                  </p>
-                  {hasRecipe ? (
-                    <span className={`mt-1.5 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-black ${hasUnlinked ? "bg-yellow-500/15 text-yellow-300" : "bg-emerald-500/15 text-emerald-300"}`}>
-                      {hasUnlinked ? (
-                        <><AlertTriangle size={12} /> {p.recipe.filter(r => r.unlinked).length} не на складе</>
-                      ) : (
-                        <><Check size={12} /> состав · {p.recipe.length}</>
-                      )}
-                    </span>
-                  ) : (
-                    <span className="mt-1.5 inline-flex rounded-lg bg-slate-700/50 px-2 py-0.5 text-[10px] font-black text-slate-400">без состава</span>
-                  )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-base font-black text-white">{p.name}</p>
+                    <MarginBadge row={p} />
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-slate-400">{p.typeName || p.type} · {p.category}</p>
+                  <div className="mt-1.5"><StatusPills p={p} /></div>
                 </div>
 
                 <div className="flex shrink-0 gap-1.5">
-                  <button
-                    onClick={() => openEditProduct(p)}
-                    aria-label="Изменить"
-                    title="Изменить"
-                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition hover:bg-blue-500/20"
-                  ><Pencil size={16} /></button>
-                  <button
-                    onClick={() => duplicateProduct(p)}
-                    aria-label="Дублировать"
-                    title="Дублировать"
-                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 text-slate-300 transition hover:bg-white/10"
-                  ><Copy size={16} /></button>
-                  <button
-                    onClick={() => deleteProduct(p.id)}
-                    aria-label="Удалить"
-                    title="Удалить"
-                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-500/10 font-black text-red-400 transition hover:bg-red-500/20"
-                  ><Trash2 size={16} /></button>
+                  <button onClick={() => openEditProduct(p)} aria-label="Изменить" title="Изменить" className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition hover:bg-blue-500/20"><Pencil size={16} /></button>
+                  <button onClick={() => duplicateProduct(p)} aria-label="Дублировать" title="Дублировать" className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 text-slate-300 transition hover:bg-white/10"><Copy size={16} /></button>
+                  <button onClick={() => deleteProduct(p.id)} aria-label="Удалить" title="Удалить" className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-500/10 font-black text-red-400 transition hover:bg-red-500/20"><Trash2 size={16} /></button>
                 </div>
               </div>
 
@@ -1442,7 +1577,7 @@ export default function WorkPage() {
                   </div>
                   <div className="mt-1 flex items-baseline justify-between gap-2">
                     <span className="text-[11px] text-slate-500">Себест.</span>
-                    <span className="text-sm font-black tabular-nums text-slate-300">{formatMoney(p.cost)}</span>
+                    <span className="text-sm font-black tabular-nums text-slate-300">{formatMoney(p.cost)}{p.incompleteCost && <span className="text-amber-400"> ·неполн.</span>}</span>
                   </div>
                 </div>
                 <div className="flex-1 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.08] px-3 py-2">
@@ -1452,39 +1587,36 @@ export default function WorkPage() {
                   </div>
                   <div className="mt-1 flex items-baseline justify-between gap-2">
                     <span className="text-[11px] text-emerald-300/80">Прибыль</span>
-                    <span className="text-sm font-black tabular-nums text-emerald-400">{formatMoney(p.cleanProfit)}</span>
+                    <span className={`text-sm font-black tabular-nums ${p.cleanProfit < 0 ? "text-rose-300" : "text-emerald-400"}`}>{formatMoney(p.cleanProfit)}</span>
                   </div>
                 </div>
+              </div>
+
+              <div className="mt-2.5">
+                <ProfitShareBar row={p} />
+                <p className="mt-1 text-[10px] font-bold text-slate-500">{Math.round(p.profitShare)}% прибыли меню</p>
               </div>
             </div>
           );
           })}
 
-          {!productRows.length && (
+          {!displayRows.length && (
             <div className="p-4">
               <EmptyState
-                title={search ? "Ничего не найдено" : "Товаров пока нет"}
-                text={search ? "Попробуйте изменить запрос." : "Добавьте первый товар в меню — из него будут складываться продажи и себестоимость."}
-                actionLabel={search ? undefined : "+ Добавить товар"}
-                onAction={search ? undefined : openProductModal}
+                title={problemFilter !== "all" ? "Под фильтр ничего не попало" : (search ? "Ничего не найдено" : "Товаров пока нет")}
+                text={problemFilter !== "all" ? "Сбросьте быстрый фильтр, чтобы увидеть остальные товары." : (search ? "Попробуйте изменить запрос." : "Добавьте первый товар в меню — из него будут складываться продажи и себестоимость.")}
+                actionLabel={problemFilter !== "all" ? "Сбросить фильтр" : (search ? undefined : "+ Добавить товар")}
+                onAction={problemFilter !== "all" ? () => setProblemFilter("all") : (search ? undefined : openProductModal)}
               />
             </div>
           )}
 
           <div className="bg-[#070b1a] p-4 font-black text-white">
             <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-slate-400">Итого по выбранным</p>
-            <div className="flex justify-between">
-              <span>Кол-во</span>
-              <span>{totals.quantity}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Выручка</span>
-              <span>{formatMoney(totals.revenue)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Чистая прибыль</span>
-              <span>{formatMoney(totals.cleanProfit)}</span>
-            </div>
+            <div className="flex justify-between"><span>Кол-во</span><span>{displayTotals.quantity}</span></div>
+            <div className="flex justify-between"><span>Выручка</span><span>{formatMoney(displayTotals.revenue)}</span></div>
+            <div className="flex justify-between"><span>Чистая прибыль</span><span className="text-emerald-400">{formatMoney(displayTotals.cleanProfit)}</span></div>
+            {avgMarginShown != null && <div className="flex justify-between"><span>Средняя маржа</span><span className={marginToneCls(avgMarginShown)}>{Math.round(avgMarginShown)}%</span></div>}
           </div>
         </div>
         )}
