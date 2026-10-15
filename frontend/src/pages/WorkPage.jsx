@@ -1386,7 +1386,7 @@ export default function WorkPage() {
       </div>
 
       {/* Герой: чистая прибыль + KPI-лента + якорь + проблемы */}
-      <div className="relative mb-4 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-600/[0.18] via-violet-600/[0.12] to-transparent p-5 shadow-2xl shadow-black/20 backdrop-blur sm:p-6">
+      <div className="relative mb-4 overflow-hidden rounded-3xl border border-white/10 app-aurora bg-white/[0.04] bg-gradient-to-br from-blue-600/[0.18] via-violet-600/[0.12] to-transparent p-5 shadow-2xl shadow-black/20 backdrop-blur sm:p-6">
         <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-blue-500/20 blur-3xl" />
         <div className="relative">
           <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">Чистая прибыль · месяц</p>
@@ -1981,7 +1981,7 @@ export default function WorkPage() {
             </div>
 
             {aiSuggestion && (
-              <div className="sm:col-span-2 rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-500/10 to-blue-500/5 p-4">
+              <div className="sm:col-span-2 rounded-2xl border border-violet-400/20 app-aurora bg-white/[0.04] bg-gradient-to-br from-violet-500/10 to-blue-500/5 p-4">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
                     <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-violet-300"><Sparkles size={14}/> AI предлагает</p>

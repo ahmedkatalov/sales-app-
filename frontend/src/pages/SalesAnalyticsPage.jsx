@@ -322,7 +322,7 @@ export default function SalesAnalyticsPage() {
           <>
             {/* ── P&L-герой: Выручка → Себестоимость → Чистая прибыль ── */}
             <div className="mb-5 grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-              <div className="overflow-hidden rounded-[2rem] border border-emerald-400/20 bg-gradient-to-br from-emerald-500/[0.10] to-teal-600/[0.04] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:p-6">
+              <div className="overflow-hidden rounded-[2rem] border border-emerald-400/20 app-aurora bg-white/[0.04] bg-gradient-to-br from-emerald-500/[0.10] to-teal-600/[0.04] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-200/70">Чистая прибыль {periodLabel}</p>

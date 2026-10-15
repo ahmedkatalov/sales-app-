@@ -230,8 +230,10 @@ export function buildCss(appearanceInput) {
   }
 
   // Декоративное фоновое свечение выкл — гасим blur-пятна (они все pointer-events-none)
+  // и плоским делаем декоративные градиент-подложки героев (класс app-aurora).
   if (a.glow === false) {
     blocks.push(`.pointer-events-none[class*="blur-3xl"],.pointer-events-none[class*="blur-2xl"]{opacity:0!important;}`);
+    blocks.push(`.app-aurora{background-image:none!important;}`);
   }
 
   // Цвет фона приложения: красим body и гасим страничные градиент-подложки.

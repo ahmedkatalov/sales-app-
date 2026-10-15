@@ -374,7 +374,7 @@ export default function HomePage() {
         </header>
 
         {showOnboarding && (
-          <div className="mb-5 flex flex-col gap-3 rounded-3xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/[0.1] to-blue-500/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-5 flex flex-col gap-3 rounded-3xl border border-emerald-400/25 app-aurora bg-white/[0.04] bg-gradient-to-br from-emerald-500/[0.1] to-blue-500/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-start gap-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-500/15 text-emerald-300"><Sparkles size={18} strokeWidth={2.4} /></span>
               <div className="min-w-0">
@@ -403,7 +403,7 @@ export default function HomePage() {
         {loading ? (
           <Skel className="mb-5 h-[340px]" />
         ) : (
-          <section className="animate-rise relative mb-5 overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-blue-600/[0.12] via-white/[0.04] to-violet-600/[0.1] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.3)] backdrop-blur sm:p-7">
+          <section className="animate-rise relative mb-5 overflow-hidden rounded-[28px] border border-white/10 app-aurora bg-white/[0.04] bg-gradient-to-br from-blue-600/[0.12] via-white/[0.04] to-violet-600/[0.1] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.3)] backdrop-blur sm:p-7">
             <div className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
             <div className="relative">
               {/* верх: число + дельта + кольцо маржи */}

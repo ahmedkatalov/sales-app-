@@ -594,7 +594,7 @@ export default function ProfilePage({
           <section className="grid gap-5 xl:grid-cols-3">
             {/* Идентичность + статистика */}
             <div className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] backdrop-blur xl:col-span-2">
-              <div className="relative bg-gradient-to-br from-blue-600/20 via-violet-600/[0.12] to-transparent p-5 sm:p-6">
+              <div className="relative app-aurora bg-white/[0.04] bg-gradient-to-br from-blue-600/20 via-violet-600/[0.12] to-transparent p-5 sm:p-6">
                 <div className="flex items-center gap-4">
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-2xl font-black text-white shadow-lg shadow-blue-900/40 sm:h-20 sm:w-20 sm:text-3xl">
                     {(session?.username || "?").slice(0, 2).toUpperCase()}

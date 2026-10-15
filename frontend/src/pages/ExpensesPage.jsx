@@ -631,7 +631,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
       {/* Расчёты с владельцем — отдельная карточка, только владельцу/админу (эндпоинт вернул данные) */}
       {ownerFin && (
-        <div className="mb-5 rounded-[2rem] border border-amber-400/20 bg-gradient-to-br from-amber-500/[0.08] to-orange-500/[0.04] p-5 shadow-2xl backdrop-blur-xl sm:p-6">
+        <div className="mb-5 rounded-[2rem] border border-amber-400/20 app-aurora bg-white/[0.04] bg-gradient-to-br from-amber-500/[0.08] to-orange-500/[0.04] p-5 shadow-2xl backdrop-blur-xl sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-sm font-black text-amber-100">Расчёты с владельцем</p>
