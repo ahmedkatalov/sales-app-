@@ -193,7 +193,7 @@ func getFinanceReport(c *gin.Context) {
 			"netProfit": netProfit,
 		},
 		"cash": gin.H{
-			"inSales": revenueCash, "inOwner": contribP, "outExpenses": expenseCash,
+			"inSales": revenueCash, "inOwner": contribP, "inDebt": debtPaidCashP, "outExpenses": expenseCash,
 			"outReimburse": reimbP, "outWithdraw": withdrawP, "net": netCash,
 		},
 		"position": gin.H{
