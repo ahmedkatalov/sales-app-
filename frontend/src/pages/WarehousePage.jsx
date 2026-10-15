@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Package, Eye, EyeOff, AlertTriangle, ChevronDown, RefreshCw, Trash2, Ban, History, Wallet, Plus, MapPin, Sparkles } from "lucide-react";
+import { Package, Eye, EyeOff, AlertTriangle, ArrowDownWideNarrow, ChevronDown, MoreHorizontal, RefreshCw, RotateCcw, Trash2, Ban, History, Wallet, Plus, MapPin, Sparkles } from "lucide-react";
 import { del, get, post, getCurrentWorkspace } from "../api";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import Modal from "../components/Modal";
@@ -119,6 +119,69 @@ const smartPieceSuggestion = (name, unit) => {
   return "1";
 };
 
+// ── Статусы остатка: тон, порядок приоритета (проблемные выше), чипы ──
+const STATUS_ORDER = { neg: 0, out: 1, low: 2, norm: 3 };
+const CHIP = {
+  all: "border-blue-400/40 bg-blue-500/20 text-blue-100",
+  neg: "border-red-400/40 bg-red-500/20 text-red-200",
+  out: "border-slate-400/30 bg-slate-500/20 text-slate-200",
+  low: "border-amber-400/40 bg-amber-500/20 text-amber-200",
+  norm: "border-emerald-400/40 bg-emerald-500/20 text-emerald-200",
+};
+
+function StatusChip({ id, label, count, active, onClick }) {
+  const dim = count === 0 && !active;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={dim}
+      className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-black transition ${
+        active ? CHIP[id] : dim ? "border-white/10 bg-white/[0.02] text-slate-600" : "border-white/10 bg-white/[0.06] text-slate-300 hover:bg-white/10"
+      }`}
+    >
+      {label}
+      {count != null && <span className={`rounded-full px-1.5 py-0.5 text-[11px] tabular-nums ${active ? "bg-black/25" : "bg-white/10"}`}>{count}</span>}
+    </button>
+  );
+}
+
+// Меню «…» строки: главное действие «+ Закупка» видно, остальное — здесь.
+function RowMenu({ hidden, onHistory, onInventory, onWriteOff, onToggleHidden, onDelete }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+  const Item = ({ icon: Icon, label, onClick, cls = "text-slate-200" }) => (
+    <button type="button" role="menuitem" onClick={() => { setOpen(false); onClick(); }} className={`flex min-h-[40px] w-full items-center gap-2 rounded-lg px-3 text-left text-[12px] font-black transition hover:bg-white/10 ${cls}`}>
+      <Icon size={15} className="shrink-0" /> {label}
+    </button>
+  );
+  return (
+    <div className="relative" ref={ref}>
+      <button type="button" aria-label="Ещё действия" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.08] text-slate-200 transition hover:bg-white/15">
+        <MoreHorizontal size={16} />
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-white/10 bg-slate-900 p-1.5 shadow-2xl">
+          <Item icon={History} label="История закупок" onClick={onHistory} />
+          <Item icon={RotateCcw} label="Пересчёт остатка" onClick={onInventory} cls="text-amber-300" />
+          <Item icon={Ban} label="Списать" onClick={onWriteOff} />
+          <Item icon={hidden ? Eye : EyeOff} label={hidden ? "Показать" : "Скрыть"} onClick={onToggleHidden} />
+          <div className="my-1 border-t border-white/10" />
+          <Item icon={Trash2} label="Удалить" onClick={onDelete} cls="text-red-300" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function WarehousePage() {
   const isXl = useMediaQuery("(min-width: 1280px)"); // рендерим таблицу ЛИБО карточки, не обе
   const [items, setItems] = useState([]);
@@ -143,6 +206,8 @@ export default function WarehousePage() {
 
   const [showHidden, setShowHidden] = useState(false);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // all | neg | out | low | norm
+  const [sortBy, setSortBy] = useState("triage"); // triage | value | deficit | name
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: "",
@@ -254,8 +319,9 @@ export default function WarehousePage() {
       0
     );
 
+    // Низкий остаток = положительный, но ниже минимума (минусовые считаем отдельно «в минусе»).
     const lowItems = activeItems.filter(
-      (item) => minQty(item) > 0 && num(item.quantity) <= minQty(item)
+      (item) => minQty(item) > 0 && num(item.quantity) > 0.000001 && num(item.quantity) <= minQty(item)
     );
     // Товары, ушедшие в минус — продано больше, чем было на складе (нужно пополнить/сверить).
     const negativeItems = activeItems.filter((item) => num(item.quantity) < -0.000001);
@@ -268,6 +334,39 @@ export default function WarehousePage() {
       hidden: (Array.isArray(items) ? items : []).length - activeItems.length,
     };
   }, [items, activeItems]);
+
+  // ── Триаж остатков: статус, дефицит, счётчики, фильтр+сортировка ──
+  const enriched = useMemo(() => visibleItems.map((item) => {
+    const qty = num(item.quantity);
+    const min = minQty(item);
+    const neg = qty < -0.000001;
+    const out = !neg && qty <= 0.000001;
+    const low = !neg && !out && min > 0 && qty <= min;
+    const status = neg ? "neg" : out ? "out" : low ? "low" : "norm";
+    const unitCost = getUnitCost(item);
+    const deficit = min > 0 ? Math.max(0, min - qty) : (neg ? -qty : 0);
+    return { ...item, _qty: qty, _min: min, _status: status, _unitCost: unitCost, _deficit: deficit, _value: qty * unitCost };
+  }), [visibleItems]);
+
+  const counts = useMemo(() => {
+    const c = { neg: 0, out: 0, low: 0, norm: 0 };
+    enriched.forEach((e) => { c[e._status]++; });
+    return c;
+  }, [enriched]);
+
+  const displayItems = useMemo(() => {
+    const rows = statusFilter === "all" ? enriched : enriched.filter((e) => e._status === statusFilter);
+    const arr = [...rows];
+    if (sortBy === "value") return arr.sort((a, b) => b._value - a._value);
+    if (sortBy === "deficit") return arr.sort((a, b) => b._deficit * b._unitCost - a._deficit * a._unitCost);
+    if (sortBy === "name") return arr.sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ru"));
+    // triage: проблемные сверху, внутри — по сумме дефицита, затем имя
+    return arr.sort((a, b) =>
+      STATUS_ORDER[a._status] - STATUS_ORDER[b._status] ||
+      b._deficit * b._unitCost - a._deficit * a._unitCost ||
+      String(a.name || "").localeCompare(String(b.name || ""), "ru")
+    );
+  }, [enriched, statusFilter, sortBy]);
 
   const computedPurchase = computeWarehouseAmount(form);
 
@@ -686,14 +785,36 @@ export default function WarehousePage() {
           <p className={`mt-2 text-xl font-black sm:text-2xl ${stats.low > 0 ? "text-red-400" : "text-emerald-400"}`}>{stats.low}</p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
+        <button type="button" onClick={() => setStatusFilter((f) => (f === "neg" ? "all" : "neg"))} className={`rounded-2xl border p-3 text-left backdrop-blur-xl transition sm:p-4 ${stats.negative > 0 ? "border-red-500/25 bg-red-500/[0.07] hover:bg-red-500/[0.12]" : "border-white/10 bg-white/[0.05]"}`}>
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-500/15 text-slate-300 sm:h-9 sm:w-9 sm:rounded-xl"><Eye className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Скрытые</p>
+            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${stats.negative > 0 ? "bg-red-500/20 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}><AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
+            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">В минусе</p>
           </div>
-          <p className="mt-2 text-xl font-black text-white sm:text-2xl">{stats.hidden}</p>
-        </div>
+          <p className={`mt-2 text-xl font-black sm:text-2xl ${stats.negative > 0 ? "text-red-400" : "text-emerald-400"}`}>{stats.negative}</p>
+        </button>
       </div>
+
+      {/* ── Здоровье склада ── */}
+      {stats.count > 0 && (
+        <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-xl">
+          <div className="mb-2.5 flex items-center justify-between gap-3">
+            <p className="text-sm font-black text-white">Здоровье склада</p>
+            <p className="text-xs font-bold text-slate-400"><b className="text-emerald-300">{counts.norm}</b> из {stats.count} в норме</p>
+          </div>
+          <div className="flex h-3 w-full overflow-hidden rounded-full bg-white/10">
+            {counts.neg > 0 && <div className="bg-red-500" style={{ width: `${(counts.neg / stats.count) * 100}%` }} />}
+            {counts.out > 0 && <div className="bg-slate-500" style={{ width: `${(counts.out / stats.count) * 100}%` }} />}
+            {counts.low > 0 && <div className="bg-amber-400" style={{ width: `${(counts.low / stats.count) * 100}%` }} />}
+            {counts.norm > 0 && <div className="bg-emerald-500" style={{ width: `${(counts.norm / stats.count) * 100}%` }} />}
+          </div>
+          <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-bold">
+            <span className="inline-flex items-center gap-1.5 text-red-300"><span className="h-2 w-2 rounded-full bg-red-500" /> В минусе {counts.neg}</span>
+            <span className="inline-flex items-center gap-1.5 text-slate-300"><span className="h-2 w-2 rounded-full bg-slate-500" /> Нет в наличии {counts.out}</span>
+            <span className="inline-flex items-center gap-1.5 text-amber-300"><span className="h-2 w-2 rounded-full bg-amber-400" /> Низкий {counts.low}</span>
+            <span className="inline-flex items-center gap-1.5 text-emerald-300"><span className="h-2 w-2 rounded-full bg-emerald-500" /> В норме {counts.norm}</span>
+          </div>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] shadow-[0_16px_55px_rgba(0,0,0,.30)] backdrop-blur-xl">
         <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
@@ -729,6 +850,26 @@ export default function WarehousePage() {
           </div>
         </div>
 
+        {/* Триаж: фильтры по статусу + сортировка */}
+        <div className="flex flex-col gap-2 border-t border-white/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
+            <StatusChip id="all" label="Все" count={enriched.length} active={statusFilter === "all"} onClick={() => setStatusFilter("all")} />
+            <StatusChip id="neg" label="В минусе" count={counts.neg} active={statusFilter === "neg"} onClick={() => setStatusFilter((f) => (f === "neg" ? "all" : "neg"))} />
+            <StatusChip id="out" label="Нет в наличии" count={counts.out} active={statusFilter === "out"} onClick={() => setStatusFilter((f) => (f === "out" ? "all" : "out"))} />
+            <StatusChip id="low" label="Низкий" count={counts.low} active={statusFilter === "low"} onClick={() => setStatusFilter((f) => (f === "low" ? "all" : "low"))} />
+            <StatusChip id="norm" label="В норме" count={counts.norm} active={statusFilter === "norm"} onClick={() => setStatusFilter((f) => (f === "norm" ? "all" : "norm"))} />
+          </div>
+          <div className="relative shrink-0">
+            <ArrowDownWideNarrow size={16} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-11 rounded-xl border border-white/10 bg-slate-950/50 pl-8 pr-3 text-sm font-bold text-white outline-none">
+              <option value="triage" className="bg-slate-900">Проблемные сверху</option>
+              <option value="deficit" className="bg-slate-900">По сумме пополнения</option>
+              <option value="value" className="bg-slate-900">По стоимости остатка</option>
+              <option value="name" className="bg-slate-900">По названию</option>
+            </select>
+          </div>
+        </div>
+
         <div className="hidden overflow-x-auto xl:block">
           <table className="w-full min-w-[1180px] table-fixed text-left text-xs">
             <colgroup>
@@ -754,7 +895,7 @@ export default function WarehousePage() {
             </thead>
 
             <tbody>
-              {isXl && visibleItems.map((item) => {
+              {isXl && displayItems.map((item) => {
                 const hidden = isHidden(item);
                 const min = minQty(item);
                 const qty = num(item.quantity);
@@ -764,6 +905,8 @@ export default function WarehousePage() {
                 const low = min > 0 && qty <= min;
                 const neg = qty < -0.000001; // продано в минус — нужно пополнить/сверить
                 const out = !neg && qty <= 0.000001; // закончилось (нет в наличии)
+                const railCls = neg ? "border-l-red-500" : out ? "border-l-slate-500" : low ? "border-l-amber-400" : "border-l-transparent";
+                const deficit = min > 0 ? Math.max(0, min - qty) : (neg ? -qty : 0);
 
                 return (
                   <tr
@@ -772,7 +915,7 @@ export default function WarehousePage() {
                       hidden ? "bg-white/[0.03] opacity-55" : "bg-transparent hover:bg-white/[0.03]"
                     }`}
                   >
-                    <td className="px-3 py-2 align-middle">
+                    <td className={`border-l-4 px-3 py-2 align-middle ${railCls}`}>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="truncate font-black text-white">
@@ -810,6 +953,7 @@ export default function WarehousePage() {
                       {fmtQty(qty)} {unit}
                       {neg && <span className="ml-1 rounded bg-red-500/20 px-1.5 py-0.5 align-middle text-[10px] font-black text-red-300">в минусе</span>}
                       {out && <span className="ml-1 rounded bg-slate-500/20 px-1.5 py-0.5 align-middle text-[10px] font-black text-slate-300">нет в наличии</span>}
+                      {deficit > 0 && <p className="mt-0.5 text-[10px] font-bold text-slate-500">пополнить ~{fmtQty(deficit)} {unit}</p>}
                     </td>
 
                     <td className="px-3 py-2 align-middle font-bold text-slate-300">
@@ -827,66 +971,30 @@ export default function WarehousePage() {
                     </td>
 
                     <td className="px-3 py-2 align-middle">
-                      <div className="flex flex-wrap items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
                           onClick={() => openPurchaseForItem(item)}
-                          className="flex h-9 items-center justify-center gap-1 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-2 text-[11px] font-black leading-none text-emerald-300 transition hover:bg-emerald-400/20"
+                          className="flex h-9 items-center justify-center gap-1 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-2.5 text-[11px] font-black leading-none text-emerald-300 transition hover:bg-emerald-400/20"
                           title="Добавить новую закупку к этому товару"
                         >
                           <Plus size={13} strokeWidth={2.4} />Закупка
                         </button>
-
-                        <button
-                          type="button"
-                          onClick={() => openHistory(item)}
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-400/20 bg-blue-400/10 text-sm font-black text-blue-300 transition hover:bg-blue-400/20"
-                          title="История закупок"
-                          aria-label="История закупок"
-                        >
-                          <History size={16} strokeWidth={2.2} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => openWriteOff(item.id)}
-                          className="h-9 rounded-xl border border-red-400/20 bg-red-400/10 px-2 text-[11px] font-black text-red-300 transition hover:bg-red-400/20"
-                        >
-                          Списать
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => openInventory(item)}
-                          title="Пересчёт: указать фактический остаток (инвентаризация)"
-                          className="h-9 rounded-xl border border-amber-400/20 bg-amber-400/10 px-2 text-[11px] font-black text-amber-300 transition hover:bg-amber-400/20"
-                        >
-                          Пересчёт
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => toggleHidden(item)}
-                          className="h-9 rounded-xl border border-white/10 bg-white/[0.08] px-2 text-[11px] font-black text-slate-200 transition hover:bg-white/12"
-                        >
-                          {hidden ? "Показать" : "Скрыть"}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => openDeleteModal(item)}
-                          className="h-9 rounded-xl bg-red-500/90 px-2 text-[11px] font-black text-white transition hover:bg-red-500"
-                          title="Удалить товар из активного склада с записью в историю"
-                        >
-                          Удалить
-                        </button>
+                        <RowMenu
+                          hidden={hidden}
+                          onHistory={() => openHistory(item)}
+                          onInventory={() => openInventory(item)}
+                          onWriteOff={() => openWriteOff(item.id)}
+                          onToggleHidden={() => toggleHidden(item)}
+                          onDelete={() => openDeleteModal(item)}
+                        />
                       </div>
                     </td>
                   </tr>
                 );
               })}
 
-              {!visibleItems.length && (
+              {!displayItems.length && (
                 <tr>
                   <td colSpan="7" className="p-10 text-center text-slate-400">
                     Сырья пока нет
@@ -898,7 +1006,7 @@ export default function WarehousePage() {
         </div>
 
         <div className="divide-y divide-white/10 xl:hidden">
-          {!isXl && visibleItems.map((item) => {
+          {!isXl && displayItems.map((item) => {
             const hidden = isHidden(item);
             const min = minQty(item);
             const qty = num(item.quantity);
@@ -981,7 +1089,7 @@ export default function WarehousePage() {
             );
           })}
 
-          {!visibleItems.length && (
+          {!displayItems.length && (
             <div className="p-4">
               <EmptyState
                 title={search ? "Ничего не найдено" : "На складе пока пусто"}
@@ -995,7 +1103,13 @@ export default function WarehousePage() {
 
         <div className="flex flex-col gap-2 border-t border-white/10 px-4 py-3 text-xs font-semibold text-slate-400 sm:flex-row sm:items-center sm:justify-between">
           <span>
-            Показано {visibleItems.length} из {safe_items.length}
+            Показано {displayItems.length} из {safe_items.length}
+            {stats.hidden > 0 && (
+              <>
+                {" · "}
+                <button type="button" onClick={() => setShowHidden(true)} className="font-black text-slate-300 underline-offset-2 hover:text-white hover:underline">Скрытых: {stats.hidden}</button>
+              </>
+            )}
           </span>
 
           <span>Движений склада: {safe_movements.length}</span>
