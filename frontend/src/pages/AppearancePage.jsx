@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Check, Copy, Download, Moon, Palette, Plus, RotateCcw, Sparkles, Sun, Trash2, Upload, Users,
+  Check, Copy, Download, Eye, EyeOff, Moon, Palette, Plus, RotateCcw, Shuffle, Sparkles, Sun, Trash2, Upload, Users, X,
 } from "lucide-react";
 import {
   DEFAULT_APPEARANCE, DENSITY_LABELS, FONT_LABELS, PRESETS, RADIUS_LABELS, RADIUS_PRESETS, SHADOW_LABELS,
-  deleteTheme, duplicateTheme, exportTheme, getAppearance, importTheme, listThemes, renameTheme,
-  resetAppearance, saveTheme, setAppearance,
+  clearHiddenPresets, deleteTheme, duplicateTheme, exportTheme, getAppearance, importTheme, listHiddenPresets,
+  listThemes, randomAppearance, renameTheme, resetAppearance, saveTheme, setAppearance, setPresetHidden,
 } from "../theme/engine";
 import { getTheme, setTheme } from "../theme";
 import { getSession, put } from "../api";
@@ -97,6 +97,9 @@ export default function AppearancePage() {
   const [ap, setAp] = useState(getAppearance());
   const [mode, setMode] = useState(getTheme());
   const [themes, setThemes] = useState(listThemes());
+  const [hidden, setHidden] = useState(listHiddenPresets());
+  const [presetFilter, setPresetFilter] = useState("all"); // all | dark | light
+  const [showHidden, setShowHidden] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [newName, setNewName] = useState("");
@@ -107,15 +110,26 @@ export default function AppearancePage() {
     const onAp = (e) => setAp(e.detail || getAppearance());
     const onTheme = () => setMode(getTheme());
     const onThemes = () => setThemes(listThemes());
+    const onHidden = () => setHidden(listHiddenPresets());
     window.addEventListener("sales-appearance-change", onAp);
     window.addEventListener("sales-theme-change", onTheme);
     window.addEventListener("sales-themes-change", onThemes);
+    window.addEventListener("sales-hidden-presets-change", onHidden);
     return () => {
       window.removeEventListener("sales-appearance-change", onAp);
       window.removeEventListener("sales-theme-change", onTheme);
       window.removeEventListener("sales-themes-change", onThemes);
+      window.removeEventListener("sales-hidden-presets-change", onHidden);
     };
   }, []);
+
+  const hiddenSet = useMemo(() => new Set(hidden), [hidden]);
+  const byFilter = useMemo(
+    () => PRESETS.filter((p) => presetFilter === "all" || (p.mode || "dark") === presetFilter),
+    [presetFilter],
+  );
+  const visiblePresets = useMemo(() => byFilter.filter((p) => !hiddenSet.has(p.id)), [byFilter, hiddenSet]);
+  const hiddenPresets = useMemo(() => PRESETS.filter((p) => hiddenSet.has(p.id)), [hiddenSet]);
 
   const update = (partial) => setAp(setAppearance(partial));
 
@@ -126,6 +140,8 @@ export default function AppearancePage() {
   };
 
   const applyCustom = (t) => { setAp(setAppearance({ ...DEFAULT_APPEARANCE, ...t.appearance })); notify(`Тема «${t.name}» применена`, "success"); };
+
+  const onSurprise = () => { setAp(setAppearance(randomAppearance())); notify("Случайная тема применена", "success"); };
 
   const onSave = () => {
     const name = newName.trim() || "Моя тема";
@@ -226,9 +242,10 @@ export default function AppearancePage() {
         )}
 
         {/* Живой предпросмотр */}
-        <div className="mb-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-lg backdrop-blur">
-          <p className="mb-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Предпросмотр</p>
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-lg backdrop-blur">
+          <div className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-blue-500/15 blur-3xl" />
+          <p className="relative mb-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Предпросмотр</p>
+          <div className="relative flex flex-wrap items-center gap-3">
             <button className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg">Основная кнопка</button>
             <button className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-slate-200">Вторичная</button>
             <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-black text-emerald-300">Успех</span>
@@ -237,28 +254,104 @@ export default function AppearancePage() {
             <span className="rounded-full border border-blue-400/25 bg-blue-500/10 px-3 py-1.5 text-xs font-black text-blue-300">Инфо</span>
             <div className="grid h-11 min-w-[120px] flex-1 place-items-center rounded-2xl border border-white/10 bg-white/[0.03] text-sm font-bold text-slate-400">Поле ввода</div>
           </div>
+          {/* Пример карточки — показывает скругление, стекло, тени и шрифт */}
+          <div className="relative mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-3.5 shadow-lg backdrop-blur">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-base font-black text-white">А</span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-white">Пример карточки</p>
+                <p className="truncate text-xs font-semibold text-slate-400">Так выглядят поверхности приложения</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-3.5 shadow-lg backdrop-blur">
+              <div className="min-w-0">
+                <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Выручка</p>
+                <p className="truncate text-xl font-black tabular-nums text-white">64 306 ₽</p>
+              </div>
+              <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-black text-emerald-300">+12%</span>
+            </div>
+          </div>
         </div>
 
         {/* Готовые темы */}
-        <Section icon={Sparkles} title="Готовые темы" desc="Начните с профессиональной темы — потом настройте детали">
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
-            {PRESETS.map((p) => {
-              const a = p.appearance;
-              const dots = [a.accent || "#3b82f6", a.accent2 || "#8b5cf6", a.success || "#10b981", a.error || "#ef4444"];
-              return (
-                <button key={p.id} type="button" onClick={() => applyPreset(p)}
-                  className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-left transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.06]">
-                  <span className="flex -space-x-1.5">
-                    {dots.map((c, i) => <span key={i} className="h-6 w-6 rounded-full border-2 border-slate-900" style={{ background: c }} />)}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-black text-white">{p.name}</span>
-                    <span className="block text-[11px] font-semibold text-slate-500">{p.mode === "light" ? "Светлая" : "Тёмная"}</span>
-                  </span>
-                </button>
-              );
-            })}
+        <Section icon={Sparkles} title="Готовые темы" desc="Начните с профессиональной темы — потом настройте детали"
+          right={
+            <button type="button" onClick={onSurprise}
+              className="flex shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10"
+              title="Случайная тема">
+              <Shuffle size={16} /> <span className="hidden sm:inline">Удиви меня</span>
+            </button>
+          }>
+          {/* Фильтр по типу */}
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Segmented value={presetFilter} onChange={setPresetFilter} size="sm" options={[
+              { value: "all", label: `Все (${PRESETS.length})` },
+              { value: "dark", label: (<span className="flex items-center gap-1.5"><Moon size={12} /> Тёмные</span>) },
+              { value: "light", label: (<span className="flex items-center gap-1.5"><Sun size={12} /> Светлые</span>) },
+            ]} />
+            {hidden.length > 0 && (
+              <button type="button" onClick={() => setShowHidden((v) => !v)}
+                className="ml-auto flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-black text-slate-300 transition hover:bg-white/10">
+                {showHidden ? <Eye size={13} /> : <EyeOff size={13} />} Скрытые ({hidden.length})
+              </button>
+            )}
           </div>
+
+          {visiblePresets.length ? (
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+              {visiblePresets.map((p) => {
+                const a = p.appearance;
+                const dots = [a.accent || "#3b82f6", a.accent2 || "#8b5cf6", a.success || "#10b981", a.error || "#ef4444"];
+                return (
+                  <div key={p.id} role="button" tabIndex={0} onClick={() => applyPreset(p)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); applyPreset(p); } }}
+                    className="group relative flex cursor-pointer flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 pr-9 text-left transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.06] focus:outline-none focus-visible:border-blue-400/60 sm:flex-row sm:items-center sm:gap-3 sm:pr-3">
+                    <span className="flex -space-x-1.5">
+                      {dots.map((c, i) => <span key={i} className="h-6 w-6 rounded-full border-2 border-slate-900" style={{ background: c }} />)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-black text-white">{p.name}</span>
+                      <span className="block text-[11px] font-semibold text-slate-500">{p.mode === "light" ? "Светлая" : "Тёмная"}</span>
+                    </span>
+                    <button type="button" aria-label={`Скрыть тему «${p.name}»`} title="Скрыть из галереи"
+                      onClick={(e) => { e.stopPropagation(); setPresetHidden(p.id, true); notify(`Тема «${p.name}» скрыта`, "success"); }}
+                      className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-lg bg-slate-900/70 text-slate-400 transition hover:bg-red-500/20 hover:text-red-300 focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
+                      <X size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-white/10 py-8 text-center text-sm font-bold text-slate-500">
+              Нет тем в этой категории{hidden.length ? " (часть скрыта)" : ""}
+            </div>
+          )}
+
+          {/* Скрытые темы — восстановление */}
+          {showHidden && hiddenPresets.length > 0 && (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">Скрытые темы</p>
+                <button type="button" onClick={() => { clearHiddenPresets(); notify("Все темы возвращены", "success"); }}
+                  className="rounded-lg bg-white/5 px-2.5 py-1 text-xs font-black text-slate-300 transition hover:bg-white/10">Вернуть все</button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {hiddenPresets.map((p) => {
+                  const a = p.appearance;
+                  const dots = [a.accent || "#3b82f6", a.accent2 || "#8b5cf6"];
+                  return (
+                    <button key={p.id} type="button" onClick={() => { setPresetHidden(p.id, false); notify(`Тема «${p.name}» возвращена`, "success"); }}
+                      className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs font-black text-slate-300 transition hover:bg-white/10 hover:text-white">
+                      <span className="flex -space-x-1">{dots.map((c, i) => <span key={i} className="h-3.5 w-3.5 rounded-full border border-slate-900" style={{ background: c }} />)}</span>
+                      {p.name}
+                      <Plus size={13} className="text-emerald-300" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </Section>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -305,8 +398,8 @@ export default function AppearancePage() {
               </div>
             </Section>
 
-            <Section title="Стекло и тени" desc="Эффект матового стекла и глубина">
-              <Row label="Матовое стекло">
+            <Section title="Стекло, тени и фон" desc="Матовое стекло, глубина и фоновое свечение">
+              <Row label="Матовое стекло" hint="Полупрозрачные размытые поверхности">
                 <div className="flex justify-end"><Toggle checked={ap.glass} onChange={(v) => update({ glass: v })} /></div>
               </Row>
               <Row label="Сила размытия">
@@ -315,6 +408,9 @@ export default function AppearancePage() {
               <Row label="Тени">
                 <Segmented value={ap.shadow} onChange={(v) => update({ shadow: v })} size="sm"
                   options={Object.keys(SHADOW_LABELS).map((k) => ({ value: k, label: SHADOW_LABELS[k] }))} />
+              </Row>
+              <Row label="Фоновое свечение" hint="Цветные размытые пятна на фоне страниц">
+                <div className="flex justify-end"><Toggle checked={ap.glow !== false} onChange={(v) => update({ glow: v })} /></div>
               </Row>
             </Section>
           </div>

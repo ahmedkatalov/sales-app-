@@ -13,6 +13,7 @@
 const KEY_APPEARANCE = "sales_app_appearance";
 const KEY_APPEARANCE_CSS = "sales_app_appearance_css";
 const KEY_THEMES = "sales_app_themes";
+const KEY_HIDDEN_PRESETS = "sales_app_hidden_presets";
 const STYLE_ID = "appearance-style";
 
 // Профиль по умолчанию. null у цвета = «не трогаем, берём родной токен
@@ -32,6 +33,7 @@ export const DEFAULT_APPEARANCE = {
   fontScale: 1,      // масштаб шрифта (0.9 … 1.15)
   density: "normal", // compact | normal | comfortable
   motion: true,      // анимации/переходы вкл/выкл
+  glow: true,        // декоративное фоновое свечение (blur-пятна)
 };
 
 export const FONT_STACKS = {
@@ -68,6 +70,20 @@ export const PRESETS = [
   { id: "minimal", name: "Minimal", mode: "light", appearance: { accent: "#111827", accent2: "#374151", radius: 0.5, glass: false, shadow: "none", font: "system" } },
   { id: "nord", name: "Nord", mode: "dark", appearance: { accent: "#88c0d0", accent2: "#5e81ac", radius: 0.9 } },
   { id: "dracula", name: "Dracula", mode: "dark", appearance: { accent: "#bd93f9", accent2: "#ff79c6", radius: 1 } },
+  // ── кофейная линейка (под бренд) ──
+  { id: "espresso", name: "Эспрессо", mode: "dark", appearance: { accent: "#b4825a", accent2: "#8c5a3b", radius: 0.9, glass: true, shadow: "soft", font: "rounded" } },
+  { id: "latte", name: "Латте", mode: "light", appearance: { accent: "#a47551", accent2: "#c89f73", radius: 1.1, glass: false, shadow: "soft", font: "rounded" } },
+  { id: "caramel", name: "Карамель", mode: "dark", appearance: { accent: "#e0a458", accent2: "#c2410c", radius: 1, glass: true, shadow: "strong" } },
+  // ── цветные ──
+  { id: "sunset", name: "Sunset", mode: "dark", appearance: { accent: "#fb7185", accent2: "#f59e0b", radius: 1.2, glass: true, shadow: "strong" } },
+  { id: "forest", name: "Forest", mode: "dark", appearance: { accent: "#22c55e", accent2: "#15803d", radius: 0.9 } },
+  { id: "rose", name: "Rose", mode: "dark", appearance: { accent: "#f43f5e", accent2: "#ec4899", radius: 1.15 } },
+  { id: "grape", name: "Grape", mode: "dark", appearance: { accent: "#a855f7", accent2: "#6366f1", radius: 1.1 } },
+  { id: "mint", name: "Mint", mode: "dark", appearance: { accent: "#2dd4bf", accent2: "#10b981", radius: 1.2 } },
+  { id: "royal", name: "Royal", mode: "dark", appearance: { accent: "#4f46e5", accent2: "#7c3aed", radius: 1, glass: true, shadow: "soft" } },
+  { id: "cyber", name: "Cyber", mode: "dark", appearance: { accent: "#22d3ee", accent2: "#a855f7", radius: 1.3, glass: true, shadow: "strong", font: "mono" } },
+  { id: "sky", name: "Sky", mode: "light", appearance: { accent: "#0ea5e9", accent2: "#38bdf8", radius: 1, glass: false, shadow: "soft" } },
+  { id: "sand", name: "Песок", mode: "light", appearance: { accent: "#d97706", accent2: "#b45309", radius: 0.8, glass: false, shadow: "none", font: "system" } },
 ];
 
 // ── Цветовая математика ──────────────────────────────────────────────
@@ -211,6 +227,11 @@ export function buildCss(appearanceInput) {
     blocks.push(`*,*::before,*::after{transition-duration:0.001ms!important;animation-duration:0.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;}`);
   }
 
+  // Декоративное фоновое свечение выкл — гасим blur-пятна (они все pointer-events-none)
+  if (a.glow === false) {
+    blocks.push(`.pointer-events-none[class*="blur-3xl"],.pointer-events-none[class*="blur-2xl"]{opacity:0!important;}`);
+  }
+
   return blocks.join("\n");
 }
 
@@ -311,4 +332,49 @@ export function importTheme(text) {
   const clean = {};
   for (const k of Object.keys(DEFAULT_APPEARANCE)) if (k in ap) clean[k] = ap[k];
   return { name: data?.name || "Импортированная тема", appearance: { ...DEFAULT_APPEARANCE, ...clean } };
+}
+
+// ── Скрытые готовые темы (чтобы убрать из галереи ненужные) ──────────
+// Это локальная преференция устройства (как и выбор тёмной/светлой темы),
+// не часть профиля оформления — в экспорт/«Применить для всех» не входит.
+export function listHiddenPresets() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(KEY_HIDDEN_PRESETS) || "[]");
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : [];
+  } catch { return []; }
+}
+function writeHiddenPresets(arr) {
+  try { localStorage.setItem(KEY_HIDDEN_PRESETS, JSON.stringify([...new Set(arr)])); } catch { /* ignore */ }
+  window.dispatchEvent(new CustomEvent("sales-hidden-presets-change"));
+}
+export function setPresetHidden(id, hidden) {
+  const cur = listHiddenPresets();
+  writeHiddenPresets(hidden ? [...cur, id] : cur.filter((x) => x !== id));
+}
+export function clearHiddenPresets() {
+  writeHiddenPresets([]);
+}
+
+// ── Генератор случайной «вкусной» темы (кнопка «Удиви меня») ─────────
+// Берём из выверенных пар оттенков + случайные структурные параметры —
+// результат всегда остаётся читаемым и гармоничным.
+const RANDOM_PAIRS = [
+  ["#3b82f6", "#8b5cf6"], ["#0ea5e9", "#06b6d4"], ["#10b981", "#14b8a6"],
+  ["#8b5cf6", "#d946ef"], ["#f43f5e", "#ec4899"], ["#fb7185", "#f59e0b"],
+  ["#22c55e", "#15803d"], ["#a855f7", "#6366f1"], ["#2dd4bf", "#10b981"],
+  ["#22d3ee", "#a855f7"], ["#e0a458", "#c2410c"], ["#4f46e5", "#7c3aed"],
+  ["#06b6d4", "#3b82f6"], ["#f97316", "#ef4444"], ["#84cc16", "#22c55e"],
+];
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+export function randomAppearance() {
+  const [accent, accent2] = pick(RANDOM_PAIRS);
+  return {
+    ...DEFAULT_APPEARANCE,
+    accent, accent2,
+    radius: pick([0.6, 0.9, 1, 1.1, 1.2, 1.35]),
+    glass: Math.random() > 0.3,
+    blur: pick([0.8, 1, 1.2, 1.45]),
+    shadow: pick(["soft", "soft", "strong", "none"]),
+    font: pick(["system", "system", "rounded", "mono"]),
+  };
 }
