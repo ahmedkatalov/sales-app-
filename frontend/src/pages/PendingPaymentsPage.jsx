@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeftRight, ArrowUp, Banknote, CheckCircle2, Clock, ListChecks, Loader2, MoreHorizontal, Package, RefreshCw, Timer, Trash2, Wallet } from "lucide-react";
+import { ArrowLeftRight, ArrowUp, Banknote, CheckCircle2, Clock, Loader2, MoreHorizontal, RefreshCw, Trash2 } from "lucide-react";
 import { del, get, post } from "../api";
 import Modal from "../components/Modal";
 import { formatMoney, num } from "../utils/format";
@@ -28,28 +28,6 @@ const TIER = {
   hot: { bl: "border-l-orange-400/80", badge: "border-orange-400/30 bg-orange-500/10 text-orange-300", dot: "bg-orange-400", text: "text-orange-300" },
   urgent: { bl: "border-l-red-500/80", badge: "border-red-500/30 bg-red-500/15 text-red-300", dot: "bg-red-500", text: "text-red-300" },
 };
-
-function Stat({ icon: Icon, label, value, sub, tone = "blue" }) {
-  const tones = {
-    blue: "border-blue-500/25 bg-blue-500/[0.08] text-blue-300",
-    emerald: "border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-300",
-    violet: "border-violet-500/25 bg-violet-500/[0.08] text-violet-300",
-    amber: "border-amber-500/25 bg-amber-500/[0.08] text-amber-300",
-    orange: "border-orange-500/25 bg-orange-500/[0.08] text-orange-300",
-    red: "border-red-500/30 bg-red-500/[0.1] text-red-300",
-    slate: "border-white/10 bg-white/[0.04] text-slate-300",
-  };
-  return (
-    <div className={`min-w-0 rounded-2xl border p-3 sm:p-4 ${tones[tone]}`}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-[11px] font-black uppercase tracking-wide opacity-90">{label}</p>
-        <Icon size={16} className="shrink-0 opacity-70" />
-      </div>
-      <p className="mt-1.5 truncate text-xl font-black tabular-nums text-white sm:text-2xl">{value}</p>
-      {sub && <p className="truncate text-[11px] font-semibold text-slate-500">{sub}</p>}
-    </div>
-  );
-}
 
 export default function PendingPaymentsPage() {
   const [list, setList] = useState([]);
@@ -195,23 +173,25 @@ export default function PendingPaymentsPage() {
       {/* ── Шапка ── */}
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-blue-400">Касса</p>
+          <p className="text-xs font-bold text-blue-400">Касса</p>
           <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">Ожидают оплаты</h2>
           {queue.length > 0 ? (
-            <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-slate-400">
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold text-slate-400">
               <span><b className="text-white">{queue.length}</b> {plural(queue.length, ["чек", "чека", "чеков"])} на <b className="tabular-nums text-emerald-300">{formatMoney(totalWaiting)}</b></span>
               <span className="text-slate-600">·</span>
-              <span className={`inline-flex items-center gap-1 ${oldestTier.text}`}><Clock size={14} /> старейший ждёт <b>{fmtAge(oldestAge)}</b></span>
+              <span>{totalItems} {plural(totalItems, ["товар", "товара", "товаров"])}</span>
+              <span className="text-slate-600">·</span>
+              <span className={`inline-flex items-center gap-1 ${oldestTier.text}`}><Clock size={13} /> старейший ждёт <b>{fmtAge(oldestAge)}</b></span>
             </p>
           ) : (
-            <p className="mt-2 text-sm leading-6 text-slate-400">Чеки собраны в кассе, но ещё не оплачены наличными или переводом.</p>
+            <p className="mt-1.5 text-sm leading-6 text-slate-400">Чеки собраны в кассе, но ещё не оплачены наличными или переводом.</p>
           )}
         </div>
 
         <button
           onClick={load}
           aria-label="Обновить"
-          className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 font-bold text-slate-200 transition hover:bg-white/10"
+          className="flex h-9 min-w-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-0 text-sm font-black text-slate-200 transition hover:bg-white/10 sm:px-3"
         >
           <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           <span className="hidden sm:inline">Обновить</span>
@@ -219,127 +199,112 @@ export default function PendingPaymentsPage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 font-bold text-red-300">{error}</div>
+        <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 font-bold text-red-300">{error}</div>
       )}
 
-      {/* ── Статы (скрыты на пустой очереди) ── */}
       {queue.length > 0 && (
-        <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
-          <Stat icon={ListChecks} label="Чеки" value={queue.length} sub="в очереди" tone="blue" />
-          <Stat icon={Wallet} label="Сумма" value={formatMoney(totalWaiting)} sub="к оплате" tone="emerald" />
-          <Stat icon={Package} label="Товаров" value={totalItems} sub="единиц всего" tone="violet" />
-          <Stat icon={Timer} label="Старейший" value={fmtAge(oldestAge)} sub={`собран в ${fmtTime(oldest?.createdAt)}`} tone={tierOf(oldestAge) === "fresh" ? "slate" : tierOf(oldestAge) === "warm" ? "amber" : tierOf(oldestAge) === "hot" ? "orange" : "red"} />
-        </div>
+        <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-slate-500">Список чеков · оплата в один тап</p>
       )}
 
-      <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] shadow-xl backdrop-blur">
-        <div className="border-b border-white/10 p-4 sm:p-5">
-          <h3 className="text-xl font-black text-white sm:text-2xl">Список чеков</h3>
-          <p className="mt-1 text-sm text-slate-400">Примите оплату в один тап — «Наличные» или «Перевод». «⋯» — приём со сдачей или выбором карты.</p>
-        </div>
-
-        {queue.length > 0 ? (
-          <div className="grid gap-3 p-3 sm:p-5">
-            {queue.map((s, idx) => {
-              const age = ageMs(s.createdAt, now);
-              const t = TIER[tierOf(age)];
-              const items = s.items || [];
-              const isOpen = expanded.has(s.id);
-              const shown = isOpen ? items : items.slice(0, 3);
-              const busy = busyId === s.id;
-              const isOldest = idx === 0 && queue.length > 1;
-              return (
-                <div
-                  key={s.id}
-                  className={`rounded-2xl border border-l-4 border-white/10 bg-white/[0.03] p-4 transition ${t.bl} ${busy ? "pointer-events-none opacity-60" : ""} ${tierOf(age) === "urgent" ? "ring-1 ring-red-500/30" : ""}`}
-                >
-                  {isOldest && (
-                    <p className={`mb-1.5 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider ${t.text}`}>
-                      <ArrowUp size={12} /> Раньше всех
-                    </p>
-                  )}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-black ${t.badge} ${tierOf(age) === "urgent" ? "animate-pulse" : ""}`}>
-                        <Clock size={13} /> ждёт {fmtAge(age)}
-                      </span>
-                      <span className="ml-2 text-xs font-semibold text-slate-500">в {fmtTime(s.createdAt)}</span>
-                    </div>
-                    <h4 className="shrink-0 text-2xl font-black tabular-nums text-white sm:text-3xl">{formatMoney(s.total)}</h4>
+      {queue.length > 0 ? (
+        <div className="grid gap-2">
+          {queue.map((s, idx) => {
+            const age = ageMs(s.createdAt, now);
+            const t = TIER[tierOf(age)];
+            const items = s.items || [];
+            const isOpen = expanded.has(s.id);
+            const shown = isOpen ? items : items.slice(0, 3);
+            const busy = busyId === s.id;
+            const isOldest = idx === 0 && queue.length > 1;
+            return (
+              <div
+                key={s.id}
+                className={`rounded-xl border border-l-2 border-white/10 bg-white/[0.04] p-3 transition ${t.bl} ${busy ? "pointer-events-none opacity-60" : ""} ${tierOf(age) === "urgent" ? "ring-1 ring-red-500/30" : ""}`}
+              >
+                {/* Шапка чека: давность + время + № + сумма */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-black ${t.badge} ${tierOf(age) === "urgent" ? "animate-pulse" : ""}`}>
+                      <Clock size={11} /> {fmtAge(age)}
+                    </span>
+                    {isOldest && <span className={`inline-flex shrink-0 items-center gap-0.5 text-[10px] font-black uppercase tracking-wide ${t.text}`}><ArrowUp size={11} /> раньше всех</span>}
+                    <span className="truncate text-[11px] font-semibold text-slate-500">в {fmtTime(s.createdAt)} · #{s.id}</span>
                   </div>
-
-                  <div className="mt-3 space-y-1.5 rounded-xl border border-white/10 bg-slate-950/40 p-3 text-sm">
-                    {shown.map((i, k) => (
-                      <div key={`${s.id}-${k}-${i.name}`} className="flex items-center justify-between gap-3">
-                        <span className="min-w-0 truncate font-bold text-slate-200">{i.name} × {i.qty}</span>
-                        <b className="shrink-0 tabular-nums text-white">{formatMoney(i.total || num(i.price) * num(i.qty))}</b>
-                      </div>
-                    ))}
-                    {!items.length && <div className="text-slate-500">В чеке нет позиций</div>}
-                    {items.length > 3 && (
-                      <button onClick={() => toggleExpand(s.id)} className="pt-0.5 text-xs font-black text-blue-300 hover:text-blue-200">
-                        {isOpen ? "Свернуть" : `+${items.length - 3} ещё · показать`}
-                      </button>
-                    )}
-                  </div>
-
-                  {transferOpenId === s.id && safe_cards.length > 1 && (
-                    <div className="no-scrollbar mt-2.5 flex gap-2 overflow-x-auto">
-                      <span className="shrink-0 self-center text-xs font-bold text-slate-500">На карту:</span>
-                      {safe_cards.map((c) => (
-                        <button key={c.id} onClick={() => quickConfirm(s, "transfer", c.id)} className="shrink-0 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2.5 text-sm font-black text-blue-200 transition hover:bg-blue-500/20">
-                          {c.name}{c.owner ? ` · ${c.owner}` : ""}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="mt-3 grid grid-cols-[1fr_1fr_auto] gap-2">
-                    <button
-                      onClick={() => quickConfirm(s, "cash")}
-                      disabled={busy}
-                      className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-3 py-3 font-black text-white shadow-lg shadow-emerald-900/30 transition hover:brightness-110 active:scale-[0.98]"
-                    >
-                      {busy ? <Loader2 size={16} className="animate-spin" /> : <Banknote size={16} />} Наличные
-                    </button>
-                    <button
-                      onClick={() => onTransfer(s)}
-                      disabled={busy}
-                      className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-3 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110 active:scale-[0.98]"
-                    >
-                      <ArrowLeftRight size={16} /> Перевод
-                    </button>
-                    <button
-                      onClick={() => openModal(s)}
-                      aria-label="Приём со сдачей или выбором карты"
-                      title="Приём со сдачей / выбор карты"
-                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10"
-                    >
-                      <MoreHorizontal size={18} />
-                    </button>
-                  </div>
-
-                  <div className="mt-2.5 flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-slate-600">Чек #{s.id}</span>
-                    <button
-                      onClick={() => cancel(s.id)}
-                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold text-slate-500 transition hover:bg-red-500/10 hover:text-red-300"
-                    >
-                      <Trash2 size={13} /> Отменить чек
-                    </button>
-                  </div>
+                  <h4 className="shrink-0 text-xl font-black tabular-nums text-white sm:text-2xl">{formatMoney(s.total)}</h4>
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="px-6 py-14 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300 shadow-[0_0_40px_rgba(16,185,129,0.15)]"><CheckCircle2 size={30} strokeWidth={2.4} /></div>
-            <p className="text-lg font-black text-white">Все чеки оплачены</p>
-            <p className="mt-1 text-sm text-slate-400">Очередь пуста — новые чеки появятся здесь, как только их соберут в кассе.</p>
-          </div>
-        )}
-      </div>
+
+                {/* Позиции чека */}
+                <div className="mt-2 space-y-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-[13px]">
+                  {shown.map((i, k) => (
+                    <div key={`${s.id}-${k}-${i.name}`} className="flex items-center justify-between gap-3">
+                      <span className="min-w-0 truncate font-bold text-slate-200">{i.name} × {i.qty}</span>
+                      <b className="shrink-0 tabular-nums text-white">{formatMoney(i.total || num(i.price) * num(i.qty))}</b>
+                    </div>
+                  ))}
+                  {!items.length && <div className="text-slate-500">В чеке нет позиций</div>}
+                  {items.length > 3 && (
+                    <button onClick={() => toggleExpand(s.id)} className="pt-0.5 text-xs font-black text-blue-300 hover:text-blue-200">
+                      {isOpen ? "Свернуть" : `+${items.length - 3} ещё · показать`}
+                    </button>
+                  )}
+                </div>
+
+                {transferOpenId === s.id && safe_cards.length > 1 && (
+                  <div className="no-scrollbar mt-2 flex gap-2 overflow-x-auto">
+                    <span className="shrink-0 self-center text-xs font-bold text-slate-500">На карту:</span>
+                    {safe_cards.map((c) => (
+                      <button key={c.id} onClick={() => quickConfirm(s, "transfer", c.id)} className="shrink-0 rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-sm font-black text-blue-200 transition hover:bg-blue-500/20">
+                        {c.name}{c.owner ? ` · ${c.owner}` : ""}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Приём оплаты в один тап */}
+                <div className="mt-2.5 grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => quickConfirm(s, "cash")}
+                    disabled={busy}
+                    className="inline-flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-emerald-600 px-3 font-black text-white transition hover:bg-emerald-500 active:scale-[0.98]"
+                  >
+                    {busy ? <Loader2 size={16} className="animate-spin" /> : <Banknote size={16} />} Наличные
+                  </button>
+                  <button
+                    onClick={() => onTransfer(s)}
+                    disabled={busy}
+                    className="inline-flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-blue-600 px-3 font-black text-white transition hover:bg-blue-500 active:scale-[0.98]"
+                  >
+                    <ArrowLeftRight size={16} /> Перевод
+                  </button>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => openModal(s)}
+                    aria-label="Приём со сдачей или выбором карты"
+                    title="Приём со сдачей / выбор карты"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-black text-slate-300 transition hover:bg-white/10"
+                  >
+                    <MoreHorizontal size={14} /> Сдача · карта
+                  </button>
+                  <button
+                    onClick={() => cancel(s.id)}
+                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold text-slate-500 transition hover:bg-red-500/10 hover:text-red-300"
+                  >
+                    <Trash2 size={12} /> Отменить чек
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-12 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300"><CheckCircle2 size={28} strokeWidth={2.4} /></div>
+          <p className="text-lg font-black text-white">Все чеки оплачены</p>
+          <p className="mt-1 text-sm text-slate-400">Очередь пуста — новые чеки появятся здесь, как только их соберут в кассе.</p>
+        </div>
+      )}
 
       {/* ── Модалка: приём со сдачей / выбором карты ── */}
       {selected && (
