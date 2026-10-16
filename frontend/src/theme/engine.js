@@ -236,17 +236,22 @@ export function buildCss(appearanceInput) {
     blocks.push(`.app-aurora{background-image:none!important;}`);
   }
 
+  // Цвет фона и блоков — значения считаем «тёмными» (их задают в тёмной теме),
+  // поэтому применяем ТОЛЬКО к тёмной. В светлой теме работает родная светлая
+  // перекраска токенов (см. index.css [data-theme="light"]) — она сама светлая.
+  const DARK = ':root:not([data-theme="light"])';
+
   // Цвет фона приложения: красим body и гасим страничные градиент-подложки.
   if (a.bg) {
-    blocks.push(`body{background-color:${a.bg}!important;}`);
-    blocks.push(`[class*="bg-[linear-gradient"],[class*="bg-[radial-gradient"]{background-image:none!important;background-color:${a.bg}!important;}`);
+    blocks.push(`${DARK} body{background-color:${a.bg}!important;}`);
+    blocks.push(`${DARK} [class*="bg-[linear-gradient"],${DARK} [class*="bg-[radial-gradient"]{background-image:none!important;background-color:${a.bg}!important;}`);
   }
 
   // Цвет блоков/карточек: переопределяем «карточные» полупрозрачные поверхности
   // (bg-white/[0.0X] — именно карточки; bg-white/5 и /10 — это кнопки/чипы, их не трогаем).
   if (a.surface) {
     const sel = ["0.02", "0.03", "0.04", "0.045", "0.05", "0.06", "0.07", "0.08"]
-      .map((o) => `[class*="bg-white/[${o}]"]`).join(",");
+      .map((o) => `${DARK} [class*="bg-white/[${o}]"]`).join(",");
     blocks.push(`${sel}{background-color:${a.surface}!important;}`);
   }
 

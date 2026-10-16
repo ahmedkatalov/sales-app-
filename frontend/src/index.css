@@ -161,19 +161,19 @@ html[data-theme="light"] :is(
 /* Жёстко заданные тёмные hex-фоны (bg-[#0f172a] и т.п.) не темизируются
    через переменные — переопределяем их вручную для светлой темы.
    Используем *= чтобы поймать и варианты с прозрачностью (bg-[#0f172a]/90). */
-html[data-theme="light"] :is([class*="bg-[#0f172a]"], [class*="bg-[#111827]"]) {
+html[data-theme="light"] :is([class*="bg-[#0f172a]"], [class*="bg-[#111827]"], [class*="bg-[#0c111d]"], [class*="bg-[#141a28]"], [class*="bg-[#0a1122]"], [class*="bg-[#0d1424]"], [class*="bg-[#0b1020]"]) {
   background-color: var(--surface);
 }
 html[data-theme="light"] :is(
   [class*="bg-[#070b1a]"], [class*="bg-[#0b1120]"], [class*="bg-[#050b1f]"],
-  [class*="bg-[#050b1d]"], [class*="bg-[#030816]"]
+  [class*="bg-[#050b1d]"], [class*="bg-[#030816]"], [class*="bg-[#0a0e17]"]
 ) {
   background-color: #eef2fb;
 }
 
 /* Произвольные hero-градиенты страниц (bg-[radial-gradient(...)]) с
    зашитыми тёмными цветами — заменяем на светлый градиент с лёгким акцентом. */
-html[data-theme="light"] [class*="bg-[radial-gradient"] {
+html[data-theme="light"] :is([class*="bg-[radial-gradient"], [class*="bg-[linear-gradient"]) {
   background-image:
     radial-gradient(circle at top right, rgba(124, 58, 237, 0.10), transparent 38%),
     radial-gradient(circle at 18% 0%, rgba(37, 99, 235, 0.08), transparent 32%),
