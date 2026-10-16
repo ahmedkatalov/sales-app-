@@ -241,9 +241,12 @@ export function buildCss(appearanceInput) {
   // перекраска токенов (см. index.css [data-theme="light"]) — она сама светлая.
   const DARK = ':root:not([data-theme="light"])';
 
-  // Цвет фона приложения: красим body и гасим страничные градиент-подложки.
+  // Цвет фона приложения: красим body, сплошную оболочку приложения/логина
+  // (bg-[#0a0e17] — корневой фон под контентом) и гасим страничные
+  // градиент-подложки героев.
   if (a.bg) {
     blocks.push(`${DARK} body{background-color:${a.bg}!important;}`);
+    blocks.push(`${DARK} [class*="bg-[#0a0e17]"]{background-color:${a.bg}!important;}`);
     blocks.push(`${DARK} [class*="bg-[linear-gradient"],${DARK} [class*="bg-[radial-gradient"]{background-image:none!important;background-color:${a.bg}!important;}`);
   }
 
