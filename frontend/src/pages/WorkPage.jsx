@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowDown, ArrowUp, Boxes, Check, Copy, Crown, FileUp, Lightbulb, MoreHorizontal, Package, PackageX, Pencil, Search, Settings, SlidersHorizontal, Sparkles, Trash2, TrendingDown, Wallet, X, Zap } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Boxes, Check, Copy, Crown, EyeOff, FileUp, Lightbulb, MoreHorizontal, Package, PackageX, Pencil, Search, Settings, SlidersHorizontal, Sparkles, Trash2, TrendingDown, Wallet, X, Zap } from "lucide-react";
 import { del, get, post, put, getSession } from "../api";
 import Modal from "../components/Modal";
 import MenuTransferModal from "../components/MenuTransferModal";
@@ -236,101 +236,81 @@ const initialsOf = (name) => {
 };
 
 function CategoryAvatar({ name, category, type, size = 44 }) {
+  const radius = size <= 36 ? "rounded-lg" : "rounded-2xl";
   return (
-    <span className={`grid shrink-0 place-items-center rounded-2xl font-black ${catTint(category || type)}`}
-      style={{ width: size, height: size, fontSize: size * 0.32 }}>
+    <span className={`grid shrink-0 place-items-center font-black ${radius} ${catTint(category || type)}`}
+      style={{ width: size, height: size, fontSize: size * 0.34 }}>
       {initialsOf(name)}
     </span>
   );
 }
 
-// Кольцо маржи на чистом SVG (r=18 → длина окружности ≈113.1).
-function MarginRing({ marginPct, tone = "slate", potential = false, size = 48 }) {
-  const t = TONE[tone] || TONE.slate;
-  const pct = Math.min(100, Math.max(0, num(marginPct)));
-  const C = 113.097;
+// Мини-тайл сводки (мобильная сетка 2×2) — единый язык со страницей «Долги».
+function MiniTile({ label, value, sub, valueClass = "text-white" }) {
   return (
-    <span className="relative inline-grid shrink-0 place-items-center" style={{ width: size, height: size }}>
-      <svg viewBox="0 0 44 44" width={size} height={size} className="-rotate-90">
-        <circle cx="22" cy="22" r="18" fill="none" strokeWidth="4" className="stroke-white/10" />
-        <circle cx="22" cy="22" r="18" fill="none" strokeWidth="4" strokeLinecap="round"
-          className={`${t.ring} transition-[stroke-dashoffset] duration-500`} strokeDasharray={C} strokeDashoffset={C * (1 - pct / 100)} />
-      </svg>
-      <span className={`absolute text-center text-[11px] font-black leading-none tabular-nums ${t.text}`}>
-        {Math.round(num(marginPct))}%{potential && <span className="block text-[7px] font-bold opacity-60">потенц.</span>}
-      </span>
-    </span>
-  );
-}
-
-function ProductCard({ p, onEdit, onDuplicate, onDelete }) {
-  const t = TONE[p.tone] || TONE.slate;
-  return (
-    <div className={`group relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06] hover:shadow-xl hover:shadow-black/30 ${p.lossmaking ? "ring-1 ring-rose-500/30" : ""} ${p.hidden ? "opacity-60" : ""}`}>
-      <div className={`absolute inset-x-5 top-0 h-[3px] rounded-b-full bg-gradient-to-r ${t.bar}`} />
-      <div className="flex items-start justify-between gap-3">
-        <CategoryAvatar name={p.name} category={p.category} type={p.typeName || p.type} size={44} />
-        <MarginRing marginPct={p.marginPct} tone={p.tone} potential={p.marginIsPotential} size={48} />
-      </div>
-
-      <div className="mt-3 min-w-0">
-        <p className="line-clamp-2 text-[15px] font-black leading-tight text-white">{p.name}</p>
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <span className="rounded-lg bg-white/5 px-2 py-0.5 text-[10px] font-bold text-slate-400">{p.typeName || p.type} · {p.category}</span>
-          <StatusPills p={p} />
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-end justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-2xl font-black tabular-nums text-white">{formatMoney(p.price)}</p>
-          <p className="truncate text-[11px] font-semibold text-slate-500">с/с {formatMoney(p.cost)}{p.incompleteCost && <span className="text-amber-400"> · неполн.</span>}</p>
-        </div>
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-white/5 px-2 py-1 text-xs font-bold text-slate-300"><Boxes size={13} /> ×{num(p.quantity)}</span>
-        <div className="shrink-0 text-right">
-          <p className={`text-sm font-black tabular-nums ${p.cleanProfit < 0 ? "text-rose-300" : "text-emerald-400"}`}>{formatMoney(p.cleanProfit)}</p>
-          <p className="text-[10px] font-semibold text-slate-500">прибыль</p>
-        </div>
-      </div>
-
-      <div className="mt-3">
-        <ProfitShareBar row={p} />
-        <p className="mt-1 text-[10px] font-bold text-slate-500">{Math.round(num(p.profitShare))}% прибыли меню</p>
-      </div>
-
-      <div className="mt-3 flex justify-end gap-1.5 opacity-100 transition sm:absolute sm:bottom-3 sm:right-3 sm:mt-0 sm:opacity-0 sm:group-hover:opacity-100">
-        <button onClick={() => onEdit(p)} aria-label="Изменить" title="Изменить" className="grid h-8 w-8 place-items-center rounded-lg bg-blue-500/15 text-blue-300 transition hover:bg-blue-500/25"><Pencil size={15} /></button>
-        <button onClick={() => onDuplicate(p)} aria-label="Дублировать" title="Дублировать" className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-slate-300 transition hover:bg-white/20"><Copy size={15} /></button>
-        <button onClick={() => onDelete(p.id)} aria-label="Удалить" title="Удалить" className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-slate-300 transition hover:bg-rose-500/20 hover:text-rose-300"><Trash2 size={15} /></button>
-      </div>
+    <div className="min-w-0 rounded-lg bg-white/[0.03] px-3 py-2">
+      <p className="truncate text-[10px] font-black uppercase tracking-wide text-slate-400">{label}</p>
+      <p className={`truncate text-base font-black tabular-nums ${valueClass}`}>{value}</p>
+      {sub && <p className="truncate text-[10px] font-semibold text-slate-500">{sub}</p>}
     </div>
   );
 }
 
-function StatusPills({ p }) {
+// Плоская компактная карточка-«ценник»: аватар + имя + %-маржа, мета + статус,
+// цена + с/с·продажи + прибыль; доля прибыли меню — хэйрлайн у нижнего края.
+function ProductCard({ p, onEdit, onDuplicate, onDelete }) {
+  const t = TONE[p.tone] || TONE.slate;
   const hasRecipe = Array.isArray(p.recipe) && p.recipe.length > 0;
   const unlinked = hasRecipe ? p.recipe.filter((r) => r.unlinked).length : 0;
   return (
-    <span className="flex flex-wrap items-center gap-1.5">
-      {hasRecipe ? (
-        unlinked > 0 ? (
-          <span className="inline-flex items-center gap-1 rounded-lg bg-amber-500/15 px-2 py-0.5 text-[10px] font-black text-amber-300"><AlertTriangle size={11} /> {unlinked} не на складе</span>
-        ) : (
-          <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/15 px-2 py-0.5 text-[10px] font-black text-emerald-300"><Check size={11} /> {p.recipe.length} ингр.</span>
-        )
-      ) : (
-        <span className="inline-flex items-center gap-1 rounded-lg bg-slate-600/30 px-2 py-0.5 text-[10px] font-black text-slate-300"><PackageX size={11} /> без состава</span>
-      )}
-      {p.hidden && <span className="inline-flex items-center rounded-lg bg-slate-500/20 px-2 py-0.5 text-[10px] font-black text-slate-300">Скрыт в кассе</span>}
-    </span>
-  );
-}
+    <div className={`group relative flex h-full flex-col overflow-hidden rounded-xl border border-l-2 border-white/10 bg-white/[0.04] px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.06] ${t.bl} ${p.lossmaking ? "ring-1 ring-rose-500/30" : ""} ${p.hidden ? "opacity-60" : ""}`}>
+      {/* Шапка: аватар + имя + %-чип маржи */}
+      <div className="flex items-center gap-2.5">
+        <CategoryAvatar name={p.name} category={p.category} type={p.typeName || p.type} size={34} />
+        <p className="min-w-0 flex-1 truncate text-[13px] font-black leading-tight text-white">{p.name}</p>
+        <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] font-black tabular-nums transition group-hover:opacity-0 ${t.chip}`} title={p.marginIsPotential ? "Маржа расчётная (нет продаж)" : "Маржа"}>
+          {Math.round(num(p.marginPct))}%{p.marginIsPotential && <span className="opacity-60">*</span>}
+        </span>
+      </div>
 
-function ProfitShareBar({ row }) {
-  const t = TONE[row.tone] || TONE.slate;
-  return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-      <div className={`h-full rounded-full bg-gradient-to-r ${t.bar}`} style={{ width: `${Math.max(2, Math.min(100, row.barPct))}%` }} />
+      {/* Мета + компактный статус */}
+      <div className="mt-1.5 flex items-center gap-1.5">
+        <span className="min-w-0 flex-1 truncate text-[10px] font-bold text-slate-500">{p.typeName || p.type} · {p.category}</span>
+        {hasRecipe ? (
+          unlinked > 0 ? (
+            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-black text-amber-300" title={`${unlinked} ингр. не на складе`}><AlertTriangle size={11} /> {unlinked}</span>
+          ) : (
+            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-black text-emerald-300" title={`${p.recipe.length} ингр. в составе`}><Check size={11} /> {p.recipe.length}</span>
+          )
+        ) : (
+          <span className="inline-flex shrink-0 items-center text-slate-400" title="Без состава"><PackageX size={11} /></span>
+        )}
+        {p.hidden && <span className="inline-flex shrink-0 items-center text-slate-400" title="Скрыт в кассе"><EyeOff size={11} /></span>}
+      </div>
+
+      {/* Цена + с/с·продажи + прибыль */}
+      <div className="mt-auto flex items-end justify-between gap-2 pt-2">
+        <div className="min-w-0">
+          <p className="truncate text-xl font-black leading-none tabular-nums text-white">{formatMoney(p.price)}</p>
+          <p className="mt-1 truncate text-[10px] font-semibold text-slate-500">с/с {formatMoney(p.cost)}{p.incompleteCost && <span className="text-amber-300"> неполн.</span>} · ×{num(p.quantity)}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className={`text-[13px] font-black leading-none tabular-nums ${p.cleanProfit < 0 ? "text-rose-300" : "text-emerald-400"}`}>{formatMoney(p.cleanProfit)}</p>
+          <p className="mt-0.5 text-[9px] font-semibold text-slate-500">прибыль</p>
+        </div>
+      </div>
+
+      {/* Доля прибыли меню — хэйрлайн у низа (0 высоты) */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-white/5">
+        <div className={`h-full bg-gradient-to-r ${t.bar}`} style={{ width: `${Math.max(2, Math.min(100, num(p.barPct)))}%` }} />
+      </div>
+
+      {/* Экшены: инлайн на мобиле (всегда), по ховеру на десктопе */}
+      <div className="mt-2 flex justify-end gap-1 sm:absolute sm:right-1.5 sm:top-1.5 sm:mt-0 sm:-translate-y-0.5 sm:opacity-0 sm:transition sm:group-hover:translate-y-0 sm:group-hover:opacity-100">
+        <button onClick={() => onEdit(p)} aria-label="Изменить" title="Изменить" className="grid h-7 w-7 place-items-center rounded-md bg-blue-500/15 text-blue-300 transition hover:bg-blue-500/25"><Pencil size={14} /></button>
+        <button onClick={() => onDuplicate(p)} aria-label="Дублировать" title="Дублировать" className="grid h-7 w-7 place-items-center rounded-md bg-white/10 text-slate-300 transition hover:bg-white/20"><Copy size={14} /></button>
+        <button onClick={() => onDelete(p.id)} aria-label="Удалить" title="Удалить" className="grid h-7 w-7 place-items-center rounded-md bg-white/10 text-slate-300 transition hover:bg-rose-500/20 hover:text-rose-300"><Trash2 size={14} /></button>
+      </div>
     </div>
   );
 }
@@ -343,7 +323,7 @@ function ProblemChip({ active, onClick, icon: Icon, label, count, tone = "slate"
       type="button"
       onClick={onClick}
       disabled={dim}
-      className={`inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-black transition ${
+      className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-black transition ${
         active ? t.chip : dim ? "border-white/10 bg-white/[0.02] text-slate-600" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
       }`}
     >
@@ -1385,65 +1365,37 @@ export default function WorkPage() {
         </div>
       </div>
 
-      {/* Герой: чистая прибыль + KPI-лента + якорь + проблемы */}
-      <div className="relative mb-4 overflow-hidden rounded-3xl border border-white/10 app-aurora bg-white/[0.04] bg-gradient-to-br from-blue-600/[0.18] via-violet-600/[0.12] to-transparent p-5 shadow-2xl shadow-black/20 backdrop-blur sm:p-6">
-        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="relative">
-          <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">Чистая прибыль · месяц</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2.5">
-            <p className={`text-3xl font-black leading-none tabular-nums sm:text-5xl ${monthTotals.cleanProfit < 0 ? "text-rose-400" : "text-emerald-400"}`}>{formatMoney(monthTotals.cleanProfit)}</p>
+      {/* Герой: чистая прибыль + маржа + факты (плоско) */}
+      <div className="mb-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Чистая прибыль · месяц</p>
+            <p className={`mt-1 text-4xl font-black leading-none tabular-nums sm:text-5xl ${monthTotals.cleanProfit < 0 ? "text-rose-400" : "text-emerald-400"}`}>{formatMoney(monthTotals.cleanProfit)}</p>
             {menuHealth.avgMargin != null && (
-              <span className="rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-sm font-black text-emerald-300">ср. маржа {Math.round(menuHealth.avgMargin)}%</span>
-            )}
-          </div>
-
-          {/* KPI-лента */}
-          <div className="mt-4 grid grid-cols-3 divide-x divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
-            {[
-              { Ic: Boxes, label: `Продано · ${productRows.length} поз.`, value: num(monthTotals.quantity).toLocaleString("ru-RU"), tint: "bg-blue-500/15 text-blue-300" },
-              { Ic: Wallet, label: "Выручка", value: formatMoney(monthTotals.revenue), tint: "bg-blue-500/15 text-blue-300" },
-              { Ic: PackageX, label: "Себест.", value: formatMoney(monthTotals.cost), tint: "bg-slate-500/20 text-slate-300" },
-            ].map(({ Ic, label, value, tint }) => (
-              <div key={label} className="min-w-0 px-3 py-2.5">
-                <div className="flex items-center gap-1.5">
-                  <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${tint}`}><Ic size={14} strokeWidth={2.4} /></span>
-                  <p className="truncate text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
+              <div className="mt-2.5 flex items-center gap-2 text-[11px] font-bold">
+                <div className="h-1.5 w-40 overflow-hidden rounded-full bg-white/10 sm:w-56">
+                  <div className="h-full rounded-full bg-emerald-400" style={{ width: `${Math.min(100, Math.max(0, menuHealth.avgMargin))}%` }} />
                 </div>
-                <p className="mt-1 truncate text-base font-black tabular-nums text-white sm:text-lg">{value}</p>
+                <span className="tabular-nums text-emerald-300">{Math.round(menuHealth.avgMargin)}%</span>
+                <span className="text-slate-500">ср. маржа</span>
               </div>
-            ))}
+            )}
           </div>
 
-          {/* Якорь прибыли */}
-          {menuHealth.anchor && (
-            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.08] p-3">
-              <span className="relative shrink-0">
-                <CategoryAvatar name={menuHealth.anchor.name} category={menuHealth.anchor.category} type={menuHealth.anchor.typeName || menuHealth.anchor.type} size={40} />
-                <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-amber-500 text-slate-950 ring-2 ring-[#0b1120]"><Crown size={11} strokeWidth={2.6} /></span>
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-300/80">Якорь прибыли</p>
-                <p className="truncate text-sm font-black text-white">{menuHealth.anchor.name}</p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-lg font-black tabular-nums text-emerald-300">{Math.round(menuHealth.anchorShare)}%</p>
-                <p className="text-[10px] font-semibold text-slate-400">доли прибыли</p>
-              </div>
-            </div>
-          )}
+          {/* Десктоп: инлайн-факты */}
+          <div className="hidden shrink-0 flex-wrap items-center justify-end gap-x-5 gap-y-2 text-sm sm:flex">
+            <span className="inline-flex items-center gap-1.5 text-slate-400"><Boxes size={15} /> Продано <b className="tabular-nums text-white">{num(monthTotals.quantity).toLocaleString("ru-RU")}</b> · {productRows.length} поз.</span>
+            <span className="inline-flex items-center gap-1.5 text-slate-400"><Wallet size={15} /> Выручка <b className="tabular-nums text-white">{formatMoney(monthTotals.revenue)}</b></span>
+            <span className="inline-flex items-center gap-1.5 text-slate-400"><PackageX size={15} /> Себест. <b className="tabular-nums text-white">{formatMoney(monthTotals.cost)}</b></span>
+            {menuHealth.anchor && <span className="inline-flex items-center gap-1.5 text-amber-300"><Crown size={15} /> якорь <b className="text-white">{menuHealth.anchor.name}</b> <b className="tabular-nums text-emerald-300">{Math.round(menuHealth.anchorShare)}%</b></span>}
+          </div>
 
-          {/* Проблемы — лента чипов (клик-фильтры) */}
-          <div className="no-scrollbar -mx-5 mt-4 flex gap-2 overflow-x-auto px-5 sm:mx-0 sm:flex-wrap sm:px-0">
-            {menuHealth.problemTotal === 0 ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-2 text-xs font-black text-emerald-300"><Check size={13} /> Меню в порядке</span>
-            ) : (
-              <>
-                <ProblemChip active={problemFilter === "loss"} onClick={() => setProblemFilter((f) => (f === "loss" ? "all" : "loss"))} icon={TrendingDown} label="Убыточные" count={menuHealth.counts.lossmaking} tone="rose" />
-                <ProblemChip active={problemFilter === "noRecipe"} onClick={() => setProblemFilter((f) => (f === "noRecipe" ? "all" : "noRecipe"))} icon={PackageX} label="Без состава" count={menuHealth.counts.noRecipe} tone="slate" />
-                <ProblemChip active={problemFilter === "incomplete"} onClick={() => setProblemFilter((f) => (f === "incomplete" ? "all" : "incomplete"))} icon={AlertTriangle} label="Неполная с/с" count={menuHealth.counts.incompleteCost} tone="amber" />
-                <ProblemChip active={problemFilter === "notSelling"} onClick={() => setProblemFilter((f) => (f === "notSelling" ? "all" : "notSelling"))} icon={Package} label="Не продаётся" count={menuHealth.counts.notSelling} tone="slate" />
-              </>
-            )}
+          {/* Мобайл: 2×2 */}
+          <div className="grid grid-cols-2 gap-2 sm:hidden">
+            <MiniTile label="Выручка" value={formatMoney(monthTotals.revenue)} />
+            <MiniTile label="Себест." value={formatMoney(monthTotals.cost)} valueClass="text-slate-200" />
+            <MiniTile label="Продано" value={num(monthTotals.quantity).toLocaleString("ru-RU")} sub={`${productRows.length} поз.`} />
+            <MiniTile label="Якорь" value={menuHealth.anchor ? `${Math.round(menuHealth.anchorShare)}%` : "—"} sub={menuHealth.anchor ? menuHealth.anchor.name : "нет данных"} valueClass="text-amber-300" />
           </div>
         </div>
       </div>
@@ -1455,8 +1407,9 @@ export default function WorkPage() {
       )}
 
       <div className="space-y-4">
-        <div className="sticky top-2 z-20 flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/70 p-3 shadow-lg shadow-black/30 backdrop-blur-xl sm:p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-2.5">
+          {/* Ряд 1: заголовок + поиск + фильтр + товар */}
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <h3 className="truncate text-lg font-black leading-tight text-white sm:text-xl">
                 {selectedFolder?.name || (selectedType ? `Все: ${selectedType.name}` : "Все товары")}
@@ -1466,39 +1419,37 @@ export default function WorkPage() {
               </p>
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="relative">
-                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 lg:flex-none">
+                <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Найти товар"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-2.5 pl-9 pr-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 sm:w-64"
+                  className="h-10 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60 lg:w-64"
                 />
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setFilterModal(true)}
-                  className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 font-black text-slate-100 backdrop-blur transition hover:bg-white/10 sm:flex-none"
-                >
-                  <SlidersHorizontal size={16} /> Фильтр
-                </button>
-                <button
-                  onClick={openProductModal}
-                  className="hidden rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 font-black text-white shadow-lg transition hover:scale-[1.01] sm:block"
-                >
-                  + Товар
-                </button>
-              </div>
+              <button
+                onClick={() => setFilterModal(true)}
+                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-black text-slate-100 transition hover:bg-white/10"
+              >
+                <SlidersHorizontal size={16} /> <span className="hidden sm:inline">Фильтр</span>
+              </button>
+              <button
+                onClick={openProductModal}
+                className="hidden h-10 shrink-0 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 text-sm font-black text-white transition hover:scale-[1.01] sm:block"
+              >
+                + Товар
+              </button>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            {/* Чипы типов */}
-            <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
+          {/* Ряд 2: чипы типов + сортировка */}
+          <div className="flex items-center gap-2">
+            <div className="no-scrollbar -mx-1 flex flex-1 gap-2 overflow-x-auto px-1">
               <button
                 onClick={() => setSelectedTypeId("")}
-                className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${selectedTypeId === "" ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-950/40" : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
+                className={`inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-xs font-black transition ${selectedTypeId === "" ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
               >
                 Все
               </button>
@@ -1506,20 +1457,18 @@ export default function WorkPage() {
                 <button
                   key={t.id}
                   onClick={() => setSelectedTypeId(String(t.id))}
-                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${String(selectedTypeId) === String(t.id) ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-950/40" : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
+                  className={`inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-xs font-black transition ${String(selectedTypeId) === String(t.id) ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
                 >
                   {t.name}
                 </button>
               ))}
             </div>
 
-            {/* Сортировка */}
             <div className="flex shrink-0 items-center gap-2">
-              <span className="hidden text-[11px] font-bold uppercase tracking-wide text-slate-500 sm:inline">Сортировка</span>
               <select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value)}
-                className="min-h-[40px] rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-white outline-none focus:border-blue-400/60"
+                className="h-8 rounded-lg border border-white/10 bg-white/5 px-2.5 text-xs font-bold text-white outline-none focus:border-blue-400/60"
               >
                 {Object.entries(SORT_LABELS).map(([k, l]) => (
                   <option key={k} value={k} className="bg-slate-900">{l}</option>
@@ -1529,22 +1478,32 @@ export default function WorkPage() {
                 onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
                 aria-label="Направление сортировки"
                 title={sortDir === "asc" ? "По возрастанию" : "По убыванию"}
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10"
               >
-                {sortDir === "asc" ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+                {sortDir === "asc" ? <ArrowUp size={15} /> : <ArrowDown size={15} />}
               </button>
             </div>
           </div>
+
+          {/* Ряд 3: быстрые фильтры проблем */}
+          {menuHealth.problemTotal > 0 && (
+            <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
+              <ProblemChip active={problemFilter === "loss"} onClick={() => setProblemFilter((f) => (f === "loss" ? "all" : "loss"))} icon={TrendingDown} label="Убыточные" count={menuHealth.counts.lossmaking} tone="rose" />
+              <ProblemChip active={problemFilter === "noRecipe"} onClick={() => setProblemFilter((f) => (f === "noRecipe" ? "all" : "noRecipe"))} icon={PackageX} label="Без состава" count={menuHealth.counts.noRecipe} tone="slate" />
+              <ProblemChip active={problemFilter === "incomplete"} onClick={() => setProblemFilter((f) => (f === "incomplete" ? "all" : "incomplete"))} icon={AlertTriangle} label="Неполная с/с" count={menuHealth.counts.incompleteCost} tone="amber" />
+              <ProblemChip active={problemFilter === "notSelling"} onClick={() => setProblemFilter((f) => (f === "notSelling" ? "all" : "notSelling"))} icon={Package} label="Не продаётся" count={menuHealth.counts.notSelling} tone="slate" />
+            </div>
+          )}
         </div>
 
         {displayRows.length > 0 ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {displayRows.map((p) => (
               <ProductCard key={p.id} p={p} onEdit={openEditProduct} onDuplicate={duplicateProduct} onDelete={deleteProduct} />
             ))}
           </div>
         ) : (
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <EmptyState
               title={problemFilter !== "all" ? "Под фильтр ничего не попало" : (search ? "Ничего не найдено" : "Товаров пока нет")}
               text={problemFilter !== "all" ? "Сбросьте быстрый фильтр, чтобы увидеть остальные товары." : (search ? "Попробуйте изменить запрос." : "Добавьте первый товар в меню — из него будут складываться продажи и себестоимость.")}
@@ -1556,7 +1515,7 @@ export default function WorkPage() {
 
         {/* Итого по выбранным */}
         {displayRows.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Итого по выбранным</p>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm font-semibold">
               <span className="text-slate-400">Продано <b className="tabular-nums text-white">{displayTotals.quantity}</b></span>
