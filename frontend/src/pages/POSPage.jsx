@@ -6,7 +6,7 @@ import PendingPaymentsModal from "../components/PendingPaymentsModal";
 import { formatMoney, money, num, businessISO } from "../utils/format";
 import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
-import { FolderOpen, ChevronLeft, LogOut, Sparkles, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt, ClipboardList } from "lucide-react";
+import { FolderOpen, ChevronLeft, ChevronRight, LogOut, Sparkles, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt, ClipboardList } from "lucide-react";
 
 // Бизнес-дата на N дней назад (0 = сегодня) с учётом времени открытия точки.
 // Вне компонента — eslint (react-hooks/purity) не любит Date.now/new Date в теле.
@@ -988,8 +988,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-[-120px] top-[-120px] h-[360px] w-[360px] rounded-full bg-blue-600/20 blur-3xl" />
-        <div className="absolute right-[-140px] bottom-[-140px] h-[360px] w-[360px] rounded-full bg-violet-600/20 blur-3xl" />
+        <div className="pointer-events-none absolute left-[-120px] top-[-120px] h-[360px] w-[360px] rounded-full bg-blue-600/20 blur-3xl" />
+        <div className="pointer-events-none absolute right-[-140px] bottom-[-140px] h-[360px] w-[360px] rounded-full bg-violet-600/20 blur-3xl" />
       </div>
       <div className="relative z-10 flex flex-col md:min-h-0 md:flex-1">
       {/* Шапка кассы (режим киоска): выход + продавец/смена */}
@@ -1009,7 +1009,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           </div>
 
           {isWorker ? (
-            <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-[#0f172a]/80 px-2 py-1.5 shadow-lg backdrop-blur">
+            <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-2 py-1.5 shadow-lg backdrop-blur">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-blue-600 to-violet-600 text-xs font-black text-white">
                 {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
               </div>
@@ -1020,7 +1020,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               </select>
             </div>
           ) : (
-            <div className="flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#0f172a]/80 px-2.5 py-2 shadow-lg backdrop-blur sm:px-3">
+            <div className="flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2 shadow-lg backdrop-blur sm:px-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-violet-600 text-sm font-black text-white">
                 {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
               </div>
@@ -1164,7 +1164,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
       <div className="flex flex-col gap-4 md:min-h-0 md:flex-1 md:flex-row">
         <div className="flex flex-col gap-3 md:min-h-0 md:flex-1">
-          <div className="shrink-0 rounded-3xl border border-white/10 bg-[#0f172a]/80 p-3 shadow-xl backdrop-blur sm:p-4">
+          <div className="shrink-0 rounded-3xl border border-white/10 bg-white/[0.04] p-3 shadow-xl backdrop-blur sm:p-4">
             <div className="flex items-center gap-3">
               {openedCategory && (
                 <button
@@ -1315,20 +1315,21 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 <button
                   key={p.id}
                   onClick={() => addToCart(p)}
-                  className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-3.5 text-left shadow-lg transition hover:border-blue-500/50 hover:bg-[#151d30] hover:shadow-xl hover:shadow-blue-950/30 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-blue-500/30 sm:p-4"
+                  className="group relative flex min-h-[108px] flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 text-left transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:bg-white/[0.07] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:p-4"
                 >
-                  <div className="text-sm font-black leading-tight text-white sm:text-base">
-                    {p.name}
+                  <div className="min-w-0">
+                    <div className="line-clamp-2 text-sm font-black leading-tight text-white sm:text-[15px]">{p.name}</div>
+                    <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">{p._catName}</p>
                   </div>
-                  <p className="mt-1 truncate text-[11px] font-bold text-slate-400">{p._catName}</p>
-                  <div className="mt-3 inline-flex w-fit items-baseline gap-1 rounded-lg bg-blue-500/15 px-2.5 py-1 text-sm font-black text-blue-200 tabular-nums">
-                    {formatMoney(p.price)} <span className="text-xs font-bold text-blue-300/70">₽</span>
+                  <div className="mt-3 flex items-end justify-between gap-2">
+                    <span className="text-lg font-black tabular-nums text-white sm:text-xl">{formatMoney(p.price)}<span className="ml-0.5 text-xs font-bold text-slate-500">₽</span></span>
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-blue-500/15 text-blue-300 transition group-hover:bg-blue-500 group-hover:text-white"><Plus size={16} strokeWidth={2.8} /></span>
                   </div>
                 </button>
               ))}
 
               {!globalSearchResults.length && (
-                <div className="col-span-full rounded-4xl border border-white/10 bg-[#0f172a]/80 p-10 text-center shadow-2xl backdrop-blur">
+                <div className="col-span-full rounded-4xl border border-white/10 bg-white/[0.04] p-10 text-center shadow-2xl backdrop-blur">
                   <p className="text-xl font-black text-white">Ничего не найдено</p>
                   <p className="mt-2 text-slate-400">Попробуйте другое название товара.</p>
                 </div>
@@ -1343,18 +1344,19 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     setOpenedCategory(cat);
                     setSearch("");
                   }}
-                  className="group flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-3.5 text-left shadow-lg transition hover:border-blue-500/50 hover:bg-[#151d30] hover:shadow-xl hover:shadow-blue-950/30 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-blue-500/30"
+                  className="group flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 text-left transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:bg-white/[0.07] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300"><FolderOpen className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-                  <div className="min-w-0">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-blue-600/25 to-violet-600/20 text-blue-200"><FolderOpen className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
+                  <div className="min-w-0 flex-1">
                     <p className="truncate text-[11px] font-bold text-blue-400">{cat.typeName || cat.type || "Раздел"}</p>
                     <h3 className="truncate text-sm font-black text-white sm:text-base">{cat.name}</h3>
                   </div>
+                  <ChevronRight size={16} className="shrink-0 text-slate-600 transition group-hover:text-blue-300" />
                 </button>
               ))}
 
               {!visibleCategories.length && (
-                <div className="col-span-full rounded-4xl border border-white/10 bg-[#0f172a]/80 p-10 text-center shadow-2xl backdrop-blur">
+                <div className="col-span-full rounded-4xl border border-white/10 bg-white/[0.04] p-10 text-center shadow-2xl backdrop-blur">
                   <p className="text-xl font-black text-white">
                     Категорий пока нет
                   </p>
@@ -1371,19 +1373,20 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 <button
                   key={p.id}
                   onClick={() => addToCart(p)}
-                  className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-3.5 text-left shadow-lg transition hover:border-blue-500/50 hover:bg-[#151d30] hover:shadow-xl hover:shadow-blue-950/30 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-blue-500/30 sm:p-4"
+                  className="group relative flex min-h-[108px] flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 text-left transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:bg-white/[0.07] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:p-4"
                 >
-                  <div className="text-sm font-black leading-tight text-white sm:text-base">
+                  <div className="line-clamp-2 text-sm font-black leading-tight text-white sm:text-[15px]">
                     {p.name}
                   </div>
-                  <div className="mt-3 inline-flex w-fit items-baseline gap-1 rounded-lg bg-blue-500/15 px-2.5 py-1 text-sm font-black text-blue-200 tabular-nums">
-                    {formatMoney(p.price)} <span className="text-xs font-bold text-blue-300/70">₽</span>
+                  <div className="mt-3 flex items-end justify-between gap-2">
+                    <span className="text-lg font-black tabular-nums text-white sm:text-xl">{formatMoney(p.price)}<span className="ml-0.5 text-xs font-bold text-slate-500">₽</span></span>
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-blue-500/15 text-blue-300 transition group-hover:bg-blue-500 group-hover:text-white"><Plus size={16} strokeWidth={2.8} /></span>
                   </div>
                 </button>
               ))}
 
               {!productsInsideCategory.length && (
-                <div className="col-span-full rounded-4xl border border-white/10 bg-[#0f172a]/80 p-10 text-center shadow-2xl backdrop-blur">
+                <div className="col-span-full rounded-4xl border border-white/10 bg-white/[0.04] p-10 text-center shadow-2xl backdrop-blur">
                   <p className="text-xl font-black text-white">
                     В этой категории пока нет товаров
                   </p>
@@ -1422,7 +1425,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           </div>
         )}
 
-        <div className="flex flex-col rounded-3xl border border-white/10 bg-[#0f172a]/90 p-3.5 shadow-2xl backdrop-blur sm:p-4 md:min-h-0 md:flex-1">
+        <div className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.04] p-3.5 shadow-2xl backdrop-blur sm:p-4 md:min-h-0 md:flex-1">
           <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
             <h3 className="text-base font-black sm:text-lg">Корзина</h3>
 
