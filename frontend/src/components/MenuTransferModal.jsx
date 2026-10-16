@@ -150,9 +150,10 @@ export default function MenuTransferModal({ onClose }) {
             <Stat label="Категорий" value={result.copiedCategories} />
             <Stat label="Товаров" value={result.copiedProducts} tone="emerald" />
             <Stat label="Пропущено дублей" value={result.skippedProducts} />
+            <Stat label="Новых разделов" value={result.createdTypes} />
+            <Stat label="Новых категорий" value={result.createdCategories} />
             {withRecipes && <Stat label="Рецептов" value={result.copiedRecipes} />}
             {withRecipes && <Stat label="Создано сырья" value={result.createdWarehouseItems} tone="amber" />}
-            <Stat label="Новых разделов" value={result.createdCategories} />
           </div>
           {withRecipes && result.createdWarehouseItems > 0 && (
             <p className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/[0.08] px-4 py-3 text-xs font-bold text-amber-200">
@@ -172,6 +173,10 @@ export default function MenuTransferModal({ onClose }) {
         </div>
       ) : (
         <div>
+          <p className="mb-4 text-xs font-bold leading-5 text-slate-400">
+            Скопируйте <b className="text-slate-200">разделы и категории</b> с товарами на другую точку — что отметите, то появится в её кассе для пробива. Источник не меняется.
+          </p>
+
           {/* Откуда → куда */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
             <label className="block">
@@ -226,7 +231,7 @@ export default function MenuTransferModal({ onClose }) {
                         {!allOn && someOn && <span className="h-0.5 w-2.5 rounded bg-white" />}
                       </span>
                       <span className="min-w-0 flex-1 truncate text-sm font-black text-white">{t.name}</span>
-                      <span className="shrink-0 text-[11px] font-bold text-slate-500">{t.categories.length} {plural(t.categories.length, "папка", "папки", "папок")}</span>
+                      <span className="shrink-0 text-[11px] font-bold text-slate-500">{t.categories.length} {plural(t.categories.length, "категория", "категории", "категорий")}</span>
                     </button>
                     {t.categories.length > 0 && (
                       <div className="space-y-1 px-2 pb-2">
