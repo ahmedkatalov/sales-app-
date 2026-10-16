@@ -236,21 +236,21 @@ function LoginPage({ onAuth }) {
     }`;
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0a0e17] p-4">
       <div className="absolute right-4 top-4 z-20">
         <ThemeToggle />
       </div>
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-blue-600/10 blur-[120px]" />
-        <div className="absolute -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-violet-600/10 blur-[120px]" />
+        <div className="pointer-events-none absolute -left-40 -top-40 h-[460px] w-[460px] rounded-full bg-blue-600/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-40 -right-40 h-[460px] w-[460px] rounded-full bg-violet-600/10 blur-3xl" />
       </div>
-      <div className="relative z-10 w-full max-w-[420px]">
-        <div className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-7 shadow-2xl backdrop-blur-xl">
+      <div className="relative z-10 w-full max-w-[400px]">
+        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7 shadow-2xl shadow-black/40 backdrop-blur-xl">
           <div className="mb-8">
-            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 shadow-xl shadow-blue-600/30">
-              <span className="text-2xl font-black text-white">S</span>
+            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-xl shadow-blue-900/40">
+              <ShoppingCart size={26} strokeWidth={2.6} className="text-white" />
             </div>
-            <p className="mb-1 text-xs font-black uppercase tracking-widest text-blue-400">Sales App</p>
+            <p className="mb-1 text-xs font-black uppercase tracking-widest text-blue-400">Okvion Sales</p>
             {step === "credentials" ? (
               <><h1 className="text-3xl font-black tracking-tight text-white">Добро пожаловать</h1><p className="mt-2 text-sm font-medium text-slate-400">Войдите, чтобы продолжить работу</p></>
             ) : (
@@ -281,7 +281,7 @@ function LoginPage({ onAuth }) {
                 </button>
               </div>
               <button type="button" onClick={submitCredentials} disabled={loading}
-                className="relative mt-1 w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-600/30 transition-all hover:from-blue-500 hover:to-blue-400 disabled:cursor-not-allowed disabled:opacity-60">
+                className="relative mt-1 w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-900/30 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
                 {loading ? <span className="flex items-center justify-center gap-2"><svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Отправляю код...</span> : "Получить код"}
               </button>
             </div>
@@ -299,7 +299,7 @@ function LoginPage({ onAuth }) {
                 ))}
               </div>
               <button type="button" onClick={submitOtp} disabled={!isOtpComplete || loading}
-                className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 py-3.5 text-sm font-black text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-60 transition">
+                className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
                 {loading ? <span className="flex items-center justify-center gap-2"><svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Проверяю...</span> : "Подтвердить вход"}
               </button>
               <div className="flex items-center justify-between gap-3">
@@ -311,7 +311,7 @@ function LoginPage({ onAuth }) {
             </div>
           )}
         </div>
-        <p className="mt-5 text-center text-xs font-medium text-slate-600">Управление бизнесом · Sales App</p>
+        <p className="mt-5 text-center text-xs font-medium text-slate-600">Okvion Sales · управление бизнесом</p>
       </div>
     </div>
   );
