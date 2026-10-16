@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus, Trash2, Warehouse, Pencil, Check, Camera, Images, Bot, MapPin, ArrowLeft } from "lucide-react";
+import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus, Trash2, Warehouse, Pencil, Check, Camera, Images, Bot, MapPin, ArrowLeft, Clock, Boxes, Sparkles } from "lucide-react";
 import { del, get, getCurrentWorkspace, getSession, post } from "../api";
 import { formatMoney, num } from "../utils/format";
 import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
@@ -883,8 +883,8 @@ const Message = memo(function Message({ msg, idx, onCancelCard, onAttachPhoto, o
   const userText = isUser ? String(msg.text || "").replace(/^📷\s*/, "") : "";
   return (
     <div className={`flex gap-2 sm:gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
-      {!isUser && <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 sm:flex"><Bot size={18} strokeWidth={2.2} /></div>}
-      <div className={`max-w-[90%] rounded-3xl px-4 py-3 text-[13px] font-bold leading-6 shadow-lg sm:max-w-[78%] ${isUser ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white" : "border border-white/10 bg-white/[0.08] text-slate-100 backdrop-blur"}`}>
+      {!isUser && <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white sm:flex"><Bot size={18} strokeWidth={2.2} /></div>}
+      <div className={`max-w-[90%] rounded-3xl px-4 py-3 text-[13px] font-bold leading-6 sm:max-w-[78%] ${isUser ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white" : "border border-white/10 bg-white/[0.06] text-slate-100"}`}>
         {msg.image && (
           <button type="button" onClick={() => onOpenImage?.(msg.image)} title="Открыть фото"
             className="mb-2 block w-full overflow-hidden rounded-2xl border border-white/20 transition active:scale-[0.98]">
@@ -1999,7 +1999,7 @@ export default function AIWarehousePage() {
             activeRightPanels ? "xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-4 xl:px-4 xl:py-4" : "xl:grid-cols-1"
           }`}
         >
-          <section className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden xl:rounded-2xl xl:border xl:border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] xl:shadow-2xl xl:shadow-black/20">
+          <section className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden bg-white/[0.04] xl:rounded-2xl xl:border xl:border-white/10">
             <div className="flex shrink-0 items-center justify-between gap-1.5 border-b border-white/10 px-2.5 py-2 sm:gap-2 sm:px-3 sm:py-2.5">
               <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
                 <button onClick={goBack} aria-label="Назад" title="Назад"
@@ -2274,9 +2274,9 @@ export default function AIWarehousePage() {
               style={{ maxHeight: "calc(100dvh - 245px)" }}
             >
               {sidePanels.recent && (
-                <div className="flex min-h-0 shrink-0 flex-col overflow-hidden rounded-[1.25rem] border border-white/10 bg-white/[0.06] p-4">
-                  <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
-                    <h3 className="text-lg font-black">Последние добавления</h3>
+                <div className="flex min-h-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                  <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
+                    <h3 className="flex items-center gap-2 text-sm font-black text-white"><Clock size={16} strokeWidth={2.4} className="text-emerald-300" /> Последние добавления</h3>
                     <button
                       type="button"
                       onClick={() => {
@@ -2290,7 +2290,7 @@ export default function AIWarehousePage() {
                   </div>
                   <div className="max-h-[240px] space-y-3 overflow-y-auto overscroll-contain pr-1">
                     {recentAdded.map((m, i) => (
-                      <div key={i} className="rounded-[1.2rem] bg-white/5 p-3">
+                      <div key={i} className="rounded-2xl bg-white/[0.04] p-3">
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
                             <p className="truncate text-sm font-black">
@@ -2307,7 +2307,7 @@ export default function AIWarehousePage() {
                       </div>
                     ))}
                     {!recentAdded.length && (
-                      <div className="rounded-[1.2rem] border border-dashed border-white/10 p-5 text-center text-sm font-bold text-slate-500">
+                      <div className="rounded-2xl border border-dashed border-white/10 p-5 text-center text-sm font-bold text-slate-500">
                         Пока нет приходов
                       </div>
                     )}
@@ -2316,9 +2316,9 @@ export default function AIWarehousePage() {
               )}
 
               {sidePanels.stocks && (
-                <div className="shrink-0 rounded-[1.25rem] border border-white/10 bg-white/[0.06] p-4">
+                <div className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="text-lg font-black">Остатки</h3>
+                    <h3 className="flex items-center gap-2 text-sm font-black text-white"><Boxes size={16} strokeWidth={2.4} className="text-blue-300" /> Остатки</h3>
                     <button
                       type="button"
                       onClick={() => {
@@ -2334,7 +2334,7 @@ export default function AIWarehousePage() {
                     {topItems.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-2"
+                        className="flex items-center justify-between rounded-2xl bg-white/[0.04] px-3 py-2"
                       >
                         <span className="truncate text-sm font-bold text-slate-200">{item.name}</span>
                         <span className="ml-3 shrink-0 text-sm font-black text-blue-200">
@@ -2348,9 +2348,9 @@ export default function AIWarehousePage() {
               )}
 
               {sidePanels.suggestions && (
-                <div className="shrink-0 rounded-[1.25rem] border border-white/10 bg-white/[0.06] p-4">
+                <div className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-black uppercase text-slate-500">Можно спросить</p>
+                    <h3 className="flex items-center gap-2 text-sm font-black text-white"><Sparkles size={16} strokeWidth={2.4} className="text-amber-300" /> Можно спросить</h3>
                     <button
                       type="button"
                       onClick={() => {
@@ -2362,13 +2362,18 @@ export default function AIWarehousePage() {
                       убрать
                     </button>
                   </div>
-                  <div className="mt-3 space-y-2 text-sm font-bold text-slate-300">
-                    <p>• что заканчивается?</p>
-                    <p>• продажи сегодня</p>
-                    <p>• себестоимость меню</p>
-                    <p>• кто должен деньги?</p>
-                    <p>• сколько калорий в эспрессо</p>
-                    <p>• дай совет по меню</p>
+                  <div className="mt-3 flex flex-col gap-1.5">
+                    {["что заканчивается?", "продажи сегодня", "себестоимость меню", "кто должен деньги?", "сколько калорий в эспрессо", "дай совет по меню"].map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => send(q)}
+                        disabled={loading}
+                        className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-sm font-bold text-slate-300 transition hover:bg-white/[0.07] hover:text-white disabled:opacity-50"
+                      >
+                        <span className="text-amber-300/70">•</span> {q}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
