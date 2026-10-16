@@ -238,7 +238,7 @@ function SplitBar({ segments, caption }) {
 function BridgeAnchor({ label, value, tone }) {
   const cls = tone === "red"
     ? "border-red-400/30 from-red-600/25 to-red-500/5 text-red-200"
-    : "border-emerald-400/30 from-emerald-600/25 to-emerald-500/5 text-emerald-100";
+    : "border-emerald-400/30 from-emerald-600/25 to-emerald-500/5 text-emerald-200";
   return (
     <div className={`flex items-center justify-between gap-3 rounded-2xl border bg-gradient-to-r px-4 py-3 ${cls}`}>
       <span className="text-sm font-black">{label}</span>

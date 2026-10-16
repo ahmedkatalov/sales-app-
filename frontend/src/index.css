@@ -82,7 +82,13 @@ html[data-theme="light"] {
   --color-gray-950: oklch(0.986 0.003 256);
 
   /* ── Углубляем светлые оттенки акцентов, чтобы цветной ТЕКСТ
-        оставался читаемым на светлом фоне ── */
+        оставался читаемым на светлом фоне ──
+        (-100 используются как текст только на полупрозрачных тинтах
+         bg-*-500/10..35, не на залитых кнопках — поэтому их тоже затемняем) */
+  --color-blue-100: oklch(0.64 0.15 256);
+  --color-amber-100: oklch(0.72 0.14 78);
+  --color-red-100: oklch(0.64 0.17 22);
+  --color-emerald-100: oklch(0.64 0.12 162);
   --color-blue-200: oklch(0.62 0.16 256);
   --color-blue-300: oklch(0.58 0.19 257);
   --color-blue-400: oklch(0.55 0.21 258);
@@ -178,6 +184,28 @@ html[data-theme="light"] :is([class*="bg-[radial-gradient"], [class*="bg-[linear
     radial-gradient(circle at top right, rgba(124, 58, 237, 0.10), transparent 38%),
     radial-gradient(circle at 18% 0%, rgba(37, 99, 235, 0.08), transparent 32%),
     linear-gradient(135deg, #f5f8ff 0%, #eef2fb 45%, #e9edf7 100%);
+}
+
+/* Модалки — всегда тёмный «лист» (smart-modal-panel). В светлой теме
+   возвращаем тёмные значения ключевых токенов ВНУТРИ модалки, чтобы текст,
+   поверхности и акценты читались на тёмной панели, а не осветлялись глобально. */
+html[data-theme="light"] .smart-modal-panel {
+  --color-white: #ffffff;
+  --color-slate-100: #f1f5f9; --color-slate-200: #e2e8f0; --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8; --color-slate-500: #64748b;
+  --color-slate-800: #1e293b; --color-slate-900: #0f172a; --color-slate-950: #020617;
+  --color-blue-200: #bfdbfe; --color-blue-300: #93c5fd; --color-blue-400: #60a5fa;
+  --color-indigo-300: #a5b4fc; --color-violet-300: #c4b5fd;
+  --color-emerald-300: #6ee7b7; --color-emerald-400: #34d399;
+  --color-amber-300: #fcd34d; --color-red-300: #fca5a5; --color-rose-300: #fda4af;
+  --color-cyan-300: #67e8f9;
+  --text: #f1f5f9; --text-muted: #94a3b8; --surface: rgba(255, 255, 255, 0.05);
+}
+html[data-theme="light"] .smart-modal-panel :is(
+  [class*="bg-[#0f172a]"], [class*="bg-[#111827]"], [class*="bg-[#0d1424]"],
+  [class*="bg-[#0b1020]"], [class*="bg-[#0a1122]"], [class*="bg-[#141a28]"]
+) {
+  background-color: rgba(15, 23, 42, 0.55) !important;
 }
 
 /* ─── Общие компоненты (тематические) ──────────────────────────── */
