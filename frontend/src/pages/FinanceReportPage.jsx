@@ -31,7 +31,7 @@ function periodBounds(preset) {
 // Карточка-«стекло».
 function Card({ children, className = "" }) {
   return (
-    <section className={`rounded-3xl border border-white/10 bg-white/[0.04] p-4 shadow-lg backdrop-blur sm:p-5 ${className}`}>
+    <section className={`rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5 ${className}`}>
       {children}
     </section>
   );
@@ -112,9 +112,9 @@ function MarginRing({ grossPct, netPct, size = 132 }) {
           strokeDasharray={CI} strokeDashoffset={CI * (1 - n / 100)} className="transition-[stroke-dashoffset] duration-700" />
       </svg>
       <div className="absolute inset-0 grid place-items-center text-center">
-        <div>
-          <p className={`text-2xl font-black tabular-nums ${netPct < 0 ? "text-red-300" : "text-white"}`}>{Math.round(num(netPct))}%</p>
-          <p className="text-[9px] font-black uppercase tracking-wide text-slate-500">чистая маржа</p>
+        <div className="leading-none">
+          <p className={`text-[26px] font-black leading-none tabular-nums ${netPct < 0 ? "text-red-300" : "text-white"}`}>{Math.round(num(netPct))}%</p>
+          <p className="mt-1 text-[9px] font-black uppercase tracking-wide text-slate-500">маржа</p>
         </div>
       </div>
     </div>
@@ -536,9 +536,6 @@ export default function FinanceReportPage() {
 
   return (
     <div className="relative pb-nav text-white sm:pb-10">
-      <div className="pointer-events-none absolute -top-24 left-1/4 h-72 w-72 rounded-full bg-emerald-600/15 blur-3xl" />
-      <div className="pointer-events-none absolute right-0 top-16 h-80 w-80 rounded-full bg-blue-700/15 blur-3xl" />
-
       <div className="relative mx-auto w-full max-w-[1200px]">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-300">
           <span className="h-2 w-2 rounded-full bg-emerald-400" /> Финансы
@@ -554,7 +551,7 @@ export default function FinanceReportPage() {
             {PRESETS.map(([key, label]) => (
               <button key={key} onClick={() => setPreset(key)}
                 className={`shrink-0 rounded-2xl px-4 py-2.5 text-sm font-black transition ${
-                  preset === key ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg" : "border border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10"
+                  preset === key ? "border border-blue-400/50 bg-blue-500/15 text-white" : "border border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10"
                 }`}>
                 {label}
               </button>
@@ -586,9 +583,9 @@ export default function FinanceReportPage() {
 
         {loading && !rep ? (
           <div className="mt-5 space-y-4">
-            <div className="h-40 animate-pulse rounded-[2rem] bg-white/[0.05]" />
+            <div className="h-40 animate-pulse rounded-2xl bg-white/[0.05]" />
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-2xl bg-white/[0.05]" />)}</div>
-            <div className="h-72 animate-pulse rounded-3xl bg-white/[0.05]" />
+            <div className="h-72 animate-pulse rounded-2xl bg-white/[0.05]" />
           </div>
         ) : !hasData && rep ? (
           <div className="mt-6">
@@ -597,10 +594,8 @@ export default function FinanceReportPage() {
         ) : rep ? (
           <div className="mt-5 space-y-4">
             {/* АКТ 1 — Герой: сколько заработали */}
-            <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:p-7">
-              <div className="pointer-events-none absolute -left-10 top-0 h-40 w-40 rounded-full bg-emerald-500/15 blur-3xl" />
-              <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-blue-600/15 blur-3xl" />
-              <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
+            <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-7">
+              <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
                 <div className="min-w-0 text-center sm:text-left">
                   <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">Чистая прибыль за период</p>
                   <p className={`mt-1 text-3xl font-black leading-none tabular-nums sm:text-4xl xl:text-5xl ${num(p.netProfit) < 0 ? "text-red-300" : "text-white"}`}>
@@ -613,7 +608,13 @@ export default function FinanceReportPage() {
                     <div className="hidden sm:block"><MiniMetric label="Себестоимость" value={rub(p.cogs)} tone="text-slate-300" /></div>
                   </div>
                 </div>
-                <MarginRing grossPct={grossMargin} netPct={netMargin} />
+                <div className="flex shrink-0 flex-col items-center gap-2.5">
+                  <MarginRing grossPct={grossMargin} netPct={netMargin} />
+                  <div className="flex items-center gap-3 text-[10px] font-bold">
+                    <span className="inline-flex items-center gap-1.5 text-slate-400"><span className="h-2 w-2 rounded-full" style={{ background: "#60a5fa" }} /> валовая <b className="tabular-nums text-blue-300">{Math.round(grossMargin)}%</b></span>
+                    <span className="inline-flex items-center gap-1.5 text-slate-400"><span className="h-2 w-2 rounded-full" style={{ background: "#34d399" }} /> чистая <b className={`tabular-nums ${netMargin < 0 ? "text-red-300" : "text-emerald-300"}`}>{Math.round(netMargin)}%</b></span>
+                  </div>
+                </div>
               </div>
             </section>
 
