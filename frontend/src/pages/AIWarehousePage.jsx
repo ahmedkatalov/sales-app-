@@ -2006,7 +2006,7 @@ export default function AIWarehousePage() {
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
-                <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 sm:flex">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/30">
                   <Bot size={18} strokeWidth={2.2} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -2213,7 +2213,7 @@ export default function AIWarehousePage() {
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-red-300"><X size={14} /></button>
                 </div>
               )}
-              <div className="flex items-end gap-1.5 rounded-2xl border border-white/10 bg-slate-900 px-2.5 py-2">
+              <div className="flex items-end gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2">
                 <div className="relative shrink-0">
                   <button type="button" title="Фото накладной" aria-label="Прикрепить фото"
                     disabled={loading || photoParsing}
@@ -2260,7 +2260,7 @@ export default function AIWarehousePage() {
                   disabled={loading}
                   aria-label="Отправить"
                   title="Отправить"
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 font-black text-white shadow-lg outline-none transition focus:outline-none focus-visible:outline-none active:scale-95 disabled:opacity-50"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 font-black text-white shadow-lg shadow-blue-900/30 outline-none transition hover:brightness-110 focus:outline-none focus-visible:outline-none active:scale-95 disabled:opacity-50"
                 >
                   {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Send size={18} />}
                 </button>
