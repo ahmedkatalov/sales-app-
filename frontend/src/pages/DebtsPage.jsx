@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlarmClock, ArrowDownWideNarrow, CheckCircle2, ChevronDown, ChevronUp, Clock, Crown, Filter, HandCoins, History, ReceiptText, RotateCcw, Search, Users, Wallet } from "lucide-react";
+import { AlarmClock, ArrowDownWideNarrow, CheckCircle2, ChevronDown, ChevronUp, Clock, Crown, Filter, History, ReceiptText, RotateCcw, Search, Users, Wallet } from "lucide-react";
 import { del, get, post } from "../api";
 import EmptyState from "../components/EmptyState";
 import Modal from "../components/Modal";
@@ -30,39 +30,13 @@ const TIER = {
   urgent: { bl: "border-l-red-500/80", badge: "border-red-500/30 bg-red-500/15 text-red-300", text: "text-red-300" },
 };
 
-function Stat({ icon: Icon, label, value, sub, tone = "blue" }) {
-  const tones = {
-    blue: "border-blue-500/25 bg-blue-500/[0.08] text-blue-300",
-    emerald: "border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-300",
-    violet: "border-violet-500/25 bg-violet-500/[0.08] text-violet-300",
-    orange: "border-orange-500/25 bg-orange-500/[0.08] text-orange-300",
-    red: "border-red-500/30 bg-red-500/[0.1] text-red-300",
-  };
+// Мини-тайл сводки (мобильная сетка 2×2).
+function MiniTile({ label, value, sub, valueClass = "text-white" }) {
   return (
-    <div className={`min-w-0 rounded-2xl border p-3 sm:p-4 ${tones[tone]}`}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-[11px] font-black uppercase tracking-wide opacity-90">{label}</p>
-        <Icon size={16} className="shrink-0 opacity-70" />
-      </div>
-      <p className="mt-1.5 truncate text-xl font-black tabular-nums text-white sm:text-2xl">{value}</p>
-      {sub && <p className="truncate text-[11px] font-semibold text-slate-500">{sub}</p>}
-    </div>
-  );
-}
-
-function CollectionRing({ rate, colorClass }) {
-  const R = 52, C = 2 * Math.PI * R;
-  const off = C * (1 - Math.max(0, Math.min(100, rate)) / 100);
-  return (
-    <div className="relative grid h-28 w-28 shrink-0 place-items-center">
-      <svg viewBox="0 0 120 120" className="h-28 w-28 -rotate-90">
-        <circle cx="60" cy="60" r={R} fill="none" strokeWidth="12" className="text-white/10" stroke="currentColor" />
-        <circle cx="60" cy="60" r={R} fill="none" strokeWidth="12" strokeLinecap="round" className={`${colorClass} transition-[stroke-dashoffset] duration-700`} stroke="currentColor" strokeDasharray={C} strokeDashoffset={off} />
-      </svg>
-      <div className="absolute flex flex-col items-center">
-        <span className="text-2xl font-black tabular-nums text-white">{Math.round(rate)}%</span>
-        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">собрано</span>
-      </div>
+    <div className="min-w-0 rounded-lg bg-white/[0.03] px-3 py-2">
+      <p className="truncate text-[10px] font-black uppercase tracking-wide text-slate-400">{label}</p>
+      <p className={`truncate text-base font-black tabular-nums ${valueClass}`}>{value}</p>
+      {sub && <p className="truncate text-[10px] font-semibold text-slate-500">{sub}</p>}
     </div>
   );
 }
@@ -205,41 +179,37 @@ export default function DebtsPage() {
   const oldest = enriched.filter((g) => g.remaining > 0).reduce((acc, g) => (acc && acc.ageMs >= g.ageMs ? acc : g), null);
   const topDebtor = enriched.find((g) => g.remaining > 0) || null;
   const collectRate = totalPaid + totalOpen > 0 ? (totalPaid / (totalPaid + totalOpen)) * 100 : 100;
-  const ringColor = collectRate >= 80 ? "text-emerald-400" : collectRate >= 50 ? "text-amber-400" : "text-red-400";
+  const rateText = collectRate >= 80 ? "text-emerald-300" : collectRate >= 50 ? "text-amber-300" : "text-red-300";
+  const rateFill = collectRate >= 80 ? "bg-emerald-400" : collectRate >= 50 ? "bg-amber-400" : "bg-red-400";
   const oldestTier = oldest ? TIER[tierOf(oldest.ageMs)] : TIER.fresh;
 
   const methodLabel = (m) => (m === "transfer" ? "Перевод" : "Наличные");
 
   return (
     <div className="relative min-h-screen pb-nav text-white sm:pb-10" style={{ WebkitTapHighlightColor: "transparent" }}>
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-[-130px] top-[-130px] h-[380px] w-[380px] rounded-full bg-blue-600/20 blur-3xl" />
-        <div className="absolute bottom-[-150px] right-[-120px] h-[380px] w-[380px] rounded-full bg-violet-600/20 blur-3xl" />
-      </div>
-
       <div className="relative z-10 mx-auto w-full max-w-[1400px]">
         {/* ── Шапка ── */}
-        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-sm font-bold text-blue-400">Клиенты</p>
+            <p className="text-xs font-bold text-blue-400">Клиенты</p>
             <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">Долги</h2>
             {debtorsCount > 0 ? (
-              <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-slate-400">
+              <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold text-slate-400">
                 <span><b className="text-white">{debtorsCount}</b> {plural(debtorsCount, ["должник", "должника", "должников"])} на <b className="tabular-nums text-red-300">{formatMoney(totalOpen)}</b></span>
-                {oldest && (<><span className="text-slate-600">·</span><span className={`inline-flex items-center gap-1 ${oldestTier.text}`}><Clock size={14} /> старейший висит <b>{fmtAge(oldest.ageMs)}</b></span></>)}
+                {oldest && (<><span className="text-slate-600">·</span><span className={`inline-flex items-center gap-1 ${oldestTier.text}`}><Clock size={13} /> старейший {fmtAge(oldest.ageMs)}</span></>)}
               </p>
             ) : (
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Отмечайте оплату долга: сумма, дата и способ. Наличные попадают в кассу. Любое погашение можно отменить.</p>
+              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-400">Отмечайте оплату долга: сумма, дата и способ. Наличные попадают в кассу. Любое погашение можно отменить.</p>
             )}
           </div>
 
-          <div className="flex shrink-0 gap-2.5">
-            <button onClick={load} aria-label="Обновить" className="flex h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 font-black text-slate-200 transition hover:bg-white/10">
+          <div className="flex shrink-0 gap-2">
+            <button onClick={load} aria-label="Обновить" className="flex h-9 min-w-9 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-0 text-sm font-black text-slate-200 transition hover:bg-white/10 sm:px-3">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
               <span className="hidden sm:inline">Обновить</span>
             </button>
             {paidFullCount > 0 && (
-              <button onClick={clearHistory} disabled={submitting} className="flex h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 font-black text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60">
+              <button onClick={clearHistory} disabled={submitting} aria-label="Скрыть оплаченных" className="flex h-9 min-w-9 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-0 text-sm font-black text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60 sm:px-3">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg>
                 <span className="hidden sm:inline">Скрыть оплаченных</span>
               </button>
@@ -247,47 +217,58 @@ export default function DebtsPage() {
           </div>
         </div>
 
-        {error && <div className="mb-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 font-bold text-red-300">{error}</div>}
+        {error && <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 font-bold text-red-300">{error}</div>}
 
         {customerGroups.length > 0 && (
           <>
-            {/* ── Статы ── */}
-            <div className="mb-3 grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
-              <Stat icon={Wallet} label="Остаток долгов" value={formatMoney(totalOpen)} sub="нужно получить" tone="red" />
-              <Stat icon={HandCoins} label="Погашено" value={formatMoney(totalPaid)} sub={`${paidFullCount} ${plural(paidFullCount, ["оплатил", "оплатили", "оплатили"])} полностью`} tone="emerald" />
-              <Stat icon={AlarmClock} label="Старейший" value={oldest ? fmtAge(oldest.ageMs) : "—"} sub={oldest ? oldest.name : "нет открытых"} tone="orange" />
-              <Stat icon={Users} label="Должников" value={debtorsCount} sub={`всего ${customerGroups.length} в списке`} tone="violet" />
-            </div>
+            {/* ── Герой-сводка: «вам должны» + собираемость + факты ── */}
+            <div className="mb-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                {/* Главное число + линия собираемости */}
+                <div className="min-w-0">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Вам должны</p>
+                  <p className="mt-1 text-4xl font-black leading-none tabular-nums text-red-300 sm:text-5xl">{formatMoney(totalOpen)}</p>
+                  <div className="mt-2.5 flex items-center gap-2 text-[11px] font-bold">
+                    <div className="h-1.5 w-40 overflow-hidden rounded-full bg-white/10 sm:w-56">
+                      <div className={`h-full rounded-full ${rateFill} transition-[width] duration-700`} style={{ width: `${collectRate}%` }} />
+                    </div>
+                    <span className={`tabular-nums ${rateText}`}>{Math.round(collectRate)}%</span>
+                    <span className="text-slate-500">собрано<span className="hidden sm:inline"> · {formatMoney(totalPaid)} из {formatMoney(totalPaid + totalOpen)}</span></span>
+                  </div>
+                </div>
 
-            {/* ── Собираемость + крупнейший должник ── */}
-            <div className="mb-4 flex flex-col items-center gap-4 rounded-[28px] border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur sm:flex-row sm:gap-6">
-              <CollectionRing rate={collectRate} colorClass={ringColor} />
-              <div className="min-w-0 flex-1 text-center sm:text-left">
-                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Собираемость долгов</p>
-                <p className="mt-0.5 text-lg font-black text-white">Возвращено {formatMoney(totalPaid)} <span className="text-slate-500">из {formatMoney(totalPaid + totalOpen)}</span></p>
-                {topDebtor && (
-                  <p className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-amber-400/20 bg-amber-500/[0.08] px-3 py-2 text-sm font-bold text-slate-200">
-                    <Crown size={16} className="shrink-0 text-amber-300" /> Больше всех должен: <b className="text-white">{topDebtor.name}</b> — <b className="tabular-nums text-red-300">{formatMoney(topDebtor.remaining)}</b>
-                  </p>
-                )}
+                {/* Десктоп: инлайн-факты */}
+                <div className="hidden shrink-0 flex-wrap items-center justify-end gap-x-5 gap-y-2 text-sm sm:flex">
+                  <span className="inline-flex items-center gap-1.5 text-slate-400"><Users size={15} /> <b className="tabular-nums text-white">{debtorsCount}</b> должников</span>
+                  {oldest && <span className={`inline-flex items-center gap-1.5 ${oldestTier.text}`}><AlarmClock size={15} /> старейший <b>{fmtAge(oldest.ageMs)}</b> <span className="font-semibold text-slate-500">· {oldest.name}</span></span>}
+                  {topDebtor && <span className="inline-flex items-center gap-1.5 text-amber-300"><Crown size={15} /> крупнейший <b className="text-white">{topDebtor.name}</b> <b className="tabular-nums text-red-300">{formatMoney(topDebtor.remaining)}</b></span>}
+                </div>
+
+                {/* Мобайл: сетка 2×2 */}
+                <div className="grid grid-cols-2 gap-2 sm:hidden">
+                  <MiniTile label="Погашено" value={formatMoney(totalPaid)} valueClass="text-emerald-300" />
+                  <MiniTile label="Должников" value={debtorsCount} sub={`всего ${customerGroups.length}`} />
+                  <MiniTile label="Старейший" value={oldest ? fmtAge(oldest.ageMs) : "—"} sub={oldest ? oldest.name : "нет открытых"} valueClass={oldestTier.text} />
+                  <MiniTile label="Крупнейший" value={topDebtor ? formatMoney(topDebtor.remaining) : "—"} sub={topDebtor ? topDebtor.name : "никто"} valueClass="text-amber-300" />
+                </div>
               </div>
             </div>
 
             {/* ── Поиск + фильтры + сортировка ── */}
-            <div className="mb-5 flex flex-col gap-3 rounded-[28px] border border-white/10 bg-[#0f172a]/80 p-4 shadow-2xl backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-3 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1">
-                <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Найти клиента" className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 pl-11 pr-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60" />
+                <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Найти клиента" className="h-10 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60" />
               </div>
               <div className="flex items-center gap-2">
                 <div className="no-scrollbar flex gap-2 overflow-x-auto">
                   {[["all", "Все"], ["debtors", "Должники"], ["paid", "Оплаченные"]].map(([v, l]) => (
-                    <button key={v} onClick={() => setFilter(v)} className={`inline-flex h-11 shrink-0 items-center rounded-full border px-4 text-sm font-black transition ${filter === v ? "border-emerald-400/60 bg-emerald-500/15 text-white" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}>{l}</button>
+                    <button key={v} onClick={() => setFilter(v)} className={`inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-xs font-black transition ${filter === v ? "border-emerald-400/60 bg-emerald-500/15 text-white" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}>{l}</button>
                   ))}
                 </div>
                 <div className="relative shrink-0">
-                  <ArrowDownWideNarrow size={16} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <select value={sort} onChange={(e) => setSort(e.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 pl-8 pr-3 text-sm font-bold text-white outline-none">
+                  <ArrowDownWideNarrow size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <select value={sort} onChange={(e) => setSort(e.target.value)} className="h-8 rounded-lg border border-white/10 bg-white/5 pl-8 pr-2.5 text-xs font-bold text-white outline-none">
                     <option value="remaining" className="bg-slate-900">По остатку</option>
                     <option value="age" className="bg-slate-900">По давности</option>
                     <option value="name" className="bg-slate-900">По имени</option>
@@ -298,113 +279,101 @@ export default function DebtsPage() {
           </>
         )}
 
-        {/* ── Список клиентов ── */}
-        <div className="space-y-3">
+        {/* ── Реестр должников ── */}
+        <div className="space-y-1.5">
           {displayGroups.map((customer) => {
             const isOpen = openedCustomer === customer.id;
             const t = TIER[customer.tier] || TIER.fresh;
             const isTop = topDebtor && customer.id === topDebtor.id;
-            const barColor = customer.pct >= 100 ? "from-emerald-500 to-emerald-400" : "from-amber-500 to-amber-400";
             return (
-              <div key={customer.id || customer.name} className={`overflow-hidden rounded-[28px] border border-l-4 border-white/10 bg-[#0f172a]/80 shadow-2xl backdrop-blur ${customer.isPaid ? "border-l-emerald-500/60" : t.bl} ${isTop ? "ring-1 ring-amber-400/40" : ""}`}>
-                <div role="button" tabIndex={0} onClick={() => setOpenedCustomer(isOpen ? null : customer.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenedCustomer(isOpen ? null : customer.id); } }} className="w-full cursor-pointer p-4 text-left transition hover:bg-white/[0.03] sm:p-5">
-                  <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                    <div className="flex min-w-0 items-center gap-3.5">
-                      <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl border text-2xl font-black ${customer.isPaid ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300" : customer.tier === "urgent" ? "border-red-400/30 bg-red-500/10 text-red-300" : "border-blue-400/20 bg-blue-500/10 text-blue-300"}`}>
-                        {String(customer.name || "?").slice(0, 1).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="truncate text-xl font-black text-white sm:text-2xl">{customer.name}</h3>
-                          {customer.isPaid ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[11px] font-black text-emerald-300"><CheckCircle2 size={12} /> Оплачен</span>
-                          ) : (
-                            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-black ${t.badge}`}><Clock size={12} /> висит {fmtAge(customer.ageMs)}</span>
-                          )}
-                          {isTop && <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-black text-amber-300"><Crown size={12} /> Крупнейший</span>}
-                        </div>
-                        <p className="mt-1 text-sm font-bold text-slate-400">Покупок в долг: {customer.records.length} · погашений: {customer.payments.length}</p>
-                        {/* прогресс возврата */}
-                        <div className="mt-2 max-w-[360px]">
-                          <div className="flex justify-between text-[11px] font-black">
-                            <span className="text-slate-400">Возврат долга</span>
-                            <span className={customer.pct >= 100 ? "text-emerald-300" : "text-slate-300"}>{customer.pct}%</span>
-                          </div>
-                          <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-white/10">
-                            <div className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-[width] duration-500`} style={{ width: `${customer.pct}%` }} />
-                          </div>
-                          <p className="mt-0.5 text-[11px] text-slate-500">{formatMoney(customer.paid)} из {formatMoney(customer.borrowed)}</p>
-                        </div>
-                      </div>
-                      <span className="ml-auto shrink-0 self-start text-slate-400" aria-hidden="true">{isOpen ? <ChevronUp size={22} /> : <ChevronDown size={22} />}</span>
-                    </div>
+              <div key={customer.id || customer.name} className={`overflow-hidden rounded-xl border border-l-2 border-white/10 bg-white/[0.04] ${customer.isPaid ? "border-l-emerald-500/60" : t.bl} ${isTop ? "ring-1 ring-amber-400/30" : ""}`}>
+                <div role="button" tabIndex={0} onClick={() => setOpenedCustomer(isOpen ? null : customer.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenedCustomer(isOpen ? null : customer.id); } }} className="flex min-h-[60px] cursor-pointer items-center gap-3 px-3 py-2.5 text-left transition hover:bg-white/[0.03] sm:px-4">
+                  {/* Аватар */}
+                  <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg border text-sm font-black ${customer.isPaid ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300" : customer.tier === "urgent" ? "border-red-400/30 bg-red-500/10 text-red-300" : "border-blue-400/20 bg-blue-500/10 text-blue-300"}`}>
+                    {String(customer.name || "?").slice(0, 1).toUpperCase()}
+                  </div>
 
-                    <div className="flex flex-col gap-2 xl:w-[420px] xl:shrink-0">
-                      <div className="grid grid-cols-3 gap-2 [@media(max-width:380px)]:grid-cols-1">
-                        <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
-                          <p className="text-[11px] font-black uppercase text-slate-400">Взял в долг</p>
-                          <p className="text-base font-black text-white sm:text-lg">{formatMoney(customer.borrowed || 0)}</p>
-                        </div>
-                        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2.5">
-                          <p className="text-[11px] font-black uppercase text-slate-400">Оплатил</p>
-                          <p className="text-base font-black text-emerald-300 sm:text-lg">{formatMoney(customer.paid || 0)}</p>
-                        </div>
-                        <div className={`rounded-xl border px-3 py-2.5 ${customer.isPaid ? "border-emerald-500/20 bg-emerald-500/10" : "border-red-500/20 bg-red-500/10"}`}>
-                          <p className="text-[11px] font-black uppercase text-slate-400">Остаток</p>
-                          <p className={`text-base font-black sm:text-lg ${customer.isPaid ? "text-emerald-300" : "text-red-300"}`}>{formatMoney(customer.remaining || 0)}</p>
-                        </div>
-                      </div>
-                      {customer.remaining > 0 && (
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); openPay(customer); }}
-                          disabled={submitting}
-                          className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-5 py-2.5 font-black text-white shadow-lg shadow-emerald-950/30 transition hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <Wallet size={18} strokeWidth={2.4} /> Клиент оплатил
-                        </button>
+                  {/* Центр: имя (своя строка) + бейдж давности + мини-прогресс */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-black text-white sm:text-base">{customer.name}</span>
+                      {isTop && <Crown size={13} className="shrink-0 text-amber-300" aria-label="Крупнейший должник" />}
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      {customer.isPaid ? (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-300"><CheckCircle2 size={11} /> Оплачен</span>
+                      ) : (
+                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-black ${t.badge}`}><Clock size={11} /> {fmtAge(customer.ageMs)}</span>
                       )}
+                      <div className="h-1 w-full min-w-0 max-w-[160px] overflow-hidden rounded-full bg-white/10">
+                        <div className={`h-full rounded-full transition-[width] duration-500 ${customer.pct >= 100 ? "bg-emerald-400" : "bg-amber-400"}`} style={{ width: `${customer.pct}%` }} />
+                      </div>
+                      <span className="hidden shrink-0 text-[10px] font-semibold text-slate-500 lg:inline">{customer.records.length} {plural(customer.records.length, ["покупка", "покупки", "покупок"])} · {customer.payments.length} {plural(customer.payments.length, ["погашение", "погашения", "погашений"])}</span>
                     </div>
                   </div>
+
+                  {/* Остаток */}
+                  <div className="shrink-0 text-right">
+                    <p className={`text-lg font-black leading-none tabular-nums sm:text-xl ${customer.isPaid ? "text-emerald-300" : "text-red-300"}`}>{formatMoney(customer.remaining || 0)}</p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">из {formatMoney(customer.borrowed || 0)}</p>
+                  </div>
+
+                  {/* Действие */}
+                  {customer.remaining > 0 && (
+                    <button
+                      type="button"
+                      aria-label="Клиент оплатил"
+                      onClick={(e) => { e.stopPropagation(); openPay(customer); }}
+                      disabled={submitting}
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-0 text-xs font-black text-emerald-300 transition hover:bg-emerald-500/25 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-3"
+                    >
+                      <Wallet size={15} strokeWidth={2.4} /> <span className="hidden sm:inline">Оплатил</span>
+                    </button>
+                  )}
+
+                  <span className="shrink-0 text-slate-400" aria-hidden="true">{isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</span>
                 </div>
 
                 {isOpen && (
-                  <div className="border-t border-white/10 p-4 sm:p-5">
-                    <div className="mb-3 flex items-center gap-2 font-black text-slate-200">
-                      <History size={20} className="text-blue-400" /> Покупки в долг
-                    </div>
-                    <div className="overflow-hidden rounded-[22px] border border-white/10 bg-[#111827]">
-                      <div className="hidden grid-cols-[180px_1fr_140px] gap-3 border-b border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-slate-400 lg:grid">
-                        <span>Дата</span><span>Описание</span><span className="text-right">Сумма</span>
-                      </div>
-                      {customer.records.map((debt) => (
-                        <div key={debt.id} className="border-t border-white/10 px-4 py-4 first:border-t-0 lg:grid lg:grid-cols-[180px_1fr_140px] lg:items-center lg:gap-3">
-                          <div className="flex items-center justify-between gap-3 lg:block">
-                            <div className="text-sm font-black text-slate-300 lg:text-base">{debt.createdAt ? new Date(debt.createdAt).toLocaleDateString("ru-RU") : "—"}</div>
-                            <div className="text-lg font-black text-white lg:hidden">{formatMoney(debt.amount)}</div>
-                          </div>
-                          <div className="mt-2 lg:mt-0">
-                            <div className="flex items-start gap-2 font-bold text-slate-100">
-                              <ReceiptText size={18} className="mt-1 shrink-0 text-slate-500" />
-                              <span>{(debt.items || []).map((item) => `${item.name} × ${item.qty}`).join(", ") || "Покупка в долг"}</span>
-                            </div>
-                          </div>
-                          <div className="hidden text-right font-black text-white lg:block">{formatMoney(debt.amount)}</div>
-                        </div>
-                      ))}
+                  <div className="space-y-3 border-t border-white/10 px-3 py-3 sm:px-4">
+                    {/* мини-сводка */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-bold">
+                      <span className="text-slate-400">Взял в долг <b className="tabular-nums text-white">{formatMoney(customer.borrowed)}</b></span>
+                      <span className="text-slate-400">Оплатил <b className="tabular-nums text-emerald-300">{formatMoney(customer.paid)}</b></span>
+                      <span className="text-slate-500">{customer.records.length} {plural(customer.records.length, ["покупка", "покупки", "покупок"])} · {customer.payments.length} {plural(customer.payments.length, ["погашение", "погашения", "погашений"])}</span>
                     </div>
 
-                    {customer.payments.length > 0 && (
-                      <div className="mt-4">
-                        <div className="mb-2 flex items-center gap-2 text-sm font-black text-emerald-300"><Wallet size={16} strokeWidth={2.4} /> Погашения</div>
-                        <div className="overflow-hidden rounded-[22px] border border-white/10 bg-[#111827]">
-                          {customer.payments.map((p) => (
-                            <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-4 py-3 first:border-t-0">
-                              <div className="min-w-0">
-                                <p className="font-black text-emerald-300">{formatMoney(p.amount)} <span className="text-xs font-bold text-slate-400">· {methodLabel(p.method)}</span></p>
-                                <p className="mt-0.5 text-xs font-bold text-slate-500">{p.createdAt ? new Date(p.createdAt).toLocaleDateString("ru-RU") : "—"}{p.note ? ` · ${p.note}` : ""}</p>
+                    {/* покупки в долг */}
+                    <div>
+                      <div className="mb-1.5 flex items-center gap-1.5 text-xs font-black text-slate-300"><History size={14} className="text-blue-400" /> Покупки в долг</div>
+                      <div className="divide-y divide-white/10 overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]">
+                        {customer.records.map((debt) => (
+                          <div key={debt.id} className="flex items-start justify-between gap-3 px-3 py-2">
+                            <div className="min-w-0">
+                              <div className="flex items-start gap-1.5 text-sm font-bold text-slate-100">
+                                <ReceiptText size={15} className="mt-0.5 shrink-0 text-slate-500" />
+                                <span className="min-w-0">{(debt.items || []).map((item) => `${item.name} × ${item.qty}`).join(", ") || "Покупка в долг"}</span>
                               </div>
-                              <button onClick={() => undoPayment(p.id)} disabled={submitting} className="flex shrink-0 items-center gap-1.5 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs font-black text-red-300 transition hover:bg-red-500/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
+                              <p className="mt-0.5 pl-[22px] text-[11px] font-semibold text-slate-500">{debt.createdAt ? new Date(debt.createdAt).toLocaleDateString("ru-RU") : "—"}</p>
+                            </div>
+                            <span className="shrink-0 text-sm font-black tabular-nums text-white">{formatMoney(debt.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* погашения */}
+                    {customer.payments.length > 0 && (
+                      <div>
+                        <div className="mb-1.5 flex items-center gap-1.5 text-xs font-black text-emerald-300"><Wallet size={14} strokeWidth={2.4} /> Погашения</div>
+                        <div className="divide-y divide-white/10 overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]">
+                          {customer.payments.map((p) => (
+                            <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                              <div className="min-w-0">
+                                <p className="text-sm font-black tabular-nums text-emerald-300">{formatMoney(p.amount)} <span className="text-[11px] font-bold text-slate-400">· {methodLabel(p.method)}</span></p>
+                                <p className="mt-0.5 text-[11px] font-semibold text-slate-500">{p.createdAt ? new Date(p.createdAt).toLocaleDateString("ru-RU") : "—"}{p.note ? ` · ${p.note}` : ""}</p>
+                              </div>
+                              <button onClick={() => undoPayment(p.id)} disabled={submitting} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-2.5 text-[11px] font-black text-red-300 transition hover:bg-red-500/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
                                 <RotateCcw size={14} strokeWidth={2.6} /> Отменить
                               </button>
                             </div>
@@ -421,7 +390,7 @@ export default function DebtsPage() {
 
         {!displayGroups.length && (
           <EmptyState
-            className="mt-4"
+            className="mt-3"
             icon={query.trim() || filter !== "all" ? <Filter size={26} /> : <CheckCircle2 size={26} />}
             title={query.trim() ? "Никого не нашлось" : filter !== "all" ? "В этом фильтре пусто" : "Все долги закрыты"}
             text={
