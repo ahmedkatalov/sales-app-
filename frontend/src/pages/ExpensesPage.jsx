@@ -44,7 +44,7 @@ function MetricTile({ icon: Icon, label, value, sub, tone = "slate" }) {
     slate: "border-white/10 bg-white/[0.05] text-slate-300",
   };
   return (
-    <div className={`min-w-0 rounded-2xl border p-3.5 backdrop-blur-xl sm:p-4 ${tones[tone]}`}>
+    <div className={`min-w-0 rounded-2xl border p-3 sm:p-3.5 ${tones[tone]}`}>
       <div className="flex items-center justify-between gap-2">
         <p className="truncate text-[10px] font-black uppercase tracking-wide opacity-90">{label}</p>
         <Icon size={16} className="shrink-0 opacity-70" />
@@ -419,30 +419,23 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
   return (
     <div className="pb-nav text-slate-100 sm:pb-10">
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[linear-gradient(135deg,#050914_0%,#071128_45%,#0a1124_100%)]" />
-      <div className="pointer-events-none fixed left-[-120px] top-[-100px] -z-10 h-[340px] w-[340px] rounded-full bg-blue-600/20 blur-3xl" />
-      <div className="pointer-events-none fixed right-[-120px] top-[6%] -z-10 h-[340px] w-[340px] rounded-full bg-violet-600/20 blur-3xl" />
-
-      <div className="mb-6 max-w-3xl">
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-300 shadow-[0_0_25px_rgba(37,99,235,.22)]">
-          <span className="h-2 w-2 rounded-full bg-blue-400 shadow-[0_0_15px_rgba(96,165,250,.9)]" />
-          Расходы
-        </div>
-        <h2 className="text-2xl font-black leading-none text-white drop-shadow sm:text-3xl">
+      <div className="mb-4 max-w-3xl">
+        <p className="text-xs font-bold text-blue-400">Расходы</p>
+        <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">
           Расходы точки
         </h2>
-        <p className="mt-2.5 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+        <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-400">
           Бытовые расходы отдельно, продукты отдельно. Типы продуктов берутся из меню.
         </p>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-3xl border border-red-400/30 bg-red-500/10 px-4 py-3 font-bold text-red-200 shadow-[0_12px_35px_rgba(239,68,68,.16)]">
+        <div className="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 font-bold text-red-200">
           {error}
         </div>
       )}
 
-      <div className="mb-5 rounded-[2rem] border border-white/10 bg-white/[0.06] shadow-2xl backdrop-blur-xl overflow-hidden">
+      <div className="mb-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
         {/* Компактная шапка фильтра — всегда видна */}
         <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
           <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -461,8 +454,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                   key={key}
                   onClick={action}
                   className={active
-                    ? "min-h-10 rounded-xl bg-linear-to-r from-blue-600 to-violet-600 px-3 py-2 text-xs font-black text-white shadow-lg sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm"
-                    : "min-h-10 rounded-xl border border-white/10 bg-white/8 px-3 py-2 text-xs font-black text-slate-300 transition hover:bg-white/15 sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm"}
+                    ? "min-h-10 rounded-xl border border-blue-400/50 bg-blue-500/15 px-3 py-2 text-xs font-black text-white sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm"
+                    : "min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-slate-300 transition hover:bg-white/10 sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm"}
                 >
                   {label}
                 </button>
@@ -525,8 +518,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                     onClick={() => setCategory(key)}
                     className={
                       filterCategory === key
-                        ? "rounded-xl bg-linear-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg"
-                        : "rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/15"
+                        ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-black text-white"
+                        : "rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10"
                     }
                   >
                     {label}
@@ -544,7 +537,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                     onClick={() => setFilterType("all")}
                     className={
                       filterType === "all"
-                        ? "rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-black text-slate-950"
+                        ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-black text-white"
                         : "rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/15"
                     }
                   >
@@ -556,7 +549,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                       onClick={() => setFilterType(type)}
                       className={
                         filterType === type
-                          ? "rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-black text-slate-950"
+                          ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-black text-white"
                           : "rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/15"
                       }
                     >
@@ -579,7 +572,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
       {/* ── Куда уходят деньги ── */}
       {visibleExpenses.length > 0 && (
-        <div className="mb-5 rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-2xl backdrop-blur-xl sm:p-6">
+        <div className="mb-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-black text-white sm:text-xl">Куда уходят деньги</h3>
@@ -631,10 +624,10 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
       {/* Расчёты с владельцем — отдельная карточка, только владельцу/админу (эндпоинт вернул данные) */}
       {ownerFin && (
-        <div className="mb-5 rounded-[2rem] border border-amber-400/20 app-aurora bg-white/[0.04] bg-gradient-to-br from-amber-500/[0.08] to-orange-500/[0.04] p-5 shadow-2xl backdrop-blur-xl sm:p-6">
+        <div className="mb-3 rounded-2xl border border-amber-400/20 bg-white/[0.04] p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-black text-amber-100">Расчёты с владельцем</p>
+              <p className="text-sm font-black text-amber-300">Расчёты с владельцем</p>
               <p className="mt-0.5 text-xs font-bold text-slate-400">Личные деньги владельца в бизнесе</p>
             </div>
             <div className="text-right">
@@ -693,14 +686,14 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         </div>
       )}
 
-      <div id="expenses-list" className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.06] shadow-2xl backdrop-blur-xl">
-        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <div id="expenses-list" className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="min-w-0">
-            <p className="text-sm font-bold text-blue-300">
+            <p className="text-xs font-bold text-blue-400">
               {filterCategory === "all" ? "Все расходы" : categoryLabel(filterCategory)}
               {filterType !== "all" ? ` · ${filterType}` : ""}
             </p>
-            <h3 className="text-2xl font-black text-white sm:text-3xl">Список расходов</h3>
+            <h3 className="text-lg font-black text-white sm:text-xl">Список расходов</h3>
             <p className="mt-1 text-sm text-slate-400">
               {workerMode
                 ? "Работник может добавить расход, но не видит общую аналитику."
@@ -718,7 +711,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             </div>
             <button
               onClick={() => setExpenseModal(true)}
-              className="hidden rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] sm:block"
+              className="hidden rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-2.5 font-black text-white shadow-lg transition hover:scale-[1.01] sm:block"
             >
               + Добавить расход
             </button>
@@ -842,7 +835,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
       <button
         onClick={() => setExpenseModal(true)}
-        className="fixed left-4 right-4 z-30 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_55px_rgba(37,99,235,.45)] transition active:scale-[0.98] sm:hidden"
+        className="fixed left-4 right-4 z-30 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-lg shadow-blue-950/40 transition active:scale-[0.98] sm:hidden"
         style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px)" }}
       >
         + Добавить расход
