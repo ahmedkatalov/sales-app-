@@ -337,9 +337,6 @@ export default function HomePage() {
 
   return (
     <div className="relative pb-nav text-white sm:pb-10">
-      <div className="pointer-events-none absolute -top-24 left-1/4 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
-      <div className="pointer-events-none absolute right-0 top-16 h-80 w-80 rounded-full bg-violet-700/15 blur-3xl" />
-
       <div className="relative mx-auto w-full max-w-[1400px]">
         {/* ── Шапка ── */}
         <header className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -374,7 +371,7 @@ export default function HomePage() {
         </header>
 
         {showOnboarding && (
-          <div className="mb-5 flex flex-col gap-3 rounded-3xl border border-emerald-400/25 app-aurora bg-white/[0.04] bg-gradient-to-br from-emerald-500/[0.1] to-blue-500/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-3 flex flex-col gap-3 rounded-2xl border border-emerald-400/25 bg-white/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-start gap-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-500/15 text-emerald-300"><Sparkles size={18} strokeWidth={2.4} /></span>
               <div className="min-w-0">
@@ -403,14 +400,13 @@ export default function HomePage() {
         {loading ? (
           <Skel className="mb-5 h-[340px]" />
         ) : (
-          <section className="animate-rise relative mb-5 overflow-hidden rounded-[28px] border border-white/10 app-aurora bg-white/[0.04] bg-gradient-to-br from-blue-600/[0.12] via-white/[0.04] to-violet-600/[0.1] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.3)] backdrop-blur sm:p-7">
-            <div className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
+          <section className="animate-rise relative mb-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
             <div className="relative">
               {/* верх: число + дельта + кольцо маржи */}
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-black uppercase tracking-wider text-slate-300/80">Выручка сегодня</p>
-                  <p className="mt-1 break-words text-[34px] font-black leading-none tabular-nums text-white sm:text-[56px]">
+                  <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">Выручка сегодня</p>
+                  <p className="mt-1 text-4xl font-black leading-none tabular-nums text-white sm:text-5xl">
                     <AnimatedMoney value={todayRev} />
                   </p>
                   <div className="mt-2.5">
@@ -421,7 +417,7 @@ export default function HomePage() {
               </div>
 
               {/* мини-показатели */}
-              <div className="mt-5 grid grid-cols-3 gap-3 rounded-2xl border border-white/10 bg-black/15 p-3.5 sm:gap-4 sm:p-4">
+              <div className="mt-5 grid grid-cols-3 gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 sm:gap-4 sm:p-4">
                 <div className="min-w-0 border-r border-white/10 pr-3">
                   <p className="truncate text-[11px] font-bold uppercase tracking-wider text-slate-400">Прибыль</p>
                   <p className="mt-0.5 truncate text-lg font-black tabular-nums text-emerald-300 sm:text-xl"><AnimatedMoney value={todayProfit} /></p>
@@ -459,7 +455,7 @@ export default function HomePage() {
             {[0, 1, 2, 3].map((i) => <Skel key={i} className="h-[58px]" />)}
           </div>
         ) : allClear ? (
-          <div className="animate-rise mb-6 flex items-center gap-4 rounded-3xl border border-emerald-400/25 bg-emerald-500/[0.06] p-5">
+          <div className="animate-rise mb-6 flex items-center gap-4 rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.06] p-5">
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-500/15 text-emerald-300"><CheckCircle2 size={24} strokeWidth={2.4} /></span>
             <div>
               <p className="text-base font-black text-white">Всё под контролем</p>
@@ -480,7 +476,7 @@ export default function HomePage() {
           {loading ? (
             <Skel className="h-[260px]" />
           ) : (
-            <section className="animate-rise overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-lg backdrop-blur">
+            <section className="animate-rise overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5">
               <div className="mb-4 flex items-center gap-2.5">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-500/15 text-blue-300"><Sparkles size={16} strokeWidth={2.6} /></span>
                 <h3 className="text-lg font-black text-white">Этот месяц</h3>
@@ -531,7 +527,7 @@ export default function HomePage() {
           {loading ? (
             <Skel className="h-[260px]" />
           ) : (
-            <section className="animate-rise overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-lg backdrop-blur">
+            <section className="animate-rise overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5">
               <div className="mb-4 flex items-center gap-2.5">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-500/15 text-amber-300"><Trophy size={16} strokeWidth={2.6} /></span>
                 <h3 className="text-lg font-black text-white">Топ товаров за месяц</h3>
