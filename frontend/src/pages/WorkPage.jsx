@@ -6,7 +6,7 @@ import Modal from "../components/Modal";
 import MenuTransferModal from "../components/MenuTransferModal";
 import MenuPdfImportModal from "../components/MenuPdfImportModal";
 import EmptyState from "../components/EmptyState";
-import { formatMoney, money, num, businessISO } from "../utils/format";
+import { formatMoney, money, num, businessISO, prettyName } from "../utils/format";
 import { getWarehouseUnitCost } from "../utils/menu";
 import { csvCell, csvNum, downloadCsv } from "../utils/csv";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
@@ -275,7 +275,7 @@ function ProductCard({ p, onEdit, onDuplicate, onDelete }) {
 
       {/* Мета + компактный статус */}
       <div className="mt-1.5 flex items-center gap-1.5">
-        <span className="min-w-0 flex-1 truncate text-[10px] font-bold text-slate-500">{p.typeName || p.type} · {p.category}</span>
+        <span className="min-w-0 flex-1 truncate text-[10px] font-bold text-slate-500">{prettyName(p.typeName || p.type)} · {prettyName(p.category)}</span>
         {hasRecipe ? (
           unlinked > 0 ? (
             <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-black text-amber-300" title={`${unlinked} ингр. не на складе`}><AlertTriangle size={11} /> {unlinked}</span>

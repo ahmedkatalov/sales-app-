@@ -38,3 +38,18 @@ export const formatMoney = (value) =>
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   });
+
+// Красивое имя для показа: «кричащие» названия ЗАГЛАВНЫМИ приводим к виду
+// «С большой буквы» (первая заглавная, остальные строчные). Намеренный смешанный
+// регистр не трогаем — только полностью верхний регистр. Данные не меняем,
+// это только отображение.
+export const prettyName = (value) => {
+  const str = String(value ?? "").trim();
+  if (!str) return str;
+  const letters = str.replace(/[^\p{L}]/gu, "");
+  const isShouty =
+    letters.length >= 2 && letters === letters.toUpperCase() && letters !== letters.toLowerCase();
+  if (!isShouty) return str;
+  const lower = str.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+};
