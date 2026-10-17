@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Info, Printer, Download, User, Wallet } from "lucide-react";
+import { Info, Printer, Download, User, Wallet, AlertTriangle } from "lucide-react";
 import { get, put } from "../api";
 import { formatMoney, num, businessISO } from "../utils/format";
 import { csvCell, downloadCsv } from "../utils/csv";
@@ -617,6 +617,18 @@ export default function FinanceReportPage() {
                 </div>
               </div>
             </section>
+
+            {num(p.revenue) > 0 && num(p.cogs) > num(p.revenue) && (
+              <div className="flex items-start gap-3 rounded-2xl border border-amber-400/30 bg-amber-500/[0.08] p-4">
+                <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-amber-500/15 text-amber-300"><AlertTriangle size={18} strokeWidth={2.4} /></span>
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-amber-200">Себестоимость больше выручки — похоже, цена задана неверно</p>
+                  <p className="mt-1 text-xs font-bold leading-5 text-slate-300">
+                    Себестоимость {formatMoney(p.cogs)} больше выручки {formatMoney(p.revenue)} — при нормальной работе так не бывает. Обычно причина — неверная <b className="text-white">цена закупки сырья</b> на складе (из неё считается себестоимость даже без остатка) или ошибка в <b className="text-white">рецепте</b> (сколько сырья уходит на 1 порцию). Найти виновников: «Товары» → фильтр <b className="text-white">«Убыточные»</b>, затем поправьте цену/рецепт или цену прихода на «Складе».
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Быстрые итоги */}
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
