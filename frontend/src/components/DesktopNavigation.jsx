@@ -61,27 +61,31 @@ export default function DesktopNavigation({
               className={({ isActive }) =>
                 `group relative flex h-11 shrink-0 items-center gap-2 rounded-xl px-2 text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-500/20 lg:px-3 ${
                   isActive
-                    ? "bg-blue-600 text-white "
-                    : "bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+                    ? "bg-blue-600 text-white shadow-sm shadow-blue-950/40"
+                    : "bg-white/[0.04] text-slate-300 hover:bg-white/[0.09] hover:text-white"
                 }`
               }
             >
-              <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5">
-                <Icon size={18} strokeWidth={2.4} />
+              {({ isActive }) => (
+                <>
+                  <span className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${isActive ? "bg-white/20" : "bg-white/5"}`}>
+                    <Icon size={18} strokeWidth={2.4} />
 
-                {badge === "pending" && pendingCount > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-slate-950">
-                    {pendingCount > 99 ? "99+" : pendingCount}
+                    {badge === "pending" && pendingCount > 0 && (
+                      <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-sky-400 px-1 text-[10px] font-bold leading-none text-sky-950 ring-2 ring-slate-950">
+                        {pendingCount > 99 ? "99+" : pendingCount}
+                      </span>
+                    )}
+                    {badge === "debt" && debtCount > 0 && (
+                      <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-slate-950">
+                        {debtCount > 99 ? "99+" : debtCount}
+                      </span>
+                    )}
                   </span>
-                )}
-                {badge === "debt" && debtCount > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-slate-950">
-                    {debtCount > 99 ? "99+" : debtCount}
-                  </span>
-                )}
-              </span>
 
-              <span className="hidden whitespace-nowrap md:inline">{label}</span>
+                  <span className="hidden whitespace-nowrap md:inline">{label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>

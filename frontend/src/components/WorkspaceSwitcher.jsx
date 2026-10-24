@@ -39,9 +39,9 @@ export default function WorkspaceSwitcher({ accountName, accountLabel, workspace
         type="button"
         onClick={() => setOpen((o) => !o)}
         title="Переключить точку"
-        className="flex w-full min-w-[210px] items-center gap-2 rounded-xl px-1 py-1 text-left transition hover:bg-white/5"
+        className="flex w-full min-w-[208px] items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2 py-1.5 text-left transition hover:bg-white/[0.07]"
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 ">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-950/40">
           <ShoppingCart size={22} strokeWidth={2.6} />
         </div>
         <div className="min-w-0 flex-1">
