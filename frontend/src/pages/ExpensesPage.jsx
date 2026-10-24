@@ -4,6 +4,7 @@ import { del, get, post, put, fetchBlobUrl } from "../api";
 import { compressImageToDataURL } from "../utils/image";
 import Modal from "../components/Modal";
 import DatePicker from "../components/DatePicker";
+import { TrendSparkline, HeroStat } from "../components/Metrics";
 import { formatMoney, localISO, money, num } from "../utils/format";
 
 const today = () => localISO();
@@ -235,6 +236,17 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
   const avgPerDay = periodDays > 0 ? total / periodDays : 0;
   const largest = useMemo(() => visibleExpenses.reduce((m, e) => (num(e.amount) > num(m?.amount || 0) ? e : m), null), [visibleExpenses]);
   const withPhoto = useMemo(() => visibleExpenses.filter((e) => e.hasPhoto).length, [visibleExpenses]);
+
+  // Расход по дням периода — для спарклайна в герое.
+  const dailyExpense = useMemo(() => {
+    const byDay = new Map();
+    for (const e of visibleExpenses) {
+      const day = String(e.createdAt || "").slice(0, 10);
+      if (!day) continue;
+      byDay.set(day, (byDay.get(day) || 0) + num(e.amount));
+    }
+    return [...byDay.keys()].sort().map((d) => byDay.get(d));
+  }, [visibleExpenses]);
 
   const byType = useMemo(() => {
     const m = new Map();
@@ -563,11 +575,48 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         )}
       </div>
 
-      <div className="mb-5 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-        <MetricTile icon={TrendingDown} label="Итого расходов" value={formatMoney(total)} sub="за период" tone="red" />
-        <MetricTile icon={CalendarDays} label="Средний в день" value={formatMoney(Math.round(avgPerDay))} sub={`≈ ${periodDays} ${periodDays === 1 ? "день" : periodDays < 5 ? "дня" : "дней"} в периоде`} tone="blue" />
-        <MetricTile icon={Flame} label="Крупнейший" value={largest ? formatMoney(largest.amount) : "—"} sub={largest ? largest.name : "—"} tone="violet" />
-        <MetricTile icon={Hash} label="Записей" value={visibleExpenses.length} sub={withPhoto ? `${withPhoto} с фото` : "за период"} tone="slate" />
+      {/* Премиум-герой: итого + темп трат + спарклайн по дням + факты */}
+      <div className="mb-5 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          {/* Главное число + темп */}
+          <div className="min-w-0 shrink-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Итого расходов · период</p>
+            <p className="mt-1 whitespace-nowrap text-4xl font-semibold leading-none tabular-nums text-white xl:text-5xl">{formatMoney(total)}</p>
+            <p className="mt-2.5 inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-semibold text-rose-400">
+              <TrendingDown size={15} />
+              <span className="tabular-nums">{formatMoney(Math.round(avgPerDay))}</span>
+              <span className="font-medium text-slate-500">в среднем в день</span>
+            </p>
+          </div>
+
+          {/* Спарклайн трат по дням — инлайн на широком экране */}
+          <div className="hidden min-w-0 flex-1 xl:block">
+            <TrendSparkline values={dailyExpense} color="#fb7185" className="h-[76px] w-full" />
+          </div>
+
+          {/* Факты: иконки + значения с разделителями */}
+          <div className="hidden min-w-0 lg:flex lg:divide-x lg:divide-white/10 lg:border-l lg:border-white/10 lg:pl-4 xl:pl-5">
+            <HeroStat icon={CalendarDays} label="Средний/день" value={formatMoney(Math.round(avgPerDay))} sub={`${periodDays} дн.`} />
+            <HeroStat icon={Flame} label="Крупнейший" tone="text-amber-300" value={largest ? formatMoney(largest.amount) : "—"} />
+            <HeroStat icon={Hash} label="Записей" value={visibleExpenses.length} sub={withPhoto ? `${withPhoto} с фото` : null} />
+          </div>
+        </div>
+
+        {/* Спарклайн во всю ширину — планшет/ноут */}
+        <div className="mt-4 hidden lg:block xl:hidden">
+          <TrendSparkline values={dailyExpense} color="#fb7185" className="h-16 w-full" />
+        </div>
+
+        {/* Мобайл: спарклайн + 2×2 факты */}
+        <div className="mt-4 lg:hidden">
+          <TrendSparkline values={dailyExpense} color="#fb7185" className="mb-3 h-14 w-full" />
+          <div className="grid grid-cols-2 gap-2.5">
+            <MetricTile icon={TrendingDown} label="Итого" value={formatMoney(total)} sub="за период" tone="red" />
+            <MetricTile icon={CalendarDays} label="Средний/день" value={formatMoney(Math.round(avgPerDay))} sub={`${periodDays} дн.`} tone="blue" />
+            <MetricTile icon={Flame} label="Крупнейший" value={largest ? formatMoney(largest.amount) : "—"} sub={largest ? largest.name : "—"} tone="violet" />
+            <MetricTile icon={Hash} label="Записей" value={visibleExpenses.length} sub={withPhoto ? `${withPhoto} с фото` : "за период"} tone="slate" />
+          </div>
+        </div>
       </div>
 
       {/* ── Куда уходят деньги ── */}
@@ -594,7 +643,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                   <span className="shrink-0 tabular-nums font-semibold text-white">{formatMoney(r.amount)} <span className="font-bold text-slate-500">· {Math.round(r.share)}%</span></span>
                 </div>
                 <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-white/10">
-                  <div className={`h-full rounded-full bg-gradient-to-r transition-[width] duration-500 ${i === 0 ? "from-amber-400 to-amber-500" : "from-blue-500/80 to-violet-500/80"}`} style={{ width: `${Math.max(4, r.barPct)}%` }} />
+                  <div className={`h-full rounded-full transition-[width] duration-500 ${i === 0 ? "bg-amber-400" : "bg-indigo-400"}`} style={{ width: `${Math.max(4, r.barPct)}%` }} />
                 </div>
               </button>
             ))}

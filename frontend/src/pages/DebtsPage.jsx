@@ -4,6 +4,7 @@ import { del, get, post } from "../api";
 import EmptyState from "../components/EmptyState";
 import Modal from "../components/Modal";
 import DatePicker from "../components/DatePicker";
+import { HeroStat } from "../components/Metrics";
 import { formatMoney } from "../utils/format";
 
 // ── чистые хелперы (react-hooks/purity: new Date с аргументом — ок) ──
@@ -37,6 +38,39 @@ function MiniTile({ label, value, sub, valueClass = "text-white" }) {
       <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
       <p className={`truncate text-base font-semibold tabular-nums ${valueClass}`}>{value}</p>
       {sub && <p className="truncate text-[10px] font-semibold text-slate-500">{sub}</p>}
+    </div>
+  );
+}
+
+// Возраст долга: какая часть остатка «свежая», а какая зависла надолго.
+const AGING_TIERS = [
+  { key: "fresh", label: "до 7 дней", bar: "bg-slate-400", dot: "bg-slate-400" },
+  { key: "warm", label: "7–14 дней", bar: "bg-amber-400", dot: "bg-amber-400" },
+  { key: "hot", label: "14–30 дней", bar: "bg-orange-400", dot: "bg-orange-400" },
+  { key: "urgent", label: "30+ дней", bar: "bg-red-500", dot: "bg-red-500" },
+];
+
+function AgingBar({ aging, total }) {
+  const active = total > 0 ? AGING_TIERS.filter((t) => aging[t.key] > 0) : [];
+  return (
+    <div className="w-full">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Возраст долга</p>
+      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-white/10">
+        {active.length
+          ? active.map((t) => <div key={t.key} className={t.bar} style={{ width: `${(aging[t.key] / total) * 100}%` }} />)
+          : <div className="h-full w-full rounded-full bg-emerald-400/60" />}
+      </div>
+      <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
+        {active.length
+          ? active.map((t) => (
+              <span key={t.key} className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold">
+                <span className={`h-2 w-2 rounded-full ${t.dot}`} />
+                <span className="text-slate-400">{t.label}</span>
+                <span className="tabular-nums text-white">{formatMoney(aging[t.key])}</span>
+              </span>
+            ))
+          : <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Всё собрано</span>}
+      </div>
     </div>
   );
 }
@@ -180,8 +214,14 @@ export default function DebtsPage() {
   const topDebtor = enriched.find((g) => g.remaining > 0) || null;
   const collectRate = totalPaid + totalOpen > 0 ? (totalPaid / (totalPaid + totalOpen)) * 100 : 100;
   const rateText = collectRate >= 80 ? "text-emerald-300" : collectRate >= 50 ? "text-amber-300" : "text-red-300";
-  const rateFill = collectRate >= 80 ? "bg-emerald-400" : collectRate >= 50 ? "bg-amber-400" : "bg-red-400";
   const oldestTier = oldest ? TIER[tierOf(oldest.ageMs)] : TIER.fresh;
+
+  // Остаток долга по возрасту (для шкалы «возраст долга» в герое).
+  const aging = useMemo(() => {
+    const b = { fresh: 0, warm: 0, hot: 0, urgent: 0 };
+    enriched.forEach((g) => { if (g.remaining > 0) b[tierOf(g.ageMs)] += g.remaining; });
+    return b;
+  }, [enriched]);
 
   const methodLabel = (m) => (m === "transfer" ? "Перевод" : "Наличные");
 
@@ -221,31 +261,43 @@ export default function DebtsPage() {
 
         {customerGroups.length > 0 && (
           <>
-            {/* ── Герой-сводка: «вам должны» + собираемость + факты ── */}
+            {/* ── Герой-сводка: «вам должны» + возраст долга + факты ── */}
             <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                {/* Главное число + линия собираемости */}
-                <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Вам должны</p>
-                  <p className="mt-1 whitespace-nowrap text-4xl font-semibold leading-none tabular-nums text-red-300 sm:text-5xl">{formatMoney(totalOpen)}</p>
-                  <div className="mt-2.5 flex items-center gap-2 whitespace-nowrap text-[11px] font-bold">
-                    <div className="h-1.5 w-40 overflow-hidden rounded-full bg-white/10 sm:w-56">
-                      <div className={`h-full rounded-full ${rateFill} transition-[width] duration-700`} style={{ width: `${collectRate}%` }} />
-                    </div>
-                    <span className={`tabular-nums ${rateText}`}>{Math.round(collectRate)}%</span>
-                    <span className="text-slate-500">собрано<span className="hidden sm:inline"> · {formatMoney(totalPaid)} из {formatMoney(totalPaid + totalOpen)}</span></span>
-                  </div>
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                {/* Главное число + собираемость */}
+                <div className="min-w-0 shrink-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Вам должны · остаток</p>
+                  <p className="mt-1 whitespace-nowrap text-4xl font-semibold leading-none tabular-nums text-rose-400 xl:text-5xl">{formatMoney(totalOpen)}</p>
+                  <p className={`mt-2.5 inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-semibold ${rateText}`}>
+                    <CheckCircle2 size={15} />
+                    <span className="tabular-nums">{Math.round(collectRate)}%</span>
+                    <span className="font-medium text-slate-500">собрано · {formatMoney(totalPaid)} из {formatMoney(totalPaid + totalOpen)}</span>
+                  </p>
                 </div>
 
-                {/* Десктоп: инлайн-факты */}
-                <div className="hidden min-w-0 flex-wrap items-center justify-end gap-x-5 gap-y-2 text-sm sm:flex">
-                  <span className="inline-flex items-center gap-1.5 text-slate-400"><Users size={15} /> <b className="tabular-nums text-white">{debtorsCount}</b> должников</span>
-                  {oldest && <span className={`inline-flex items-center gap-1.5 ${oldestTier.text}`}><AlarmClock size={15} /> старейший <b>{fmtAge(oldest.ageMs)}</b> <span className="font-semibold text-slate-500">· {oldest.name}</span></span>}
-                  {topDebtor && <span className="inline-flex items-center gap-1.5 text-amber-300"><Crown size={15} /> крупнейший <b className="text-white">{topDebtor.name}</b> <b className="tabular-nums text-red-300">{formatMoney(topDebtor.remaining)}</b></span>}
+                {/* Возраст долга — инлайн на широком экране */}
+                <div className="hidden min-w-0 flex-1 xl:block">
+                  <AgingBar aging={aging} total={totalOpen} />
                 </div>
 
-                {/* Мобайл: сетка 2×2 */}
-                <div className="grid grid-cols-2 gap-2 sm:hidden">
+                {/* Факты: иконки + значения с разделителями */}
+                <div className="hidden min-w-0 lg:flex lg:divide-x lg:divide-white/10 lg:border-l lg:border-white/10 lg:pl-4 xl:pl-5">
+                  <HeroStat icon={Users} label="Должников" value={debtorsCount} sub={`из ${customerGroups.length}`} />
+                  <HeroStat icon={Wallet} label="Погашено" tone="text-emerald-300" value={formatMoney(totalPaid)} />
+                  <HeroStat icon={AlarmClock} label="Старейший" tone={oldestTier.text} value={oldest ? fmtAge(oldest.ageMs) : "—"} sub={oldest ? oldest.name : null} />
+                  <HeroStat icon={Crown} label="Крупнейший" tone="text-amber-300" value={topDebtor ? topDebtor.name : "—"} sub={topDebtor ? formatMoney(topDebtor.remaining) : null} />
+                </div>
+              </div>
+
+              {/* Возраст долга во всю ширину — планшет/ноут */}
+              <div className="mt-4 hidden lg:block xl:hidden">
+                <AgingBar aging={aging} total={totalOpen} />
+              </div>
+
+              {/* Мобайл: возраст долга + 2×2 факты */}
+              <div className="mt-4 lg:hidden">
+                <div className="mb-3"><AgingBar aging={aging} total={totalOpen} /></div>
+                <div className="grid grid-cols-2 gap-2">
                   <MiniTile label="Погашено" value={formatMoney(totalPaid)} valueClass="text-emerald-300" />
                   <MiniTile label="Должников" value={debtorsCount} sub={`всего ${customerGroups.length}`} />
                   <MiniTile label="Старейший" value={oldest ? fmtAge(oldest.ageMs) : "—"} sub={oldest ? oldest.name : "нет открытых"} valueClass={oldestTier.text} />

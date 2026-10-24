@@ -6,6 +6,7 @@ import Modal from "../components/Modal";
 import MenuTransferModal from "../components/MenuTransferModal";
 import MenuPdfImportModal from "../components/MenuPdfImportModal";
 import EmptyState from "../components/EmptyState";
+import { TrendSparkline, HeroStat } from "../components/Metrics";
 import { formatMoney, money, num, businessISO, prettyName } from "../utils/format";
 import { getWarehouseUnitCost } from "../utils/menu";
 import { csvCell, csvNum, downloadCsv } from "../utils/csv";
@@ -252,60 +253,6 @@ function MiniTile({ label, value, sub, valueClass = "text-white" }) {
       <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
       <p className={`truncate text-base font-semibold tabular-nums ${valueClass}`}>{value}</p>
       {sub && <p className="truncate text-[10px] font-semibold text-slate-500">{sub}</p>}
-    </div>
-  );
-}
-
-// Лёгкий инлайн-спарклайн (area + line) без зависимостей. Тянется по ширине
-// контейнера (preserveAspectRatio="none"), штрих не искажается (non-scaling-stroke).
-function TrendSparkline({ values = [], color = "#fb7185", className = "" }) {
-  const pts = (Array.isArray(values) ? values : []).filter((v) => Number.isFinite(v));
-  const W = 100, H = 100, pad = 10;
-  let line, area;
-  if (pts.length >= 2) {
-    const min = Math.min(...pts), max = Math.max(...pts);
-    const flat = max === min;
-    const range = flat ? 1 : max - min;
-    const stepX = W / (pts.length - 1);
-    const xy = pts.map((v, i) => {
-      const x = i * stepX;
-      const y = flat ? H / 2 : pad + (H - 2 * pad) * (1 - (v - min) / range);
-      return `${x.toFixed(2)} ${y.toFixed(2)}`;
-    });
-    line = "M" + xy.join(" L");
-    area = `${line} L${W} ${H} L0 ${H} Z`;
-  } else {
-    const y = (H / 2).toFixed(2);
-    line = `M0 ${y} L${W} ${y}`;
-    area = `${line} L${W} ${H} L0 ${H} Z`;
-  }
-  const gid = "heroTrendGrad";
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={className} aria-hidden="true">
-      <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.26" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#${gid})`} />
-      <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-    </svg>
-  );
-}
-
-// Факт в герое: иконка + подпись сверху, крупное значение снизу (с опц. суффиксом).
-function HeroStat({ icon: Icon, label, value, sub, tone = "text-white" }) {
-  return (
-    <div className="px-4 first:pl-0 lg:px-5">
-      <div className="flex items-center gap-1.5 text-slate-400">
-        {Icon && <Icon size={14} />}
-        <span className="text-[11px] font-semibold uppercase tracking-wide">{label}</span>
-      </div>
-      <p className={`mt-1.5 whitespace-nowrap text-lg font-semibold tabular-nums ${tone}`}>
-        {value}
-        {sub != null && <span className="ml-1.5 text-xs font-semibold text-slate-500">{sub}</span>}
-      </p>
     </div>
   );
 }
@@ -1468,7 +1415,7 @@ export default function WorkPage() {
           </div>
 
           {/* Факты: иконки + значения с разделителями (десктоп/планшет) */}
-          <div className="hidden shrink-0 lg:flex lg:divide-x lg:divide-white/10 lg:border-l lg:border-white/10 lg:pl-4 xl:pl-5">
+          <div className="hidden min-w-0 lg:flex lg:divide-x lg:divide-white/10 lg:border-l lg:border-white/10 lg:pl-4 xl:pl-5">
             <HeroStat icon={Boxes} label="Продано" value={num(monthTotals.quantity).toLocaleString("ru-RU")} sub={`${productRows.length} поз.`} />
             <HeroStat icon={Wallet} label="Выручка" value={formatMoney(monthTotals.revenue)} />
             <HeroStat icon={PackageX} label="Себест." value={formatMoney(monthTotals.cost)} />
