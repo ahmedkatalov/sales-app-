@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowDown, ArrowUp, Boxes, Check, Copy, Crown, EyeOff, FileUp, Lightbulb, MoreHorizontal, Package, PackageX, Pencil, Search, Settings, SlidersHorizontal, Sparkles, Trash2, TrendingDown, Wallet, X, Zap } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Boxes, Check, Copy, Crown, EyeOff, FileUp, Lightbulb, MoreHorizontal, Package, PackageX, Pencil, Search, Settings, SlidersHorizontal, Sparkles, Trash2, TrendingDown, TrendingUp, Wallet, X, Zap } from "lucide-react";
 import { del, get, post, put, getSession } from "../api";
 import Modal from "../components/Modal";
 import MenuTransferModal from "../components/MenuTransferModal";
@@ -252,6 +252,60 @@ function MiniTile({ label, value, sub, valueClass = "text-white" }) {
       <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
       <p className={`truncate text-base font-semibold tabular-nums ${valueClass}`}>{value}</p>
       {sub && <p className="truncate text-[10px] font-semibold text-slate-500">{sub}</p>}
+    </div>
+  );
+}
+
+// Лёгкий инлайн-спарклайн (area + line) без зависимостей. Тянется по ширине
+// контейнера (preserveAspectRatio="none"), штрих не искажается (non-scaling-stroke).
+function TrendSparkline({ values = [], color = "#fb7185", className = "" }) {
+  const pts = (Array.isArray(values) ? values : []).filter((v) => Number.isFinite(v));
+  const W = 100, H = 100, pad = 10;
+  let line, area;
+  if (pts.length >= 2) {
+    const min = Math.min(...pts), max = Math.max(...pts);
+    const flat = max === min;
+    const range = flat ? 1 : max - min;
+    const stepX = W / (pts.length - 1);
+    const xy = pts.map((v, i) => {
+      const x = i * stepX;
+      const y = flat ? H / 2 : pad + (H - 2 * pad) * (1 - (v - min) / range);
+      return `${x.toFixed(2)} ${y.toFixed(2)}`;
+    });
+    line = "M" + xy.join(" L");
+    area = `${line} L${W} ${H} L0 ${H} Z`;
+  } else {
+    const y = (H / 2).toFixed(2);
+    line = `M0 ${y} L${W} ${y}`;
+    area = `${line} L${W} ${H} L0 ${H} Z`;
+  }
+  const gid = "heroTrendGrad";
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.26" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gid})`} />
+      <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+// Факт в герое: иконка + подпись сверху, крупное значение снизу (с опц. суффиксом).
+function HeroStat({ icon: Icon, label, value, sub, tone = "text-white" }) {
+  return (
+    <div className="px-4 first:pl-0 lg:px-5">
+      <div className="flex items-center gap-1.5 text-slate-400">
+        {Icon && <Icon size={14} />}
+        <span className="text-[11px] font-semibold uppercase tracking-wide">{label}</span>
+      </div>
+      <p className={`mt-1.5 whitespace-nowrap text-lg font-semibold tabular-nums ${tone}`}>
+        {value}
+        {sub != null && <span className="ml-1.5 text-xs font-semibold text-slate-500">{sub}</span>}
+      </p>
     </div>
   );
 }
@@ -600,6 +654,35 @@ export default function WorkPage() {
     });
     return { quantity, revenue, cost, cleanProfit: revenue - cost };
   }, [monthSales]);
+
+  // Тренд чистой прибыли по дням периода — для мини-графика в герое.
+  const dailyProfit = useMemo(() => {
+    const byDay = new Map();
+    monthSales.forEach((sale) => {
+      const created = sale.createdAt || sale.created_at;
+      if (!created) return;
+      const day = businessISO(new Date(created)).slice(0, 10);
+      let rev = 0, cost = 0;
+      const addOne = (item) => {
+        const qty = Number(item.qty || item.quantity || item.count || 1) || 0;
+        if (qty <= 0) return;
+        rev += money(item.total != null ? item.total : money(item.price) * qty);
+        cost += money(item.cost) * qty;
+      };
+      if (Array.isArray(sale.items) && sale.items.length) sale.items.forEach(addOne);
+      else if (sale.productName || sale.name || sale.product_name) addOne(sale);
+      const prev = byDay.get(day) || { rev: 0, cost: 0 };
+      byDay.set(day, { rev: prev.rev + rev, cost: prev.cost + cost });
+    });
+    return [...byDay.keys()].sort().map((d) => {
+      const { rev, cost } = byDay.get(d);
+      return { day: d, profit: rev - cost };
+    });
+  }, [monthSales]);
+
+  const heroLoss = monthTotals.cleanProfit < 0;
+  const heroTrendColor = heroLoss ? "#fb7185" : "#34d399";
+  const monthMargin = monthTotals.revenue > 0 ? (monthTotals.cleanProfit / monthTotals.revenue) * 100 : null;
 
   const visibleProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -1363,37 +1446,49 @@ export default function WorkPage() {
         </div>
       </div>
 
-      {/* Герой: чистая прибыль + маржа + факты (плоско) */}
+      {/* Герой: чистая прибыль + тренд по дням + факты */}
       <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          {/* Главное число + маржа-дельта */}
+          <div className="min-w-0 shrink-0">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Чистая прибыль · месяц</p>
-            <p className={`mt-1 whitespace-nowrap text-4xl font-semibold leading-none tabular-nums sm:text-5xl ${monthTotals.cleanProfit < 0 ? "text-rose-400" : "text-emerald-400"}`}>{formatMoney(monthTotals.cleanProfit)}</p>
-            {menuHealth.avgMargin != null && (
-              <div className="mt-2.5 flex items-center gap-2 whitespace-nowrap text-[11px] font-bold">
-                <div className="h-1.5 w-40 overflow-hidden rounded-full bg-white/10 sm:w-56">
-                  <div className="h-full rounded-full bg-emerald-400" style={{ width: `${Math.min(100, Math.max(0, menuHealth.avgMargin))}%` }} />
-                </div>
-                <span className="tabular-nums text-emerald-300">{Math.round(menuHealth.avgMargin)}%</span>
-                <span className="text-slate-500">ср. маржа</span>
-              </div>
+            <p className={`mt-1 whitespace-nowrap text-4xl font-semibold leading-none tabular-nums xl:text-5xl ${heroLoss ? "text-rose-400" : "text-emerald-400"}`}>{formatMoney(monthTotals.cleanProfit)}</p>
+            {monthMargin != null && (
+              <p className={`mt-2.5 inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-semibold ${heroLoss ? "text-rose-400" : "text-emerald-400"}`}>
+                {heroLoss ? <TrendingDown size={15} /> : <TrendingUp size={15} />}
+                <span className="tabular-nums">{Math.round(monthMargin)}%</span>
+                <span className="font-medium text-slate-500">ср. маржа</span>
+              </p>
             )}
           </div>
 
-          {/* Десктоп: инлайн-факты */}
-          <div className="hidden min-w-0 flex-wrap items-center justify-end gap-x-5 gap-y-2 text-sm sm:flex">
-            <span className="inline-flex items-center gap-1.5 text-slate-400"><Boxes size={15} /> Продано <b className="tabular-nums text-white">{num(monthTotals.quantity).toLocaleString("ru-RU")}</b> · {productRows.length} поз.</span>
-            <span className="inline-flex items-center gap-1.5 text-slate-400"><Wallet size={15} /> Выручка <b className="tabular-nums text-white">{formatMoney(monthTotals.revenue)}</b></span>
-            <span className="inline-flex items-center gap-1.5 text-slate-400"><PackageX size={15} /> Себест. <b className="tabular-nums text-white">{formatMoney(monthTotals.cost)}</b></span>
-            {menuHealth.anchor && <span className="inline-flex items-center gap-1.5 text-amber-300"><Crown size={15} /> якорь <b className="text-white">{menuHealth.anchor.name}</b> <b className="tabular-nums text-emerald-300">{Math.round(menuHealth.anchorShare)}%</b></span>}
+          {/* Тренд прибыли по дням — инлайн между числом и фактами (широкий экран) */}
+          <div className="hidden min-w-0 flex-1 xl:block">
+            <TrendSparkline values={dailyProfit.map((d) => d.profit)} color={heroTrendColor} className="h-[76px] w-full" />
           </div>
 
-          {/* Мобайл: 2×2 */}
-          <div className="grid grid-cols-2 gap-2 sm:hidden">
+          {/* Факты: иконки + значения с разделителями (десктоп/планшет) */}
+          <div className="hidden shrink-0 lg:flex lg:divide-x lg:divide-white/10 lg:border-l lg:border-white/10 lg:pl-4 xl:pl-5">
+            <HeroStat icon={Boxes} label="Продано" value={num(monthTotals.quantity).toLocaleString("ru-RU")} sub={`${productRows.length} поз.`} />
+            <HeroStat icon={Wallet} label="Выручка" value={formatMoney(monthTotals.revenue)} />
+            <HeroStat icon={PackageX} label="Себест." value={formatMoney(monthTotals.cost)} />
+            <HeroStat icon={Crown} label="Якорь" tone="text-amber-300" value={menuHealth.anchor ? prettyName(menuHealth.anchor.name) : "—"} sub={menuHealth.anchor ? `${Math.round(menuHealth.anchorShare)}%` : null} />
+          </div>
+        </div>
+
+        {/* Тренд во всю ширину — планшет/ноут (между sm и xl, где нет места инлайн) */}
+        <div className="mt-4 hidden lg:block xl:hidden">
+          <TrendSparkline values={dailyProfit.map((d) => d.profit)} color={heroTrendColor} className="h-16 w-full" />
+        </div>
+
+        {/* Мобайл: мини-тренд + 2×2 факты */}
+        <div className="mt-4 lg:hidden">
+          <TrendSparkline values={dailyProfit.map((d) => d.profit)} color={heroTrendColor} className="mb-3 h-14 w-full" />
+          <div className="grid grid-cols-2 gap-2">
             <MiniTile label="Выручка" value={formatMoney(monthTotals.revenue)} />
             <MiniTile label="Себест." value={formatMoney(monthTotals.cost)} valueClass="text-slate-200" />
             <MiniTile label="Продано" value={num(monthTotals.quantity).toLocaleString("ru-RU")} sub={`${productRows.length} поз.`} />
-            <MiniTile label="Якорь" value={menuHealth.anchor ? `${Math.round(menuHealth.anchorShare)}%` : "—"} sub={menuHealth.anchor ? menuHealth.anchor.name : "нет данных"} valueClass="text-amber-300" />
+            <MiniTile label="Якорь" value={menuHealth.anchor ? prettyName(menuHealth.anchor.name) : "—"} sub={menuHealth.anchor ? `${Math.round(menuHealth.anchorShare)}%` : "нет данных"} valueClass="text-amber-300" />
           </div>
         </div>
       </div>
