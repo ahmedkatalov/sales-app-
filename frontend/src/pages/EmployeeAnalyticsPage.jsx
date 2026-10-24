@@ -203,8 +203,6 @@ export default function EmployeeAnalyticsPage() {
 
   return (
     <div className="relative pb-nav text-white sm:pb-10">
-      <div className="pointer-events-none absolute -top-24 left-1/4 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
-      <div className="pointer-events-none absolute right-0 top-16 h-80 w-80 rounded-full bg-violet-700/15 blur-3xl" />
 
       <div className="relative mx-auto w-full max-w-[1500px] px-3 sm:px-6 lg:px-8">
         {/* Заголовок + период */}
@@ -275,7 +273,7 @@ export default function EmployeeAnalyticsPage() {
         ) : (
           <>
             {/* Герой: выручка + лидер */}
-            <div className="mb-4 grid gap-4 rounded-[2rem] border border-blue-400/20 app-aurora bg-white/[0.04] bg-gradient-to-br from-blue-500/[0.10] to-violet-600/[0.05] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:p-6 lg:grid-cols-[1.4fr_1fr]">
+            <div className="mb-4 grid gap-4 rounded-2xl border border-blue-400/20 bg-white/[0.04] p-5 sm:p-6 lg:grid-cols-[1.4fr_1fr]">
               <div className="min-w-0">
                 <p className="text-[11px] font-black uppercase tracking-wide text-blue-300/80">Выручка за период</p>
                 <p className="mt-1 text-3xl font-black leading-none tabular-nums text-white sm:text-4xl xl:text-5xl">{money(totals.revenue)}</p>
