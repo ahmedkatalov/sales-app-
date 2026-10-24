@@ -22,7 +22,7 @@ const WH_SELECT =
 const WH_BTN_GHOST =
   "rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-black text-white transition hover:bg-white/15";
 const WH_BTN_PRIMARY =
-  "rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-5 py-3 font-black text-white shadow-[0_14px_36px_rgba(37,99,235,.30)] transition hover:brightness-110";
+  "rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-5 py-3 font-black text-white transition hover:brightness-110";
 const WH_BTN_DANGER =
   "rounded-2xl bg-red-600 px-5 py-3 font-black text-white shadow-sm transition hover:bg-red-500";
 
@@ -169,7 +169,7 @@ function RowMenu({ hidden, onHistory, onInventory, onWriteOff, onToggleHidden, o
         <MoreHorizontal size={16} />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-white/10 bg-slate-900 p-1.5 shadow-2xl">
+        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-white/10 bg-slate-900 p-1.5">
           <Item icon={History} label="История закупок" onClick={onHistory} />
           <Item icon={RotateCcw} label="Пересчёт остатка" onClick={onInventory} cls="text-amber-300" />
           <Item icon={Ban} label="Списать" onClick={onWriteOff} />
@@ -680,12 +680,7 @@ export default function WarehousePage() {
   };
 
   return (
-    <div className="relative -m-4 bg-[#050b1d] px-3 pb-nav pt-3 text-white sm:-m-6 sm:px-4 sm:pb-10 lg:px-5">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-28 -top-28 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
-        <div className="absolute right-0 top-20 h-96 w-96 rounded-full bg-violet-600/20 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
-      </div>
+    <div className="relative -m-4 px-3 pb-nav pt-3 text-white sm:-m-6 sm:px-4 sm:pb-10 lg:px-5">
       <div className="relative z-10 mx-auto max-w-[1480px]">
       <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="max-w-2xl">
@@ -709,7 +704,7 @@ export default function WarehousePage() {
               setPurchaseTargetItem(null);
               setAddModal(true);
             }}
-            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-4 py-3 text-sm font-black text-white shadow-[0_14px_36px_rgba(37,99,235,.35)] transition hover:scale-[1.01] xl:flex-none"
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-4 py-3 text-sm font-black text-white transition hover:scale-[1.01] xl:flex-none"
           >
             <Plus size={18} strokeWidth={2.4} className="shrink-0" />
             <span className="truncate">Добавить закупку</span>
@@ -743,13 +738,13 @@ export default function WarehousePage() {
       </div>
 
   {error && (
-        <div className="mb-4 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 font-bold text-red-200 backdrop-blur">
+        <div className="mb-4 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 font-bold text-red-200">
           {error}
         </div>
       )}
 
       {stats.negative > 0 && (
-        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-red-400/30 bg-red-500/[0.09] px-4 py-3 backdrop-blur">
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-red-400/30 bg-red-500/[0.09] px-4 py-3">
           <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-500/25 text-red-200"><AlertTriangle size={14} strokeWidth={2.4} /></span>
           <div>
             <p className="text-sm font-black text-red-200">{stats.negative} {stats.negative === 1 ? "товар ушёл" : "товаров ушли"} в минус</p>
@@ -761,7 +756,7 @@ export default function WarehousePage() {
       )}
 
       <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 sm:p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300 sm:h-9 sm:w-9 sm:rounded-xl"><Package className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
             <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Позиций сырья</p>
@@ -769,7 +764,7 @@ export default function WarehousePage() {
           <p className="mt-2 text-xl font-black text-white sm:text-2xl">{stats.count}</p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 backdrop-blur-xl sm:p-4">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 sm:p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-300 sm:h-9 sm:w-9 sm:rounded-xl"><Wallet className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
             <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Стоимость остатков</p>
@@ -777,7 +772,7 @@ export default function WarehousePage() {
           <p className="mt-2 text-xl font-black tabular-nums text-white sm:text-2xl">{formatMoney(stats.value)}</p>
         </div>
 
-        <div className={`rounded-2xl border p-3 backdrop-blur-xl sm:p-4 ${stats.low > 0 ? "border-red-500/25 bg-red-500/[0.07]" : "border-white/10 bg-white/[0.05]"}`}>
+        <div className={`rounded-2xl border p-3 sm:p-4 ${stats.low > 0 ? "border-red-500/25 bg-red-500/[0.07]" : "border-white/10 bg-white/[0.05]"}`}>
           <div className="flex items-center gap-2">
             <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${stats.low > 0 ? "bg-red-500/20 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}><AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
             <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Низкий остаток</p>
@@ -785,7 +780,7 @@ export default function WarehousePage() {
           <p className={`mt-2 text-xl font-black sm:text-2xl ${stats.low > 0 ? "text-red-400" : "text-emerald-400"}`}>{stats.low}</p>
         </div>
 
-        <button type="button" onClick={() => setStatusFilter((f) => (f === "neg" ? "all" : "neg"))} className={`rounded-2xl border p-3 text-left backdrop-blur-xl transition sm:p-4 ${stats.negative > 0 ? "border-red-500/25 bg-red-500/[0.07] hover:bg-red-500/[0.12]" : "border-white/10 bg-white/[0.05]"}`}>
+        <button type="button" onClick={() => setStatusFilter((f) => (f === "neg" ? "all" : "neg"))} className={`rounded-2xl border p-3 text-left transition sm:p-4 ${stats.negative > 0 ? "border-red-500/25 bg-red-500/[0.07] hover:bg-red-500/[0.12]" : "border-white/10 bg-white/[0.05]"}`}>
           <div className="flex items-center gap-2">
             <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${stats.negative > 0 ? "bg-red-500/20 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}><AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
             <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">В минусе</p>
@@ -796,7 +791,7 @@ export default function WarehousePage() {
 
       {/* ── Здоровье склада ── */}
       {stats.count > 0 && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-xl">
+        <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
           <div className="mb-2.5 flex items-center justify-between gap-3">
             <p className="text-sm font-black text-white">Здоровье склада</p>
             <p className="text-xs font-bold text-slate-400"><b className="text-emerald-300">{counts.norm}</b> из {stats.count} в норме</p>
@@ -816,7 +811,7 @@ export default function WarehousePage() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] shadow-[0_16px_55px_rgba(0,0,0,.30)] backdrop-blur-xl">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06]">
         <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h3 className="text-xl font-black text-white">
@@ -1117,7 +1112,7 @@ export default function WarehousePage() {
       </div>
 
       {safe_movements.length > 0 && (
-        <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] shadow-[0_16px_55px_rgba(0,0,0,.30)] backdrop-blur-xl">
+        <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06]">
           <div className="p-4">
             <h3 className="text-xl font-black text-white">
               Последние движения
@@ -1444,7 +1439,7 @@ export default function WarehousePage() {
             <MapPin size={16} strokeWidth={2.2} className="shrink-0" />
             <span className="shrink-0">Склад точки:</span> <span className="truncate text-white">{getCurrentWorkspace()?.name || "текущая"}</span>
           </div>
-          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-4 sm:p-5">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5">
             <p className="mb-4 text-sm font-bold leading-6 text-slate-400">
               Заполните поля ниже — система сама посчитает остаток и себестоимость.
             </p>
