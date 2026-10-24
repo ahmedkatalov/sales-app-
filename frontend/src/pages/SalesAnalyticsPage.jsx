@@ -84,7 +84,7 @@ function KpiTile({ icon: Icon, label, value, sub, tone = "slate", className = ""
     slate: "border-white/10 bg-white/[0.05] text-slate-300",
   };
   return (
-    <div className={`min-w-0 rounded-2xl border p-3.5 backdrop-blur-xl sm:p-4 ${tones[tone] || tones.slate} ${className}`}>
+    <div className={`min-w-0 rounded-2xl border p-3.5 sm:p-4 ${tones[tone] || tones.slate} ${className}`}>
       <div className="flex items-center justify-between gap-2">
         <p className="truncate text-[10px] font-black uppercase tracking-wide opacity-90">{label}</p>
         <Icon size={16} className="shrink-0 opacity-70" />
@@ -216,19 +216,13 @@ export default function SalesAnalyticsPage() {
 
   return (
     <div className="relative pb-nav text-white sm:pb-10">
-      <div className="pointer-events-none absolute -top-28 left-1/4 h-72 w-72 rounded-full bg-emerald-600/15 blur-3xl" />
-      <div className="pointer-events-none absolute right-0 top-24 h-80 w-80 rounded-full bg-blue-700/15 blur-3xl" />
-
-      <div className="relative mx-auto w-full max-w-[1500px] px-3 sm:px-6 lg:px-8">
+      <div className="relative mx-auto w-full max-w-[1500px]">
         {/* ── Шапка ── */}
-        <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="max-w-3xl">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-300 shadow-[0_0_30px_rgba(16,185,129,0.18)]">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,1)]" />
-              Отчёт о прибыли
-            </div>
-            <h2 className="text-2xl font-black leading-none tracking-[-0.05em] text-white sm:text-3xl">Продажи</h2>
-            <p className="mt-4 max-w-2xl text-sm font-medium leading-6 text-slate-400 sm:text-base">
+        <div className="mb-5 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0 max-w-3xl">
+            <p className="text-xs font-bold text-emerald-400">Отчёт о прибыли</p>
+            <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">Продажи</h2>
+            <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-400">
               Сколько заработали, как шли продажи по дням, чем платили и что покупают.
             </p>
           </div>
@@ -239,7 +233,7 @@ export default function SalesAnalyticsPage() {
             disabled={loading}
             aria-label="Обновить"
             title="Обновить"
-            className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3.5 text-sm font-black text-white shadow-[0_20px_60px_rgba(0,0,0,0.25)] transition hover:border-emerald-400/40 hover:bg-emerald-600/20 disabled:opacity-60 sm:px-5 sm:py-4"
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-60"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "animate-spin" : ""}><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" /></svg>
             <span className="hidden sm:inline">{loading ? "Обновление" : "Обновить"}</span>
@@ -247,13 +241,13 @@ export default function SalesAnalyticsPage() {
         </div>
 
         {error && (
-          <div className="mb-5 rounded-[1.5rem] border border-red-400/25 bg-red-500/10 px-5 py-4 text-sm font-black text-red-200 shadow-[0_18px_60px_rgba(127,29,29,0.2)]">
+          <div className="mb-5 rounded-2xl border border-red-400/25 bg-red-500/10 px-5 py-4 text-sm font-black text-red-200">
             {error}
           </div>
         )}
 
         {/* ── Период ── */}
-        <div className="mb-5 overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl">
+        <div className="mb-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
           <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:gap-3 sm:px-5">
             <div className="flex flex-1 flex-wrap items-center gap-2">
               {[
@@ -268,7 +262,7 @@ export default function SalesAnalyticsPage() {
                 return (
                   <button key={key} type="button" onClick={action}
                     className={active
-                      ? "min-h-[44px] rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2.5 text-sm font-black text-white shadow-lg"
+                      ? "min-h-[44px] rounded-xl border border-emerald-400/50 bg-emerald-500/15 px-4 py-2.5 text-sm font-black text-white"
                       : "min-h-[44px] rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-white/10"}>
                     {label}
                   </button>
@@ -309,7 +303,7 @@ export default function SalesAnalyticsPage() {
 
         {!hasSales ? (
           /* ── Спокойное пустое состояние ── */
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] px-6 py-16 text-center shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-16 text-center">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-white/5 text-slate-500">
               <Receipt size={30} strokeWidth={2} />
             </div>
@@ -322,7 +316,7 @@ export default function SalesAnalyticsPage() {
           <>
             {/* ── P&L-герой: Выручка → Себестоимость → Чистая прибыль ── */}
             <div className="mb-5 grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-              <div className="overflow-hidden rounded-[2rem] border border-emerald-400/20 app-aurora bg-white/[0.04] bg-gradient-to-br from-emerald-500/[0.10] to-teal-600/[0.04] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:p-6">
+              <div className="overflow-hidden rounded-2xl border border-emerald-400/20 bg-white/[0.04] p-5 sm:p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-200/70">Чистая прибыль {periodLabel}</p>
@@ -380,10 +374,10 @@ export default function SalesAnalyticsPage() {
             </div>
 
             {/* ── График по дням ── */}
-            <section className="mb-5 overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:p-6">
+            <section className="mb-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="flex items-center gap-2 text-xl font-black tracking-[-0.03em] text-white sm:text-2xl">
+                  <h3 className="flex items-center gap-2 text-lg font-black text-white sm:text-xl">
                     <CalendarDays size={20} className="text-emerald-300" /> Продажи по дням
                   </h3>
                   <p className="mt-1 text-sm font-medium text-slate-400">
@@ -448,10 +442,10 @@ export default function SalesAnalyticsPage() {
             {/* ── Чем платят + популярные товары ── */}
             <div className="mb-5 grid gap-5 lg:grid-cols-2">
               {/* Способы оплаты */}
-              <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:p-6">
+              <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
-                    <h3 className="flex items-center gap-2 text-xl font-black tracking-[-0.03em] text-white sm:text-2xl"><Wallet size={20} className="text-blue-300" /> Чем платят</h3>
+                    <h3 className="flex items-center gap-2 text-lg font-black text-white sm:text-xl"><Wallet size={20} className="text-blue-300" /> Чем платят</h3>
                     <p className="mt-1 text-sm font-medium text-slate-400">Наличные и переводы по сумме.</p>
                   </div>
                 </div>
@@ -492,10 +486,10 @@ export default function SalesAnalyticsPage() {
               </section>
 
               {/* Популярные товары */}
-              <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:p-6">
+              <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
-                    <h3 className="flex items-center gap-2 text-xl font-black tracking-[-0.03em] text-white sm:text-2xl"><Trophy size={20} className="text-amber-300" /> Популярные товары</h3>
+                    <h3 className="flex items-center gap-2 text-lg font-black text-white sm:text-xl"><Trophy size={20} className="text-amber-300" /> Популярные товары</h3>
                     <p className="mt-1 text-sm font-medium text-slate-400">Доля в выручке за период.</p>
                   </div>
                 </div>
@@ -541,10 +535,10 @@ export default function SalesAnalyticsPage() {
             </div>
 
             {/* ── Последние чеки ── */}
-            <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] shadow-[0_24px_90px_rgba(0,0,0,0.25)] backdrop-blur-xl">
+            <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
               <div className="flex items-center justify-between gap-3 border-b border-white/10 p-5 sm:p-6">
                 <div>
-                  <h3 className="text-xl font-black tracking-[-0.03em] text-white sm:text-2xl">Последние чеки</h3>
+                  <h3 className="text-lg font-black text-white sm:text-xl">Последние чеки</h3>
                   <p className="mt-1 text-sm font-medium text-slate-400">Недавние продажи и способ оплаты.</p>
                 </div>
                 <div className="grid h-12 w-12 place-items-center rounded-2xl bg-violet-500/15 text-violet-200"><Receipt size={22} strokeWidth={2.4} /></div>
