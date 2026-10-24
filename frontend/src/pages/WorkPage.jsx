@@ -1940,7 +1940,7 @@ export default function WorkPage() {
             </div>
 
             {aiSuggestion && (
-              <div className="sm:col-span-2 rounded-2xl border border-violet-400/20 app-aurora bg-white/[0.04] bg-gradient-to-br from-violet-500/10 to-blue-500/5 p-4">
+              <div className="sm:col-span-2 rounded-2xl border border-violet-400/20 bg-violet-500/[0.06] p-4">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
                     <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-violet-300"><Sparkles size={14}/> AI предлагает</p>
