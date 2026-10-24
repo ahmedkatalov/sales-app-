@@ -135,7 +135,7 @@ export default function SuperAdminPage() {
         </div>
 
         <div className="relative z-10 w-full max-w-[400px]">
-          <div className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-7 shadow-2xl backdrop-blur-xl">
+          <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-7">
             <div className="mb-6">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-violet-700 shadow-lg shadow-violet-600/30">
                 <Settings size={22} strokeWidth={2.4} className="text-white" />
@@ -218,7 +218,7 @@ export default function SuperAdminPage() {
             + Создать компанию
           </button>
         ) : (
-          <div className="mb-6 rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-2xl backdrop-blur">
+          <div className="mb-6 rounded-2xl border border-white/10 bg-slate-900/80 p-6">
             <h2 className="mb-4 text-xl font-black">Новая компания</h2>
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
@@ -282,7 +282,7 @@ export default function SuperAdminPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {safe_accounts.map((acc) => (
-              <article key={acc.id} className="rounded-[1.5rem] border border-white/10 bg-slate-900 p-5">
+              <article key={acc.id} className="rounded-2xl border border-white/10 bg-slate-900 p-5">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-black uppercase tracking-wide text-violet-400">#{acc.id}</p>
