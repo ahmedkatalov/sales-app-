@@ -200,8 +200,8 @@ export default function ShopPage() {
 
   const CartPanel = ({ mobile = false }) => (
     <aside
-      className={`flex h-full flex-col overflow-hidden border border-white/10 bg-slate-950/90 shadow-2xl shadow-black/30 backdrop-blur-2xl ${
-        mobile ? "rounded-t-3xl" : "rounded-[2rem]"
+      className={`flex h-full flex-col overflow-hidden border border-white/10 bg-slate-950/90 ${
+        mobile ? "rounded-t-3xl" : "rounded-2xl"
       }`}
     >
       {mobile && (
@@ -398,7 +398,7 @@ export default function ShopPage() {
           type="button"
           onClick={confirmSale}
           disabled={submitting || !safe_cart.length}
-          className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-4 text-lg font-black text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
+          className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-4 text-lg font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {submitting ? "Провожу…" : "Провести продажу"}
         </button>
@@ -407,16 +407,11 @@ export default function ShopPage() {
   );
 
   return (
-    <div className="min-h-screen  text-white">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-20 -top-24 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute right-0 top-24 h-80 w-80 rounded-full bg-blue-600/20 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-violet-500/10 blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-[#0a0e17] text-white">
 
       <div className="relative flex min-h-screen flex-col gap-4 p-3 pb-nav sm:p-5 xl:grid xl:grid-cols-[1fr_430px]">
         <main
-          className="flex min-w-0 flex-col overflow-hidden rounded-4xl border border-white/10 bg-white/4 shadow-2xl shadow-black/20 backdrop-blur-2xl"
+          className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]"
           style={{ height: "calc(100dvh - env(safe-area-inset-bottom,0px) - 24px)" }}
         >
           <div className="shrink-0 border-b border-white/10 p-4 sm:p-6">
@@ -518,7 +513,7 @@ export default function ShopPage() {
             ))}
 
             {!filteredProducts.length && (
-              <div className="grid min-h-65 place-items-center rounded-4xl border border-dashed border-white/10 bg-white/3 p-8 text-center">
+              <div className="grid min-h-65 place-items-center rounded-2xl border border-dashed border-white/10 bg-white/3 p-8 text-center">
                 <div>
                   <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-3xl bg-white/5 text-slate-300">
                     <Search size={26} strokeWidth={2.2} />
@@ -544,7 +539,7 @@ export default function ShopPage() {
       <button
         type="button"
         onClick={() => setCartOpen(true)}
-        className="fixed left-4 right-4 z-40 flex items-center justify-between rounded-3xl bg-linear-to-r from-cyan-400 to-blue-500 px-5 py-3.5 font-black text-slate-950 shadow-2xl shadow-cyan-500/30 xl:hidden"
+        className="fixed left-4 right-4 z-40 flex items-center justify-between rounded-3xl bg-linear-to-r from-cyan-400 to-blue-500 px-5 py-3.5 font-black text-slate-950 shadow-lg shadow-cyan-500/30 xl:hidden"
         style={{ bottom: "calc(env(safe-area-inset-bottom,0px) + 16px)" }}
       >
         <span className="flex items-center gap-2 text-sm"><ShoppingCart size={16} strokeWidth={2.4} /> Корзина · {safe_cart.reduce((s, i) => s + i.qty, 0)} шт</span>
