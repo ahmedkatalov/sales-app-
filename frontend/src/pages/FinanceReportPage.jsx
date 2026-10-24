@@ -31,7 +31,7 @@ function periodBounds(preset) {
 // Карточка-«стекло».
 function Card({ children, className = "" }) {
   return (
-    <section className={`rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5 ${className}`}>
+    <section className={`rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5 ${className}`}>
       {children}
     </section>
   );
@@ -43,7 +43,7 @@ function SectionHead({ title, subtitle, hint, accent = "text-white" }) {
   return (
     <div className="mb-3">
       <div className="flex items-start gap-2">
-        <h3 className={`text-base font-black leading-tight sm:text-lg ${accent}`}>{title}</h3>
+        <h3 className={`text-base font-semibold leading-tight sm:text-lg ${accent}`}>{title}</h3>
         {hint ? (
           <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label="Пояснение"
             className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-500 transition hover:bg-white/5 hover:text-slate-300">
@@ -53,7 +53,7 @@ function SectionHead({ title, subtitle, hint, accent = "text-white" }) {
       </div>
       {subtitle ? <p className="mt-0.5 text-[12px] font-semibold text-slate-400">{subtitle}</p> : null}
       {open && hint ? (
-        <p className="mt-1.5 rounded-xl bg-white/[0.04] px-3 py-2 text-xs font-medium leading-snug text-slate-400">{hint}</p>
+        <p className="mt-1.5 rounded-xl bg-white/[0.02] px-3 py-2 text-xs font-medium leading-snug text-slate-400">{hint}</p>
       ) : null}
     </div>
   );
@@ -62,8 +62,8 @@ function SectionHead({ title, subtitle, hint, accent = "text-white" }) {
 function MiniMetric({ label, value, tone = "text-white" }) {
   return (
     <div className="min-w-0">
-      <p className="truncate text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`mt-0.5 truncate text-sm font-black tabular-nums ${tone}`}>{value}</p>
+      <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className={`mt-0.5 truncate text-sm font-semibold tabular-nums ${tone}`}>{value}</p>
     </div>
   );
 }
@@ -74,7 +74,7 @@ function KpiTile({ label, value, sub, tone = "slate" }) {
     blue: "border-blue-400/25 bg-blue-500/[0.07]",
     amber: "border-amber-400/25 bg-amber-500/[0.07]",
     red: "border-red-400/25 bg-red-500/[0.07]",
-    slate: "border-white/10 bg-white/[0.05]",
+    slate: "border-white/[0.08] bg-white/[0.05]",
   };
   const labelTone = {
     emerald: "text-emerald-300/80", blue: "text-blue-300/80", amber: "text-amber-300/80",
@@ -82,8 +82,8 @@ function KpiTile({ label, value, sub, tone = "slate" }) {
   };
   return (
     <div className={`min-w-0 rounded-2xl border px-4 py-3 ${tones[tone]}`}>
-      <p className={`text-[10px] font-black uppercase tracking-wide sm:text-[11px] ${labelTone[tone]}`}>{label}</p>
-      <p className="mt-1 truncate text-xl font-black tabular-nums text-white sm:text-2xl">{value}</p>
+      <p className={`text-[10px] font-semibold uppercase tracking-wide sm:text-[11px] ${labelTone[tone]}`}>{label}</p>
+      <p className="mt-1 truncate text-xl font-semibold tabular-nums text-white sm:text-2xl">{value}</p>
       {sub ? <p className="truncate text-[11px] font-bold text-slate-500">{sub}</p> : null}
     </div>
   );
@@ -113,8 +113,8 @@ function MarginRing({ grossPct, netPct, size = 132 }) {
       </svg>
       <div className="absolute inset-0 grid place-items-center text-center">
         <div className="leading-none">
-          <p className={`text-[26px] font-black leading-none tabular-nums ${netPct < 0 ? "text-red-300" : "text-white"}`}>{Math.round(num(netPct))}%</p>
-          <p className="mt-1 text-[9px] font-black uppercase tracking-wide text-slate-500">маржа</p>
+          <p className={`text-[26px] font-semibold leading-none tabular-nums ${netPct < 0 ? "text-red-300" : "text-white"}`}>{Math.round(num(netPct))}%</p>
+          <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-slate-500">маржа</p>
         </div>
       </div>
     </div>
@@ -143,7 +143,7 @@ function Waterfall({ revenue, cogs, grossProfit, expenses, netProfit }) {
   // колонка: {верхний уровень, нижний уровень, цвет, скругление}
   const cols = [
     { key: "rev", label: "Выручка", value: num(revenue), lo: 0, hi: num(revenue),
-      color: "bg-gradient-to-t from-blue-600 to-violet-500", round: "rounded-t-lg" },
+      color: "bg-indigo-600", round: "rounded-t-lg" },
     { key: "cogs", label: "Себест.", value: num(cogs), sign: "−", lo: num(grossProfit), hi: num(revenue),
       color: "bg-red-500/80", round: "rounded-t-sm" },
     { key: "gross", label: "Валовая", value: num(grossProfit), lo: 0, hi: num(grossProfit),
@@ -151,7 +151,7 @@ function Waterfall({ revenue, cogs, grossProfit, expenses, netProfit }) {
     { key: "exp", label: "Расходы", value: num(expenses), sign: "−", lo: num(netProfit), hi: num(grossProfit),
       color: "bg-red-500/80", round: "rounded-t-sm" },
     { key: "net", label: "Чистая", value: num(netProfit), lo: Math.min(0, num(netProfit)), hi: Math.max(0, num(netProfit)),
-      color: num(netProfit) < 0 ? "bg-red-500" : "bg-gradient-to-t from-emerald-600 to-emerald-400",
+      color: num(netProfit) < 0 ? "bg-red-500" : "bg-emerald-600",
       round: num(netProfit) < 0 ? "rounded-b-lg" : "rounded-t-lg",
       glow: num(netProfit) >= 0 },
   ];
@@ -179,7 +179,7 @@ function Waterfall({ revenue, cogs, grossProfit, expenses, netProfit }) {
                 style={{ bottom: mounted ? barBottom : belowH, height: mounted ? barH : 0 }}
               />
               <span
-                className={`absolute inset-x-0 text-center text-[11px] font-black tabular-nums sm:text-sm ${c.sign === "−" ? "text-red-300" : c.value < 0 ? "text-red-300" : "text-white"}`}
+                className={`absolute inset-x-0 text-center text-[11px] font-semibold tabular-nums sm:text-sm ${c.sign === "−" ? "text-red-300" : c.value < 0 ? "text-red-300" : "text-white"}`}
                 style={belowBaseline ? { bottom: Math.max(0, barBottom - 18) } : { bottom: Math.min(total - 14, valueTop + 3) }}
               >
                 {c.sign || (c.value < 0 ? "−" : "")}{formatMoney(Math.abs(c.value))}
@@ -190,7 +190,7 @@ function Waterfall({ revenue, cogs, grossProfit, expenses, netProfit }) {
       </div>
       <div className="mt-2 flex gap-2 sm:gap-3">
         {cols.map((c) => (
-          <p key={c.key} className="flex-1 text-center text-[10px] font-black uppercase leading-tight tracking-wide text-slate-400">{c.label}</p>
+          <p key={c.key} className="flex-1 text-center text-[10px] font-semibold uppercase leading-tight tracking-wide text-slate-400">{c.label}</p>
         ))}
       </div>
     </div>
@@ -224,7 +224,7 @@ function SplitBar({ segments, caption }) {
               <span>{s.label}</span>
               <b className="whitespace-nowrap tabular-nums text-white">{formatMoney(s.value)}</b>
               <span className="whitespace-nowrap text-slate-500">{pct}%</span>
-              {s.tag ? <span className="whitespace-nowrap rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-300">{s.tag}</span> : null}
+              {s.tag ? <span className="whitespace-nowrap rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">{s.tag}</span> : null}
             </span>
           );
         })}
@@ -241,8 +241,8 @@ function BridgeAnchor({ label, value, tone }) {
     : "border-emerald-400/30 from-emerald-600/25 to-emerald-500/5 text-emerald-200";
   return (
     <div className={`flex items-center justify-between gap-3 rounded-2xl border bg-gradient-to-r px-4 py-3 ${cls}`}>
-      <span className="text-sm font-black">{label}</span>
-      <span className="text-xl font-black tabular-nums">{formatMoney(value)}</span>
+      <span className="text-sm font-semibold">{label}</span>
+      <span className="text-xl font-semibold tabular-nums">{formatMoney(value)}</span>
     </div>
   );
 }
@@ -262,7 +262,7 @@ function BridgeRow({ label, reason, value, sign, tone, owner, widthPct }) {
       <div className="hidden w-16 shrink-0 sm:block lg:w-24">
         <div className={`h-2 rounded-full ${barCol}`} style={{ width: `${widthPct}%` }} />
       </div>
-      <span className={`w-24 shrink-0 text-right text-sm font-black tabular-nums ${txtCol}`}>{sign}{formatMoney(value)}</span>
+      <span className={`w-24 shrink-0 text-right text-sm font-semibold tabular-nums ${txtCol}`}>{sign}{formatMoney(value)}</span>
     </div>
   );
 }
@@ -287,7 +287,7 @@ function CashBridge({ netProfit, rows, net }) {
 function BalanceSide({ title, titleTone, total, items, scale }) {
   return (
     <div>
-      <div className="mb-1.5 flex items-center justify-between text-[11px] font-black uppercase tracking-wide">
+      <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide">
         <span className={titleTone}>{title}</span>
         <span className="tabular-nums text-white">{formatMoney(total)}</span>
       </div>
@@ -322,11 +322,11 @@ function PositionBars({ assets, liabilities, net }) {
     <div className="space-y-4">
       <BalanceSide title="Активы" titleTone="text-emerald-300" total={aTot} items={assets} scale={scale} />
       <BalanceSide title="Обязательства" titleTone="text-red-300" total={lTot} items={liabilities} scale={scale} />
-      <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3">
-        <span className="text-sm font-black text-white">
+      <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] pt-3">
+        <span className="text-sm font-semibold text-white">
           Чистая позиция <span className="font-bold text-slate-500">активы − обязательства</span>
         </span>
-        <span className={`shrink-0 text-2xl font-black tabular-nums ${net < 0 ? "text-red-300" : "text-emerald-300"}`}>{formatMoney(net)}</span>
+        <span className={`shrink-0 text-2xl font-semibold tabular-nums ${net < 0 ? "text-red-300" : "text-emerald-300"}`}>{formatMoney(net)}</span>
       </div>
     </div>
   );
@@ -537,10 +537,10 @@ export default function FinanceReportPage() {
   return (
     <div className="relative pb-nav text-white sm:pb-10">
       <div className="relative mx-auto w-full max-w-[1200px]">
-        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-300">
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
           <span className="h-2 w-2 rounded-full bg-emerald-400" /> Финансы
         </div>
-        <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Финансовый отчёт</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Финансовый отчёт</h1>
         <p className="mt-2 max-w-2xl text-sm font-medium text-slate-400">
           История ваших денег за период: сколько заработали, сколько осело в кассе и сколько стоит бизнес.
         </p>
@@ -550,8 +550,8 @@ export default function FinanceReportPage() {
           <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0" style={{ scrollbarWidth: "none" }}>
             {PRESETS.map(([key, label]) => (
               <button key={key} onClick={() => setPreset(key)}
-                className={`shrink-0 rounded-2xl px-4 py-2.5 text-sm font-black transition ${
-                  preset === key ? "border border-blue-400/50 bg-blue-500/15 text-white" : "border border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10"
+                className={`shrink-0 rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${
+                  preset === key ? "border border-blue-400/50 bg-blue-500/15 text-white" : "border border-white/[0.08] bg-white/[0.02] text-slate-300 hover:bg-white/10"
                 }`}>
                 {label}
               </button>
@@ -559,18 +559,18 @@ export default function FinanceReportPage() {
           </div>
 
           <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-            <div className="flex flex-1 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1.5">
+            <div className="flex flex-1 items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-1.5">
               <DatePicker value={custom.from} onChange={(v) => { setCustom((c) => ({ ...c, from: v })); setPreset("custom"); }} placeholder="Дата с" className="min-w-0 flex-1" />
               <span className="shrink-0 text-slate-500">—</span>
               <DatePicker value={custom.to} onChange={(v) => { setCustom((c) => ({ ...c, to: v })); setPreset("custom"); }} placeholder="Дата по" align="right" className="min-w-0 flex-1" />
             </div>
             <div className="flex gap-2 sm:ml-auto sm:shrink-0">
               <button onClick={printReport} disabled={!rep}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-50 sm:flex-none">
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10 disabled:opacity-50 sm:flex-none">
                 <Printer size={15} /> Печать / PDF
               </button>
               <button onClick={exportCSV} disabled={!rep}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-50 sm:flex-none">
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10 disabled:opacity-50 sm:flex-none">
                 <Download size={15} /> Экспорт CSV
               </button>
             </div>
@@ -594,11 +594,11 @@ export default function FinanceReportPage() {
         ) : rep ? (
           <div className="mt-5 space-y-4">
             {/* АКТ 1 — Герой: сколько заработали */}
-            <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-7">
+            <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 sm:p-7">
               <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
                 <div className="min-w-0 text-center sm:text-left">
-                  <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">Чистая прибыль за период</p>
-                  <p className={`mt-1 text-3xl font-black leading-none tabular-nums sm:text-4xl xl:text-5xl ${num(p.netProfit) < 0 ? "text-red-300" : "text-white"}`}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-300/80">Чистая прибыль за период</p>
+                  <p className={`mt-1 text-3xl font-semibold leading-none tabular-nums sm:text-4xl xl:text-5xl ${num(p.netProfit) < 0 ? "text-red-300" : "text-white"}`}>
                     {formatMoney(p.netProfit)}
                   </p>
                   <p className="mt-2.5 text-sm font-bold text-slate-400">из выручки <b className="text-white">{rub(p.revenue)}</b></p>
@@ -622,7 +622,7 @@ export default function FinanceReportPage() {
               <div className="flex items-start gap-3 rounded-2xl border border-amber-400/30 bg-amber-500/[0.08] p-4">
                 <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-amber-500/15 text-amber-300"><AlertTriangle size={18} strokeWidth={2.4} /></span>
                 <div className="min-w-0">
-                  <p className="text-sm font-black text-amber-200">Себестоимость больше выручки — похоже, цена задана неверно</p>
+                  <p className="text-sm font-semibold text-amber-200">Себестоимость больше выручки — похоже, цена задана неверно</p>
                   <p className="mt-1 text-xs font-bold leading-5 text-slate-300">
                     Себестоимость {formatMoney(p.cogs)} больше выручки {formatMoney(p.revenue)} — при нормальной работе так не бывает. Обычно причина — неверная <b className="text-white">цена закупки сырья</b> на складе (из неё считается себестоимость даже без остатка) или ошибка в <b className="text-white">рецепте</b> (сколько сырья уходит на 1 порцию). Найти виновников: «Товары» → фильтр <b className="text-white">«Убыточные»</b>, затем поправьте цену/рецепт или цену прихода на «Складе».
                   </p>
@@ -664,10 +664,10 @@ export default function FinanceReportPage() {
               </div>
 
               {/* Честная сверка остатка — без ложного равенства для подпериодов */}
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3">
                 <span className="flex items-center gap-2 text-sm font-bold text-slate-300"><Wallet size={16} className="text-slate-400" /> Текущий остаток кассы (расчётный)</span>
                 <div className="text-right">
-                  <p className="text-lg font-black tabular-nums text-white">{formatMoney(pos.cashNow)}</p>
+                  <p className="text-lg font-semibold tabular-nums text-white">{formatMoney(pos.cashNow)}</p>
                   <p className="text-[11px] font-semibold text-slate-500">с учётом стартового остатка и прошлых периодов</p>
                 </div>
               </div>
@@ -683,7 +683,7 @@ export default function FinanceReportPage() {
                 {/* Деньги владельца за период */}
                 {(num(p.expenseOwner) || num(cash.inOwner) || num(cash.outReimburse) || num(cash.outWithdraw)) ? (
                   <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/[0.05] p-3.5">
-                    <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-amber-300"><User size={13} /> Деньги владельца за период</p>
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-300"><User size={13} /> Деньги владельца за период</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {[
                         ["+ оплатил лично", p.expenseOwner],
@@ -715,7 +715,7 @@ export default function FinanceReportPage() {
                 ) : (
                   <EmptyState text="Расходов за период нет" />
                 )}
-                <div className="mt-4 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
+                <div className="mt-4 grid grid-cols-2 gap-3 border-t border-white/[0.08] pt-4">
                   <MiniMetric label="Итого расходы" value={rub(p.expenses)} tone="text-red-300" />
                   <MiniMetric label="Доля в выручке" value={`${num(p.revenue) > 0 ? Math.round((num(p.expenses) / num(p.revenue)) * 100) : 0}%`} tone="text-slate-300" />
                   <MiniMetric label="Себестоимость" value={rub(p.cogs)} tone="text-slate-300" />
@@ -743,7 +743,7 @@ export default function FinanceReportPage() {
                 </p>
               )}
               <button onClick={openOpeningEditor}
-                className="mt-4 w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-black text-white transition hover:bg-white/10 sm:w-auto sm:px-6">
+                className="mt-4 w-full rounded-xl border border-white/[0.08] bg-white/[0.06] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 sm:w-auto sm:px-6">
                 {op.isSet ? "Изменить стартовые балансы" : "Задать стартовые балансы"}
               </button>
             </Card>
@@ -754,11 +754,11 @@ export default function FinanceReportPage() {
       {openingModal && openingForm && (
         <Modal title="Стартовые балансы" wide legacyLight={false} onClose={() => setOpeningModal(false)}>
           <div className="grid gap-3">
-            <p className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold leading-snug text-slate-300">
+            <p className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm font-bold leading-snug text-slate-300">
               Введите состояние бизнеса на дату, с которой начинаете вести учёт в приложении. Это точка отсчёта, а не транзакции — в отчёте они не появятся как операции.
             </p>
             <label className="block">
-              <span className="mb-1.5 block text-xs font-black text-slate-400">Дата старта</span>
+              <span className="mb-1.5 block text-xs font-semibold text-slate-400">Дата старта</span>
               <DatePicker value={openingForm.asOfDate} onChange={(v) => setOpeningForm((f) => ({ ...f, asOfDate: v }))} placeholder="Выберите дату" />
             </label>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -771,21 +771,21 @@ export default function FinanceReportPage() {
                 ["supplierDebts", "Мы должны поставщикам"],
               ].map(([key, label]) => (
                 <label key={key}>
-                  <span className="mb-1.5 block text-xs font-black text-slate-400">{label}</span>
+                  <span className="mb-1.5 block text-xs font-semibold text-slate-400">{label}</span>
                   <input type="number" inputMode="decimal" value={openingForm[key]} onChange={(e) => setOpeningForm((f) => ({ ...f, [key]: e.target.value }))} placeholder="0"
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-600 focus:border-blue-400/70" />
+                    className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-600 focus:border-blue-400/70" />
                 </label>
               ))}
             </div>
             <label>
-              <span className="mb-1.5 block text-xs font-black text-slate-400">Примечание</span>
+              <span className="mb-1.5 block text-xs font-semibold text-slate-400">Примечание</span>
               <input value={openingForm.note} onChange={(e) => setOpeningForm((f) => ({ ...f, note: e.target.value }))} placeholder="Необязательно"
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-600 focus:border-blue-400/70" />
+                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-600 focus:border-blue-400/70" />
             </label>
             <div className="mt-1 flex gap-3">
               <button onClick={() => setOpeningModal(false)} className="btn-white flex-1">Отмена</button>
               <button onClick={saveOpening} disabled={savingOpening}
-                className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-60">
+                className="flex-1 rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
                 {savingOpening ? "Сохраняю…" : "Сохранить"}
               </button>
             </div>

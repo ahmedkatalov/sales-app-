@@ -41,15 +41,15 @@ function MetricTile({ icon: Icon, label, value, sub, tone = "slate" }) {
     red: "border-red-400/25 bg-red-500/[0.08] text-red-300",
     blue: "border-blue-400/25 bg-blue-500/[0.08] text-blue-300",
     violet: "border-violet-400/25 bg-violet-500/[0.08] text-violet-300",
-    slate: "border-white/10 bg-white/[0.05] text-slate-300",
+    slate: "border-white/[0.08] bg-white/[0.05] text-slate-300",
   };
   return (
     <div className={`min-w-0 rounded-2xl border p-3 sm:p-3.5 ${tones[tone]}`}>
       <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-[10px] font-black uppercase tracking-wide opacity-90">{label}</p>
+        <p className="truncate text-[10px] font-semibold uppercase tracking-wide opacity-90">{label}</p>
         <Icon size={16} className="shrink-0 opacity-70" />
       </div>
-      <p className="mt-2 truncate text-xl font-black tabular-nums text-white sm:text-2xl">{value}</p>
+      <p className="mt-2 truncate text-xl font-semibold tabular-nums text-white sm:text-2xl">{value}</p>
       {sub && <p className="truncate text-[11px] font-semibold text-slate-500">{sub}</p>}
     </div>
   );
@@ -288,7 +288,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
       hint: "Владелец забирает прибыль из кассы для себя. Касса уменьшится, долг перед владельцем НЕ меняется." },
   };
   const owedOwner = ownerFin ? ownerFin.owed : owedToOwner;
-  const fieldCls = "w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3.5 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10";
+  const fieldCls = "w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-3.5 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10";
 
   const setCategory = (category) => {
     setFilterCategory(category);
@@ -421,7 +421,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
     <div className="pb-nav text-slate-100 sm:pb-10">
       <div className="mb-4 max-w-3xl">
         <p className="text-xs font-bold text-blue-400">Расходы</p>
-        <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">
+        <h2 className="text-2xl font-semibold leading-none text-white sm:text-3xl">
           Расходы точки
         </h2>
         <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-400">
@@ -435,7 +435,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         </div>
       )}
 
-      <div className="mb-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+      <div className="mb-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
         {/* Компактная шапка фильтра — всегда видна */}
         <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
           <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -454,8 +454,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                   key={key}
                   onClick={action}
                   className={active
-                    ? "min-h-10 rounded-xl border border-blue-400/50 bg-blue-500/15 px-3 py-2 text-xs font-black text-white sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm"
-                    : "min-h-10 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-slate-300 transition hover:bg-white/10 sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm"}
+                    ? "min-h-10 rounded-xl border border-blue-400/50 bg-blue-500/15 px-3 py-2 text-xs font-semibold text-white sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm"
+                    : "min-h-10 rounded-xl border border-white/[0.08] bg-white/5 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:bg-white/10 sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm"}
                 >
                   {label}
                 </button>
@@ -464,7 +464,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
             {/* Показываем активный диапазон если не стандартный пресет */}
             {fromDate && toDate && fromDate !== monthStart() && toDate !== monthEnd() && fromDate !== today() && (
-              <span className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2 text-sm font-black text-blue-200">
+              <span className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2 text-sm font-semibold text-blue-200">
                 {formatDateRu(fromDate)} — {formatDateRu(toDate)}
               </span>
             )}
@@ -473,10 +473,10 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           {/* Кнопка открытия расширенного фильтра */}
           <button
             onClick={() => setFilterOpen((v) => !v)}
-            className={`flex min-h-10 shrink-0 basis-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-black transition sm:basis-auto sm:justify-start ${
+            className={`flex min-h-10 shrink-0 basis-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition sm:basis-auto sm:justify-start ${
               filterOpen
                 ? "border-blue-400/40 bg-blue-500/15 text-blue-200"
-                : "border-white/10 bg-white/8 text-slate-300 hover:bg-white/15"
+                : "border-white/[0.08] bg-white/8 text-slate-300 hover:bg-white/15"
             }`}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -491,22 +491,22 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
         {/* Расширенный фильтр — скрыт по умолчанию */}
         {filterOpen && (
-          <div className="border-t border-white/10 px-4 py-4 sm:px-5">
+          <div className="border-t border-white/[0.08] px-4 py-4 sm:px-5">
             {/* Даты от/до */}
             <div className="mb-4 grid gap-3 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">От даты</span>
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">От даты</span>
                 <DatePicker value={fromDate} onChange={(v) => setFromDate(v)} placeholder="Дата с" />
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">До даты</span>
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">До даты</span>
                 <DatePicker value={toDate} onChange={(v) => setToDate(v)} placeholder="Дата по" align="right" />
               </label>
             </div>
 
             {/* Категория */}
             <div className="mb-3">
-              <p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-400">Категория</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Категория</p>
               <div className="flex flex-wrap gap-2">
                 {[
                   ["all", "Все"],
@@ -518,8 +518,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                     onClick={() => setCategory(key)}
                     className={
                       filterCategory === key
-                        ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-black text-white"
-                        : "rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10"
+                        ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-semibold text-white"
+                        : "rounded-xl border border-white/[0.08] bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
                     }
                   >
                     {label}
@@ -531,14 +531,14 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             {/* Тип внутри категории */}
             {filterCategory !== "all" && (
               <div>
-                <p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-400">Тип</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Тип</p>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setFilterType("all")}
                     className={
                       filterType === "all"
-                        ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-black text-white"
-                        : "rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/15"
+                        ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-semibold text-white"
+                        : "rounded-xl border border-white/[0.08] bg-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/15"
                     }
                   >
                     Все типы
@@ -549,8 +549,8 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                       onClick={() => setFilterType(type)}
                       className={
                         filterType === type
-                          ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-black text-white"
-                          : "rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/15"
+                          ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-semibold text-white"
+                          : "rounded-xl border border-white/[0.08] bg-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/15"
                       }
                     >
                       {type}
@@ -572,10 +572,10 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
       {/* ── Куда уходят деньги ── */}
       {visibleExpenses.length > 0 && (
-        <div className="mb-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
+        <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-lg font-black text-white sm:text-xl">Куда уходят деньги</h3>
+              <h3 className="text-lg font-semibold text-white sm:text-xl">Куда уходят деньги</h3>
               <p className="text-xs font-semibold text-slate-400">Крупнейшие статьи за период</p>
             </div>
           </div>
@@ -587,11 +587,11 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <span className="flex min-w-0 items-center gap-2">
                     <span className={`h-2 w-2 shrink-0 rounded-full ${catDot(r.category)}`} />
-                    <span className="truncate font-black text-white">{r.type}</span>
-                    {i === 0 && <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-300"><Crown size={11} /><span className="hidden sm:inline">Крупнейшая</span></span>}
+                    <span className="truncate font-semibold text-white">{r.type}</span>
+                    {i === 0 && <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300"><Crown size={11} /><span className="hidden sm:inline">Крупнейшая</span></span>}
                     <span className="hidden shrink-0 text-xs text-slate-500 sm:inline">{r.count} {r.count === 1 ? "запись" : r.count < 5 ? "записи" : "записей"}</span>
                   </span>
-                  <span className="shrink-0 tabular-nums font-black text-white">{formatMoney(r.amount)} <span className="font-bold text-slate-500">· {Math.round(r.share)}%</span></span>
+                  <span className="shrink-0 tabular-nums font-semibold text-white">{formatMoney(r.amount)} <span className="font-bold text-slate-500">· {Math.round(r.share)}%</span></span>
                 </div>
                 <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-white/10">
                   <div className={`h-full rounded-full bg-gradient-to-r transition-[width] duration-500 ${i === 0 ? "from-amber-400 to-amber-500" : "from-blue-500/80 to-violet-500/80"}`} style={{ width: `${Math.max(4, r.barPct)}%` }} />
@@ -599,24 +599,24 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               </button>
             ))}
             {byType.length > 6 && (
-              <button type="button" onClick={() => setShowAllTypes((v) => !v)} className="text-xs font-black text-blue-300 hover:text-blue-200">
+              <button type="button" onClick={() => setShowAllTypes((v) => !v)} className="text-xs font-semibold text-blue-300 hover:text-blue-200">
                 {showAllTypes ? "Свернуть" : `+${byType.length - 6} других статей · показать`}
               </button>
             )}
           </div>
 
           {/* сплит-бар источников */}
-          <div className="mt-5 border-t border-white/10 pt-4">
-            <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-slate-400">Из какого кармана</p>
+          <div className="mt-5 border-t border-white/[0.08] pt-4">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Из какого кармана</p>
             <div className="flex h-3 w-full overflow-hidden rounded-full bg-white/10">
               <div className="bg-emerald-400/85" style={{ width: `${pct(bySource.cash)}%` }} />
               <div className="bg-blue-400/85" style={{ width: `${pct(bySource.card)}%` }} />
               <div className="bg-amber-400/85" style={{ width: `${pct(bySource.owner)}%` }} />
             </div>
             <div className="mt-2.5 grid grid-cols-3 gap-2 text-xs">
-              <div className="min-w-0"><p className="flex items-center gap-1.5 font-black text-emerald-300"><Banknote size={14} /> Из кассы</p><p className="truncate tabular-nums text-white">{formatMoney(bySource.cash)} <span className="text-slate-500">· {Math.round(pct(bySource.cash))}%</span></p></div>
-              <div className="min-w-0"><p className="flex items-center gap-1.5 font-black text-blue-300"><CreditCard size={14} /> С карты</p><p className="truncate tabular-nums text-white">{formatMoney(bySource.card)} <span className="text-slate-500">· {Math.round(pct(bySource.card))}%</span></p></div>
-              <div className="min-w-0"><p className="flex items-center gap-1.5 font-black text-amber-300"><User size={14} /> Личные</p><p className="truncate tabular-nums text-white">{formatMoney(bySource.owner)} <span className="text-slate-500">· {Math.round(pct(bySource.owner))}%</span></p></div>
+              <div className="min-w-0"><p className="flex items-center gap-1.5 font-semibold text-emerald-300"><Banknote size={14} /> Из кассы</p><p className="truncate tabular-nums text-white">{formatMoney(bySource.cash)} <span className="text-slate-500">· {Math.round(pct(bySource.cash))}%</span></p></div>
+              <div className="min-w-0"><p className="flex items-center gap-1.5 font-semibold text-blue-300"><CreditCard size={14} /> С карты</p><p className="truncate tabular-nums text-white">{formatMoney(bySource.card)} <span className="text-slate-500">· {Math.round(pct(bySource.card))}%</span></p></div>
+              <div className="min-w-0"><p className="flex items-center gap-1.5 font-semibold text-amber-300"><User size={14} /> Личные</p><p className="truncate tabular-nums text-white">{formatMoney(bySource.owner)} <span className="text-slate-500">· {Math.round(pct(bySource.owner))}%</span></p></div>
             </div>
           </div>
         </div>
@@ -624,15 +624,15 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
       {/* Расчёты с владельцем — отдельная карточка, только владельцу/админу (эндпоинт вернул данные) */}
       {ownerFin && (
-        <div className="mb-3 rounded-2xl border border-amber-400/20 bg-white/[0.04] p-4 sm:p-5">
+        <div className="mb-3 rounded-2xl border border-amber-400/20 bg-white/[0.02] p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-black text-amber-300">Расчёты с владельцем</p>
+              <p className="text-sm font-semibold text-amber-300">Расчёты с владельцем</p>
               <p className="mt-0.5 text-xs font-bold text-slate-400">Личные деньги владельца в бизнесе</p>
             </div>
             <div className="text-right">
-              <p className="text-[11px] font-black uppercase tracking-wide text-amber-200/70">Бизнес должен владельцу</p>
-              <p className="text-2xl font-black text-amber-100 sm:text-3xl">{formatMoney(owedOwner)}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-200/70">Бизнес должен владельцу</p>
+              <p className="text-2xl font-semibold text-amber-100 sm:text-3xl">{formatMoney(owedOwner)}</p>
               {ownerFin.openingOwed > 0 && (
                 <p className="text-[11px] font-bold text-amber-200/50">в т.ч. на старте {formatMoney(ownerFin.openingOwed)}</p>
               )}
@@ -640,22 +640,22 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-            <div className="rounded-xl bg-white/[0.04] px-3 py-2"><span className="text-slate-400">Расходы владельца</span><br /><b className="text-white">{formatMoney(ownerFin.fromExpenses)}</b></div>
-            <div className="rounded-xl bg-white/[0.04] px-3 py-2"><span className="text-slate-400">Вклады в кассу</span><br /><b className="text-emerald-300">+{formatMoney(ownerFin.contributions)}</b></div>
-            <div className="rounded-xl bg-white/[0.04] px-3 py-2"><span className="text-slate-400">Возвраты владельцу</span><br /><b className="text-blue-300">−{formatMoney(ownerFin.reimbursements)}</b></div>
-            <div className="rounded-xl bg-white/[0.04] px-3 py-2" title="Изъятие прибыли не уменьшает долг перед владельцем."><span className="text-slate-400">Изъятия прибыли</span><br /><b className="text-slate-200">{formatMoney(ownerFin.withdrawals)}</b></div>
+            <div className="rounded-xl bg-white/[0.02] px-3 py-2"><span className="text-slate-400">Расходы владельца</span><br /><b className="text-white">{formatMoney(ownerFin.fromExpenses)}</b></div>
+            <div className="rounded-xl bg-white/[0.02] px-3 py-2"><span className="text-slate-400">Вклады в кассу</span><br /><b className="text-emerald-300">+{formatMoney(ownerFin.contributions)}</b></div>
+            <div className="rounded-xl bg-white/[0.02] px-3 py-2"><span className="text-slate-400">Возвраты владельцу</span><br /><b className="text-blue-300">−{formatMoney(ownerFin.reimbursements)}</b></div>
+            <div className="rounded-xl bg-white/[0.02] px-3 py-2" title="Изъятие прибыли не уменьшает долг перед владельцем."><span className="text-slate-400">Изъятия прибыли</span><br /><b className="text-slate-200">{formatMoney(ownerFin.withdrawals)}</b></div>
           </div>
 
           {!workerMode && (
             <div className="mt-3 flex flex-wrap gap-2">
               {Object.entries(OWNER_KIND).map(([kind, m]) => (
                 <button key={kind} onClick={() => { setOwnerForm({ amount: "", note: "", date: "" }); setError(""); setOwnerModal(kind); }}
-                  className="rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-2.5 text-xs font-black text-white transition hover:bg-white/10">
+                  className="rounded-xl border border-white/[0.08] bg-white/[0.06] px-3.5 py-2.5 text-xs font-semibold text-white transition hover:bg-white/10">
                   {m.cta}
                 </button>
               ))}
               <button onClick={openOpeningModal}
-                className="ml-auto flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-xs font-black text-slate-300 transition hover:bg-white/10"
+                className="ml-auto flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2.5 text-xs font-semibold text-slate-300 transition hover:bg-white/10"
                 title="Начальное финансовое состояние при переходе с другой системы">
                 <Settings size={14} strokeWidth={2.2} /> Остатки на начало учёта
               </button>
@@ -669,7 +669,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 return (
                   <div key={en.id} className="flex items-center justify-between gap-2 py-2 text-xs">
                     <div className="min-w-0">
-                      <span className="font-black text-white">{m.label}</span>
+                      <span className="font-semibold text-white">{m.label}</span>
                       <span className="text-slate-500"> {en.note ? `· ${en.note} ` : ""}· {String(en.createdAt || "").slice(0, 10)}{en.employeeName ? ` · ${en.employeeName}` : ""}</span>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -686,14 +686,14 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         </div>
       )}
 
-      <div id="expenses-list" className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+      <div id="expenses-list" className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="min-w-0">
             <p className="text-xs font-bold text-blue-400">
               {filterCategory === "all" ? "Все расходы" : categoryLabel(filterCategory)}
               {filterType !== "all" ? ` · ${filterType}` : ""}
             </p>
-            <h3 className="text-lg font-black text-white sm:text-xl">Список расходов</h3>
+            <h3 className="text-lg font-semibold text-white sm:text-xl">Список расходов</h3>
             <p className="mt-1 text-sm text-slate-400">
               {workerMode
                 ? "Работник может добавить расход, но не видит общую аналитику."
@@ -704,14 +704,14 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="relative">
               <ArrowDownWideNarrow size={16} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-11 rounded-xl border border-white/10 bg-white/5 pl-8 pr-3 text-sm font-bold text-white outline-none">
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-11 rounded-xl border border-white/[0.08] bg-white/5 pl-8 pr-3 text-sm font-bold text-white outline-none">
                 <option value="date" className="bg-slate-900">Сначала новые</option>
                 <option value="amount" className="bg-slate-900">По сумме</option>
               </select>
             </div>
             <button
               onClick={() => setExpenseModal(true)}
-              className="hidden rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-2.5 font-black text-white shadow-lg transition hover:scale-[1.01] sm:block"
+              className="hidden rounded-xl bg-indigo-600 px-5 py-2.5 font-semibold text-white shadow-lg transition hover:scale-[1.01] sm:block"
             >
               + Добавить расход
             </button>
@@ -720,7 +720,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
         <div className="hidden overflow-x-auto xl:block">
           <table className="w-full min-w-[1050px] text-left text-sm">
-            <thead className="border-y border-white/10 bg-slate-950/50 text-xs uppercase tracking-wide text-slate-400">
+            <thead className="border-y border-white/[0.08] bg-slate-950/50 text-xs uppercase tracking-wide text-slate-400">
               <tr>
                 <th className="p-4">Дата</th>
                 <th className="p-4">Категория</th>
@@ -735,22 +735,22 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
             <tbody>
               {sortedExpenses.map((e) => (
-                <tr key={e.id} className={`border-b border-l-4 border-white/10 bg-slate-950/20 transition hover:bg-white/[0.05] ${SRC_RAIL[e.paymentSource] || SRC_RAIL.cash}`}>
+                <tr key={e.id} className={`border-b border-l-4 border-white/[0.08] bg-slate-950/20 transition hover:bg-white/[0.05] ${SRC_RAIL[e.paymentSource] || SRC_RAIL.cash}`}>
                   <td className="p-4 font-bold text-slate-400">{String(e.createdAt || "").slice(0, 10) || "—"}</td>
-                  <td className="p-4 font-black text-white">{categoryLabel(e.category)}</td>
+                  <td className="p-4 font-semibold text-white">{categoryLabel(e.category)}</td>
                   <td className="p-4 text-slate-300">{e.type || "—"}</td>
                   <td className="p-4 font-bold text-white">
                     {e.name}
-                    <span className={`ml-2 inline-block rounded-md border px-1.5 py-0.5 align-middle text-[10px] font-black ${srcMeta(e).cls}`}>{srcMeta(e).label}</span>
+                    <span className={`ml-2 inline-block rounded-md border px-1.5 py-0.5 align-middle text-[10px] font-semibold ${srcMeta(e).cls}`}>{srcMeta(e).label}</span>
                     {e.hasPhoto && (
                       <button onClick={() => openPhotoView(e)} title="Открыть фото накладной"
-                        className="ml-2 inline-flex min-h-[32px] items-center gap-1 rounded-md border border-blue-400/25 bg-blue-500/10 px-2 py-1.5 align-middle text-xs font-black text-blue-200 transition hover:bg-blue-500/20">
+                        className="ml-2 inline-flex min-h-[32px] items-center gap-1 rounded-md border border-blue-400/25 bg-blue-500/10 px-2 py-1.5 align-middle text-xs font-semibold text-blue-200 transition hover:bg-blue-500/20">
                         <Paperclip size={11} strokeWidth={2.6} /> накладная
                       </button>
                     )}
                   </td>
                   <td className="p-4 text-slate-400">{e.comment || "—"}</td>
-                  <td className="p-4 font-black text-red-300">{formatMoney(e.amount)}</td>
+                  <td className="p-4 font-semibold text-red-300">{formatMoney(e.amount)}</td>
                   <td className="p-4 text-slate-300">{e.employeeName || "—"}</td>
 
                   {!workerMode && (
@@ -759,7 +759,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                         onClick={() => openDeleteExpense(e)}
                         aria-label="Удалить расход"
                         title="Удалить расход"
-                        className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 font-black text-red-200 transition hover:bg-red-500/20"
+                        className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 font-semibold text-red-200 transition hover:bg-red-500/20"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -777,7 +777,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               )}
             </tbody>
 
-            <tfoot className="bg-slate-950/70 font-black text-white">
+            <tfoot className="bg-slate-950/70 font-semibold text-white">
               <tr>
                 <td className="p-4" colSpan="5">ИТОГО</td>
                 <td className="p-4 text-red-200">{formatMoney(total)}</td>
@@ -792,12 +792,12 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           {sortedExpenses.map((e) => (
             <div key={e.id} className={`flex items-start justify-between gap-3 border-l-4 p-3.5 ${SRC_RAIL[e.paymentSource] || SRC_RAIL.cash}`}>
               <div className="min-w-0">
-                <p className="truncate text-base font-black text-white">{e.name}</p>
+                <p className="truncate text-base font-semibold text-white">{e.name}</p>
                 <p className="truncate text-xs text-slate-400">{categoryLabel(e.category)} · {e.type || "—"}</p>
-                <span className={`mt-1 inline-block rounded-md border px-1.5 py-0.5 text-[10px] font-black ${srcMeta(e).cls}`}>{srcMeta(e).label}</span>
+                <span className={`mt-1 inline-block rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${srcMeta(e).cls}`}>{srcMeta(e).label}</span>
                 {e.hasPhoto && (
                   <button onClick={() => openPhotoView(e)}
-                    className="ml-1.5 mt-1 inline-flex min-h-[32px] items-center gap-1 rounded-md border border-blue-400/25 bg-blue-500/10 px-2 py-1.5 align-top text-xs font-black text-blue-200 transition hover:bg-blue-500/20">
+                    className="ml-1.5 mt-1 inline-flex min-h-[32px] items-center gap-1 rounded-md border border-blue-400/25 bg-blue-500/10 px-2 py-1.5 align-top text-xs font-semibold text-blue-200 transition hover:bg-blue-500/20">
                     <Paperclip size={11} strokeWidth={2.6} /> накладная
                   </button>
                 )}
@@ -808,7 +808,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
-                <span className="whitespace-nowrap text-base font-black tabular-nums text-red-400">−{formatMoney(e.amount)}</span>
+                <span className="whitespace-nowrap text-base font-semibold tabular-nums text-red-400">−{formatMoney(e.amount)}</span>
                 {!workerMode && (
                   <button
                     onClick={() => openDeleteExpense(e)}
@@ -824,7 +824,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
           {!visibleExpenses.length && <div className="p-10 text-center font-bold text-slate-400">Расходов пока нет</div>}
 
-          <div className="flex justify-between bg-slate-950/60 p-4 font-black text-white">
+          <div className="flex justify-between bg-slate-950/60 p-4 font-semibold text-white">
             <span>Итого</span>
             <span className="tabular-nums text-red-400">{formatMoney(total)}</span>
           </div>
@@ -835,7 +835,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
 
       <button
         onClick={() => setExpenseModal(true)}
-        className="fixed left-4 right-4 z-30 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-lg shadow-blue-950/40 transition active:scale-[0.98] sm:hidden"
+        className="fixed left-4 right-4 z-30 rounded-2xl bg-indigo-600 px-5 py-4 font-semibold text-white  transition active:scale-[0.98] sm:hidden"
         style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px)" }}
       >
         + Добавить расход
@@ -845,11 +845,11 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
         <Modal title="Новый расход" wide onClose={() => setExpenseModal(false)}>
           <div className="grid gap-3">
             <label>
-              <span className="mb-2 block text-sm font-black text-slate-300">Категория расхода</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">Категория расхода</span>
               <select
                 value={form.category}
                 onChange={(e) => changeFormCategory(e.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
+                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
               >
                 <option value="household">Бытовой расход</option>
                 <option value="products">Продукты</option>
@@ -857,11 +857,11 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             </label>
 
             <label>
-              <span className="mb-2 block text-sm font-black text-slate-300">Тип расхода</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">Тип расхода</span>
               <select
                 value={form.type}
                 onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
+                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
               >
                 {currentTypeOptions.map((type) => (
                   <option key={type} value={type}>{type}</option>
@@ -870,30 +870,30 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             </label>
 
             <label>
-              <span className="mb-2 block text-sm font-black text-slate-300">За что заплатили</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">За что заплатили</span>
               <input
                 value={form.name}
                 onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                 placeholder={form.category === "household" ? "Например: уборка, свет, зарплата..." : "Например: молоко, стаканчики, продукты..."}
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
+                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
                 autoFocus
               />
             </label>
 
             <label>
-              <span className="mb-2 block text-sm font-black text-slate-300">Сумма</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">Сумма</span>
               <input
                 value={form.amount}
                 onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
                 placeholder="Например: 1500"
                 type="text"
                 inputMode="decimal"
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
+                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
               />
             </label>
 
             <label>
-              <span className="mb-2 block text-sm font-black text-slate-300">Чем оплатили</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">Чем оплатили</span>
               <div className="grid grid-cols-3 gap-2">
                 {[
                   ["cash", "Из кассы", Banknote],
@@ -902,10 +902,10 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 ].map(([val, label, Icon]) => (
                   <button key={val} type="button"
                     onClick={() => setForm((p) => ({ ...p, paymentSource: val }))}
-                    className={`flex flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 text-center text-xs font-black leading-tight transition ${
+                    className={`flex flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 text-center text-xs font-semibold leading-tight transition ${
                       form.paymentSource === val
                         ? "border-blue-400/70 bg-blue-500/15 text-white"
-                        : "border-white/10 bg-slate-950/60 text-slate-300 hover:bg-white/5"
+                        : "border-white/[0.08] bg-slate-950/60 text-slate-300 hover:bg-white/5"
                     }`}>
                     <Icon size={20} strokeWidth={2.2} />{label}
                   </button>
@@ -925,21 +925,21 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             </label>
 
             <label>
-              <span className="mb-2 block text-sm font-black text-slate-300">Комментарий</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">Комментарий</span>
               <textarea
                 value={form.comment}
                 onChange={(e) => setForm((p) => ({ ...p, comment: e.target.value }))}
                 placeholder="Дополнительно, если нужно"
-                className="min-h-28 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
+                className="min-h-28 w-full resize-none rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
               />
             </label>
 
             <div>
-              <span className="mb-2 block text-sm font-black text-slate-300">Фото накладной / чека <span className="font-bold text-slate-500">— необязательно</span></span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">Фото накладной / чека <span className="font-bold text-slate-500">— необязательно</span></span>
               {form.photo ? (
-                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-3">
+                <div className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-slate-950/60 p-3">
                   <img src={form.photo} alt="Накладная" className="h-16 w-16 shrink-0 rounded-xl object-cover" />
-                  <span className="flex-1 text-sm font-black text-emerald-300">Фото готово к загрузке</span>
+                  <span className="flex-1 text-sm font-semibold text-emerald-300">Фото готово к загрузке</span>
                   <button type="button" onClick={() => setForm((p) => ({ ...p, photo: null }))}
                     aria-label="Убрать фото"
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-red-300">
@@ -947,7 +947,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                   </button>
                 </div>
               ) : (
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-slate-950/40 px-4 py-4 font-black text-slate-300 transition hover:bg-white/5">
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-slate-950/40 px-4 py-4 font-semibold text-slate-300 transition hover:bg-white/5">
                   <Camera size={18} strokeWidth={2.2} /> {photoBusy ? "Обрабатываю…" : "Прикрепить фото"}
                   <input type="file" accept="image/*" hidden disabled={photoBusy}
                     onChange={(e) => { pickExpensePhoto(e.target.files?.[0]); e.target.value = ""; }} />
@@ -959,14 +959,14 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <button
               onClick={() => setExpenseModal(false)}
-              className="flex-1 rounded-2xl border border-white/10 bg-white/10 px-5 py-4 font-black text-white transition hover:bg-white/15"
+              className="flex-1 rounded-2xl border border-white/[0.08] bg-white/10 px-5 py-4 font-semibold text-white transition hover:bg-white/15"
             >
               Отмена
             </button>
             <button
               onClick={createExpense}
               disabled={submitting}
-              className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex-1 rounded-2xl bg-indigo-600 px-5 py-4 font-semibold text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? "Сохраняю…" : "Добавить расход"}
             </button>
@@ -982,7 +982,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 Вы действительно хотите удалить этот расход?
               </p>
 
-              <p className="mt-3 text-lg font-black text-white">
+              <p className="mt-3 text-lg font-semibold text-white">
                 {expenseToDelete.name || "Расход"}
               </p>
 
@@ -994,7 +994,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={() => setExpenseToDelete(null)}
-                className="flex-1 rounded-2xl border border-white/10 bg-white/10 px-5 py-4 font-black text-white transition hover:bg-white/15"
+                className="flex-1 rounded-2xl border border-white/[0.08] bg-white/10 px-5 py-4 font-semibold text-white transition hover:bg-white/15"
               >
                 Отмена
               </button>
@@ -1002,7 +1002,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               <button
                 onClick={deleteExpense}
                 disabled={submitting}
-                className="flex-1 rounded-2xl bg-linear-to-r from-red-600 to-red-500 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(239,68,68,.25)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex-1 rounded-2xl bg-red-600 px-5 py-4 font-semibold text-white shadow-[0_18px_45px_rgba(239,68,68,.25)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? "Удаляю…" : "Удалить"}
               </button>
@@ -1014,11 +1014,11 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
       {ownerModal && (
         <Modal title={OWNER_KIND[ownerModal]?.cta || "Расчёт с владельцем"} onClose={() => setOwnerModal(null)}>
           <div className="grid gap-3">
-            <p className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold leading-snug text-slate-300">
+            <p className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm font-bold leading-snug text-slate-300">
               {OWNER_KIND[ownerModal]?.hint}
             </p>
             <label>
-              <span className="mb-2 block text-sm font-black text-slate-300">Сумма</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">Сумма</span>
               <input
                 value={ownerForm.amount}
                 onChange={(e) => setOwnerForm((p) => ({ ...p, amount: e.target.value }))}
@@ -1026,29 +1026,29 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 type="text"
                 inputMode="decimal"
                 autoFocus
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-amber-400/70 focus:ring-4 focus:ring-amber-500/10"
+                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-amber-400/70 focus:ring-4 focus:ring-amber-500/10"
               />
             </label>
             <label className="block">
-              <span className="mb-2 block text-sm font-black text-slate-300">Дата <span className="font-bold text-slate-500">— необязательно, по умолчанию сегодня</span></span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">Дата <span className="font-bold text-slate-500">— необязательно, по умолчанию сегодня</span></span>
               <DatePicker value={ownerForm.date} onChange={(v) => setOwnerForm((p) => ({ ...p, date: v }))} placeholder="Сегодня" />
             </label>
             <label>
-              <span className="mb-2 block text-sm font-black text-slate-300">Примечание</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">Примечание</span>
               <input
                 value={ownerForm.note}
                 onChange={(e) => setOwnerForm((p) => ({ ...p, note: e.target.value }))}
                 placeholder="За что / комментарий (необязательно)"
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-amber-400/70 focus:ring-4 focus:ring-amber-500/10"
+                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-amber-400/70 focus:ring-4 focus:ring-amber-500/10"
               />
             </label>
             <div className="mt-1 flex flex-col gap-3 sm:flex-row">
               <button onClick={() => setOwnerModal(null)}
-                className="flex-1 rounded-2xl border border-white/10 bg-white/10 px-5 py-4 font-black text-white transition hover:bg-white/15">
+                className="flex-1 rounded-2xl border border-white/[0.08] bg-white/10 px-5 py-4 font-semibold text-white transition hover:bg-white/15">
                 Отмена
               </button>
               <button onClick={submitOwnerEntry} disabled={submitting}
-                className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(245,158,11,.25)] disabled:cursor-not-allowed disabled:opacity-60">
+                className="flex-1 rounded-2xl bg-amber-500 px-5 py-4 font-semibold text-white shadow-[0_18px_45px_rgba(245,158,11,.25)] disabled:cursor-not-allowed disabled:opacity-60">
                 {submitting ? "Сохраняю…" : "Сохранить"}
               </button>
             </div>
@@ -1063,7 +1063,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               Начальное состояние при переходе с другой системы. Это <b>не</b> транзакции — это точка отсчёта. Заполните то, что знаете на дату старта; остальное можно оставить нулём и уточнить позже.
             </p>
             <label>
-              <span className="mb-2 block text-sm font-black text-slate-300">Дата старта учёта</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">Дата старта учёта</span>
               <input type="date" value={openingForm.asOfDate}
                 onChange={(e) => setOpeningForm((p) => ({ ...p, asOfDate: e.target.value }))} className={fieldCls} />
             </label>
@@ -1077,7 +1077,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
                 ["supplierDebts", "Мы должны поставщикам", "долги перед поставщиками"],
               ].map(([key, label, hint]) => (
                 <label key={key}>
-                  <span className="mb-2 block text-sm font-black text-slate-300">{label}</span>
+                  <span className="mb-2 block text-sm font-semibold text-slate-300">{label}</span>
                   <input type="text" inputMode="decimal" min="0" value={openingForm[key]} placeholder="0"
                     onChange={(e) => setOpeningForm((p) => ({ ...p, [key]: e.target.value }))} className={fieldCls} />
                   <span className="mt-1 block px-1 text-[11px] font-bold text-slate-500">{hint}</span>
@@ -1085,17 +1085,17 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
               ))}
             </div>
             <label>
-              <span className="mb-2 block text-sm font-black text-slate-300">Примечание</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-300">Примечание</span>
               <input value={openingForm.note} placeholder="Необязательно"
                 onChange={(e) => setOpeningForm((p) => ({ ...p, note: e.target.value }))} className={fieldCls} />
             </label>
             <div className="mt-1 flex flex-col gap-3 sm:flex-row">
               <button onClick={() => setOpeningModal(false)}
-                className="flex-1 rounded-2xl border border-white/10 bg-white/10 px-5 py-4 font-black text-white transition hover:bg-white/15">
+                className="flex-1 rounded-2xl border border-white/[0.08] bg-white/10 px-5 py-4 font-semibold text-white transition hover:bg-white/15">
                 Отмена
               </button>
               <button onClick={saveOpening} disabled={submitting}
-                className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] disabled:cursor-not-allowed disabled:opacity-60">
+                className="flex-1 rounded-2xl bg-indigo-600 px-5 py-4 font-semibold text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] disabled:cursor-not-allowed disabled:opacity-60">
                 {submitting ? "Сохраняю…" : "Сохранить"}
               </button>
             </div>
@@ -1115,7 +1115,7 @@ export default function ExpensesPage({ currentProfile, workerMode }) {
             )}
           </div>
           <button type="button" onClick={closePhotoView}
-            className="mt-4 w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">
+            className="mt-4 w-full rounded-2xl border border-white/[0.08] bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
             Закрыть
           </button>
         </Modal>

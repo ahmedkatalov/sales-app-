@@ -29,12 +29,12 @@ export default function WorkspaceSelectPage({ session, onSelect }) {
       <div className="w-full max-w-lg">
         {/* Шапка */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-600 text-white shadow-2xl shadow-blue-600/30">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-600 text-white ">
             <Store size={30} strokeWidth={2} />
           </div>
-          <h1 className="text-3xl font-black text-white">Выберите точку</h1>
+          <h1 className="text-3xl font-semibold text-white">Выберите точку</h1>
           <p className="mt-2 text-slate-400">
-            Здравствуйте, <span className="font-black text-white">{session?.username}</span>! Выберите точку для работы.
+            Здравствуйте, <span className="font-semibold text-white">{session?.username}</span>! Выберите точку для работы.
           </p>
         </div>
 
@@ -53,13 +53,13 @@ export default function WorkspaceSelectPage({ session, onSelect }) {
                 key={ws.id}
                 type="button"
                 onClick={() => handleSelect(ws)}
-                className="group flex items-center gap-4 rounded-3xl border border-white/10 bg-white/[0.06] p-5 text-left shadow-xl transition hover:border-blue-400/40 hover:bg-blue-500/10"
+                className="group flex items-center gap-4 rounded-3xl border border-white/[0.08] bg-white/[0.06] p-5 text-left shadow-xl transition hover:border-blue-400/40 hover:bg-blue-500/10"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg">
                   {ws.isMain ? <Star size={22} strokeWidth={2} /> : <Store size={22} strokeWidth={2} />}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-lg font-black text-white">{ws.name}</p>
+                  <p className="text-lg font-semibold text-white">{ws.name}</p>
                   <p className="text-sm text-slate-400">
                     {ws.role === "owner" ? "Владелец" : ws.role === "branch_admin" ? "Администратор" : "Кассир"}
                     {ws.isMain ? " · Основная" : ""}

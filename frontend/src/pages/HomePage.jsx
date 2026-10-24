@@ -97,7 +97,7 @@ function DeltaPill({ percent, suffix = "против вчера", size = "sm" })
   const cls = up ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300";
   const text = `${up ? "+" : "−"}${Math.abs(Math.round(percent))}%`;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-black tabular-nums ${cls} ${size === "sm" ? "text-[12px]" : "text-sm"}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold tabular-nums ${cls} ${size === "sm" ? "text-[12px]" : "text-sm"}`}>
       <Icon size={size === "sm" ? 14 : 16} strokeWidth={2.8} />
       {text}
       <span className="font-bold opacity-70">{suffix}</span>
@@ -116,10 +116,10 @@ function MarginRing({ value }) {
         style={{ background: `conic-gradient(${color} ${v * 3.6}deg, rgba(255,255,255,0.08) 0deg)` }}
       >
         <div className="grid h-[66px] w-[66px] place-items-center rounded-full bg-[#0a1122] sm:h-[96px] sm:w-[96px]">
-          <span className="text-lg font-black tabular-nums text-white sm:text-3xl">{has ? `${Math.round(v)}%` : "—"}</span>
+          <span className="text-lg font-semibold tabular-nums text-white sm:text-3xl">{has ? `${Math.round(v)}%` : "—"}</span>
         </div>
       </div>
-      <span className="mt-2 text-[10px] font-black uppercase tracking-wider text-slate-400">Маржа сегодня</span>
+      <span className="mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Маржа сегодня</span>
     </div>
   );
 }
@@ -161,17 +161,17 @@ function SplitBar({ cash, transfer }) {
 
 function HealthChip({ to, icon: Icon, label, value, level, className = "" }) {
   const dot = level === "act" ? "bg-red-400" : level === "watch" ? "bg-amber-400" : "bg-emerald-400";
-  const border = level === "act" ? "border-red-400/25" : level === "watch" ? "border-amber-400/20" : "border-white/10";
+  const border = level === "act" ? "border-red-400/25" : level === "watch" ? "border-amber-400/20" : "border-white/[0.08]";
   const valCls = level === "act" ? "text-rose-300" : level === "watch" ? "text-amber-300" : "text-white";
   return (
-    <NavLink to={to} className={`group flex min-h-[120px] flex-col justify-between rounded-2xl border ${border} bg-white/[0.04] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.07] active:scale-[0.98] ${className}`}>
+    <NavLink to={to} className={`group flex min-h-[120px] flex-col justify-between rounded-2xl border ${border} bg-white/[0.02] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.07] active:scale-[0.98] ${className}`}>
       <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/[0.08] text-slate-200">
         <Icon size={16} strokeWidth={2.5} />
         <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full ${dot} ring-2 ring-white/10`} />
       </span>
       <div className="mt-3 min-w-0">
         <p className="truncate text-[11px] font-bold uppercase leading-tight tracking-wide text-slate-400">{label}</p>
-        <p className={`mt-0.5 truncate text-lg font-black tabular-nums sm:text-xl ${valCls}`}>{value}</p>
+        <p className={`mt-0.5 truncate text-lg font-semibold tabular-nums sm:text-xl ${valCls}`}>{value}</p>
       </div>
     </NavLink>
   );
@@ -181,7 +181,7 @@ function QuickAction({ to, icon: Icon, label }) {
   return (
     <NavLink
       to={to}
-      className="group flex min-h-[72px] flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-center transition duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06]"
+      className="group flex min-h-[72px] flex-col items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 text-center transition duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06]"
     >
       <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white/[0.08] text-slate-200 transition group-hover:bg-blue-500/20 group-hover:text-blue-300">
         <Icon size={19} strokeWidth={2.3} />
@@ -337,7 +337,7 @@ export default function HomePage() {
         <header className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-bold capitalize text-blue-400 sm:text-sm">{todayLabel}</p>
-            <h1 className="mt-1 text-2xl font-black leading-tight tracking-[-0.02em] text-white sm:text-3xl">
+            <h1 className="mt-1 text-2xl font-semibold leading-tight tracking-[-0.02em] text-white sm:text-3xl">
               {hello}{firstName ? `, ${firstName}` : ""}
             </h1>
             <p className="mt-1.5 flex items-center gap-1.5 text-sm font-semibold text-slate-400">
@@ -348,7 +348,7 @@ export default function HomePage() {
           <div className="flex shrink-0 gap-2.5">
             <NavLink
               to="/pos"
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3.5 font-black text-white transition hover:brightness-110 active:scale-[0.98] lg:flex-none"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 font-semibold text-slate-950 transition hover:bg-slate-100 active:scale-[0.98] lg:flex-none"
             >
               <ShoppingCart size={18} strokeWidth={2.6} />
               Новая продажа
@@ -357,7 +357,7 @@ export default function HomePage() {
               to="/sales-analytics"
               aria-label="Продажи"
               title="Продажи"
-              className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 font-black text-slate-200 transition hover:bg-white/10 active:scale-[0.98]"
+              className="flex items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3.5 font-semibold text-slate-200 transition hover:bg-white/10 active:scale-[0.98]"
             >
               <BarChart3 size={18} strokeWidth={2.4} />
               <span className="hidden sm:inline">Продажи</span>
@@ -366,20 +366,20 @@ export default function HomePage() {
         </header>
 
         {showOnboarding && (
-          <div className="mb-3 flex flex-col gap-3 rounded-2xl border border-emerald-400/25 bg-white/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-3 flex flex-col gap-3 rounded-2xl border border-emerald-400/25 bg-white/[0.02] p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-start gap-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-500/15 text-emerald-300"><Sparkles size={18} strokeWidth={2.4} /></span>
               <div className="min-w-0">
-                <p className="text-sm font-black text-white">Начинаете вести учёт не с нуля?</p>
+                <p className="text-sm font-semibold text-white">Начинаете вести учёт не с нуля?</p>
                 <p className="mt-0.5 text-xs font-bold leading-snug text-slate-300">
                   Задайте стартовые балансы (касса, банк, склад, долги) — и отчёты сразу будут точными.
                 </p>
               </div>
             </div>
             <div className="flex shrink-0 gap-2">
-              <NavLink to="/finance?setup=1" className="rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-2.5 text-sm font-black text-white shadow-lg transition hover:brightness-110">Настроить</NavLink>
+              <NavLink to="/finance?setup=1" className="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:brightness-110">Настроить</NavLink>
               <button onClick={() => { try { localStorage.setItem("okvion_opening_onboarding_dismissed", "1"); } catch { /* ignore */ } setShowOnboarding(false); }}
-                className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-white/10">Позже</button>
+                className="rounded-2xl border border-white/[0.08] bg-white/[0.06] px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/10">Позже</button>
             </div>
           </div>
         )}
@@ -387,12 +387,12 @@ export default function HomePage() {
         {error && (
           <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-300">
             {error}
-            <button onClick={load} className="shrink-0 rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white transition hover:bg-white/20">Обновить</button>
+            <button onClick={load} className="shrink-0 rounded-xl bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20">Обновить</button>
           </div>
         )}
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-6 lg:grid-cols-12">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-6 lg:grid-cols-12">
             <Skel className="col-span-2 h-[300px] lg:col-span-5" />
             <Skel className="col-span-2 h-[300px] lg:col-span-3" />
             <Skel className="col-span-2 h-[140px] lg:col-span-4" />
@@ -404,57 +404,57 @@ export default function HomePage() {
         ) : (
           <>
             {/* ── Бенто-мозаика ── */}
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-6 md:auto-rows-[128px] lg:grid-cols-12 lg:auto-rows-[minmax(140px,auto)]">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-6 md:auto-rows-[128px] lg:grid-cols-12 lg:auto-rows-[minmax(140px,auto)]">
 
               {/* БЕНД A · СЕГОДНЯ — выручка (главный фокус) */}
-              <section className="animate-rise col-span-2 flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-6 md:col-span-4 md:row-span-2 lg:col-span-5 lg:row-span-2">
+              <section className="animate-rise col-span-2 flex flex-col justify-between rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 sm:p-6 md:col-span-4 md:row-span-2 lg:col-span-5 lg:row-span-2">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">Выручка сегодня</p>
-                  <p className="mt-1 text-4xl font-black leading-none tabular-nums text-white sm:text-5xl"><AnimatedMoney value={todayRev} /></p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Выручка сегодня</p>
+                  <p className="mt-2 text-5xl font-semibold leading-none tracking-[-0.03em] tabular-nums text-white sm:text-6xl"><AnimatedMoney value={todayRev} /></p>
                   <div className="mt-2.5"><DeltaPill percent={revDelta} /></div>
                 </div>
                 <div className="mt-5"><SplitBar cash={t.cashTotal} transfer={t.transferTotal} /></div>
               </section>
 
               {/* Кольцо маржи */}
-              <section className="animate-rise col-span-1 flex items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] p-4 md:col-span-2 md:row-span-2 lg:col-span-3 lg:row-span-2">
+              <section className="animate-rise col-span-1 flex items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 md:col-span-2 md:row-span-2 lg:col-span-3 lg:row-span-2">
                 <MarginRing value={margin} />
               </section>
 
               {/* Три-стат: прибыль / ср.чек / продаж */}
-              <section className="animate-rise col-span-1 flex items-center rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5 md:col-span-3 lg:col-span-4">
-                <div className="grid w-full grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-0 lg:divide-x lg:divide-white/10">
-                  <div className="min-w-0 lg:px-4 lg:first:pl-0">
-                    <p className="truncate text-[11px] font-bold uppercase tracking-wider text-slate-400">Прибыль</p>
-                    <p className="mt-0.5 truncate text-lg font-black tabular-nums text-emerald-300 sm:text-xl"><AnimatedMoney value={todayProfit} /></p>
+              <section className="animate-rise col-span-1 flex items-center rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5 md:col-span-3 lg:col-span-4">
+                <div className="grid w-full grid-cols-1 gap-3 xl:grid-cols-3 xl:gap-0 xl:divide-x xl:divide-white/10">
+                  <div className="flex min-w-0 items-baseline justify-between gap-2 xl:block xl:px-3 xl:first:pl-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">Прибыль</p>
+                    <p className="truncate text-lg font-semibold tabular-nums text-emerald-300 sm:text-xl xl:mt-0.5"><AnimatedMoney value={todayProfit} /></p>
                   </div>
-                  <div className="min-w-0 lg:px-4">
-                    <p className="truncate text-[11px] font-bold uppercase tracking-wider text-slate-400">Ср. чек</p>
-                    <p className="mt-0.5 truncate text-lg font-black tabular-nums text-white sm:text-xl">{avgCheck === null ? "—" : formatMoney(avgCheck)}</p>
+                  <div className="flex min-w-0 items-baseline justify-between gap-2 xl:block xl:px-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">Ср. чек</p>
+                    <p className="truncate text-lg font-semibold tabular-nums text-white sm:text-xl xl:mt-0.5">{avgCheck === null ? "—" : formatMoney(avgCheck)}</p>
                   </div>
-                  <div className="min-w-0 lg:px-4">
-                    <p className="truncate text-[11px] font-bold uppercase tracking-wider text-slate-400">Продаж</p>
-                    <p className="mt-0.5 truncate text-lg font-black tabular-nums text-white sm:text-xl"><AnimatedInt value={t.salesCount} /></p>
+                  <div className="flex min-w-0 items-baseline justify-between gap-2 xl:block xl:px-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">Продаж</p>
+                    <p className="truncate text-lg font-semibold tabular-nums text-white sm:text-xl xl:mt-0.5"><AnimatedInt value={t.salesCount} /></p>
                   </div>
                 </div>
               </section>
 
               {/* Выручка за 7 дней */}
-              <section className="animate-rise col-span-2 flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5 md:col-span-3 lg:col-span-4">
+              <section className="animate-rise col-span-2 flex flex-col justify-between rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5 md:col-span-3 lg:col-span-4">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">Выручка за 7 дней</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Выручка за 7 дней</span>
                   <span className="truncate text-[11px] font-bold tabular-nums text-slate-400">{formatMoney(data.weekTotal)} · {formatMoney(data.weekAvg)}/день</span>
                 </div>
                 <Sparkline data={data.spark} />
               </section>
 
               {/* БЕНД B · СОСТОЯНИЕ — только реальные проблемы */}
-              <p className="col-span-2 mt-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 md:col-span-6 lg:col-span-12">Состояние</p>
+              <p className="col-span-2 mt-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 md:col-span-6 lg:col-span-12">Состояние</p>
               {allClear ? (
                 <div className="animate-rise col-span-2 flex items-center gap-4 rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.06] p-5 md:col-span-6 lg:col-span-12">
                   <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-500/15 text-emerald-300"><CheckCircle2 size={24} strokeWidth={2.4} /></span>
                   <div>
-                    <p className="text-base font-black text-white">Всё под контролем</p>
+                    <p className="text-base font-semibold text-white">Всё под контролем</p>
                     <p className="mt-0.5 text-sm font-semibold text-slate-400">Нет неоплаченных чеков, долгов и проблем со складом.</p>
                   </div>
                 </div>
@@ -465,32 +465,32 @@ export default function HomePage() {
               )}
 
               {/* БЕНД C · МЕСЯЦ */}
-              <p className="col-span-2 mt-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 md:col-span-6 lg:col-span-12">Месяц</p>
+              <p className="col-span-2 mt-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 md:col-span-6 lg:col-span-12">Месяц</p>
 
               {/* Топ товаров */}
-              <section className="animate-rise col-span-2 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 md:col-span-6 md:row-span-2 lg:col-span-7 lg:row-span-2">
+              <section className="animate-rise col-span-2 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 md:col-span-6 md:row-span-2 lg:col-span-7 lg:row-span-2">
                 <div className="mb-4 flex items-center gap-2.5">
                   <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-500/15 text-amber-300"><Trophy size={16} strokeWidth={2.6} /></span>
-                  <h3 className="text-lg font-black text-white">Топ товаров за месяц</h3>
+                  <h3 className="text-lg font-semibold text-white">Топ товаров за месяц</h3>
                 </div>
                 {topProducts.length ? (
                   <div className="space-y-3">
                     {topProducts.map((p, i) => (
                       <div key={`${p.name}-${i}`}>
                         <div className="flex items-center gap-3">
-                          <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg text-xs font-black ${i === 0 ? "bg-amber-500/20 text-amber-300" : "bg-white/[0.06] text-slate-400"}`}>{i + 1}</span>
+                          <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg text-xs font-semibold ${i === 0 ? "bg-amber-500/20 text-amber-300" : "bg-white/[0.06] text-slate-400"}`}>{i + 1}</span>
                           <span className="min-w-0 flex-1 truncate font-bold text-white">{p.name}</span>
                           <span className="shrink-0 text-right text-[13px] font-semibold tabular-nums text-slate-400">{num(p.qty).toLocaleString("ru-RU")} шт</span>
-                          <span className="w-24 shrink-0 text-right text-sm font-black tabular-nums text-emerald-300">{formatMoney(num(p.revenue))}</span>
+                          <span className="w-24 shrink-0 text-right text-sm font-semibold tabular-nums text-emerald-300">{formatMoney(num(p.revenue))}</span>
                         </div>
                         <div className="mt-1.5 ml-10 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-                          <div className={`h-full rounded-full ${i === 0 ? "bg-gradient-to-r from-amber-400 to-amber-500" : "bg-gradient-to-r from-blue-500/70 to-violet-500/70"}`} style={{ width: `${Math.max(4, pct(p.revenue, maxTopRev))}%` }} />
+                          <div className={`h-full rounded-full ${i === 0 ? "bg-amber-400" : "bg-gradient-to-r from-blue-500/70 to-violet-500/70"}`} style={{ width: `${Math.max(4, pct(p.revenue, maxTopRev))}%` }} />
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="grid place-items-center rounded-2xl border border-dashed border-white/10 py-12 text-center">
+                  <div className="grid place-items-center rounded-2xl border border-dashed border-white/[0.08] py-12 text-center">
                     <Package size={26} className="mb-2 text-slate-500" />
                     <p className="text-sm font-bold text-slate-400">Продаж в этом месяце ещё не было</p>
                   </div>
@@ -498,15 +498,15 @@ export default function HomePage() {
               </section>
 
               {/* Этот месяц */}
-              <section className="animate-rise col-span-2 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 md:col-span-6 md:row-span-2 lg:col-span-5 lg:row-span-2">
+              <section className="animate-rise col-span-2 flex flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 md:col-span-6 md:row-span-2 lg:col-span-5 lg:row-span-2">
                 <div className="mb-4 flex items-center gap-2.5">
                   <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-500/15 text-blue-300"><Sparkles size={16} strokeWidth={2.6} /></span>
-                  <h3 className="text-lg font-black text-white">Этот месяц</h3>
+                  <h3 className="text-lg font-semibold text-white">Этот месяц</h3>
                 </div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Выручка</p>
-                <p className="text-3xl font-black tabular-nums text-white"><AnimatedMoney value={mRev} /></p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Выручка</p>
+                <p className="text-3xl font-semibold tabular-nums text-white"><AnimatedMoney value={mRev} /></p>
                 <div className="relative mt-3 h-2.5 w-full overflow-hidden rounded-full bg-white/[0.08]">
-                  <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500" style={{ width: `${paceFill}%` }} />
+                  <div className="h-full rounded-full bg-indigo-600" style={{ width: `${paceFill}%` }} />
                   {lastMonthRev > 0 && (
                     <div className="absolute top-[-3px] h-[16px] w-[2px] rounded bg-white/70" style={{ left: `${timeMarker}%` }} title="Темп на сегодня" />
                   )}
@@ -514,7 +514,7 @@ export default function HomePage() {
                 <p className="mt-2 text-[12px] font-semibold leading-snug text-slate-400">
                   {lastMonthRev > 0 ? (
                     showForecast ? (
-                      <>Прогноз до конца месяца ~<span className="font-black text-white">{formatMoney(num(data.forecast))}</span>{" "}
+                      <>Прогноз до конца месяца ~<span className="font-semibold text-white">{formatMoney(num(data.forecast))}</span>{" "}
                         {forecastDelta !== null && (
                           <span className={forecastDelta >= 0 ? "text-emerald-300" : "text-rose-300"}>
                             ({forecastDelta >= 0 ? "+" : "−"}{Math.abs(Math.round(forecastDelta))}% к прошлому месяцу)
@@ -522,7 +522,7 @@ export default function HomePage() {
                         )}
                       </>
                     ) : (
-                      <>Прошлый месяц — <span className="font-black text-white">{formatMoney(lastMonthRev)}</span>. Прогноз появится через пару дней.</>
+                      <>Прошлый месяц — <span className="font-semibold text-white">{formatMoney(lastMonthRev)}</span>. Прогноз появится через пару дней.</>
                     )
                   ) : (
                     <>Первый месяц учёта — сравнение появится в следующем.</>
@@ -534,15 +534,15 @@ export default function HomePage() {
                   <MonthChip label="Средний чек" value={num(m.salesCount) > 0 ? formatMoney(mRev / num(m.salesCount)) : "—"} />
                   <MonthChip label="Скидки" value={formatMoney(num(m.totalDiscount))} />
                 </div>
-                <NavLink to="/analytics" className="mt-auto flex items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] py-2.5 text-sm font-black text-slate-300 transition hover:bg-white/10">
+                <NavLink to="/analytics" className="mt-auto flex items-center justify-center gap-1.5 rounded-2xl border border-white/[0.08] bg-white/[0.02] py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/10">
                   Аналитика <ArrowRight size={16} />
                 </NavLink>
               </section>
             </div>
 
             {/* БЕНД D · ДЕЙСТВИЯ */}
-            <p className="mb-3 mt-5 text-[11px] font-bold uppercase tracking-wider text-slate-400">Действия</p>
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+            <p className="mb-3 mt-5 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Действия</p>
+            <div className="grid grid-cols-3 gap-4 sm:grid-cols-6">
               <QuickAction to="/pos" icon={ShoppingCart} label="Касса" />
               <QuickAction to="/expenses" icon={Wallet} label="Расход" />
               <QuickAction to="/work" icon={Boxes} label="Товары" />
@@ -559,9 +559,9 @@ export default function HomePage() {
 
 function MonthChip({ label, value, accent = "text-white" }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-3 py-2.5">
       <p className="truncate text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`mt-0.5 truncate text-base font-black tabular-nums ${accent}`}>{value}</p>
+      <p className={`mt-0.5 truncate text-base font-semibold tabular-nums ${accent}`}>{value}</p>
     </div>
   );
 }

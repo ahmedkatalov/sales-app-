@@ -155,7 +155,7 @@ export default function Modal({ title, section, children, wide, onClose, legacyL
             wide ? "max-w-[760px]" : "max-w-[460px]"
           }`}
         >
-          <div className="flex-none border-b border-white/10 bg-slate-950/60 px-5 py-3.5 backdrop-blur-xl sm:py-4">
+          <div className="flex-none border-b border-white/[0.08] bg-slate-950/60 px-5 py-3.5 backdrop-blur-xl sm:py-4">
             {onClose ? (
               <button
                 type="button"
@@ -172,8 +172,8 @@ export default function Modal({ title, section, children, wide, onClose, legacyL
             )}
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                {section && <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300/80">{section}</p>}
-                <h2 className={`text-lg font-black leading-tight text-white sm:text-xl ${section ? "mt-0.5" : ""}`}>{title}</h2>
+                {section && <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-300/80">{section}</p>}
+                <h2 className={`text-lg font-semibold leading-tight text-white sm:text-xl ${section ? "mt-0.5" : ""}`}>{title}</h2>
               </div>
               {onClose && (
                 <button

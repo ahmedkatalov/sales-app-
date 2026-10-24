@@ -67,8 +67,8 @@ function MarginRing({ pct, size = 112, label = "маржа" }) {
         className="absolute grid place-items-center rounded-full bg-slate-950"
         style={{ inset: thickness }}
       >
-        <span className="text-xl font-black tabular-nums text-emerald-300 sm:text-2xl">{Math.round(p)}%</span>
-        <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</span>
+        <span className="text-xl font-semibold tabular-nums text-emerald-300 sm:text-2xl">{Math.round(p)}%</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</span>
       </div>
     </div>
   );
@@ -81,15 +81,15 @@ function KpiTile({ icon: Icon, label, value, sub, tone = "slate", className = ""
     violet: "border-violet-400/25 bg-violet-500/[0.08] text-violet-300",
     amber: "border-amber-400/25 bg-amber-500/[0.08] text-amber-300",
     red: "border-red-400/25 bg-red-500/[0.08] text-red-300",
-    slate: "border-white/10 bg-white/[0.05] text-slate-300",
+    slate: "border-white/[0.08] bg-white/[0.05] text-slate-300",
   };
   return (
     <div className={`min-w-0 rounded-2xl border p-3.5 sm:p-4 ${tones[tone] || tones.slate} ${className}`}>
       <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-[10px] font-black uppercase tracking-wide opacity-90">{label}</p>
+        <p className="truncate text-[10px] font-semibold uppercase tracking-wide opacity-90">{label}</p>
         <Icon size={16} className="shrink-0 opacity-70" />
       </div>
-      <p className="mt-2 truncate text-xl font-black tabular-nums text-white sm:text-2xl">{value}</p>
+      <p className="mt-2 truncate text-xl font-semibold tabular-nums text-white sm:text-2xl">{value}</p>
       {sub && <p className="truncate text-[11px] font-semibold text-slate-500">{sub}</p>}
     </div>
   );
@@ -221,7 +221,7 @@ export default function SalesAnalyticsPage() {
         <div className="mb-5 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0 max-w-3xl">
             <p className="text-xs font-bold text-emerald-400">Отчёт о прибыли</p>
-            <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">Продажи</h2>
+            <h2 className="text-2xl font-semibold leading-none text-white sm:text-3xl">Продажи</h2>
             <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-400">
               Сколько заработали, как шли продажи по дням, чем платили и что покупают.
             </p>
@@ -233,7 +233,7 @@ export default function SalesAnalyticsPage() {
             disabled={loading}
             aria-label="Обновить"
             title="Обновить"
-            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-60"
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/5 px-4 text-sm font-semibold text-slate-200 transition hover:bg-white/10 disabled:opacity-60"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "animate-spin" : ""}><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" /></svg>
             <span className="hidden sm:inline">{loading ? "Обновление" : "Обновить"}</span>
@@ -241,13 +241,13 @@ export default function SalesAnalyticsPage() {
         </div>
 
         {error && (
-          <div className="mb-5 rounded-2xl border border-red-400/25 bg-red-500/10 px-5 py-4 text-sm font-black text-red-200">
+          <div className="mb-5 rounded-2xl border border-red-400/25 bg-red-500/10 px-5 py-4 text-sm font-semibold text-red-200">
             {error}
           </div>
         )}
 
         {/* ── Период ── */}
-        <div className="mb-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+        <div className="mb-5 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
           <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:gap-3 sm:px-5">
             <div className="flex flex-1 flex-wrap items-center gap-2">
               {[
@@ -262,21 +262,21 @@ export default function SalesAnalyticsPage() {
                 return (
                   <button key={key} type="button" onClick={action}
                     className={active
-                      ? "min-h-[44px] rounded-xl border border-emerald-400/50 bg-emerald-500/15 px-4 py-2.5 text-sm font-black text-white"
-                      : "min-h-[44px] rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-white/10"}>
+                      ? "min-h-[44px] rounded-xl border border-emerald-400/50 bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-white"
+                      : "min-h-[44px] rounded-xl border border-white/[0.08] bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/10"}>
                     {label}
                   </button>
                 );
               })}
               {from && to && !(from === monthStartStr && to === monthEndStr) && !(from === todayStr && to === todayStr) && (
-                <span className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-sm font-black text-emerald-200">
+                <span className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-200">
                   {formatDateRu(from)} — {formatDateRu(to)}
                 </span>
               )}
             </div>
             <button type="button" onClick={() => setFilterOpen((v) => !v)}
-              className={`flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-black transition ${
-                filterOpen ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-200" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+              className={`flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                filterOpen ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-200" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"
               }`}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
               Период
@@ -284,17 +284,17 @@ export default function SalesAnalyticsPage() {
           </div>
 
           {filterOpen && (
-            <div className="border-t border-white/10 px-4 py-4 sm:px-5">
+            <div className="border-t border-white/[0.08] px-4 py-4 sm:px-5">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
-                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">От даты</span>
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">От даты</span>
                   <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
-                    className="h-12 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 font-bold text-white outline-none transition [color-scheme:dark] focus:border-emerald-400/70 focus:ring-4 focus:ring-emerald-500/10" />
+                    className="h-12 w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 font-bold text-white outline-none transition [color-scheme:dark] focus:border-emerald-400/70 focus:ring-4 focus:ring-emerald-500/10" />
                 </label>
                 <label className="block">
-                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">До даты</span>
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">До даты</span>
                   <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
-                    className="h-12 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 font-bold text-white outline-none transition [color-scheme:dark] focus:border-emerald-400/70 focus:ring-4 focus:ring-emerald-500/10" />
+                    className="h-12 w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 font-bold text-white outline-none transition [color-scheme:dark] focus:border-emerald-400/70 focus:ring-4 focus:ring-emerald-500/10" />
                 </label>
               </div>
             </div>
@@ -303,11 +303,11 @@ export default function SalesAnalyticsPage() {
 
         {!hasSales ? (
           /* ── Спокойное пустое состояние ── */
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-16 text-center">
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-6 py-16 text-center">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-white/5 text-slate-500">
               <Receipt size={30} strokeWidth={2} />
             </div>
-            <p className="mt-5 text-lg font-black text-white">Продаж {periodLabel} не было</p>
+            <p className="mt-5 text-lg font-semibold text-white">Продаж {periodLabel} не было</p>
             <p className="mx-auto mt-2 max-w-sm text-sm font-medium leading-6 text-slate-400">
               Выберите другой период выше или нажмите «Обновить» — здесь появится прибыль, график по дням и популярные товары.
             </p>
@@ -316,16 +316,16 @@ export default function SalesAnalyticsPage() {
           <>
             {/* ── P&L-герой: Выручка → Себестоимость → Чистая прибыль ── */}
             <div className="mb-5 grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-              <div className="overflow-hidden rounded-2xl border border-emerald-400/20 bg-white/[0.04] p-5 sm:p-6">
+              <div className="overflow-hidden rounded-2xl border border-emerald-400/20 bg-white/[0.02] p-5 sm:p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-200/70">Чистая прибыль {periodLabel}</p>
-                    <p className="mt-1.5 text-3xl font-black leading-none tabular-nums text-white sm:text-4xl xl:text-5xl">{money(m.profit)}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-200/70">Чистая прибыль {periodLabel}</p>
+                    <p className="mt-1.5 text-3xl font-semibold leading-none tabular-nums text-white sm:text-4xl xl:text-5xl">{money(m.profit)}</p>
                     <p className="mt-3 text-sm font-semibold text-slate-400">
-                      из выручки <span className="font-black text-white">{money(m.revenue)}</span>
+                      из выручки <span className="font-semibold text-white">{money(m.revenue)}</span>
                       {m.hasCost
-                        ? <> · себестоимость <span className="font-black text-slate-300">{money(m.cost)}</span></>
-                        : <> · <span className="font-black text-amber-300">себестоимость не указана</span></>}
+                        ? <> · себестоимость <span className="font-semibold text-slate-300">{money(m.cost)}</span></>
+                        : <> · <span className="font-semibold text-amber-300">себестоимость не указана</span></>}
                     </p>
                   </div>
                   {m.hasCost
@@ -337,7 +337,7 @@ export default function SalesAnalyticsPage() {
                 {m.hasCost && (
                   <div className="mt-5">
                     <div className="flex h-4 w-full overflow-hidden rounded-full bg-white/10">
-                      <div className="bg-gradient-to-r from-emerald-400 to-teal-400" style={{ width: `${clampPct(m.marginPct)}%` }} title={`Чистая прибыль · ${Math.round(m.marginPct)}%`} />
+                      <div className="bg-emerald-500" style={{ width: `${clampPct(m.marginPct)}%` }} title={`Чистая прибыль · ${Math.round(m.marginPct)}%`} />
                       <div className="bg-slate-500/50" style={{ width: `${clampPct(m.costPct)}%` }} title={`Себестоимость · ${Math.round(m.costPct)}%`} />
                     </div>
                     <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs font-semibold">
@@ -348,18 +348,18 @@ export default function SalesAnalyticsPage() {
                 )}
 
                 {/* Мини-отчёт (income statement) */}
-                <div className="mt-5 space-y-2.5 border-t border-white/10 pt-4 text-sm">
+                <div className="mt-5 space-y-2.5 border-t border-white/[0.08] pt-4 text-sm">
                   <div className="flex items-center justify-between gap-3">
                     <span className="flex items-center gap-2 font-semibold text-slate-300"><TrendingUp size={15} className="text-emerald-300" /> Выручка</span>
-                    <span className="tabular-nums font-black text-white">{money(m.revenue)}</span>
+                    <span className="tabular-nums font-semibold text-white">{money(m.revenue)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <span className="flex items-center gap-2 font-semibold text-slate-300"><Package size={15} className="text-slate-400" /> Себестоимость проданного</span>
-                    <span className="tabular-nums font-black text-slate-300">{m.hasCost ? `− ${money(m.cost)}` : "—"}</span>
+                    <span className="tabular-nums font-semibold text-slate-300">{m.hasCost ? `− ${money(m.cost)}` : "—"}</span>
                   </div>
-                  <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-2.5">
-                    <span className="flex items-center gap-2 font-black text-emerald-200"><PiggyBank size={15} className="text-emerald-300" /> Чистая прибыль</span>
-                    <span className={`tabular-nums text-base font-black ${m.profit >= 0 ? "text-emerald-300" : "text-red-300"}`}>{money(m.profit)}</span>
+                  <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] pt-2.5">
+                    <span className="flex items-center gap-2 font-semibold text-emerald-200"><PiggyBank size={15} className="text-emerald-300" /> Чистая прибыль</span>
+                    <span className={`tabular-nums text-base font-semibold ${m.profit >= 0 ? "text-emerald-300" : "text-red-300"}`}>{money(m.profit)}</span>
                   </div>
                 </div>
               </div>
@@ -374,10 +374,10 @@ export default function SalesAnalyticsPage() {
             </div>
 
             {/* ── График по дням ── */}
-            <section className="mb-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
+            <section className="mb-5 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 sm:p-6">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="flex items-center gap-2 text-lg font-black text-white sm:text-xl">
+                  <h3 className="flex items-center gap-2 text-lg font-semibold text-white sm:text-xl">
                     <CalendarDays size={20} className="text-emerald-300" /> Продажи по дням
                   </h3>
                   <p className="mt-1 text-sm font-medium text-slate-400">
@@ -386,8 +386,8 @@ export default function SalesAnalyticsPage() {
                 </div>
                 {daily.best && daily.best.revenue > 0 && (
                   <div className="rounded-2xl border border-amber-400/25 bg-amber-500/[0.08] px-3.5 py-2 text-right">
-                    <p className="flex items-center justify-end gap-1.5 text-[10px] font-black uppercase tracking-wide text-amber-300"><Crown size={12} /> Лучший день</p>
-                    <p className="mt-0.5 text-sm font-black tabular-nums text-white">{money(daily.best.revenue)}</p>
+                    <p className="flex items-center justify-end gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300"><Crown size={12} /> Лучший день</p>
+                    <p className="mt-0.5 text-sm font-semibold tabular-nums text-white">{money(daily.best.revenue)}</p>
                     <p className="text-[11px] font-bold text-slate-400">{dayLabelFull(daily.best.date)}</p>
                   </div>
                 )}
@@ -408,10 +408,10 @@ export default function SalesAnalyticsPage() {
                             marginRatio != null ? (
                               <div className="flex w-full flex-col justify-end overflow-hidden rounded-md" style={{ height: `${Math.max(3, barPct)}%` }}>
                                 <div className="w-full bg-slate-500/35" style={{ height: `${(costPart / Math.max(barPct, 0.01)) * 100}%` }} />
-                                <div className={`w-full ${isBest ? "bg-gradient-to-t from-amber-400 to-amber-300" : "bg-gradient-to-t from-emerald-500 to-emerald-400"}`} style={{ height: `${(profitPart / Math.max(barPct, 0.01)) * 100}%` }} />
+                                <div className={`w-full ${isBest ? "bg-amber-400" : "bg-emerald-500"}`} style={{ height: `${(profitPart / Math.max(barPct, 0.01)) * 100}%` }} />
                               </div>
                             ) : (
-                              <div className={`w-full rounded-md ${isBest ? "bg-gradient-to-t from-amber-400 to-amber-300" : "bg-gradient-to-t from-emerald-500 to-emerald-400"}`} style={{ height: `${Math.max(3, barPct)}%` }} />
+                              <div className={`w-full rounded-md ${isBest ? "bg-amber-400" : "bg-emerald-500"}`} style={{ height: `${Math.max(3, barPct)}%` }} />
                             )
                           ) : (
                             <div className="w-full rounded-md bg-white/5" style={{ height: "3%" }} />
@@ -426,15 +426,15 @@ export default function SalesAnalyticsPage() {
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-3 text-xs font-semibold">
+              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/[0.08] pt-3 text-xs font-semibold">
                 {marginRatio != null && (
                   <>
                     <span className="flex items-center gap-1.5 text-emerald-300"><span className="h-2.5 w-2.5 rounded-sm bg-emerald-400" /> Прибыль (оценка)</span>
                     <span className="flex items-center gap-1.5 text-slate-400"><span className="h-2.5 w-2.5 rounded-sm bg-slate-500/50" /> Себестоимость</span>
                   </>
                 )}
-                <span className="text-slate-500">Активных дней: <span className="font-black text-slate-300">{daily.activeDays}</span></span>
-                <span className="text-slate-500">В среднем в день: <span className="font-black text-slate-300">{money(daily.avgPerActiveDay)}</span></span>
+                <span className="text-slate-500">Активных дней: <span className="font-semibold text-slate-300">{daily.activeDays}</span></span>
+                <span className="text-slate-500">В среднем в день: <span className="font-semibold text-slate-300">{money(daily.avgPerActiveDay)}</span></span>
                 {daily.truncated && <span className="text-slate-500">показаны последние 45 дней</span>}
               </div>
             </section>
@@ -442,10 +442,10 @@ export default function SalesAnalyticsPage() {
             {/* ── Чем платят + популярные товары ── */}
             <div className="mb-5 grid gap-5 lg:grid-cols-2">
               {/* Способы оплаты */}
-              <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
+              <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 sm:p-6">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
-                    <h3 className="flex items-center gap-2 text-lg font-black text-white sm:text-xl"><Wallet size={20} className="text-blue-300" /> Чем платят</h3>
+                    <h3 className="flex items-center gap-2 text-lg font-semibold text-white sm:text-xl"><Wallet size={20} className="text-blue-300" /> Чем платят</h3>
                     <p className="mt-1 text-sm font-medium text-slate-400">Наличные и переводы по сумме.</p>
                   </div>
                 </div>
@@ -453,18 +453,18 @@ export default function SalesAnalyticsPage() {
                 {m.paid > 0 ? (
                   <>
                     <div className="flex h-4 w-full overflow-hidden rounded-full bg-white/10">
-                      <div className="bg-gradient-to-r from-emerald-400 to-teal-400" style={{ width: `${clampPct(m.cashPct)}%` }} title={`Наличные · ${Math.round(m.cashPct)}%`} />
-                      <div className="bg-gradient-to-r from-blue-400 to-indigo-400" style={{ width: `${clampPct(m.transferPct)}%` }} title={`Переводы · ${Math.round(m.transferPct)}%`} />
+                      <div className="bg-emerald-500" style={{ width: `${clampPct(m.cashPct)}%` }} title={`Наличные · ${Math.round(m.cashPct)}%`} />
+                      <div className="bg-indigo-400" style={{ width: `${clampPct(m.transferPct)}%` }} title={`Переводы · ${Math.round(m.transferPct)}%`} />
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.06] p-3.5">
-                        <p className="flex items-center gap-1.5 text-xs font-black text-emerald-300"><Banknote size={15} /> Наличные</p>
-                        <p className="mt-1.5 tabular-nums text-lg font-black text-white sm:text-xl">{money(m.cash)}</p>
+                        <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-300"><Banknote size={15} /> Наличные</p>
+                        <p className="mt-1.5 tabular-nums text-lg font-semibold text-white sm:text-xl">{money(m.cash)}</p>
                         <p className="text-[11px] font-bold text-slate-500">{Math.round(m.cashPct)}% оплат</p>
                       </div>
                       <div className="rounded-2xl border border-blue-400/20 bg-blue-500/[0.06] p-3.5">
-                        <p className="flex items-center gap-1.5 text-xs font-black text-blue-300"><ArrowLeftRight size={15} /> Переводы</p>
-                        <p className="mt-1.5 tabular-nums text-lg font-black text-white sm:text-xl">{money(m.transfer)}</p>
+                        <p className="flex items-center gap-1.5 text-xs font-semibold text-blue-300"><ArrowLeftRight size={15} /> Переводы</p>
+                        <p className="mt-1.5 tabular-nums text-lg font-semibold text-white sm:text-xl">{money(m.transfer)}</p>
                         <p className="text-[11px] font-bold text-slate-500">{Math.round(m.transferPct)}% оплат</p>
                       </div>
                     </div>
@@ -474,22 +474,22 @@ export default function SalesAnalyticsPage() {
                 )}
 
                 {/* Скидки как доля */}
-                <div className="mt-5 border-t border-white/10 pt-4">
+                <div className="mt-5 border-t border-white/[0.08] pt-4">
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="flex items-center gap-2 font-semibold text-slate-300"><Percent size={15} className="text-red-300" /> Скидки покупателям</span>
-                    <span className="tabular-nums font-black text-white">{money(m.discount)} <span className="font-bold text-slate-500">· {Math.round(m.discountPct)}%</span></span>
+                    <span className="tabular-nums font-semibold text-white">{money(m.discount)} <span className="font-bold text-slate-500">· {Math.round(m.discountPct)}%</span></span>
                   </div>
                   <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-white/10">
-                    <div className="h-full rounded-full bg-gradient-to-r from-red-400 to-rose-400" style={{ width: `${clampPct(m.discountPct)}%` }} />
+                    <div className="h-full rounded-full bg-rose-500" style={{ width: `${clampPct(m.discountPct)}%` }} />
                   </div>
                 </div>
               </section>
 
               {/* Популярные товары */}
-              <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
+              <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 sm:p-6">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
-                    <h3 className="flex items-center gap-2 text-lg font-black text-white sm:text-xl"><Trophy size={20} className="text-amber-300" /> Популярные товары</h3>
+                    <h3 className="flex items-center gap-2 text-lg font-semibold text-white sm:text-xl"><Trophy size={20} className="text-amber-300" /> Популярные товары</h3>
                     <p className="mt-1 text-sm font-medium text-slate-400">Доля в выручке за период.</p>
                   </div>
                 </div>
@@ -500,11 +500,11 @@ export default function SalesAnalyticsPage() {
                       <div key={`${p.name}-${i}`}>
                         <div className="flex items-center justify-between gap-3 text-sm">
                           <span className="flex min-w-0 items-center gap-2">
-                            <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[11px] font-black ${i === 0 ? "bg-amber-500/20 text-amber-300" : "bg-white/10 text-slate-300"}`}>{i + 1}</span>
-                            <span className="truncate font-black text-white">{p.name}</span>
+                            <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[11px] font-semibold ${i === 0 ? "bg-amber-500/20 text-amber-300" : "bg-white/10 text-slate-300"}`}>{i + 1}</span>
+                            <span className="truncate font-semibold text-white">{p.name}</span>
                             <span className="hidden shrink-0 text-xs font-bold text-slate-500 sm:inline">× {p.qty}</span>
                           </span>
-                          <span className="shrink-0 tabular-nums font-black text-white">{money(p.revenueNum)} <span className="font-bold text-slate-500">· {Math.round(p.sharePct)}%</span></span>
+                          <span className="shrink-0 tabular-nums font-semibold text-white">{money(p.revenueNum)} <span className="font-bold text-slate-500">· {Math.round(p.sharePct)}%</span></span>
                         </div>
                         <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-white/10">
                           <div className={`h-full rounded-full bg-gradient-to-r transition-[width] duration-500 ${i === 0 ? "from-amber-400 to-amber-500" : "from-emerald-500/80 to-teal-500/80"}`} style={{ width: `${Math.max(3, p.barPct)}%` }} />
@@ -517,14 +517,14 @@ export default function SalesAnalyticsPage() {
                 )}
 
                 {extraItems.length > 0 && (
-                  <div className="mt-5 border-t border-white/10 pt-4">
+                  <div className="mt-5 border-t border-white/[0.08] pt-4">
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-slate-400"><Package size={14} /> Доп. товары</p>
-                      <p className="tabular-nums text-sm font-black text-amber-300">{money(stats.extraRevenue)}</p>
+                      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400"><Package size={14} /> Доп. товары</p>
+                      <p className="tabular-nums text-sm font-semibold text-amber-300">{money(stats.extraRevenue)}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {extraItems.map((p, i) => (
-                        <span key={`extra-${p.name}-${i}`} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold text-slate-300">
+                        <span key={`extra-${p.name}-${i}`} className="rounded-full border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-xs font-bold text-slate-300">
                           {p.name} <span className="text-slate-500">× {p.qty}</span>
                         </span>
                       ))}
@@ -535,10 +535,10 @@ export default function SalesAnalyticsPage() {
             </div>
 
             {/* ── Последние чеки ── */}
-            <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
-              <div className="flex items-center justify-between gap-3 border-b border-white/10 p-5 sm:p-6">
+            <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+              <div className="flex items-center justify-between gap-3 border-b border-white/[0.08] p-5 sm:p-6">
                 <div>
-                  <h3 className="text-lg font-black text-white sm:text-xl">Последние чеки</h3>
+                  <h3 className="text-lg font-semibold text-white sm:text-xl">Последние чеки</h3>
                   <p className="mt-1 text-sm font-medium text-slate-400">Недавние продажи и способ оплаты.</p>
                 </div>
                 <div className="grid h-12 w-12 place-items-center rounded-2xl bg-violet-500/15 text-violet-200"><Receipt size={22} strokeWidth={2.4} /></div>
@@ -548,16 +548,16 @@ export default function SalesAnalyticsPage() {
                 {normalizedSales.map((s) => {
                   const isCash = s.paymentType === "cash";
                   return (
-                    <div key={s.id} className={`border-l-[3px] p-4 transition hover:bg-white/[0.04] sm:p-5 ${isCash ? "border-l-emerald-400/60" : "border-l-blue-400/60"}`}>
+                    <div key={s.id} className={`border-l-[3px] p-4 transition hover:bg-white/[0.02] sm:p-5 ${isCash ? "border-l-emerald-400/60" : "border-l-blue-400/60"}`}>
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <p className="font-black text-white">Чек #{s.id}</p>
+                          <p className="font-semibold text-white">Чек #{s.id}</p>
                           <p className="mt-1 text-sm font-bold text-slate-400">{s.date} {s.time}</p>
                         </div>
-                        <p className="shrink-0 rounded-2xl bg-white/5 px-3 py-2 text-sm font-black tabular-nums text-white">{money(s.total)}</p>
+                        <p className="shrink-0 rounded-2xl bg-white/5 px-3 py-2 text-sm font-semibold tabular-nums text-white">{money(s.total)}</p>
                       </div>
 
-                      <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
                         <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 ${isCash ? "border border-emerald-400/20 bg-emerald-500/10 text-emerald-300" : "border border-blue-400/20 bg-blue-500/10 text-blue-300"}`}>
                           {isCash ? <Banknote size={13} /> : <ArrowLeftRight size={13} />}
                           {isCash ? "Наличные" : (s.cardName ? `Перевод · ${s.cardName}` : "Перевод")}

@@ -45,7 +45,7 @@ export default function InstallAppCard() {
             <Check size={22} strokeWidth={2.6} />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-black text-white">Приложение установлено</p>
+            <p className="text-sm font-semibold text-white">Приложение установлено</p>
             <p className="text-xs font-bold text-slate-400">Вы открыли Okvion Sales как приложение.</p>
           </div>
         </div>
@@ -54,13 +54,13 @@ export default function InstallAppCard() {
   }
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 shadow-xl sm:p-5">
+    <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-4 shadow-xl sm:p-5">
       <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-lg shadow-blue-600/30">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white ">
           <Download size={22} strokeWidth={2.4} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-white">Установить приложение</p>
+          <p className="text-sm font-semibold text-white">Установить приложение</p>
           {ios ? (
             <p className="mt-1 text-xs leading-snug text-slate-400">
               Нажмите <ShareGlyph /> «Поделиться» в браузере, затем «На&nbsp;экран „Домой“» — Okvion Sales появится как обычное приложение.
@@ -76,14 +76,14 @@ export default function InstallAppCard() {
               type="button"
               onClick={install}
               disabled={installing}
-              className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+              className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white  transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
             >
               <Download size={16} strokeWidth={2.6} /> {installing ? "Устанавливаю…" : "Установить"}
             </button>
           )}
 
           {!ios && !available && (
-            <p className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] font-bold text-slate-400">
+            <p className="mt-3 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-[11px] font-bold text-slate-400">
               Откройте сайт в Chrome и выберите «Установить приложение» в меню браузера (⋮). Если кнопка не появляется — попользуйтесь приложением минуту и вернитесь сюда.
             </p>
           )}

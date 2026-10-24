@@ -750,7 +750,7 @@ function renderInline(text, kp) {
     if (m.index > last) nodes.push(text.slice(last, m.index));
     const t = m[0];
     if (t.startsWith("**") || t.startsWith("__"))
-      nodes.push(<strong key={`${kp}-${i}`} className="font-black text-white">{t.slice(2, -2)}</strong>);
+      nodes.push(<strong key={`${kp}-${i}`} className="font-semibold text-white">{t.slice(2, -2)}</strong>);
     else if (t.startsWith("`"))
       nodes.push(<code key={`${kp}-${i}`} className="rounded-md bg-white/10 px-1.5 py-0.5 text-[12px] font-bold text-blue-200">{t.slice(1, -1)}</code>);
     else
@@ -785,7 +785,7 @@ const RichText = memo(function RichText({ text }) {
       {blocks.map((blk, bi) => {
         if (blk.type === "h") {
           const cls = blk.level === 1 ? "text-[15px]" : blk.level === 2 ? "text-sm" : "text-[13px]";
-          return <p key={bi} className={`${cls} font-black text-white ${bi ? "mt-2.5" : ""}`}>{renderInline(blk.text, `h${bi}`)}</p>;
+          return <p key={bi} className={`${cls} font-semibold text-white ${bi ? "mt-2.5" : ""}`}>{renderInline(blk.text, `h${bi}`)}</p>;
         }
         if (blk.type === "ul" || blk.type === "ol") {
           return (
@@ -793,7 +793,7 @@ const RichText = memo(function RichText({ text }) {
               {blk.items.map((it, ii) => (
                 <li key={ii} className="flex gap-2">
                   {blk.type === "ol"
-                    ? <span className="shrink-0 font-black text-blue-300">{ii + 1}.</span>
+                    ? <span className="shrink-0 font-semibold text-blue-300">{ii + 1}.</span>
                     : <span className="mt-[8px] h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />}
                   <span className="min-w-0 leading-6">{renderInline(it, `li${bi}-${ii}`)}</span>
                 </li>
@@ -883,8 +883,8 @@ const Message = memo(function Message({ msg, idx, onCancelCard, onAttachPhoto, o
   const userText = isUser ? String(msg.text || "").replace(/^📷\s*/, "") : "";
   return (
     <div className={`flex gap-2 sm:gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
-      {!isUser && <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white sm:flex"><Bot size={18} strokeWidth={2.2} /></div>}
-      <div className={`max-w-[90%] rounded-3xl px-4 py-3 text-[13px] font-bold leading-6 sm:max-w-[78%] ${isUser ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white" : "border border-white/10 bg-white/[0.06] text-slate-100"}`}>
+      {!isUser && <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white sm:flex"><Bot size={18} strokeWidth={2.2} /></div>}
+      <div className={`max-w-[90%] rounded-3xl px-4 py-3 text-[13px] font-bold leading-6 sm:max-w-[78%] ${isUser ? "bg-indigo-600 text-white" : "border border-white/[0.08] bg-white/[0.06] text-slate-100"}`}>
         {msg.image && (
           <button type="button" onClick={() => onOpenImage?.(msg.image)} title="Открыть фото"
             className="mb-2 block w-full overflow-hidden rounded-2xl border border-white/20 transition active:scale-[0.98]">
@@ -898,40 +898,40 @@ const Message = memo(function Message({ msg, idx, onCancelCard, onAttachPhoto, o
           <div className="mt-3 space-y-2">
             {msg.cards.map((card, i) => (
               card.kind === "photoPrompt" ? (
-                <div key={i} className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+                <div key={i} className="rounded-2xl border border-white/[0.08] bg-slate-950/40 p-3">
                   {card.done ? (
-                    <p className="inline-flex items-center gap-1.5 text-[12px] font-black text-emerald-300"><Paperclip size={12} strokeWidth={2.6} /> Фото накладной прикреплено</p>
+                    <p className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-emerald-300"><Paperclip size={12} strokeWidth={2.6} /> Фото накладной прикреплено</p>
                   ) : card.dismissed ? (
                     <p className="text-[12px] font-bold text-slate-400">Без фото</p>
                   ) : (
                     <>
                       <p className="mb-2 text-[12px] font-bold text-slate-300">Есть фото накладной или чека?</p>
                       <div className="flex gap-2">
-                        <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-500/15 px-3 py-1.5 text-[11px] font-black text-blue-200 transition hover:bg-blue-500/25 active:scale-95 ${card.uploading ? "pointer-events-none opacity-60" : ""}`}>
+                        <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-500/15 px-3 py-1.5 text-[11px] font-semibold text-blue-200 transition hover:bg-blue-500/25 active:scale-95 ${card.uploading ? "pointer-events-none opacity-60" : ""}`}>
                           <Paperclip size={12} strokeWidth={2.6} /> {card.uploading ? "Загружаю…" : "Прикрепить фото"}
                           <input type="file" accept="image/*" hidden
                             onChange={(e) => { onAttachPhoto?.(idx, i, card, e.target.files?.[0]); e.target.value = ""; }} />
                         </label>
                         <button type="button" onClick={() => onDismissPhoto?.(idx, i)}
-                          className="rounded-lg bg-white/5 px-3 py-1.5 text-[11px] font-black text-slate-300 transition hover:bg-white/10 active:scale-95">Без фото</button>
+                          className="rounded-lg bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-slate-300 transition hover:bg-white/10 active:scale-95">Без фото</button>
                       </div>
                     </>
                   )}
                 </div>
               ) : (
-              <div key={i} className={`rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-slate-100 ${card.cancelled ? "opacity-50" : ""}`}>
+              <div key={i} className={`rounded-2xl border border-white/[0.08] bg-slate-950/40 p-3 text-slate-100 ${card.cancelled ? "opacity-50" : ""}`}>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className={`truncate font-black ${card.cancelled ? "line-through text-slate-400" : ""}`}>{card.name}</p>
+                    <p className={`truncate font-semibold ${card.cancelled ? "line-through text-slate-400" : ""}`}>{card.name}</p>
                     <p className="text-xs font-bold text-slate-400">{card.detail}</p>
                   </div>
-                  <span className="shrink-0 rounded-2xl bg-emerald-500/15 px-3 py-2 text-xs font-black text-emerald-300">+{card.qty}</span>
+                  <span className="shrink-0 rounded-2xl bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-300">+{card.qty}</span>
                 </div>
                 {card.cancelled ? (
-                  <p className="mt-2 text-[11px] font-black text-red-300">✕ Отменено</p>
+                  <p className="mt-2 text-[11px] font-semibold text-red-300">✕ Отменено</p>
                 ) : (onCancelCard && card.itemId && card.batchId) ? (
                   <button type="button" onClick={() => onCancelCard(idx, i, card)}
-                    className="mt-2 inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1.5 text-[11px] font-black text-red-300 transition hover:bg-red-500/20 active:scale-95">
+                    className="mt-2 inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-red-300 transition hover:bg-red-500/20 active:scale-95">
                     <X size={12} strokeWidth={2.6} /> Отменить
                   </button>
                 ) : null}
@@ -941,9 +941,9 @@ const Message = memo(function Message({ msg, idx, onCancelCard, onAttachPhoto, o
           </div>
         )}
         {showPdf && (
-          <div className="mt-2.5 flex justify-start border-t border-white/10 pt-2">
+          <div className="mt-2.5 flex justify-start border-t border-white/[0.08] pt-2">
             <button type="button" onClick={() => exportTextToPdf(msg.text)} aria-label="Скачать отчёт в PDF" title="Скачать в PDF"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-black text-slate-200 transition hover:bg-white/15 active:scale-[0.97]">
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 transition hover:bg-white/15 active:scale-[0.97]">
               <FileDown size={13} strokeWidth={2.4} /> Скачать PDF
             </button>
           </div>
@@ -1999,18 +1999,18 @@ export default function AIWarehousePage() {
             activeRightPanels ? "xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-4 xl:px-4 xl:py-4" : "xl:grid-cols-1"
           }`}
         >
-          <section className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden bg-white/[0.04] xl:rounded-2xl xl:border xl:border-white/10">
-            <div className="flex shrink-0 items-center justify-between gap-1.5 border-b border-white/10 px-2.5 py-2 sm:gap-2 sm:px-3 sm:py-2.5">
+          <section className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden bg-white/[0.02] xl:rounded-2xl xl:border xl:border-white/[0.08]">
+            <div className="flex shrink-0 items-center justify-between gap-1.5 border-b border-white/[0.08] px-2.5 py-2 sm:gap-2 sm:px-3 sm:py-2.5">
               <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
                 <button onClick={goBack} aria-label="Назад" title="Назад"
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/30">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white ">
                   <Bot size={18} strokeWidth={2.2} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-black leading-tight">AI-ассистент</p>
+                  <p className="truncate text-sm font-semibold leading-tight">AI-ассистент</p>
                   {targetName && (
                     <div className="flex min-w-0 items-center gap-1">
                       <MapPin size={11} strokeWidth={2.4} className="shrink-0 text-slate-400" />
@@ -2030,12 +2030,12 @@ export default function AIWarehousePage() {
                       setLastUIPanel(Object.keys(DEFAULT_SIDE_PANELS).find((k) => !next[k]) || "");
                     }}
                     title="Вернуть скрытую панель"
-                    className="hidden shrink-0 items-center rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white transition hover:bg-white/15 xl:inline-flex"
+                    className="hidden shrink-0 items-center rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/15 xl:inline-flex"
                   >
                     {lastUIPanel === "stocks" ? "Вернуть остатки" : lastUIPanel === "recent" ? "Вернуть последние" : lastUIPanel === "suggestions" ? "Вернуть подсказки" : "Вернуть панель"}
                   </button>
                 )}
-                <span className="hidden rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-black text-emerald-300 sm:inline">
+                <span className="hidden rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-300 sm:inline">
                   Автосохранение
                 </span>
                 <button onClick={load} aria-label="Обновить" title="Обновить" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15"><RefreshCw size={16} strokeWidth={2.4} /></button>
@@ -2043,7 +2043,7 @@ export default function AIWarehousePage() {
                   aria-label="Очистить чат" title="Очистить чат"
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition hover:bg-red-500/20 hover:text-red-300"><Trash2 size={16} strokeWidth={2.4} /></button>
                 <Link to="/warehouse" aria-label="Склад" title="Склад"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-black text-white transition hover:bg-white/15 sm:w-auto sm:px-3">
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold text-white transition hover:bg-white/15 sm:w-auto sm:px-3">
                   <Warehouse size={16} strokeWidth={2.4} className="sm:hidden" />
                   <span className="hidden sm:inline">Склад →</span>
                 </Link>
@@ -2051,8 +2051,8 @@ export default function AIWarehousePage() {
             </div>
 
             {hasMultiPoints && (
-              <div className="flex shrink-0 items-center gap-2 border-b border-white/10 bg-slate-950/40 px-3 py-2">
-                <span className="shrink-0 text-[11px] font-black uppercase tracking-wide text-slate-500">Точка</span>
+              <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.08] bg-slate-950/40 px-3 py-2">
+                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Точка</span>
                 <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto scrollbar-none" style={{ scrollbarWidth: "none" }}>
                   {points.map((p) => {
                     const pid = p.dataAccountId || p.id;
@@ -2065,10 +2065,10 @@ export default function AIWarehousePage() {
                         aria-pressed={active}
                         disabled={loading}
                         title={`Записывать в точку «${p.name}»`}
-                        className={`flex min-h-[40px] shrink-0 items-center gap-1 rounded-full px-3.5 py-2 text-xs font-black transition active:scale-95 disabled:opacity-50 ${
+                        className={`flex min-h-[40px] shrink-0 items-center gap-1 rounded-full px-3.5 py-2 text-xs font-semibold transition active:scale-95 disabled:opacity-50 ${
                           active
-                            ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-600/30"
-                            : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                            ? "bg-indigo-600 text-white "
+                            : "border border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"
                         }`}
                       >
                         <MapPin size={13} strokeWidth={2.4} className="shrink-0" /> {p.name}
@@ -2090,7 +2090,7 @@ export default function AIWarehousePage() {
               <div ref={bottomRef} />
             </div>
 
-            <div className="shrink-0 border-t border-white/10 bg-slate-950/50 px-3 py-2">
+            <div className="shrink-0 border-t border-white/[0.08] bg-slate-950/50 px-3 py-2">
               <div className="mb-1 flex justify-end lg:hidden">
                 <Link to="/work" className="flex min-h-[40px] items-center gap-1 px-2 text-xs font-bold text-slate-500 hover:text-slate-300 transition">
                   <ArrowLeft size={13} strokeWidth={2.4} /> К кассе
@@ -2099,12 +2099,12 @@ export default function AIWarehousePage() {
               {pendingPurchaseConfirmation?.items?.length > 0 && (
                 <div className="mb-2 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="min-w-0 text-xs font-black text-blue-200">
+                    <p className="min-w-0 text-xs font-semibold text-blue-200">
                       Проверьте закупку{pendingPurchaseConfirmation.wsName || wsName ? ` — запишу на точку «${pendingPurchaseConfirmation.wsName || wsName}»` : ""}
                     </p>
                     {pendingPhoto && (
                       <button type="button" onClick={() => setZoomImage(pendingPhoto)}
-                        className="flex shrink-0 items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-black text-blue-200 transition hover:bg-white/15 active:scale-95">
+                        className="flex shrink-0 items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-blue-200 transition hover:bg-white/15 active:scale-95">
                         <ImagePlus size={12} strokeWidth={2.6} /> Фото
                       </button>
                     )}
@@ -2115,13 +2115,13 @@ export default function AIWarehousePage() {
                       const tgt = x.matched ? `прибавить к «${normalizeProductEntityName(x.matched.name)}»` : "создать новый";
                       return (
                         <div key={i} className="rounded-xl bg-white/5 px-3 py-2">
-                          <p className="text-[13px] font-black text-white">{nm} — {x.computed.quantity} {unitLabel(x.computed.unit)}</p>
+                          <p className="text-[13px] font-semibold text-white">{nm} — {x.computed.quantity} {unitLabel(x.computed.unit)}</p>
                           <p className="text-[11px] font-bold text-slate-400">{num(x.payload?.price) > 0 ? `${formatMoney(x.payload.price)} · ` : ""}{tgt}</p>
                           {x.result?.assumedWeight && (
-                            <p className="mt-1 inline-flex items-center rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-black text-amber-300/90">≈ вес по среднему{x.result?.assumedNote && x.result.assumedNote !== "уточнено" ? ` · ${x.result.assumedNote}` : ""}</p>
+                            <p className="mt-1 inline-flex items-center rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300/90">≈ вес по среднему{x.result?.assumedNote && x.result.assumedNote !== "уточнено" ? ` · ${x.result.assumedNote}` : ""}</p>
                           )}
                           {x.result?.assumedNote === "уточнено" && (
-                            <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-black text-emerald-300"><Check size={11} strokeWidth={3} /> вес уточнён</p>
+                            <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300"><Check size={11} strokeWidth={3} /> вес уточнён</p>
                           )}
                           {canClarifyWeight(x) && (
                             weightOpen[i] ? (
@@ -2133,15 +2133,15 @@ export default function AIWarehousePage() {
                                     if (e.key === "Escape") { setWeightOpen((p) => { const n = { ...p }; delete n[i]; return n; }); }
                                   }}
                                   placeholder={`${unitLabel(x.computed.unit)} в 1 шт`}
-                                  className="w-28 rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1 text-[11px] font-bold text-white outline-none focus:border-blue-400/60 focus:outline-none focus-visible:outline-none" />
+                                  className="w-28 rounded-lg border border-white/[0.08] bg-slate-950/60 px-2 py-1 text-[11px] font-bold text-white outline-none focus:border-blue-400/60 focus:outline-none focus-visible:outline-none" />
                                 <button type="button" onClick={() => applyItemWeight(i)}
-                                  className="rounded-lg bg-blue-500/20 px-2.5 py-1 text-[11px] font-black text-blue-100 outline-none transition hover:bg-blue-500/30 active:scale-95 focus:outline-none focus-visible:outline-none">Сохранить</button>
+                                  className="rounded-lg bg-blue-500/20 px-2.5 py-1 text-[11px] font-semibold text-blue-100 outline-none transition hover:bg-blue-500/30 active:scale-95 focus:outline-none focus-visible:outline-none">Сохранить</button>
                                 <button type="button" onClick={() => setWeightOpen((p) => { const n = { ...p }; delete n[i]; return n; })} aria-label="Отмена"
                                   className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-slate-200 active:scale-95"><X size={12} strokeWidth={2.6} /></button>
                               </div>
                             ) : (
                               <button type="button" onClick={() => setWeightOpen((p) => ({ ...p, [i]: true }))}
-                                className={`mt-1.5 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-black transition active:scale-95 ${x.result?.assumedWeight ? "bg-amber-500/15 text-amber-200 hover:bg-amber-500/25" : "bg-white/5 text-slate-300 hover:bg-white/10"}`}>
+                                className={`mt-1.5 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${x.result?.assumedWeight ? "bg-amber-500/15 text-amber-200 hover:bg-amber-500/25" : "bg-white/5 text-slate-300 hover:bg-white/10"}`}>
                                 <Pencil size={11} strokeWidth={2.6} /> Уточнить вес
                               </button>
                             )
@@ -2154,14 +2154,14 @@ export default function AIWarehousePage() {
                     <button
                       onClick={confirmPendingPurchase}
                       disabled={loading}
-                      className="flex-1 min-h-[44px] rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 px-3 py-3 text-sm font-black text-white shadow-lg transition active:scale-95 disabled:opacity-50"
+                      className="flex-1 min-h-[44px] rounded-xl bg-indigo-600 px-3 py-3 text-sm font-semibold text-white shadow-lg transition active:scale-95 disabled:opacity-50"
                     >
                       Да, записать
                     </button>
                     <button
                       onClick={cancelPendingPurchase}
                       disabled={loading}
-                      className="flex-1 min-h-[44px] rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm font-black text-slate-200 transition active:scale-95 hover:bg-white/10 disabled:opacity-50"
+                      className="flex-1 min-h-[44px] rounded-xl border border-white/[0.08] bg-white/5 px-3 py-3 text-sm font-semibold text-slate-200 transition active:scale-95 hover:bg-white/10 disabled:opacity-50"
                     >
                       Отмена
                     </button>
@@ -2170,18 +2170,18 @@ export default function AIWarehousePage() {
               )}
               {pendingItems.length > 0 && (
                 <div className="mb-2 flex items-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2">
-                  <span className="min-w-0 flex-1 text-xs font-black leading-snug text-amber-200">
+                  <span className="min-w-0 flex-1 text-xs font-semibold leading-snug text-amber-200">
                     Нужно уточнить {pendingItems.filter((x) => !x.resolved).length} {pluralPositions(pendingItems.filter((x) => !x.resolved).length, ["позицию", "позиции", "позиций"])}
                   </span>
                   <button
                     onClick={() => setClarifyModalOpen(true)}
-                    className="min-h-[40px] shrink-0 rounded-full bg-amber-500/25 px-3 py-2 text-xs font-black text-amber-100 transition active:scale-95 hover:bg-amber-500/35"
+                    className="min-h-[40px] shrink-0 rounded-full bg-amber-500/25 px-3 py-2 text-xs font-semibold text-amber-100 transition active:scale-95 hover:bg-amber-500/35"
                   >
                     Заполнить
                   </button>
                   <button
                     onClick={() => { clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation }); setClarifyDraft({}); setClarifyOpen({}); setPendingPhoto(null); setMessages((p) => [...p, { role: "bot", text: "Ок, закрыла уточнения. Что дальше?" }]); }}
-                    className="min-h-[40px] shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-slate-200 transition active:scale-95 hover:bg-white/10"
+                    className="min-h-[40px] shrink-0 rounded-full border border-white/[0.08] bg-white/5 px-3 py-2 text-xs font-bold text-slate-200 transition active:scale-95 hover:bg-white/10"
                   >
                     Отменить
                   </button>
@@ -2199,7 +2199,7 @@ export default function AIWarehousePage() {
                   <button
                     key={x}
                     onClick={() => send(x)}
-                    className="flex min-h-[40px] shrink-0 items-center rounded-full border border-white/10 bg-white/5 px-3.5 py-2.5 text-xs font-bold text-slate-300 transition active:scale-95 active:bg-white/15 hover:bg-white/10"
+                    className="flex min-h-[40px] shrink-0 items-center rounded-full border border-white/[0.08] bg-white/5 px-3.5 py-2.5 text-xs font-bold text-slate-300 transition active:scale-95 active:bg-white/15 hover:bg-white/10"
                   >
                     {x}
                   </button>
@@ -2208,12 +2208,12 @@ export default function AIWarehousePage() {
               {attachedPhoto && (
                 <div className="mb-2 flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2">
                   <img src={attachedPhoto} alt="Накладная" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
-                  <span className="min-w-0 flex-1 text-[11px] font-black text-blue-200">Фото накладной готово — нажмите «Отправить», чтобы распознать</span>
+                  <span className="min-w-0 flex-1 text-[11px] font-semibold text-blue-200">Фото накладной готово — нажмите «Отправить», чтобы распознать</span>
                   <button type="button" onClick={() => setAttachedPhoto(null)} aria-label="Убрать фото"
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-red-300"><X size={14} /></button>
                 </div>
               )}
-              <div className="flex items-end gap-1.5 rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2">
+              <div className="flex items-end gap-1.5 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-2.5 py-2">
                 <div className="relative shrink-0">
                   <button type="button" title="Фото накладной" aria-label="Прикрепить фото"
                     disabled={loading || photoParsing}
@@ -2224,12 +2224,12 @@ export default function AIWarehousePage() {
                   {photoMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setPhotoMenuOpen(false)} />
-                      <div className="absolute bottom-full left-0 z-20 mb-2 w-52 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 p-1.5 shadow-2xl shadow-black/50">
-                        <label className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-black text-slate-200 transition hover:bg-white/10 active:scale-[0.98]">
+                      <div className="absolute bottom-full left-0 z-20 mb-2 w-52 overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-900 p-1.5 shadow-lg shadow-black/50">
+                        <label className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-slate-200 transition hover:bg-white/10 active:scale-[0.98]">
                           <Camera size={18} strokeWidth={2.2} className="shrink-0 text-blue-300" /> Сфотографировать
                           <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => handlePhotoFile(e.target.files?.[0], e)} />
                         </label>
-                        <label className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-black text-slate-200 transition hover:bg-white/10 active:scale-[0.98]">
+                        <label className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-slate-200 transition hover:bg-white/10 active:scale-[0.98]">
                           <Images size={18} strokeWidth={2.2} className="shrink-0 text-violet-300" /> Выбрать из галереи
                           <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(e.target.files?.[0], e)} />
                         </label>
@@ -2260,7 +2260,7 @@ export default function AIWarehousePage() {
                   disabled={loading}
                   aria-label="Отправить"
                   title="Отправить"
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 font-black text-white shadow-lg shadow-blue-900/30 outline-none transition hover:brightness-110 focus:outline-none focus-visible:outline-none active:scale-95 disabled:opacity-50"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 font-semibold text-white  outline-none transition hover:brightness-110 focus:outline-none focus-visible:outline-none active:scale-95 disabled:opacity-50"
                 >
                   {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Send size={18} />}
                 </button>
@@ -2274,40 +2274,40 @@ export default function AIWarehousePage() {
               style={{ maxHeight: "calc(100dvh - 245px)" }}
             >
               {sidePanels.recent && (
-                <div className="flex min-h-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <div className="flex min-h-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06] p-4">
                   <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
-                    <h3 className="flex items-center gap-2 text-sm font-black text-white"><Clock size={16} strokeWidth={2.4} className="text-emerald-300" /> Последние добавления</h3>
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Clock size={16} strokeWidth={2.4} className="text-emerald-300" /> Последние добавления</h3>
                     <button
                       type="button"
                       onClick={() => {
                         setSidePanels((prev) => ({ ...prev, recent: false }));
                         setLastUIPanel("recent");
                       }}
-                      className="rounded-full bg-white/5 px-2 py-1 text-[11px] font-black text-slate-400 hover:bg-white/10 hover:text-white"
+                      className="rounded-full bg-white/5 px-2 py-1 text-[11px] font-semibold text-slate-400 hover:bg-white/10 hover:text-white"
                     >
                       убрать
                     </button>
                   </div>
                   <div className="max-h-[240px] space-y-3 overflow-y-auto overscroll-contain pr-1">
                     {recentAdded.map((m, i) => (
-                      <div key={i} className="rounded-2xl bg-white/[0.04] p-3">
+                      <div key={i} className="rounded-2xl bg-white/[0.02] p-3">
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-black">
+                            <p className="truncate text-sm font-semibold">
                               {m.itemName || m.item_name || "Сырьё"}
                             </p>
                             <p className="text-[11px] font-bold text-slate-500">
                               {String(m.createdAt || m.created_at || "").slice(0, 16) || "сейчас"}
                             </p>
                           </div>
-                          <p className="shrink-0 text-sm font-black text-emerald-300">
+                          <p className="shrink-0 text-sm font-semibold text-emerald-300">
                             +{num(m.quantity)} {unitLabel(m.unit)}
                           </p>
                         </div>
                       </div>
                     ))}
                     {!recentAdded.length && (
-                      <div className="rounded-2xl border border-dashed border-white/10 p-5 text-center text-sm font-bold text-slate-500">
+                      <div className="rounded-2xl border border-dashed border-white/[0.08] p-5 text-center text-sm font-bold text-slate-500">
                         Пока нет приходов
                       </div>
                     )}
@@ -2316,16 +2316,16 @@ export default function AIWarehousePage() {
               )}
 
               {sidePanels.stocks && (
-                <div className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <div className="shrink-0 rounded-2xl border border-white/[0.08] bg-white/[0.06] p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="flex items-center gap-2 text-sm font-black text-white"><Boxes size={16} strokeWidth={2.4} className="text-blue-300" /> Остатки</h3>
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Boxes size={16} strokeWidth={2.4} className="text-blue-300" /> Остатки</h3>
                     <button
                       type="button"
                       onClick={() => {
                         setSidePanels((prev) => ({ ...prev, stocks: false }));
                         setLastUIPanel("stocks");
                       }}
-                      className="rounded-full bg-white/5 px-2 py-1 text-[11px] font-black text-slate-400 hover:bg-white/10 hover:text-white"
+                      className="rounded-full bg-white/5 px-2 py-1 text-[11px] font-semibold text-slate-400 hover:bg-white/10 hover:text-white"
                     >
                       убрать
                     </button>
@@ -2334,10 +2334,10 @@ export default function AIWarehousePage() {
                     {topItems.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between rounded-2xl bg-white/[0.04] px-3 py-2"
+                        className="flex items-center justify-between rounded-2xl bg-white/[0.02] px-3 py-2"
                       >
                         <span className="truncate text-sm font-bold text-slate-200">{item.name}</span>
-                        <span className="ml-3 shrink-0 text-sm font-black text-blue-200">
+                        <span className="ml-3 shrink-0 text-sm font-semibold text-blue-200">
                           {num(item.quantity)} {unitLabel(item.unit)}
                         </span>
                       </div>
@@ -2348,16 +2348,16 @@ export default function AIWarehousePage() {
               )}
 
               {sidePanels.suggestions && (
-                <div className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <div className="shrink-0 rounded-2xl border border-white/[0.08] bg-white/[0.06] p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <h3 className="flex items-center gap-2 text-sm font-black text-white"><Sparkles size={16} strokeWidth={2.4} className="text-amber-300" /> Можно спросить</h3>
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Sparkles size={16} strokeWidth={2.4} className="text-amber-300" /> Можно спросить</h3>
                     <button
                       type="button"
                       onClick={() => {
                         setSidePanels((prev) => ({ ...prev, suggestions: false }));
                         setLastUIPanel("suggestions");
                       }}
-                      className="rounded-full bg-white/5 px-2 py-1 text-[11px] font-black text-slate-400 hover:bg-white/10 hover:text-white"
+                      className="rounded-full bg-white/5 px-2 py-1 text-[11px] font-semibold text-slate-400 hover:bg-white/10 hover:text-white"
                     >
                       убрать
                     </button>
@@ -2369,7 +2369,7 @@ export default function AIWarehousePage() {
                         type="button"
                         onClick={() => send(q)}
                         disabled={loading}
-                        className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-sm font-bold text-slate-300 transition hover:bg-white/[0.07] hover:text-white disabled:opacity-50"
+                        className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-left text-sm font-bold text-slate-300 transition hover:bg-white/[0.07] hover:text-white disabled:opacity-50"
                       >
                         <span className="text-amber-300/70">•</span> {q}
                       </button>
@@ -2390,12 +2390,12 @@ export default function AIWarehousePage() {
           aria-label="Уточнения по закупке"
         >
           <div
-            className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-slate-900 shadow-2xl sm:rounded-3xl"
+            className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-white/[0.08] bg-slate-900 shadow-lg sm:rounded-3xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/[0.08] px-4 py-3">
               <div className="min-w-0">
-                <p className="text-sm font-black text-white">Нужно уточнить</p>
+                <p className="text-sm font-semibold text-white">Нужно уточнить</p>
                 <p className="truncate text-[11px] font-bold text-amber-300">
                   {pendingItems.filter((x) => !x.resolved).length} {pluralPositions(pendingItems.filter((x) => !x.resolved).length, ["позиция", "позиции", "позиций"])} · остальное запишу сразу
                 </p>
@@ -2403,7 +2403,7 @@ export default function AIWarehousePage() {
               <div className="flex shrink-0 items-center gap-1.5">
                 {pendingPhoto && (
                   <button type="button" onClick={() => setZoomImage(pendingPhoto)}
-                    className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-black text-blue-200 transition hover:bg-white/15 active:scale-95">
+                    className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-blue-200 transition hover:bg-white/15 active:scale-95">
                     <ImagePlus size={13} strokeWidth={2.6} /> Фото
                   </button>
                 )}
@@ -2421,19 +2421,19 @@ export default function AIWarehousePage() {
                 if (x.resolved) {
                   return (
                     <div key={i} className="rounded-2xl border border-emerald-400/15 bg-emerald-500/[0.06] px-3.5 py-3">
-                      <p className="text-[14px] font-black text-white">{nm} — {x.computed?.quantity} {unitLabel(x.computed?.unit)}</p>
-                      <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-300"><Check size={11} strokeWidth={3} /> уточнено</p>
+                      <p className="text-[14px] font-semibold text-white">{nm} — {x.computed?.quantity} {unitLabel(x.computed?.unit)}</p>
+                      <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300"><Check size={11} strokeWidth={3} /> уточнено</p>
                     </div>
                   );
                 }
                 const open = !!clarifyOpen[i];
                 return (
-                  <div key={i} className="rounded-2xl border border-white/10 bg-slate-950/50 px-3.5 py-3">
-                    <p className="text-[14px] font-black text-white">{nm}</p>
+                  <div key={i} className="rounded-2xl border border-white/[0.08] bg-slate-950/50 px-3.5 py-3">
+                    <p className="text-[14px] font-semibold text-white">{nm}</p>
                     <p className="mt-1 whitespace-pre-line text-[12px] font-bold leading-snug text-amber-200/90">{q}</p>
                     {!open ? (
                       <button type="button" onClick={() => setClarifyOpen((p) => ({ ...p, [i]: true }))}
-                        className="mt-2.5 rounded-xl bg-amber-500/20 px-4 py-2 text-[12px] font-black text-amber-100 outline-none transition hover:bg-amber-500/30 active:scale-95 focus:outline-none focus-visible:outline-none">
+                        className="mt-2.5 rounded-xl bg-amber-500/20 px-4 py-2 text-[12px] font-semibold text-amber-100 outline-none transition hover:bg-amber-500/30 active:scale-95 focus:outline-none focus-visible:outline-none">
                         Уточнить
                       </button>
                     ) : (
@@ -2449,15 +2449,15 @@ export default function AIWarehousePage() {
                           }}
                           placeholder="Ваш ответ… напр. «пекинская капуста» или «250г»"
                           disabled={loading}
-                          className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-[13px] font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-amber-400/60 focus:outline-none focus-visible:outline-none disabled:opacity-50"
+                          className="w-full rounded-xl border border-white/[0.08] bg-slate-950/70 px-3 py-2.5 text-[13px] font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-amber-400/60 focus:outline-none focus-visible:outline-none disabled:opacity-50"
                         />
                         <div className="flex gap-2">
                           <button type="button" onClick={() => applyClarification(i)} disabled={loading}
-                            className="flex-1 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 px-4 py-2.5 text-[12px] font-black text-white shadow-lg outline-none transition active:scale-95 focus:outline-none focus-visible:outline-none disabled:opacity-50">
+                            className="flex-1 rounded-xl bg-amber-500 px-4 py-2.5 text-[12px] font-semibold text-white shadow-lg outline-none transition active:scale-95 focus:outline-none focus-visible:outline-none disabled:opacity-50">
                             {loading ? "Обрабатываю…" : "Готово"}
                           </button>
                           <button type="button" onClick={() => setClarifyOpen((p) => { const n = { ...p }; delete n[i]; return n; })}
-                            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-[12px] font-black text-slate-200 transition hover:bg-white/10 active:scale-95">
+                            className="rounded-xl border border-white/[0.08] bg-white/5 px-4 py-2.5 text-[12px] font-semibold text-slate-200 transition hover:bg-white/10 active:scale-95">
                             Скрыть
                           </button>
                         </div>
@@ -2468,14 +2468,14 @@ export default function AIWarehousePage() {
               })}
             </div>
 
-            <div className="flex shrink-0 gap-2 border-t border-white/10 p-3">
+            <div className="flex shrink-0 gap-2 border-t border-white/[0.08] p-3">
               <button type="button"
                 onClick={() => { clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation }); setClarifyDraft({}); setClarifyOpen({}); setPendingPhoto(null); setMessages((p) => [...p, { role: "bot", text: "Ок, закрыла уточнения. Что дальше?" }]); }}
-                className="flex-1 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2.5 text-[12px] font-black text-red-300 transition hover:bg-red-500/20 active:scale-95">
+                className="flex-1 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2.5 text-[12px] font-semibold text-red-300 transition hover:bg-red-500/20 active:scale-95">
                 Отменить всё
               </button>
               <button type="button" onClick={() => setClarifyModalOpen(false)}
-                className="flex-1 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-[12px] font-black text-white transition hover:bg-white/10 active:scale-95">
+                className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.06] px-4 py-2.5 text-[12px] font-semibold text-white transition hover:bg-white/10 active:scale-95">
                 Свернуть
               </button>
             </div>
@@ -2490,7 +2490,7 @@ export default function AIWarehousePage() {
           role="dialog"
           aria-label="Просмотр фото"
         >
-          <img src={zoomImage} alt="Отправленное фото" className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl" onClick={(e) => e.stopPropagation()} />
+          <img src={zoomImage} alt="Отправленное фото" className="max-h-full max-w-full rounded-2xl object-contain shadow-lg" onClick={(e) => e.stopPropagation()} />
           <button type="button" onClick={() => setZoomImage(null)} aria-label="Закрыть"
             className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 active:scale-95">
             <X size={22} strokeWidth={2.4} />

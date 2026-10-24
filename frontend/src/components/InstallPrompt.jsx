@@ -64,27 +64,27 @@ export default function InstallPrompt() {
   return (
     <div className="hide-on-modal pointer-events-none fixed inset-x-0 bottom-0 z-[60] p-3 sm:p-4"
       style={{ paddingBottom: "calc(var(--nav-h, 0px) + env(safe-area-inset-bottom, 0px) + 12px)" }}>
-      <div className="animate-toast pointer-events-auto relative mx-auto max-w-sm rounded-2xl border border-white/12 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-xl">
+      <div className="animate-toast pointer-events-auto relative mx-auto max-w-sm rounded-2xl border border-white/12 bg-slate-900/95 p-4 shadow-lg backdrop-blur-xl">
         <button onClick={dismiss} aria-label="Закрыть" title="Закрыть"
           className="absolute right-1.5 top-1.5 inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white">
           <X size={18} />
         </button>
 
         <div className="flex items-start gap-3 pr-8">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-lg shadow-blue-600/30">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white ">
             <ShoppingCart size={24} strokeWidth={2.6} />
           </div>
           <div className="min-w-0">
             {ios ? (
               <>
-                <p className="text-sm font-black text-white">Установить Okvion Sales</p>
+                <p className="text-sm font-semibold text-white">Установить Okvion Sales</p>
                 <p className="mt-1 text-xs leading-snug text-slate-400">
                   Нажмите <ShareGlyph /> «Поделиться», затем «На&nbsp;экран „Домой“».
                 </p>
               </>
             ) : (
               <>
-                <p className="text-sm font-black text-white">Установить приложение</p>
+                <p className="text-sm font-semibold text-white">Установить приложение</p>
                 <p className="mt-1 text-xs leading-snug text-slate-400">
                   Открывайте кассу с домашнего экрана — как обычное приложение.
                 </p>
@@ -95,7 +95,7 @@ export default function InstallPrompt() {
 
         {!ios && (
           <button onClick={install}
-            className="mt-3 w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-600/30 transition active:scale-95 hover:from-blue-500 hover:to-blue-400">
+            className="mt-3 w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white  transition active:scale-95 hover:from-blue-500 hover:to-blue-400">
             Установить
           </button>
         )}

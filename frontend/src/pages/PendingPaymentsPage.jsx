@@ -23,7 +23,7 @@ const plural = (n, forms) => {
 };
 
 const TIER = {
-  fresh: { bl: "border-l-slate-500/50", badge: "border-white/10 bg-white/5 text-slate-300", dot: "bg-slate-500", text: "text-slate-300" },
+  fresh: { bl: "border-l-slate-500/50", badge: "border-white/[0.08] bg-white/5 text-slate-300", dot: "bg-slate-500", text: "text-slate-300" },
   warm: { bl: "border-l-amber-400/70", badge: "border-amber-400/30 bg-amber-400/10 text-amber-300", dot: "bg-amber-400", text: "text-amber-300" },
   hot: { bl: "border-l-orange-400/80", badge: "border-orange-400/30 bg-orange-500/10 text-orange-300", dot: "bg-orange-400", text: "text-orange-300" },
   urgent: { bl: "border-l-red-500/80", badge: "border-red-500/30 bg-red-500/15 text-red-300", dot: "bg-red-500", text: "text-red-300" },
@@ -174,7 +174,7 @@ export default function PendingPaymentsPage() {
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-bold text-blue-400">Касса</p>
-          <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">Ожидают оплаты</h2>
+          <h2 className="text-2xl font-semibold leading-none text-white sm:text-3xl">Ожидают оплаты</h2>
           {queue.length > 0 ? (
             <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold text-slate-400">
               <span><b className="text-white">{queue.length}</b> {plural(queue.length, ["чек", "чека", "чеков"])} на <b className="tabular-nums text-emerald-300">{formatMoney(totalWaiting)}</b></span>
@@ -191,7 +191,7 @@ export default function PendingPaymentsPage() {
         <button
           onClick={load}
           aria-label="Обновить"
-          className="flex h-9 min-w-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-0 text-sm font-black text-slate-200 transition hover:bg-white/10 sm:px-3"
+          className="flex h-9 min-w-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/5 px-0 text-sm font-semibold text-slate-200 transition hover:bg-white/10 sm:px-3"
         >
           <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           <span className="hidden sm:inline">Обновить</span>
@@ -203,7 +203,7 @@ export default function PendingPaymentsPage() {
       )}
 
       {queue.length > 0 && (
-        <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-slate-500">Список чеков · оплата в один тап</p>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Список чеков · оплата в один тап</p>
       )}
 
       {queue.length > 0 ? (
@@ -219,22 +219,22 @@ export default function PendingPaymentsPage() {
             return (
               <div
                 key={s.id}
-                className={`rounded-xl border border-l-2 border-white/10 bg-white/[0.04] p-3 transition ${t.bl} ${busy ? "pointer-events-none opacity-60" : ""} ${tierOf(age) === "urgent" ? "ring-1 ring-red-500/30" : ""}`}
+                className={`rounded-xl border border-l-2 border-white/[0.08] bg-white/[0.02] p-3 transition ${t.bl} ${busy ? "pointer-events-none opacity-60" : ""} ${tierOf(age) === "urgent" ? "ring-1 ring-red-500/30" : ""}`}
               >
                 {/* Шапка чека: давность + время + № + сумма */}
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-black ${t.badge} ${tierOf(age) === "urgent" ? "animate-pulse" : ""}`}>
+                    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${t.badge} ${tierOf(age) === "urgent" ? "animate-pulse" : ""}`}>
                       <Clock size={11} /> {fmtAge(age)}
                     </span>
-                    {isOldest && <span className={`inline-flex shrink-0 items-center gap-0.5 text-[10px] font-black uppercase tracking-wide ${t.text}`}><ArrowUp size={11} /> раньше всех</span>}
+                    {isOldest && <span className={`inline-flex shrink-0 items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide ${t.text}`}><ArrowUp size={11} /> раньше всех</span>}
                     <span className="truncate text-[11px] font-semibold text-slate-500">в {fmtTime(s.createdAt)} · #{s.id}</span>
                   </div>
-                  <h4 className="shrink-0 text-xl font-black tabular-nums text-white sm:text-2xl">{formatMoney(s.total)}</h4>
+                  <h4 className="shrink-0 text-xl font-semibold tabular-nums text-white sm:text-2xl">{formatMoney(s.total)}</h4>
                 </div>
 
                 {/* Позиции чека */}
-                <div className="mt-2 space-y-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-[13px]">
+                <div className="mt-2 space-y-1 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-[13px]">
                   {shown.map((i, k) => (
                     <div key={`${s.id}-${k}-${i.name}`} className="flex items-center justify-between gap-3">
                       <span className="min-w-0 truncate font-bold text-slate-200">{i.name} × {i.qty}</span>
@@ -243,7 +243,7 @@ export default function PendingPaymentsPage() {
                   ))}
                   {!items.length && <div className="text-slate-500">В чеке нет позиций</div>}
                   {items.length > 3 && (
-                    <button onClick={() => toggleExpand(s.id)} className="pt-0.5 text-xs font-black text-blue-300 hover:text-blue-200">
+                    <button onClick={() => toggleExpand(s.id)} className="pt-0.5 text-xs font-semibold text-blue-300 hover:text-blue-200">
                       {isOpen ? "Свернуть" : `+${items.length - 3} ещё · показать`}
                     </button>
                   )}
@@ -253,7 +253,7 @@ export default function PendingPaymentsPage() {
                   <div className="no-scrollbar mt-2 flex gap-2 overflow-x-auto">
                     <span className="shrink-0 self-center text-xs font-bold text-slate-500">На карту:</span>
                     {safe_cards.map((c) => (
-                      <button key={c.id} onClick={() => quickConfirm(s, "transfer", c.id)} className="shrink-0 rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-sm font-black text-blue-200 transition hover:bg-blue-500/20">
+                      <button key={c.id} onClick={() => quickConfirm(s, "transfer", c.id)} className="shrink-0 rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20">
                         {c.name}{c.owner ? ` · ${c.owner}` : ""}
                       </button>
                     ))}
@@ -265,14 +265,14 @@ export default function PendingPaymentsPage() {
                   <button
                     onClick={() => quickConfirm(s, "cash")}
                     disabled={busy}
-                    className="inline-flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-emerald-600 px-3 font-black text-white transition hover:bg-emerald-500 active:scale-[0.98]"
+                    className="inline-flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-emerald-600 px-3 font-semibold text-white transition hover:bg-emerald-500 active:scale-[0.98]"
                   >
                     {busy ? <Loader2 size={16} className="animate-spin" /> : <Banknote size={16} />} Наличные
                   </button>
                   <button
                     onClick={() => onTransfer(s)}
                     disabled={busy}
-                    className="inline-flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-blue-600 px-3 font-black text-white transition hover:bg-blue-500 active:scale-[0.98]"
+                    className="inline-flex min-h-[44px] items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-blue-600 px-3 font-semibold text-white transition hover:bg-blue-500 active:scale-[0.98]"
                   >
                     <ArrowLeftRight size={16} /> Перевод
                   </button>
@@ -283,7 +283,7 @@ export default function PendingPaymentsPage() {
                     onClick={() => openModal(s)}
                     aria-label="Приём со сдачей или выбором карты"
                     title="Приём со сдачей / выбор карты"
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-black text-slate-300 transition hover:bg-white/10"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-slate-300 transition hover:bg-white/10"
                   >
                     <MoreHorizontal size={14} /> Сдача · карта
                   </button>
@@ -299,9 +299,9 @@ export default function PendingPaymentsPage() {
           })}
         </div>
       ) : (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-12 text-center">
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-6 py-12 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300"><CheckCircle2 size={28} strokeWidth={2.4} /></div>
-          <p className="text-lg font-black text-white">Все чеки оплачены</p>
+          <p className="text-lg font-semibold text-white">Все чеки оплачены</p>
           <p className="mt-1 text-sm text-slate-400">Очередь пуста — новые чеки появятся здесь, как только их соберут в кассе.</p>
         </div>
       )}
@@ -309,43 +309,43 @@ export default function PendingPaymentsPage() {
       {/* ── Модалка: приём со сдачей / выбором карты ── */}
       {selected && (
         <Modal title="Принять оплату" legacyLight={false} onClose={() => { setSelected(null); setModalError(""); }}>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="rounded-2xl border border-white/[0.08] bg-white/5 p-4">
             <p className="text-sm font-bold text-slate-400">Итого к оплате</p>
-            <p className="mt-1 text-3xl font-black tabular-nums text-white">{formatMoney(selected.total)}</p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-white">{formatMoney(selected.total)}</p>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
             <button
               onClick={() => { setPaymentType("cash"); setModalError(""); }}
               className={paymentType === "cash"
-                ? "inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white"
-                : "inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-200"}
+                ? "inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white"
+                : "inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-200"}
             ><Banknote size={16} /> Наличные</button>
             <button
               onClick={() => { setPaymentType("transfer"); setModalError(""); }}
               className={paymentType === "transfer"
-                ? "inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white"
-                : "inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-200"}
+                ? "inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white"
+                : "inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-200"}
             ><ArrowLeftRight size={16} /> Перевод</button>
           </div>
 
           {paymentType === "cash" ? (
             <div className="mt-4">
               <div className="no-scrollbar mb-2 flex gap-2 overflow-x-auto">
-                <button onClick={() => setPaidAmount(String(num(selected.total)))} className="shrink-0 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm font-black text-emerald-200">Под расчёт</button>
+                <button onClick={() => setPaidAmount(String(num(selected.total)))} className="shrink-0 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-200">Под расчёт</button>
                 {billChips.map((v) => (
-                  <button key={v} onClick={() => setPaidAmount(String(v))} className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-black text-slate-200">{formatMoney(v)}</button>
+                  <button key={v} onClick={() => setPaidAmount(String(v))} className="shrink-0 rounded-xl border border-white/[0.08] bg-white/5 px-3 py-2 text-sm font-semibold text-slate-200">{formatMoney(v)}</button>
                 ))}
               </div>
               <label className="block">
-                <span className="mb-2 block text-sm font-black text-slate-400">Получено наличными</span>
+                <span className="mb-2 block text-sm font-semibold text-slate-400">Получено наличными</span>
                 <input
                   value={paidAmount}
                   onChange={(e) => setPaidAmount(e.target.value)}
                   type="number"
                   inputMode="decimal"
                   placeholder="Сумма, ₽"
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
                 />
               </label>
               {paidAmount !== "" && (
@@ -358,11 +358,11 @@ export default function PendingPaymentsPage() {
             </div>
           ) : (
             <label className="mt-4 block">
-              <span className="mb-2 block text-sm font-black text-slate-400">Карта для перевода</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-400">Карта для перевода</span>
               <select
                 value={cardId}
                 onChange={(e) => { setCardId(e.target.value); setModalError(""); }}
-                className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 font-bold text-white outline-none"
+                className="w-full rounded-xl border border-white/[0.08] bg-slate-900 px-4 py-3 font-bold text-white outline-none"
               >
                 <option value="">Выберите карту</option>
                 {safe_cards.map((c) => (
@@ -378,12 +378,12 @@ export default function PendingPaymentsPage() {
           <div className="mt-6 grid grid-cols-2 gap-2">
             <button
               onClick={() => { setSelected(null); setModalError(""); }}
-              className="min-h-[48px] rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-200 transition hover:bg-white/10"
+              className="min-h-[48px] rounded-xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-200 transition hover:bg-white/10"
             >Отмена</button>
             <button
               onClick={confirmPayment}
               disabled={confirming || (paymentType === "cash" && paidAmount !== "" && change < 0)}
-              className="min-h-[48px] rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              className="min-h-[48px] rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white  transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >{confirming ? "Подтверждаю…" : "Подтвердить"}</button>
           </div>
         </Modal>

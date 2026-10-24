@@ -200,7 +200,7 @@ export default function ShopPage() {
 
   const CartPanel = ({ mobile = false }) => (
     <aside
-      className={`flex h-full flex-col overflow-hidden border border-white/10 bg-slate-950/90 ${
+      className={`flex h-full flex-col overflow-hidden border border-white/[0.08] bg-slate-950/90 ${
         mobile ? "rounded-t-3xl" : "rounded-2xl"
       }`}
     >
@@ -209,10 +209,10 @@ export default function ShopPage() {
           <div className="h-1 w-10 rounded-full bg-white/20" />
         </div>
       )}
-      <div className="border-b border-white/10 px-5 py-4">
+      <div className="border-b border-white/[0.08] px-5 py-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-black text-white">Заказ</h2>
+            <h2 className="text-xl font-semibold text-white">Заказ</h2>
             <p className="mt-0.5 text-xs font-semibold text-slate-400">
               {currentEmployee ? currentEmployee.name : "Сотрудник не выбран"}
             </p>
@@ -224,7 +224,7 @@ export default function ShopPage() {
               onClick={() => setCartOpen(false)}
               aria-label="Закрыть корзину"
               title="Закрыть корзину"
-              className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 font-black text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/5 font-semibold text-white"
             >
               <X size={18} strokeWidth={2.4} />
             </button>
@@ -236,11 +236,11 @@ export default function ShopPage() {
         {safe_cart.map((item) => (
           <div
             key={item.productId}
-            className="rounded-3xl border border-white/10 bg-white/[0.04] p-4"
+            className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-4"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate text-base font-black text-white">{item.name}</p>
+                <p className="truncate text-base font-semibold text-white">{item.name}</p>
                 <p className="mt-1 text-xs font-bold text-slate-500">
                   {formatMoney(item.price)} за шт
                 </p>
@@ -251,36 +251,36 @@ export default function ShopPage() {
                 onClick={() => removeFromCart(item.productId)}
                 aria-label="Удалить товар"
                 title="Удалить товар"
-                className="flex items-center justify-center rounded-xl bg-red-500/10 px-3 py-2.5 font-black text-red-300"
+                className="flex items-center justify-center rounded-xl bg-red-500/10 px-3 py-2.5 font-semibold text-red-300"
               >
                 <X size={18} strokeWidth={2.4} />
               </button>
             </div>
 
             <div className="mt-4 flex items-center justify-between gap-3">
-              <div className="flex items-center rounded-2xl border border-white/10 bg-black/20 p-1">
+              <div className="flex items-center rounded-2xl border border-white/[0.08] bg-black/20 p-1">
                 <button
                   type="button"
                   onClick={() => decreaseQty(item.productId)}
                   aria-label="Уменьшить количество"
                   title="Уменьшить количество"
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 font-black text-white"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 font-semibold text-white"
                 >
                   <Minus size={18} strokeWidth={2.4} />
                 </button>
-                <span className="w-12 text-center font-black text-white">{item.qty}</span>
+                <span className="w-12 text-center font-semibold text-white">{item.qty}</span>
                 <button
                   type="button"
                   onClick={() => increaseQty(item.productId)}
                   aria-label="Увеличить количество"
                   title="Увеличить количество"
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500 font-black text-slate-950"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500 font-semibold text-slate-950"
                 >
                   <Plus size={18} strokeWidth={2.4} />
                 </button>
               </div>
 
-              <p className="text-lg font-black text-cyan-200">
+              <p className="text-lg font-semibold text-cyan-200">
                 {formatMoney(item.qty * item.price)}
               </p>
             </div>
@@ -288,11 +288,11 @@ export default function ShopPage() {
         ))}
 
         {!safe_cart.length && (
-          <div className="flex h-full min-h-[220px] flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-8 text-center">
+          <div className="flex h-full min-h-[220px] flex-col items-center justify-center rounded-3xl border border-dashed border-white/[0.08] bg-white/[0.02] p-8 text-center">
             <div className="mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-cyan-500/10 text-cyan-300">
               <ShoppingCart size={30} strokeWidth={2} />
             </div>
-            <p className="text-lg font-black text-white">Корзина пустая</p>
+            <p className="text-lg font-semibold text-white">Корзина пустая</p>
             <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
               Нажмите на товар слева, чтобы добавить его в заказ.
             </p>
@@ -300,12 +300,12 @@ export default function ShopPage() {
         )}
       </div>
 
-      <div className="space-y-3 border-t border-white/10 bg-black/20 p-4">
+      <div className="space-y-3 border-t border-white/[0.08] bg-black/20 p-4">
         <select
           value={employeeId}
           onChange={(e) => setEmployeeId(e.target.value)}
           aria-label="Сотрудник"
-          className="min-h-[44px] w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-cyan-400"
+          className="min-h-[44px] w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-cyan-400"
         >
           <option value="">Выберите сотрудника</option>
           {safe_employees.map((e) => (
@@ -318,7 +318,7 @@ export default function ShopPage() {
         <select
           value={paymentType}
           onChange={(e) => setPaymentType(e.target.value)}
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-cyan-400"
+          className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-cyan-400"
         >
           <option value="cash">Наличные</option>
           <option value="transfer">Перевод</option>
@@ -328,7 +328,7 @@ export default function ShopPage() {
           <select
             value={cardId}
             onChange={(e) => setCardId(e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-cyan-400"
+            className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-cyan-400"
           >
             <option value="">Карта</option>
             {safe_cards.map((c) => (
@@ -346,14 +346,14 @@ export default function ShopPage() {
             placeholder="Сумма от клиента"
             type="number"
             inputMode="decimal"
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white placeholder:text-slate-500 outline-none focus:border-cyan-400"
+            className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white placeholder:text-slate-500 outline-none focus:border-cyan-400"
           />
         )}
 
         <select
           value={discount}
           onChange={(e) => setDiscount(Number(e.target.value))}
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-cyan-400"
+          className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-cyan-400"
         >
           <option value={0}>Без скидки</option>
           <option value={5}>Скидка 5%</option>
@@ -361,7 +361,7 @@ export default function ShopPage() {
           <option value={15}>Скидка 15%</option>
         </select>
 
-        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+        <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-4">
           <div className="flex justify-between text-sm font-bold text-slate-400">
             <span>Сумма</span>
             <span>{formatMoney(subtotal)}</span>
@@ -372,22 +372,22 @@ export default function ShopPage() {
             <span>-{formatMoney(discountAmount)}</span>
           </div>
 
-          <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
-            <span className="font-black text-white">Итого</span>
-            <span className="text-3xl font-black text-cyan-200">
+          <div className="mt-4 flex items-end justify-between border-t border-white/[0.08] pt-4">
+            <span className="font-semibold text-white">Итого</span>
+            <span className="text-3xl font-semibold text-cyan-200">
               {formatMoney(total)}
             </span>
           </div>
 
           {paymentType === "cash" && hasCash && cashNum >= total && (
-            <div className="mt-3 flex justify-between rounded-2xl bg-emerald-500/10 px-3 py-2 font-black text-emerald-300">
+            <div className="mt-3 flex justify-between rounded-2xl bg-emerald-500/10 px-3 py-2 font-semibold text-emerald-300">
               <span>Сдача</span>
               <span>{formatMoney(Math.max(0, changeAmount))}</span>
             </div>
           )}
 
           {paymentType === "cash" && hasCash && cashNum < total && (
-            <div className="mt-3 flex justify-between rounded-2xl bg-red-500/10 px-3 py-2 font-black text-red-300">
+            <div className="mt-3 flex justify-between rounded-2xl bg-red-500/10 px-3 py-2 font-semibold text-red-300">
               <span>Не хватает</span>
               <span>{formatMoney(total - cashNum)}</span>
             </div>
@@ -398,7 +398,7 @@ export default function ShopPage() {
           type="button"
           onClick={confirmSale}
           disabled={submitting || !safe_cart.length}
-          className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-4 text-lg font-black text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
+          className="w-full rounded-2xl bg-blue-500 px-5 py-4 text-lg font-semibold text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {submitting ? "Провожу…" : "Провести продажу"}
         </button>
@@ -411,16 +411,16 @@ export default function ShopPage() {
 
       <div className="relative flex min-h-screen flex-col gap-4 p-3 pb-nav sm:p-5 xl:grid xl:grid-cols-[1fr_430px]">
         <main
-          className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]"
+          className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]"
           style={{ height: "calc(100dvh - env(safe-area-inset-bottom,0px) - 24px)" }}
         >
-          <div className="shrink-0 border-b border-white/10 p-4 sm:p-6">
+          <div className="shrink-0 border-b border-white/[0.08] p-4 sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-300">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-300">
                   Быстрая продажа
                 </p>
-                <h1 className="mt-1 text-2xl font-black leading-none sm:text-3xl">
+                <h1 className="mt-1 text-2xl font-semibold leading-none sm:text-3xl">
                   Касса
                 </h1>
               </div>
@@ -430,7 +430,7 @@ export default function ShopPage() {
                   value={employeeId}
                   onChange={(e) => setEmployeeId(e.target.value)}
                   aria-label="Сотрудник"
-                  className="min-h-[40px] min-w-0 max-w-[45vw] shrink truncate rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-cyan-400"
+                  className="min-h-[40px] min-w-0 max-w-[45vw] shrink truncate rounded-2xl border border-white/[0.08] bg-white/5 px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-cyan-400"
                 >
                   <option value="">Сотрудник</option>
                   {safe_employees.map((e) => (
@@ -445,7 +445,7 @@ export default function ShopPage() {
                   onClick={load}
                   aria-label="Обновить"
                   title="Обновить"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/5 text-white transition hover:bg-white/10"
                 >
                   <RefreshCw size={17} strokeWidth={2.4} className={loading ? "animate-spin" : ""} />
                 </button>
@@ -456,7 +456,7 @@ export default function ShopPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск товара..."
-              className="mt-3 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm font-bold text-white placeholder:text-slate-500 outline-none focus:border-cyan-400"
+              className="mt-3 w-full rounded-2xl border border-white/[0.08] bg-black/20 px-4 py-2.5 text-sm font-bold text-white placeholder:text-slate-500 outline-none focus:border-cyan-400"
             />
 
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -465,10 +465,10 @@ export default function ShopPage() {
                   key={category}
                   type="button"
                   onClick={() => setActiveCategory(category)}
-                  className={`min-h-[36px] shrink-0 rounded-xl px-3.5 py-2 text-sm font-black transition ${
+                  className={`min-h-[36px] shrink-0 rounded-xl px-3.5 py-2 text-sm font-semibold transition ${
                     activeCategory === category
                       ? "bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-500/20"
-                      : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                      : "border border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"
                   }`}
                 >
                   {category === "all" ? "Все" : category}
@@ -481,8 +481,8 @@ export default function ShopPage() {
             {Object.entries(grouped).map(([category, items]) => (
               <section key={category} className="mb-6 last:mb-0">
                 <div className="mb-3 flex items-center gap-2">
-                  <h2 className="text-base font-black text-white">{category}</h2>
-                  <span className="rounded-lg bg-white/5 px-2 py-0.5 text-[10px] font-black text-slate-500">
+                  <h2 className="text-base font-semibold text-white">{category}</h2>
+                  <span className="rounded-lg bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
                     {items.length}
                   </span>
                 </div>
@@ -493,17 +493,17 @@ export default function ShopPage() {
                       key={p.id}
                       type="button"
                       onClick={() => addToCart(p)}
-                      className="group flex flex-col rounded-3xl border border-white/10 bg-white/5 p-3 text-left shadow-xl shadow-black/10 transition active:scale-95 hover:border-cyan-400/60 hover:bg-cyan-400/10 sm:p-4"
+                      className="group flex flex-col rounded-3xl border border-white/[0.08] bg-white/5 p-3 text-left shadow-xl shadow-black/10 transition active:scale-95 hover:border-cyan-400/60 hover:bg-cyan-400/10 sm:p-4"
                     >
                       <div className="mb-3 grid h-9 w-9 place-items-center rounded-xl bg-cyan-400/10 text-base text-cyan-200 group-hover:bg-cyan-400 group-hover:text-slate-950">
                         +
                       </div>
 
-                      <p className="line-clamp-2 flex-1 text-sm font-black leading-tight text-white">
+                      <p className="line-clamp-2 flex-1 text-sm font-semibold leading-tight text-white">
                         {p.name}
                       </p>
 
-                      <p className="mt-2 text-base font-black text-cyan-200">
+                      <p className="mt-2 text-base font-semibold text-cyan-200">
                         {formatMoney(p.price)}
                       </p>
                     </button>
@@ -513,12 +513,12 @@ export default function ShopPage() {
             ))}
 
             {!filteredProducts.length && (
-              <div className="grid min-h-65 place-items-center rounded-2xl border border-dashed border-white/10 bg-white/3 p-8 text-center">
+              <div className="grid min-h-65 place-items-center rounded-2xl border border-dashed border-white/[0.08] bg-white/3 p-8 text-center">
                 <div>
                   <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-3xl bg-white/5 text-slate-300">
                     <Search size={26} strokeWidth={2.2} />
                   </div>
-                  <p className="text-lg font-black text-white">Товары не найдены</p>
+                  <p className="text-lg font-semibold text-white">Товары не найдены</p>
                   <p className="mt-1 text-xs font-semibold text-slate-500">
                     Попробуйте изменить поиск или категорию
                   </p>
@@ -539,7 +539,7 @@ export default function ShopPage() {
       <button
         type="button"
         onClick={() => setCartOpen(true)}
-        className="fixed left-4 right-4 z-40 flex items-center justify-between rounded-3xl bg-linear-to-r from-cyan-400 to-blue-500 px-5 py-3.5 font-black text-slate-950 shadow-lg shadow-cyan-500/30 xl:hidden"
+        className="fixed left-4 right-4 z-40 flex items-center justify-between rounded-3xl bg-blue-500 px-5 py-3.5 font-semibold text-slate-950 shadow-lg shadow-cyan-500/30 xl:hidden"
         style={{ bottom: "calc(env(safe-area-inset-bottom,0px) + 16px)" }}
       >
         <span className="flex items-center gap-2 text-sm"><ShoppingCart size={16} strokeWidth={2.4} /> Корзина · {safe_cart.reduce((s, i) => s + i.qty, 0)} шт</span>

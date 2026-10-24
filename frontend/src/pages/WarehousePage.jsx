@@ -16,15 +16,15 @@ const fmtQty = (value) =>
 // Единые тёмные токены полей и кнопок для модалок склада (Modal legacyLight={false}):
 // глобальные .input/.btn-white/.btn-blue светлые, поэтому здесь задаём тёмные явно.
 const WH_INPUT =
-  "w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10";
+  "w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-3 font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10";
 const WH_SELECT =
-  "w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10";
+  "w-full rounded-2xl border border-white/[0.08] bg-slate-900 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10";
 const WH_BTN_GHOST =
-  "rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-black text-white transition hover:bg-white/15";
+  "rounded-2xl border border-white/[0.08] bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15";
 const WH_BTN_PRIMARY =
-  "rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-5 py-3 font-black text-white transition hover:brightness-110";
+  "rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:brightness-110";
 const WH_BTN_DANGER =
-  "rounded-2xl bg-red-600 px-5 py-3 font-black text-white shadow-sm transition hover:bg-red-500";
+  "rounded-2xl bg-red-600 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-red-500";
 
 const SMART_UNIT_SETTINGS = {
   g: { controlMode: "approximate", lossPercent: "3", inventoryMethod: "average", packagingQuantity: "1", hint: "Для граммов система считает расход приблизительно и добавляет небольшой запас на потери." },
@@ -136,8 +136,8 @@ function StatusChip({ id, label, count, active, onClick }) {
       type="button"
       onClick={onClick}
       disabled={dim}
-      className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-black transition ${
-        active ? CHIP[id] : dim ? "border-white/10 bg-white/[0.02] text-slate-600" : "border-white/10 bg-white/[0.06] text-slate-300 hover:bg-white/10"
+      className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition ${
+        active ? CHIP[id] : dim ? "border-white/[0.08] bg-white/[0.02] text-slate-600" : "border-white/[0.08] bg-white/[0.06] text-slate-300 hover:bg-white/10"
       }`}
     >
       {label}
@@ -159,22 +159,22 @@ function RowMenu({ hidden, onHistory, onInventory, onWriteOff, onToggleHidden, o
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
   }, [open]);
   const Item = ({ icon: Icon, label, onClick, cls = "text-slate-200" }) => (
-    <button type="button" role="menuitem" onClick={() => { setOpen(false); onClick(); }} className={`flex min-h-[40px] w-full items-center gap-2 rounded-lg px-3 text-left text-[12px] font-black transition hover:bg-white/10 ${cls}`}>
+    <button type="button" role="menuitem" onClick={() => { setOpen(false); onClick(); }} className={`flex min-h-[40px] w-full items-center gap-2 rounded-lg px-3 text-left text-[12px] font-semibold transition hover:bg-white/10 ${cls}`}>
       <Icon size={15} className="shrink-0" /> {label}
     </button>
   );
   return (
     <div className="relative" ref={ref}>
-      <button type="button" aria-label="Ещё действия" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.08] text-slate-200 transition hover:bg-white/15">
+      <button type="button" aria-label="Ещё действия" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.08] text-slate-200 transition hover:bg-white/15">
         <MoreHorizontal size={16} />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-white/10 bg-slate-900 p-1.5">
+        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-white/[0.08] bg-slate-900 p-1.5">
           <Item icon={History} label="История закупок" onClick={onHistory} />
           <Item icon={RotateCcw} label="Пересчёт остатка" onClick={onInventory} cls="text-amber-300" />
           <Item icon={Ban} label="Списать" onClick={onWriteOff} />
           <Item icon={hidden ? Eye : EyeOff} label={hidden ? "Показать" : "Скрыть"} onClick={onToggleHidden} />
-          <div className="my-1 border-t border-white/10" />
+          <div className="my-1 border-t border-white/[0.08]" />
           <Item icon={Trash2} label="Удалить" onClick={onDelete} cls="text-red-300" />
         </div>
       )}
@@ -684,9 +684,9 @@ export default function WarehousePage() {
       <div className="relative z-10 mx-auto max-w-[1480px]">
       <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="max-w-2xl">
-          <p className="inline-flex rounded-full border border-blue-400/20 bg-blue-500/10 px-2.5 py-1 text-xs font-black text-blue-300">Склад</p>
+          <p className="inline-flex rounded-full border border-blue-400/20 bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-300">Склад</p>
 
-          <h2 className="mt-2 text-2xl font-black leading-none tracking-tight text-white sm:text-3xl">
+          <h2 className="mt-2 text-2xl font-semibold leading-none tracking-tight text-white sm:text-3xl">
             Склад сырья
           </h2>
 
@@ -704,7 +704,7 @@ export default function WarehousePage() {
               setPurchaseTargetItem(null);
               setAddModal(true);
             }}
-            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-violet-600 px-4 py-3 text-sm font-black text-white transition hover:scale-[1.01] xl:flex-none"
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] xl:flex-none"
           >
             <Plus size={18} strokeWidth={2.4} className="shrink-0" />
             <span className="truncate">Добавить закупку</span>
@@ -716,7 +716,7 @@ export default function WarehousePage() {
             onClick={() => openWriteOff()}
             aria-label="Списание сырья"
             title="Списание сырья"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
           ><Ban size={18} strokeWidth={2.2} /></button>
 
           <button
@@ -724,7 +724,7 @@ export default function WarehousePage() {
             onClick={openDeletedHistory}
             aria-label="История удалений"
             title="История удалений"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
           ><Trash2 size={17} strokeWidth={2.2} /></button>
 
           <button
@@ -732,7 +732,7 @@ export default function WarehousePage() {
             onClick={load}
             aria-label="Обновить"
             title="Обновить"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
           ><RefreshCw size={18} strokeWidth={2.4} /></button>
         </div>
       </div>
@@ -747,7 +747,7 @@ export default function WarehousePage() {
         <div className="mb-4 flex items-start gap-3 rounded-2xl border border-red-400/30 bg-red-500/[0.09] px-4 py-3">
           <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-500/25 text-red-200"><AlertTriangle size={14} strokeWidth={2.4} /></span>
           <div>
-            <p className="text-sm font-black text-red-200">{stats.negative} {stats.negative === 1 ? "товар ушёл" : "товаров ушли"} в минус</p>
+            <p className="text-sm font-semibold text-red-200">{stats.negative} {stats.negative === 1 ? "товар ушёл" : "товаров ушли"} в минус</p>
             <p className="mt-0.5 text-xs font-bold leading-snug text-red-200/70">
               Продали больше, чем было на складе. Продажи прошли (их не блокируем), но остаток стал отрицательным — пополните закупкой или проведите инвентаризацию, чтобы себестоимость и отчёты были точными.
             </p>
@@ -756,44 +756,44 @@ export default function WarehousePage() {
       )}
 
       <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 sm:p-4">
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.05] p-3 sm:p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300 sm:h-9 sm:w-9 sm:rounded-xl"><Package className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Позиций сырья</p>
+            <p className="min-w-0 text-[11px] font-semibold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Позиций сырья</p>
           </div>
-          <p className="mt-2 text-xl font-black text-white sm:text-2xl">{stats.count}</p>
+          <p className="mt-2 text-xl font-semibold text-white sm:text-2xl">{stats.count}</p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-3 sm:p-4">
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.05] p-3 sm:p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-300 sm:h-9 sm:w-9 sm:rounded-xl"><Wallet className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Стоимость остатков</p>
+            <p className="min-w-0 text-[11px] font-semibold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Стоимость остатков</p>
           </div>
-          <p className="mt-2 text-xl font-black tabular-nums text-white sm:text-2xl">{formatMoney(stats.value)}</p>
+          <p className="mt-2 text-xl font-semibold tabular-nums text-white sm:text-2xl">{formatMoney(stats.value)}</p>
         </div>
 
-        <div className={`rounded-2xl border p-3 sm:p-4 ${stats.low > 0 ? "border-red-500/25 bg-red-500/[0.07]" : "border-white/10 bg-white/[0.05]"}`}>
+        <div className={`rounded-2xl border p-3 sm:p-4 ${stats.low > 0 ? "border-red-500/25 bg-red-500/[0.07]" : "border-white/[0.08] bg-white/[0.05]"}`}>
           <div className="flex items-center gap-2">
             <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${stats.low > 0 ? "bg-red-500/20 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}><AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Низкий остаток</p>
+            <p className="min-w-0 text-[11px] font-semibold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Низкий остаток</p>
           </div>
-          <p className={`mt-2 text-xl font-black sm:text-2xl ${stats.low > 0 ? "text-red-400" : "text-emerald-400"}`}>{stats.low}</p>
+          <p className={`mt-2 text-xl font-semibold sm:text-2xl ${stats.low > 0 ? "text-red-400" : "text-emerald-400"}`}>{stats.low}</p>
         </div>
 
-        <button type="button" onClick={() => setStatusFilter((f) => (f === "neg" ? "all" : "neg"))} className={`rounded-2xl border p-3 text-left transition sm:p-4 ${stats.negative > 0 ? "border-red-500/25 bg-red-500/[0.07] hover:bg-red-500/[0.12]" : "border-white/10 bg-white/[0.05]"}`}>
+        <button type="button" onClick={() => setStatusFilter((f) => (f === "neg" ? "all" : "neg"))} className={`rounded-2xl border p-3 text-left transition sm:p-4 ${stats.negative > 0 ? "border-red-500/25 bg-red-500/[0.07] hover:bg-red-500/[0.12]" : "border-white/[0.08] bg-white/[0.05]"}`}>
           <div className="flex items-center gap-2">
             <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${stats.negative > 0 ? "bg-red-500/20 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}><AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-            <p className="min-w-0 text-[11px] font-black uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">В минусе</p>
+            <p className="min-w-0 text-[11px] font-semibold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">В минусе</p>
           </div>
-          <p className={`mt-2 text-xl font-black sm:text-2xl ${stats.negative > 0 ? "text-red-400" : "text-emerald-400"}`}>{stats.negative}</p>
+          <p className={`mt-2 text-xl font-semibold sm:text-2xl ${stats.negative > 0 ? "text-red-400" : "text-emerald-400"}`}>{stats.negative}</p>
         </button>
       </div>
 
       {/* ── Здоровье склада ── */}
       {stats.count > 0 && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+        <div className="mb-4 rounded-2xl border border-white/[0.08] bg-white/[0.06] p-4">
           <div className="mb-2.5 flex items-center justify-between gap-3">
-            <p className="text-sm font-black text-white">Здоровье склада</p>
+            <p className="text-sm font-semibold text-white">Здоровье склада</p>
             <p className="text-xs font-bold text-slate-400"><b className="text-emerald-300">{counts.norm}</b> из {stats.count} в норме</p>
           </div>
           <div className="flex h-3 w-full overflow-hidden rounded-full bg-white/10">
@@ -811,10 +811,10 @@ export default function WarehousePage() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06]">
+      <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06]">
         <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h3 className="text-xl font-black text-white">
+            <h3 className="text-xl font-semibold text-white">
               Остатки на складе
             </h3>
             <p className="mt-1 text-xs font-semibold text-slate-400">
@@ -827,7 +827,7 @@ export default function WarehousePage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск по названию..."
-              className="w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400 sm:w-72"
+              className="w-full rounded-xl border border-white/[0.08] bg-slate-950/50 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400 sm:w-72"
             />
 
             <button
@@ -835,8 +835,8 @@ export default function WarehousePage() {
               onClick={() => setShowHidden((p) => !p)}
               className={
                 showHidden
-                  ? "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/20 px-3 py-2.5 text-sm font-black text-blue-100 whitespace-nowrap"
-                  : "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2.5 text-sm font-black text-white whitespace-nowrap"
+                  ? "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/20 px-3 py-2.5 text-sm font-semibold text-blue-100 whitespace-nowrap"
+                  : "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.08] px-3 py-2.5 text-sm font-semibold text-white whitespace-nowrap"
               }
             >
               {showHidden ? <EyeOff size={16} strokeWidth={2.2} /> : <Eye size={16} strokeWidth={2.2} />}
@@ -846,7 +846,7 @@ export default function WarehousePage() {
         </div>
 
         {/* Триаж: фильтры по статусу + сортировка */}
-        <div className="flex flex-col gap-2 border-t border-white/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-t border-white/[0.08] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
             <StatusChip id="all" label="Все" count={enriched.length} active={statusFilter === "all"} onClick={() => setStatusFilter("all")} />
             <StatusChip id="neg" label="В минусе" count={counts.neg} active={statusFilter === "neg"} onClick={() => setStatusFilter((f) => (f === "neg" ? "all" : "neg"))} />
@@ -856,7 +856,7 @@ export default function WarehousePage() {
           </div>
           <div className="relative shrink-0">
             <ArrowDownWideNarrow size={16} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-11 rounded-xl border border-white/10 bg-slate-950/50 pl-8 pr-3 text-sm font-bold text-white outline-none">
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-11 rounded-xl border border-white/[0.08] bg-slate-950/50 pl-8 pr-3 text-sm font-bold text-white outline-none">
               <option value="triage" className="bg-slate-900">Проблемные сверху</option>
               <option value="deficit" className="bg-slate-900">По сумме пополнения</option>
               <option value="value" className="bg-slate-900">По стоимости остатка</option>
@@ -877,7 +877,7 @@ export default function WarehousePage() {
               <col className="w-[30%]" />
             </colgroup>
 
-            <thead className="border-y border-white/10 bg-slate-950/45 text-[11px] uppercase tracking-[0.14em] text-slate-400">
+            <thead className="border-y border-white/[0.08] bg-slate-950/45 text-[11px] uppercase tracking-[0.14em] text-slate-400">
               <tr>
                 <th className="px-3 py-2">Сырьё</th>
                 <th className="px-3 py-2" title="Единица измерения">Ед. изм.</th>
@@ -907,22 +907,22 @@ export default function WarehousePage() {
                   <tr
                     key={item.id}
                     className={`border-b border-white/[0.08] ${
-                      hidden ? "bg-white/[0.03] opacity-55" : "bg-transparent hover:bg-white/[0.03]"
+                      hidden ? "bg-white/[0.02] opacity-55" : "bg-transparent hover:bg-white/[0.02]"
                     }`}
                   >
                     <td className={`border-l-4 px-3 py-2 align-middle ${railCls}`}>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="truncate font-black text-white">
+                          <span className="truncate font-semibold text-white">
                             {item.name}
                           </span>
 
-                          <span className="shrink-0 rounded-lg bg-blue-500/15 px-2 py-1 text-[10px] font-black text-blue-300">
+                          <span className="shrink-0 rounded-lg bg-blue-500/15 px-2 py-1 text-[10px] font-semibold text-blue-300">
                             {getSmartModeLabel(item)}
                           </span>
 
                           {hidden && (
-                            <span className="shrink-0 rounded-lg bg-slate-700 px-2 py-1 text-[10px] font-black text-slate-300">
+                            <span className="shrink-0 rounded-lg bg-slate-700 px-2 py-1 text-[10px] font-semibold text-slate-300">
                               скрыто
                             </span>
                           )}
@@ -941,13 +941,13 @@ export default function WarehousePage() {
                     </td>
 
                     <td
-                      className={`px-3 py-2 align-middle font-black ${
+                      className={`px-3 py-2 align-middle font-semibold ${
                         neg ? "text-red-400" : out ? "text-slate-300" : low ? "text-amber-400" : "text-emerald-400"
                       }`}
                     >
                       {fmtQty(qty)} {unit}
-                      {neg && <span className="ml-1 rounded bg-red-500/20 px-1.5 py-0.5 align-middle text-[10px] font-black text-red-300">в минусе</span>}
-                      {out && <span className="ml-1 rounded bg-slate-500/20 px-1.5 py-0.5 align-middle text-[10px] font-black text-slate-300">нет в наличии</span>}
+                      {neg && <span className="ml-1 rounded bg-red-500/20 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-red-300">в минусе</span>}
+                      {out && <span className="ml-1 rounded bg-slate-500/20 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-300">нет в наличии</span>}
                       {deficit > 0 && <p className="mt-0.5 text-[10px] font-bold text-slate-500">пополнить ~{fmtQty(deficit)} {unit}</p>}
                     </td>
 
@@ -955,7 +955,7 @@ export default function WarehousePage() {
                       {fmtQty(min)} {unit}
                     </td>
 
-                    <td className="px-3 py-2 align-middle font-black text-white">
+                    <td className="px-3 py-2 align-middle font-semibold text-white">
                       {formatMoney(totalValue)}
                     </td>
 
@@ -970,7 +970,7 @@ export default function WarehousePage() {
                         <button
                           type="button"
                           onClick={() => openPurchaseForItem(item)}
-                          className="flex h-9 items-center justify-center gap-1 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-2.5 text-[11px] font-black leading-none text-emerald-300 transition hover:bg-emerald-400/20"
+                          className="flex h-9 items-center justify-center gap-1 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-2.5 text-[11px] font-semibold leading-none text-emerald-300 transition hover:bg-emerald-400/20"
                           title="Добавить новую закупку к этому товару"
                         >
                           <Plus size={13} strokeWidth={2.4} />Закупка
@@ -1027,15 +1027,15 @@ export default function WarehousePage() {
                   <div className="flex min-w-0 items-center gap-2.5">
                     <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${neg ? "bg-red-500/15 text-red-300" : "bg-white/[0.06] text-slate-300"}`}>{neg ? <AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.2} /> : <Package className="h-[18px] w-[18px]" strokeWidth={2.2} />}</span>
                     <div className="min-w-0">
-                      <p className="truncate text-base font-black text-white">{item.name}</p>
-                      <p className={`truncate text-xs ${neg ? "font-black text-red-300" : "text-slate-400"}`}>
+                      <p className="truncate text-base font-semibold text-white">{item.name}</p>
+                      <p className={`truncate text-xs ${neg ? "font-semibold text-red-300" : "text-slate-400"}`}>
                         {neg ? "В минусе — пополните" : out ? "Нет в наличии" : low ? "Ниже минимума" : "В наличии"}{item.supplier ? ` · ${item.supplier}` : ""}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className={`rounded-xl px-2.5 py-1 text-sm font-black tabular-nums ${neg || low ? "bg-red-500/15 text-red-300" : out ? "bg-slate-600/30 text-slate-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+                    <span className={`rounded-xl px-2.5 py-1 text-sm font-semibold tabular-nums ${neg || low ? "bg-red-500/15 text-red-300" : out ? "bg-slate-600/30 text-slate-300" : "bg-emerald-500/15 text-emerald-300"}`}>
                       {fmtQty(qty)} {unit}
                     </span>
                     <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`} strokeWidth={2.4} />
@@ -1044,14 +1044,14 @@ export default function WarehousePage() {
 
                 {open && (
                   <div className="px-3.5 pb-3.5">
-                    <div className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-xs">
+                    <div className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.08] bg-slate-950/40 px-3 py-2 text-xs">
                       <div>
                         <span className="text-slate-500">Минимум: </span>
-                        <span className={`font-black ${low ? "text-red-300" : "text-slate-200"}`}>{fmtQty(min)} {unit}</span>
+                        <span className={`font-semibold ${low ? "text-red-300" : "text-slate-200"}`}>{fmtQty(min)} {unit}</span>
                       </div>
                       <div className="text-right">
                         <span className="text-slate-500">Единица: </span>
-                        <span className="font-black text-slate-200">{unit}</span>
+                        <span className="font-semibold text-slate-200">{unit}</span>
                       </div>
                     </div>
 
@@ -1059,25 +1059,25 @@ export default function WarehousePage() {
                       <button
                         type="button"
                         onClick={() => openPurchaseForItem(item)}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500/15 px-3 py-2.5 text-sm font-black text-emerald-300 transition active:scale-95 hover:bg-emerald-500/25"
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500/15 px-3 py-2.5 text-sm font-semibold text-emerald-300 transition active:scale-95 hover:bg-emerald-500/25"
                       >
                         <Plus size={16} strokeWidth={2.4} />Закупка
                       </button>
                       <button
                         type="button"
                         onClick={() => openInventory(item)}
-                        className="flex-1 rounded-xl bg-amber-500/15 px-3 py-2.5 text-sm font-black text-amber-300 transition active:scale-95 hover:bg-amber-500/25"
+                        className="flex-1 rounded-xl bg-amber-500/15 px-3 py-2.5 text-sm font-semibold text-amber-300 transition active:scale-95 hover:bg-amber-500/25"
                       >
                         Пересчёт
                       </button>
                     </div>
 
                     <div className="mt-2 grid grid-cols-3 gap-1.5 text-xs">
-                      <button type="button" onClick={() => openHistory(item)} className="flex min-h-[44px] min-w-0 items-center justify-center gap-1 rounded-lg bg-white/[0.04] px-2 font-black text-slate-300 transition active:scale-95 hover:bg-white/10"><History size={13} strokeWidth={2.2} className="shrink-0" /><span className="min-w-0 truncate">История</span></button>
-                      <button type="button" onClick={() => openWriteOff(item.id)} className="min-h-[44px] min-w-0 rounded-lg bg-white/[0.04] px-2 font-black text-slate-300 transition active:scale-95 hover:bg-white/10"><span className="block min-w-0 truncate">Списать</span></button>
-                      <button type="button" onClick={() => toggleHidden(item)} className="min-h-[44px] min-w-0 rounded-lg bg-white/[0.04] px-2 font-black text-slate-300 transition active:scale-95 hover:bg-white/10"><span className="block min-w-0 truncate">{hidden ? "Показать" : "Скрыть"}</span></button>
+                      <button type="button" onClick={() => openHistory(item)} className="flex min-h-[44px] min-w-0 items-center justify-center gap-1 rounded-lg bg-white/[0.02] px-2 font-semibold text-slate-300 transition active:scale-95 hover:bg-white/10"><History size={13} strokeWidth={2.2} className="shrink-0" /><span className="min-w-0 truncate">История</span></button>
+                      <button type="button" onClick={() => openWriteOff(item.id)} className="min-h-[44px] min-w-0 rounded-lg bg-white/[0.02] px-2 font-semibold text-slate-300 transition active:scale-95 hover:bg-white/10"><span className="block min-w-0 truncate">Списать</span></button>
+                      <button type="button" onClick={() => toggleHidden(item)} className="min-h-[44px] min-w-0 rounded-lg bg-white/[0.02] px-2 font-semibold text-slate-300 transition active:scale-95 hover:bg-white/10"><span className="block min-w-0 truncate">{hidden ? "Показать" : "Скрыть"}</span></button>
                     </div>
-                    <button type="button" onClick={() => openDeleteModal(item)} className="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 px-2 text-xs font-black text-red-400/90 transition active:scale-95 hover:bg-red-500/20">Удалить</button>
+                    <button type="button" onClick={() => openDeleteModal(item)} className="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 px-2 text-xs font-semibold text-red-400/90 transition active:scale-95 hover:bg-red-500/20">Удалить</button>
                   </div>
                 )}
               </div>
@@ -1096,13 +1096,13 @@ export default function WarehousePage() {
           )}
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-white/10 px-4 py-3 text-xs font-semibold text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-t border-white/[0.08] px-4 py-3 text-xs font-semibold text-slate-400 sm:flex-row sm:items-center sm:justify-between">
           <span>
             Показано {displayItems.length} из {safe_items.length}
             {stats.hidden > 0 && (
               <>
                 {" · "}
-                <button type="button" onClick={() => setShowHidden(true)} className="font-black text-slate-300 underline-offset-2 hover:text-white hover:underline">Скрытых: {stats.hidden}</button>
+                <button type="button" onClick={() => setShowHidden(true)} className="font-semibold text-slate-300 underline-offset-2 hover:text-white hover:underline">Скрытых: {stats.hidden}</button>
               </>
             )}
           </span>
@@ -1112,9 +1112,9 @@ export default function WarehousePage() {
       </div>
 
       {safe_movements.length > 0 && (
-        <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06]">
+        <div className="mt-5 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06]">
           <div className="p-4">
-            <h3 className="text-xl font-black text-white">
+            <h3 className="text-xl font-semibold text-white">
               Последние движения
             </h3>
             <p className="mt-1 text-xs font-semibold text-slate-400">
@@ -1137,7 +1137,7 @@ export default function WarehousePage() {
                   className="flex items-center justify-between gap-3 px-4 py-3"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-black text-white">
+                    <p className="truncate font-semibold text-white">
                       {m.itemName || m.item_name || "Сырьё"}
                     </p>
                     <p className="truncate text-xs text-slate-400 sm:text-sm">
@@ -1146,7 +1146,7 @@ export default function WarehousePage() {
                   </div>
 
                   <p
-                    className={`shrink-0 whitespace-nowrap text-sm font-black tabular-nums sm:text-base ${
+                    className={`shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base ${
                       isIncome ? "text-emerald-400" : "text-red-400"
                     }`}
                   >
@@ -1164,7 +1164,7 @@ export default function WarehousePage() {
       {deleteModal && (
         <Modal title={`Удалить товар: ${deleteTargetItem?.name || "сырьё"}`} wide onClose={() => setDeleteModal(false)} legacyLight={false}>
           <div className="rounded-3xl border border-red-400/20 bg-red-500/10 p-4 text-red-200">
-            <p className="font-black">Товар уйдёт из активного склада, но останется в истории удалений.</p>
+            <p className="font-semibold">Товар уйдёт из активного склада, но останется в истории удалений.</p>
             <p className="mt-1 text-sm font-bold">
               Остаток на момент удаления: {fmtQty(deleteTargetItem?.quantity)} {unitLabel(deleteTargetItem?.unit)} · сумма {formatMoney(num(deleteTargetItem?.quantity) * getUnitCost(deleteTargetItem || {}))}
             </p>
@@ -1206,11 +1206,11 @@ export default function WarehousePage() {
 
       {deletedModal && (
         <Modal title="История удалённых товаров" wide onClose={() => setDeletedModal(false)} legacyLight={false}>
-          <div className="rounded-3xl border border-white/10 bg-slate-950/40 p-4 text-sm font-bold text-slate-300">
+          <div className="rounded-3xl border border-white/[0.08] bg-slate-950/40 p-4 text-sm font-bold text-slate-300">
             Здесь видно, что удалили, когда, какой был остаток и почему. Это не смешивается со скрытыми товарами.
           </div>
 
-          <div className="mt-4 hidden overflow-x-auto rounded-3xl border border-white/10 lg:block">
+          <div className="mt-4 hidden overflow-x-auto rounded-3xl border border-white/[0.08] lg:block">
             <table className="w-full min-w-[840px] text-left text-sm">
               <thead className="bg-slate-950/45 text-xs uppercase tracking-wide text-slate-400">
                 <tr>
@@ -1224,11 +1224,11 @@ export default function WarehousePage() {
               </thead>
               <tbody>
                 {safe_deletedItems.map((item) => (
-                  <tr key={item.id} className="border-t border-white/10">
+                  <tr key={item.id} className="border-t border-white/[0.08]">
                     <td className="p-3 font-bold text-slate-300">{String(item.deletedAt || "").slice(0, 16).replace("T", " ") || "—"}</td>
-                    <td className="p-3 font-black text-white">{item.name}</td>
-                    <td className="p-3 font-black text-red-300">{fmtQty(item.quantity)} {unitLabel(item.unit)}</td>
-                    <td className="p-3 font-black text-white">{formatMoney(item.totalValue || num(item.quantity) * num(item.unitCost))}</td>
+                    <td className="p-3 font-semibold text-white">{item.name}</td>
+                    <td className="p-3 font-semibold text-red-300">{fmtQty(item.quantity)} {unitLabel(item.unit)}</td>
+                    <td className="p-3 font-semibold text-white">{formatMoney(item.totalValue || num(item.quantity) * num(item.unitCost))}</td>
                     <td className="p-3 font-bold text-slate-300">{item.deleteReason || "—"}</td>
                     <td className="p-3 text-slate-400">{item.deleteNote || item.note || "—"}</td>
                   </tr>
@@ -1245,10 +1245,10 @@ export default function WarehousePage() {
           {/* Карточки — телефон и планшет */}
           <div className="mt-4 space-y-2.5 lg:hidden">
             {safe_deletedItems.map((item) => (
-              <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
+              <div key={item.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5">
                 <div className="flex items-start justify-between gap-3">
-                  <p className="min-w-0 break-words font-black text-white">{item.name}</p>
-                  <span className="shrink-0 text-sm font-black text-red-300">{fmtQty(item.quantity)} {unitLabel(item.unit)}</span>
+                  <p className="min-w-0 break-words font-semibold text-white">{item.name}</p>
+                  <span className="shrink-0 text-sm font-semibold text-red-300">{fmtQty(item.quantity)} {unitLabel(item.unit)}</span>
                 </div>
                 <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
                   <span className="text-slate-400">Дата</span><span className="text-right font-bold text-slate-200">{String(item.deletedAt || "").slice(0, 16).replace("T", " ") || "—"}</span>
@@ -1259,7 +1259,7 @@ export default function WarehousePage() {
               </div>
             ))}
             {!safe_deletedItems.length && (
-              <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-400">Удалённых товаров пока нет</div>
+              <div className="rounded-2xl border border-dashed border-white/[0.08] p-8 text-center text-sm text-slate-400">Удалённых товаров пока нет</div>
             )}
           </div>
 
@@ -1271,15 +1271,15 @@ export default function WarehousePage() {
 
       {historyModal && (
         <Modal title={`История закупок: ${historyItem?.name || "сырьё"}`} wide onClose={() => setHistoryModal(false)} legacyLight={false}>
-          <div className="mb-4 rounded-3xl border border-white/10 bg-slate-950/40 p-4">
+          <div className="mb-4 rounded-3xl border border-white/[0.08] bg-slate-950/40 p-4">
             <p className="text-sm font-bold text-slate-400">Текущий остаток</p>
-            <p className="mt-1 text-2xl font-black text-white">
+            <p className="mt-1 text-2xl font-semibold text-white">
               {fmtQty(historyItem?.quantity)} {unitLabel(historyItem?.unit)} ·
               средняя цена {formatMoney(getUnitCost(historyItem || {}))}
             </p>
           </div>
 
-          <div className="hidden overflow-x-auto rounded-3xl border border-white/10 lg:block">
+          <div className="hidden overflow-x-auto rounded-3xl border border-white/[0.08] lg:block">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="bg-slate-950/45 text-xs uppercase tracking-wide text-slate-400">
                 <tr>
@@ -1296,18 +1296,18 @@ export default function WarehousePage() {
 
               <tbody>
                 {safe_historyBatches.map((b) => (
-                  <tr key={b.id} className="border-t border-white/10">
+                  <tr key={b.id} className="border-t border-white/[0.08]">
                     <td className="p-3 font-bold text-slate-300">
                       {String(b.createdAt || "").slice(0, 10) || "—"}
                     </td>
-                    <td className="p-3 font-black text-white">
+                    <td className="p-3 font-semibold text-white">
                       {fmtQty(b.quantity)} {unitLabel(historyItem?.unit)}
                     </td>
-                    <td className="p-3 font-black text-emerald-300">
+                    <td className="p-3 font-semibold text-emerald-300">
                       {fmtQty(b.remainingQuantity)}{" "}
                       {unitLabel(historyItem?.unit)}
                     </td>
-                    <td className="p-3 font-black text-white">
+                    <td className="p-3 font-semibold text-white">
                       {formatMoney(b.purchasePrice)}
                     </td>
                     <td className="p-3 font-bold text-slate-200">
@@ -1319,7 +1319,7 @@ export default function WarehousePage() {
                     <td className="p-3 text-slate-300">{b.note || "—"}</td>
                     <td className="p-3 text-right">
                       <button type="button" onClick={() => cancelPurchase(b)} title="Отменить закупку"
-                        className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1.5 text-xs font-black text-red-300 transition hover:bg-red-500/20 active:scale-95">
+                        className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-500/20 active:scale-95">
                         <Ban size={12} strokeWidth={2.4} /> Отменить
                       </button>
                     </td>
@@ -1340,10 +1340,10 @@ export default function WarehousePage() {
           {/* Карточки — телефон и планшет */}
           <div className="space-y-2.5 lg:hidden">
             {safe_historyBatches.map((b) => (
-              <div key={b.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
+              <div key={b.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-black text-white">{String(b.createdAt || "").slice(0, 10) || "—"}</span>
-                  <span className="text-sm font-black text-slate-200">{fmtQty(b.quantity)} {unitLabel(historyItem?.unit)}</span>
+                  <span className="text-sm font-semibold text-white">{String(b.createdAt || "").slice(0, 10) || "—"}</span>
+                  <span className="text-sm font-semibold text-slate-200">{fmtQty(b.quantity)} {unitLabel(historyItem?.unit)}</span>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
                   <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Осталось</p><b className="text-sm text-emerald-300">{fmtQty(b.remainingQuantity)} {unitLabel(historyItem?.unit)}</b></div>
@@ -1353,13 +1353,13 @@ export default function WarehousePage() {
                 </div>
                 {b.note && <p className="mt-2 text-xs text-slate-400">{b.note}</p>}
                 <button type="button" onClick={() => cancelPurchase(b)}
-                  className="mt-2.5 flex min-h-[40px] w-full items-center justify-center gap-1.5 rounded-xl bg-red-500/10 px-3 font-black text-red-300 transition active:scale-95 hover:bg-red-500/20">
+                  className="mt-2.5 flex min-h-[40px] w-full items-center justify-center gap-1.5 rounded-xl bg-red-500/10 px-3 font-semibold text-red-300 transition active:scale-95 hover:bg-red-500/20">
                   <Ban size={14} strokeWidth={2.4} /> Отменить закупку
                 </button>
               </div>
             ))}
             {!safe_historyBatches.length && (
-              <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-400">Истории закупок пока нет</div>
+              <div className="rounded-2xl border border-dashed border-white/[0.08] p-8 text-center text-sm text-slate-400">Истории закупок пока нет</div>
             )}
           </div>
 
@@ -1378,7 +1378,7 @@ export default function WarehousePage() {
       {duplicateModal && (
         <Modal title="Похожий товар уже есть" wide onClose={() => setDuplicateModal(false)} legacyLight={false}>
           <div className="rounded-3xl border border-amber-400/20 bg-amber-500/10 p-4 text-amber-200">
-            <p className="font-black">Защита от дублей</p>
+            <p className="font-semibold">Защита от дублей</p>
             <p className="mt-1 text-sm font-bold">
               Вы вводите «{form.name}». Возможно, это уже есть на складе.
               Лучше добавить новую закупку к существующему товару, чтобы
@@ -1390,10 +1390,10 @@ export default function WarehousePage() {
             {safe_duplicateSuggestions.map((item) => (
               <div
                 key={item.id}
-                className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 rounded-3xl border border-white/[0.08] bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <p className="text-xl font-black text-white">
+                  <p className="text-xl font-semibold text-white">
                     {item.name}
                   </p>
                   <p className="text-sm font-bold text-slate-400">
@@ -1435,11 +1435,11 @@ export default function WarehousePage() {
 
       {addModal && (
         <Modal title={purchaseTargetItem ? `Новая закупка: ${purchaseTargetItem.name}` : "Добавить закупку вручную"} wide onClose={() => { setAddModal(false); resetForm(); }} legacyLight={false}>
-          <div className="mb-3 flex items-center gap-2 rounded-2xl border border-blue-400/25 bg-blue-500/10 px-3.5 py-2.5 text-sm font-black text-blue-200">
+          <div className="mb-3 flex items-center gap-2 rounded-2xl border border-blue-400/25 bg-blue-500/10 px-3.5 py-2.5 text-sm font-semibold text-blue-200">
             <MapPin size={16} strokeWidth={2.2} className="shrink-0" />
             <span className="shrink-0">Склад точки:</span> <span className="truncate text-white">{getCurrentWorkspace()?.name || "текущая"}</span>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5">
+          <div className="rounded-2xl border border-white/[0.08] bg-white/5 p-4 sm:p-5">
             <p className="mb-4 text-sm font-bold leading-6 text-slate-400">
               Заполните поля ниже — система сама посчитает остаток и себестоимость.
             </p>
@@ -1469,7 +1469,7 @@ export default function WarehousePage() {
                       key={s.warehouseId || s.name}
                       type="button"
                       onClick={() => setForm((p) => ({ ...p, name: s.name }))}
-                      className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-1.5 text-sm font-black text-violet-200 transition hover:bg-violet-500/20"
+                      className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-1.5 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/20"
                     >
                       {s.name}{s.warehouseId ? " · уже на складе" : ""}
                     </button>
@@ -1596,14 +1596,14 @@ export default function WarehousePage() {
               />
             </div>
 
-            <div className="mt-4 rounded-3xl border border-white/10 bg-slate-950/40 p-4">
+            <div className="mt-4 rounded-3xl border border-white/[0.08] bg-slate-950/40 p-4">
               <p className="text-sm font-bold text-slate-400">Проверка перед сохранением</p>
-              <p className="mt-1 text-xl font-black text-white">{computedPurchase.text}</p>
+              <p className="mt-1 text-xl font-semibold text-white">{computedPurchase.text}</p>
               {computedPurchase.detail && (
                 <p className="mt-1 text-sm font-bold text-slate-400">{computedPurchase.detail}</p>
               )}
               <p className="mt-3 text-sm font-bold text-slate-400">Себестоимость 1 {unitLabel(computedPurchase.unit)}</p>
-              <p className="text-2xl font-black text-blue-300">{formatMoney(computedPurchase.unitCost)}</p>
+              <p className="text-2xl font-semibold text-blue-300">{formatMoney(computedPurchase.unitCost)}</p>
             </div>
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -1745,14 +1745,14 @@ export default function WarehousePage() {
           <p className="mb-4 text-sm text-slate-400">
             Пересчитали по факту? Укажите, сколько реально на складе — система сама проведёт недостачу или излишек.
           </p>
-          <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3">
             <div className="min-w-0">
-              <p className="truncate text-base font-black text-white">{inventoryForm.item.name}</p>
+              <p className="truncate text-base font-semibold text-white">{inventoryForm.item.name}</p>
               <p className="text-xs text-slate-400">По учёту: {fmtQty(inventoryForm.item.quantity)} {unitLabel(inventoryForm.item.unit)}</p>
             </div>
           </div>
           <label className="block">
-            <span className="mb-2 block text-sm font-black text-slate-400">Фактический остаток ({unitLabel(inventoryForm.item.unit)})</span>
+            <span className="mb-2 block text-sm font-semibold text-slate-400">Фактический остаток ({unitLabel(inventoryForm.item.unit)})</span>
             <input
               value={inventoryForm.actual}
               onChange={(e) => setInventoryForm((p) => ({ ...p, actual: e.target.value }))}
@@ -1774,7 +1774,7 @@ export default function WarehousePage() {
             </p>
           )}
           <label className="mt-3 block">
-            <span className="mb-2 block text-sm font-black text-slate-400">Комментарий <span className="font-bold text-slate-500">(необязательно)</span></span>
+            <span className="mb-2 block text-sm font-semibold text-slate-400">Комментарий <span className="font-bold text-slate-500">(необязательно)</span></span>
             <input
               value={inventoryForm.note}
               onChange={(e) => setInventoryForm((p) => ({ ...p, note: e.target.value }))}
@@ -1788,7 +1788,7 @@ export default function WarehousePage() {
               type="button"
               onClick={doInventory}
               disabled={submitting}
-              className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex-1 rounded-2xl bg-amber-500 px-5 py-3 font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? "Провожу…" : "Провести"}
             </button>

@@ -28,7 +28,7 @@ const toneFor = (id, name) => {
 
 function Avatar({ id, name, size = 40, className = "" }) {
   return (
-    <span className={`grid shrink-0 place-items-center rounded-2xl font-black ${toneFor(id, name)} ${className}`} style={{ width: size, height: size, fontSize: size * 0.34 }}>
+    <span className={`grid shrink-0 place-items-center rounded-2xl font-semibold ${toneFor(id, name)} ${className}`} style={{ width: size, height: size, fontSize: size * 0.34 }}>
       {initials(name)}
     </span>
   );
@@ -54,9 +54,9 @@ function KpiTile({ label, value, sub, tone = "blue", className = "" }) {
     slate: "text-slate-300 bg-white/10",
   };
   return (
-    <div className={`rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 shadow-lg backdrop-blur sm:p-4 ${className}`}>
-      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 sm:text-[11px]">{label}</p>
-      <p className="mt-1.5 truncate text-xl font-black tabular-nums text-white sm:text-2xl">{value}</p>
+    <div className={`rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 sm:p-4 ${className}`}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 sm:text-[11px]">{label}</p>
+      <p className="mt-1.5 truncate text-xl font-semibold tabular-nums text-white sm:text-2xl">{value}</p>
       {sub && <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500">{sub}</p>}
       <span className={`sr-only ${tones[tone]}`} />
     </div>
@@ -79,10 +79,10 @@ const Skel = ({ className = "" }) => <div className={`animate-pulse rounded-2xl 
 
 function ChartCard({ title, subtitle, children, right }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 shadow-lg backdrop-blur sm:p-5">
+    <section className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-black text-white sm:text-lg">{title}</h3>
+          <h3 className="text-base font-semibold text-white sm:text-lg">{title}</h3>
           {subtitle && <p className="mt-0.5 text-[12px] font-semibold text-slate-400">{subtitle}</p>}
         </div>
         {right}
@@ -209,50 +209,50 @@ export default function EmployeeAnalyticsPage() {
         <header className="mb-5 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-bold text-blue-400 sm:text-sm">Аналитика</p>
-            <h1 className="text-2xl font-black leading-tight tracking-[-0.02em] text-white sm:text-3xl">Сотрудники</h1>
+            <h1 className="text-2xl font-semibold leading-tight tracking-[-0.02em] text-white sm:text-3xl">Сотрудники</h1>
             <p className="mt-1 text-sm font-medium text-slate-400">Кто сколько заработал, чеки, средний чек, наличные и переводы — в одном месте.</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <button onClick={exportCsv} disabled={!hasData} aria-label="Экспорт CSV" title="Экспорт CSV"
-              className="flex h-11 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
+              className="flex h-11 items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 text-sm font-semibold text-slate-200 transition hover:bg-white/10 disabled:opacity-50">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
               <span className="hidden sm:inline">Экспорт CSV</span>
             </button>
             <button onClick={load} aria-label="Обновить" title="Обновить"
-              className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-slate-200 transition hover:bg-white/10">
+              className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.02] text-slate-200 transition hover:bg-white/10">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "animate-spin" : ""}><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" /></svg>
             </button>
           </div>
         </header>
 
         {/* Период */}
-        <div className="mb-5 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] backdrop-blur">
+        <div className="mb-5 overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02]">
           <div className="flex flex-wrap items-center gap-2 px-3 py-3 sm:px-4">
             <div className="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto">
               {PRESETS.map(([key, label]) => (
                 <button key={key} onClick={() => applyPreset(key)}
-                  className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${preset === key ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg" : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}>
+                  className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${preset === key ? "bg-indigo-600 text-white shadow-lg" : "border border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"}`}>
                   {label}
                 </button>
               ))}
             </div>
             <button onClick={() => setFilterOpen((v) => !v)}
-              className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-black transition ${filterOpen ? "border-blue-400/40 bg-blue-500/15 text-blue-200" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}>
+              className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${filterOpen ? "border-blue-400/40 bg-blue-500/15 text-blue-200" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"}`}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
               Свой период
             </button>
           </div>
           {filterOpen && (
-            <div className="grid gap-3 border-t border-white/10 px-3 py-4 sm:grid-cols-2 sm:px-4">
+            <div className="grid gap-3 border-t border-white/[0.08] px-3 py-4 sm:grid-cols-2 sm:px-4">
               <label className="block">
-                <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">От даты</span>
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">От даты</span>
                 <input type="date" value={from} onChange={(e) => { setPreset("custom"); setFrom(e.target.value); }}
-                  className="h-12 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 font-bold text-white outline-none [color-scheme:dark] focus:border-blue-400/70" />
+                  className="h-12 w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 font-bold text-white outline-none [color-scheme:dark] focus:border-blue-400/70" />
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">До даты</span>
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">До даты</span>
                 <input type="date" value={to} onChange={(e) => { setPreset("custom"); setTo(e.target.value); }}
-                  className="h-12 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 font-bold text-white outline-none [color-scheme:dark] focus:border-blue-400/70" />
+                  className="h-12 w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 font-bold text-white outline-none [color-scheme:dark] focus:border-blue-400/70" />
               </label>
             </div>
           )}
@@ -261,7 +261,7 @@ export default function EmployeeAnalyticsPage() {
         {error && (
           <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-300">
             {error}
-            <button onClick={load} className="shrink-0 rounded-xl bg-white/10 px-3 py-1.5 text-xs font-black text-white hover:bg-white/20">Обновить</button>
+            <button onClick={load} className="shrink-0 rounded-xl bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20">Обновить</button>
           </div>
         )}
 
@@ -273,10 +273,10 @@ export default function EmployeeAnalyticsPage() {
         ) : (
           <>
             {/* Герой: выручка + лидер */}
-            <div className="mb-4 grid gap-4 rounded-2xl border border-blue-400/20 bg-white/[0.04] p-5 sm:p-6 lg:grid-cols-[1.4fr_1fr]">
+            <div className="mb-4 grid gap-4 rounded-2xl border border-blue-400/20 bg-white/[0.02] p-5 sm:p-6 lg:grid-cols-[1.4fr_1fr]">
               <div className="min-w-0">
-                <p className="text-[11px] font-black uppercase tracking-wide text-blue-300/80">Выручка за период</p>
-                <p className="mt-1 text-3xl font-black leading-none tabular-nums text-white sm:text-4xl xl:text-5xl">{money(totals.revenue)}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-300/80">Выручка за период</p>
+                <p className="mt-1 text-3xl font-semibold leading-none tabular-nums text-white sm:text-4xl xl:text-5xl">{money(totals.revenue)}</p>
                 <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-slate-400">
                   <span><b className="text-white">{num(totals.orders).toLocaleString("ru-RU")}</b> чеков</span>
                   <span className="text-slate-600">·</span>
@@ -300,16 +300,16 @@ export default function EmployeeAnalyticsPage() {
                   onClick={() => { setOpenId(leader.id); if (typeof document !== "undefined") document.getElementById("emp-leaderboard")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
                   className="rounded-2xl border border-amber-400/20 bg-amber-500/[0.06] p-4 text-left transition hover:bg-amber-500/[0.1]"
                 >
-                  <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wide text-amber-300"><Crown size={12} /> Лидер по выручке</p>
+                  <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300"><Crown size={12} /> Лидер по выручке</p>
                   <div className="mt-2.5 flex items-center gap-3">
                     <Avatar id={leader.id} name={leader.name} size={48} />
                     <div className="min-w-0">
-                      <p className="truncate font-black text-white">{leader.name}</p>
+                      <p className="truncate font-semibold text-white">{leader.name}</p>
                       <p className="text-xs font-bold text-slate-400">{Math.round(num(leader.share))}% выручки команды</p>
                     </div>
                   </div>
-                  <p className="mt-3 text-2xl font-black tabular-nums text-amber-200">{money(leader.revenue)}</p>
-                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-[width] duration-500" style={{ width: `${Math.min(100, num(leader.share))}%` }} /></div>
+                  <p className="mt-3 text-2xl font-semibold tabular-nums text-amber-200">{money(leader.revenue)}</p>
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-amber-400 transition-[width] duration-500" style={{ width: `${Math.min(100, num(leader.share))}%` }} /></div>
                 </button>
               )}
             </div>
@@ -328,7 +328,7 @@ export default function EmployeeAnalyticsPage() {
         {hasData && insights.length > 0 && (
           <div className="mb-5 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
             {insights.map((ins, i) => (
-              <div key={i} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-3">
+              <div key={i} className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-3">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-500/15 text-blue-300"><ins.icon size={18} /></span>
                 <span className="text-[13px] font-bold leading-tight text-slate-200">{ins.text}</span>
               </div>
@@ -341,7 +341,7 @@ export default function EmployeeAnalyticsPage() {
             <span className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-white/[0.06] text-slate-300">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18M7 14l4-4 3 3 5-6" /></svg>
             </span>
-            <h3 className="text-lg font-black text-white">За этот период продаж нет</h3>
+            <h3 className="text-lg font-semibold text-white">За этот период продаж нет</h3>
             <p className="mt-1.5 max-w-sm text-sm text-slate-400">Выберите другой период или проведите первую продажу в кассе — статистика появится здесь.</p>
           </div>
         ) : (
@@ -349,10 +349,10 @@ export default function EmployeeAnalyticsPage() {
             {/* Лидерборд */}
             <ChartCard title="Рейтинг продавцов" subtitle="Нажмите на продавца, чтобы раскрыть детали"
               right={
-                <div className="no-scrollbar flex min-w-0 items-center gap-1.5 overflow-x-auto rounded-xl border border-white/10 bg-white/[0.03] p-1">
+                <div className="no-scrollbar flex min-w-0 items-center gap-1.5 overflow-x-auto rounded-xl border border-white/[0.08] bg-white/[0.02] p-1">
                   {[["revenue", "Выручка"], ["orders", "Чеки"], ["aov", "Средний чек"], ["items", "Товары"]].map(([k, l]) => (
                     <button key={k} onClick={() => setSort(k)}
-                      className={`flex min-h-[40px] shrink-0 items-center rounded-lg px-2.5 py-2 text-xs font-black transition ${sort === k ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white" : "text-slate-400 hover:text-white"}`}>{l}</button>
+                      className={`flex min-h-[40px] shrink-0 items-center rounded-lg px-2.5 py-2 text-xs font-semibold transition ${sort === k ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}>{l}</button>
                   ))}
                 </div>
               }>
@@ -363,16 +363,16 @@ export default function EmployeeAnalyticsPage() {
                   {employees.map((e, i) => {
                     const open = openId === e.id;
                     return (
-                      <div key={e.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
-                        <button type="button" onClick={() => setOpenId(open ? null : e.id)} className="flex w-full items-start gap-3 p-3 text-left transition hover:bg-white/[0.03]">
+                      <div key={e.id} className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+                        <button type="button" onClick={() => setOpenId(open ? null : e.id)} className="flex w-full items-start gap-3 p-3 text-left transition hover:bg-white/[0.02]">
                           <span className="relative shrink-0">
                             <Avatar id={e.id} name={e.name} size={40} />
-                            <span className={`absolute -left-1 -top-1 grid h-5 w-5 place-items-center rounded-full text-[10px] font-black ring-2 ring-[#0b1120] ${i === 0 ? "bg-amber-500 text-slate-950" : i === 1 ? "bg-slate-300 text-slate-950" : i === 2 ? "bg-orange-600 text-white" : "bg-white/15 text-slate-300"}`}>{i + 1}</span>
+                            <span className={`absolute -left-1 -top-1 grid h-5 w-5 place-items-center rounded-full text-[10px] font-semibold ring-2 ring-[#0b1120] ${i === 0 ? "bg-amber-500 text-slate-950" : i === 1 ? "bg-slate-300 text-slate-950" : i === 2 ? "bg-orange-600 text-white" : "bg-white/15 text-slate-300"}`}>{i + 1}</span>
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-baseline justify-between gap-3">
-                              <p className="truncate font-black text-white">{e.name}</p>
-                              <p className="shrink-0 font-black tabular-nums text-white">{money(e.revenue)}</p>
+                              <p className="truncate font-semibold text-white">{e.name}</p>
+                              <p className="shrink-0 font-semibold tabular-nums text-white">{money(e.revenue)}</p>
                             </div>
                             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-bold text-slate-400">
                               <span>{e.orders} чек.</span><span className="text-slate-600">·</span>
@@ -452,7 +452,7 @@ export default function EmployeeAnalyticsPage() {
                     </ResponsiveContainer>
                     {payTotal > 0 && (
                       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-sm font-black tabular-nums text-white">{money(payTotal)}</span>
+                        <span className="text-sm font-semibold tabular-nums text-white">{money(payTotal)}</span>
                         <span className="text-[9px] font-bold uppercase tracking-wide text-slate-500">всего</span>
                       </div>
                     )}
@@ -462,7 +462,7 @@ export default function EmployeeAnalyticsPage() {
                       <div key={p.key} className="flex items-center gap-2.5">
                         <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: PAY_COLORS[p.key] }} />
                         <span className="flex-1 truncate text-sm font-bold text-slate-300">{p.name}</span>
-                        <span className="shrink-0 text-sm font-black tabular-nums text-white">{money(p.value)}</span>
+                        <span className="shrink-0 text-sm font-semibold tabular-nums text-white">{money(p.value)}</span>
                       </div>
                     )) : <p className="text-sm text-slate-500">Нет данных</p>}
                   </div>
@@ -496,7 +496,7 @@ function Detail({ label, value, tone = "text-white", className = "" }) {
   return (
     <div className={`rounded-xl bg-slate-950/40 px-2.5 py-2 ${className}`}>
       <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`mt-0.5 truncate text-sm font-black tabular-nums ${tone}`}>{value}</p>
+      <p className={`mt-0.5 truncate text-sm font-semibold tabular-nums ${tone}`}>{value}</p>
     </div>
   );
 }

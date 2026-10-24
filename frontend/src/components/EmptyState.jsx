@@ -32,7 +32,7 @@ export default function EmptyState({
         )}
       </div>
 
-      {title && <h3 className="text-lg font-black text-white">{title}</h3>}
+      {title && <h3 className="text-lg font-semibold text-white">{title}</h3>}
       {text && <p className="mt-1.5 max-w-sm text-sm leading-6 text-slate-400">{text}</p>}
 
       {(actionLabel || secondaryLabel) && (
@@ -41,7 +41,7 @@ export default function EmptyState({
             <button
               type="button"
               onClick={onAction}
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110 active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white  transition hover:brightness-110 active:scale-[0.98]"
             >
               {actionLabel}
             </button>
@@ -50,7 +50,7 @@ export default function EmptyState({
             <button
               type="button"
               onClick={onSecondary}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 font-black text-slate-200 transition hover:bg-white/10 active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-5 py-3 font-semibold text-slate-200 transition hover:bg-white/10 active:scale-[0.98]"
             >
               {secondaryLabel}
             </button>

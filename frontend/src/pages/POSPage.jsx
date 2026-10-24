@@ -176,15 +176,15 @@ function SmartIngredientInputPOS({ value, onChange, warehouseItems = [], onSelec
       {open && merged.length > 0 && rect && createPortal(
         <div data-pos-ingredient-dropdown
           style={{ position: "fixed", left: rect.left, top: rect.top, width: rect.width, zIndex: 80 }}
-          className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/50">
+          className="overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-900 shadow-lg shadow-black/50">
           {merged.map((s) => (
             <button key={s.key} type="button" onMouseDown={(e) => { e.preventDefault(); handleSelect(s); }}
               className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/8">
-              <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black ${s.source === "warehouse" ? "bg-emerald-500/20 text-emerald-300" : "bg-violet-500/20 text-violet-300"}`}>
+              <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-semibold ${s.source === "warehouse" ? "bg-emerald-500/20 text-emerald-300" : "bg-violet-500/20 text-violet-300"}`}>
                 {s.source === "warehouse" ? "склад" : "AI"}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-black text-white">{s.name}</p>
+                <p className="truncate text-sm font-semibold text-white">{s.name}</p>
                 {s.sub && <p className="text-xs text-slate-400">{s.sub}</p>}
               </div>
             </button>
@@ -994,35 +994,35 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         <div className="flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button type="button" onClick={onExit} aria-label="Выйти из кассы" title="Выйти из кассы"
-              className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-3 font-black text-slate-200 transition hover:bg-white/10 active:scale-95 sm:px-3.5">
+              className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.05] px-3 font-semibold text-slate-200 transition hover:bg-white/10 active:scale-95 sm:px-3.5">
               <LogOut size={18} strokeWidth={2.4} />
               <span>Выход</span>
             </button>
             <div className="min-w-0">
               <p className="text-[11px] font-bold text-blue-400 sm:text-sm">Касса</p>
-              <h2 className="hidden truncate text-base font-black leading-none text-white sm:block sm:text-xl">Магазин</h2>
+              <h2 className="hidden truncate text-base font-semibold leading-none text-white sm:block sm:text-xl">Магазин</h2>
             </div>
           </div>
 
           {isWorker ? (
-            <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-2 py-1.5 shadow-lg backdrop-blur">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-blue-600 to-violet-600 text-xs font-black text-white">
+            <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-2 py-1.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-xs font-semibold text-white">
                 {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
               </div>
               <select value={currentProfile?.id || ""} onChange={(e) => onProfileChange?.(e.target.value)}
-                className="max-w-[38vw] rounded-lg bg-transparent py-1 pr-6 text-sm font-black text-blue-300 outline-none [color-scheme:dark] sm:max-w-none">
+                className="max-w-[38vw] rounded-lg bg-transparent py-1 pr-6 text-sm font-semibold text-blue-300 outline-none [color-scheme:dark] sm:max-w-none">
                 <option value="">Сотрудник…</option>
                 {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
               </select>
             </div>
           ) : (
-            <div className="flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2 shadow-lg backdrop-blur sm:px-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-violet-600 text-sm font-black text-white">
+            <div className="flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-2.5 py-2 sm:px-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-sm font-semibold text-white">
                 {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
               </div>
               <div className="hidden min-w-0 pr-1 sm:block">
-                <p className="text-[11px] font-black uppercase leading-none text-slate-400">Сейчас работает</p>
-                <p className="truncate text-sm font-black leading-tight text-white">{activeWorkerName}</p>
+                <p className="text-[11px] font-semibold uppercase leading-none text-slate-400">Сейчас работает</p>
+                <p className="truncate text-sm font-semibold leading-tight text-white">{activeWorkerName}</p>
               </div>
             </div>
           )}
@@ -1032,22 +1032,22 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-none" style={{ scrollbarWidth: "none" }}>
           <button type="button" onClick={() => setPendingModal(true)}
             aria-label="К оплате — отложенные чеки" title="К оплате — отложенные чеки"
-            className="relative flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-amber-400/25 bg-amber-500/10 px-3.5 font-black text-amber-200 transition hover:bg-amber-500/20 active:scale-95">
+            className="relative flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-amber-400/25 bg-amber-500/10 px-3.5 font-semibold text-amber-200 transition hover:bg-amber-500/20 active:scale-95">
             <Clock size={18} strokeWidth={2.4} />
             Отложенные
             {pendingCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black leading-none text-white">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-semibold leading-none text-white">
                 {pendingCount > 99 ? "99+" : pendingCount}
               </span>
             )}
           </button>
           <button type="button" onClick={openOrders}
             aria-label="Заказы с сайта" title="Заказы с сайта"
-            className={`relative flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border px-3.5 font-black transition active:scale-95 ${ordersCount > 0 ? "border-pink-400/40 bg-pink-500/15 text-pink-200 hover:bg-pink-500/25" : "border-indigo-400/25 bg-indigo-500/10 text-indigo-200 hover:bg-indigo-500/20"}`}>
+            className={`relative flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border px-3.5 font-semibold transition active:scale-95 ${ordersCount > 0 ? "border-pink-400/40 bg-pink-500/15 text-pink-200 hover:bg-pink-500/25" : "border-indigo-400/25 bg-indigo-500/10 text-indigo-200 hover:bg-indigo-500/20"}`}>
             <ClipboardList size={18} strokeWidth={2.4} />
             Заказы
             {ordersCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-black leading-none text-white">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-semibold leading-none text-white">
                 {ordersCount > 99 ? "99+" : ordersCount}
               </span>
             )}
@@ -1055,21 +1055,21 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           <button type="button" onClick={openCashCheck}
             aria-label="Проверить кассу — сколько наличных должно быть сейчас"
             title="Проверить кассу — сколько наличных должно быть сейчас"
-            className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-3.5 font-black text-emerald-200 transition hover:bg-emerald-500/20 active:scale-95">
+            className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-3.5 font-semibold text-emerald-200 transition hover:bg-emerald-500/20 active:scale-95">
             <Wallet size={18} strokeWidth={2.4} />
             Касса
           </button>
           <button type="button" onClick={openCardModal}
             aria-label="Счета для оплаты переводом — добавить или удалить"
             title="Счета для оплаты переводом — добавить или удалить"
-            className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3.5 font-black text-sky-200 transition hover:bg-sky-500/20 active:scale-95">
+            className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3.5 font-semibold text-sky-200 transition hover:bg-sky-500/20 active:scale-95">
             <CreditCard size={18} strokeWidth={2.4} />
             Счета
           </button>
           <button type="button" onClick={openReceipts}
             aria-label="Чеки за сегодня — что пробили"
             title="Чеки за сегодня — что пробили"
-            className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3.5 font-black text-violet-200 transition hover:bg-violet-500/20 active:scale-95">
+            className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3.5 font-semibold text-violet-200 transition hover:bg-violet-500/20 active:scale-95">
             <Receipt size={18} strokeWidth={2.4} />
             Чеки
           </button>
@@ -1092,7 +1092,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             ) : orders.length === 0 ? (
               <div className="flex flex-col items-center py-10 text-center">
                 <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/5 text-slate-500"><ClipboardList size={30} strokeWidth={1.8} /></div>
-                <p className="text-base font-black text-white">Заказов пока нет</p>
+                <p className="text-base font-semibold text-white">Заказов пока нет</p>
                 <p className="mt-1 text-sm font-bold text-slate-400">Новый заказ придёт сюда сам — со звонком 🛎, обновлять не нужно.</p>
               </div>
             ) : (
@@ -1102,24 +1102,24 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   const time = String(o.createdAt || "").slice(11, 16);
                   const isNew = o.status === "new";
                   return (
-                    <div key={o.id} className={`overflow-hidden rounded-3xl border ${isNew ? "border-pink-400/40 bg-pink-500/[0.08] shadow-lg shadow-pink-500/5" : "border-white/10 bg-white/[0.04]"}`}>
+                    <div key={o.id} className={`overflow-hidden rounded-3xl border ${isNew ? "border-pink-400/40 bg-pink-500/[0.08] shadow-lg shadow-pink-500/5" : "border-white/[0.08] bg-white/[0.02]"}`}>
                       {/* Шапка заказа */}
                       <div className="flex items-center justify-between gap-2 px-4 pt-3.5">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black ${isNew ? "bg-pink-500/25 text-pink-100" : "bg-white/10 text-slate-300"}`}>
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${isNew ? "bg-pink-500/25 text-pink-100" : "bg-white/10 text-slate-300"}`}>
                           {isNew && <span className="h-1.5 w-1.5 rounded-full bg-pink-300 motion-safe:animate-pulse" />}
                           {isNew ? "НОВЫЙ ЗАКАЗ" : "В РАБОТЕ"}
                         </span>
-                        <span className="text-xs font-black text-slate-400">🌐 сайт{time ? ` · ${time}` : ""}</span>
+                        <span className="text-xs font-semibold text-slate-400">🌐 сайт{time ? ` · ${time}` : ""}</span>
                       </div>
                       {/* Клиент + сумма */}
                       <div className="flex items-end justify-between gap-3 px-4 pt-2">
                         <div className="min-w-0">
-                          <p className="truncate text-[16px] font-black leading-tight text-white">{o.customerName || "Клиент"}</p>
+                          <p className="truncate text-[16px] font-semibold leading-tight text-white">{o.customerName || "Клиент"}</p>
                           {o.customerPhone && <a href={`tel:${o.customerPhone}`} className="text-[13px] font-bold text-blue-300">{o.customerPhone}</a>}
                         </div>
                         <div className="shrink-0 text-right">
-                          <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Сумма</p>
-                          <p className="text-xl font-black leading-none text-emerald-300">{formatMoney(o.total)}</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Сумма</p>
+                          <p className="text-xl font-semibold leading-none text-emerald-300">{formatMoney(o.total)}</p>
                         </div>
                       </div>
                       {/* Позиции */}
@@ -1127,7 +1127,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                         {items.map((it, i) => (
                           <div key={i} className="flex items-center justify-between gap-2 text-[13px] font-bold text-slate-200">
                             <span className="flex min-w-0 items-center gap-2">
-                              <span className="shrink-0 rounded-lg bg-blue-500/15 px-1.5 py-0.5 text-[12px] font-black text-blue-200">×{num(it.qty)}</span>
+                              <span className="shrink-0 rounded-lg bg-blue-500/15 px-1.5 py-0.5 text-[12px] font-semibold text-blue-200">×{num(it.qty)}</span>
                               <span className="truncate">{prettyName(it.name)}</span>
                             </span>
                             <span className="shrink-0 text-slate-400">{formatMoney(num(it.price) * num(it.qty))}</span>
@@ -1139,11 +1139,11 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                       {/* Действия */}
                       <div className="flex gap-2 p-4 pt-3">
                         <button type="button" onClick={() => acceptOrder(o)}
-                          className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 px-3 py-3 text-sm font-black text-white shadow-lg transition active:scale-95">
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-indigo-600 px-3 py-3 text-sm font-semibold text-white shadow-lg transition active:scale-95">
                           <Check size={16} strokeWidth={2.6} /> Принять в кассу
                         </button>
                         <button type="button" onClick={() => rejectOrder(o)}
-                          className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm font-black text-red-300 transition hover:bg-red-500/20 active:scale-95">
+                          className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 active:scale-95">
                           Отклонить
                         </button>
                       </div>
@@ -1153,14 +1153,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               </div>
             )}
 
-            <button type="button" onClick={() => setOrdersModal(false)} className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">Закрыть</button>
+            <button type="button" onClick={() => setOrdersModal(false)} className="w-full rounded-2xl border border-white/[0.08] bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10">Закрыть</button>
           </div>
         </Modal>
       )}
 
       <div className="flex flex-col gap-4 md:min-h-0 md:flex-1 md:flex-row">
         <div className="flex flex-col gap-3 md:min-h-0 md:flex-1">
-          <div className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:p-4">
+          <div className="shrink-0 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 sm:p-4">
             <div className="flex items-center gap-3">
               {openedCategory && (
                 <button
@@ -1168,14 +1168,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   onClick={() => { setOpenedCategory(null); setSearch(""); }}
                   aria-label="Назад к категориям"
                   title="Назад к категориям"
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
                 ><ChevronLeft size={20} strokeWidth={2.4} /></button>
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
                   {openedCategory ? prettyName(openedCategory.typeName || openedCategory.type || "Категория") : "Меню"}
                 </p>
-                <h3 className="truncate text-base font-black sm:text-lg">
+                <h3 className="truncate text-base font-semibold sm:text-lg">
                   {openedCategory ? prettyName(openedCategory.name) : "Категории"}
                 </h3>
               </div>
@@ -1183,7 +1183,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={openedCategory ? "Найти позицию" : "Найти товар по всему меню"}
-                className="hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 lg:block lg:w-72"
+                className="hidden rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 lg:block lg:w-72"
               />
             </div>
 
@@ -1191,14 +1191,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={openedCategory ? "Найти позицию" : "Найти товар по всему меню"}
-              className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 lg:hidden"
+              className="mt-3 w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 lg:hidden"
             />
 
             {!openedCategory && (
               <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-0.5">
                 <button
                   onClick={() => { setSelectedSectionId("all"); setOpenedCategory(null); }}
-                  className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-black transition ${selectedSectionId === "all" ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
+                  className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${selectedSectionId === "all" ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"}`}
                 >
                   Все
                 </button>
@@ -1206,7 +1206,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   <button
                     key={s.id}
                     onClick={() => { setSelectedSectionId(String(s.id)); setOpenedCategory(null); }}
-                    className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-black transition ${String(selectedSectionId) === String(s.id) ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
+                    className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${String(selectedSectionId) === String(s.id) ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"}`}
                   >
                     {prettyName(s.name)}
                   </button>
@@ -1220,7 +1220,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               {/* ── Создать раздел inline ── */}
               {inlineSection ? (
                 <div className="flex flex-1 items-center gap-2 rounded-2xl border border-blue-400/30 bg-blue-500/10 px-3 py-2">
-                  <span className="text-sm font-black text-blue-300 shrink-0">Раздел:</span>
+                  <span className="text-sm font-semibold text-blue-300 shrink-0">Раздел:</span>
                   <input
                     value={newSectionName}
                     onChange={(e) => setNewSectionName(e.target.value)}
@@ -1229,17 +1229,17 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     autoFocus
                     className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-blue-400/50"
                   />
-                  <button onClick={() => { createSection(); setInlineSection(false); }} className="shrink-0 rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-black text-white hover:bg-blue-500">Добавить</button>
+                  <button onClick={() => { createSection(); setInlineSection(false); }} className="shrink-0 rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-semibold text-white hover:bg-blue-500">Добавить</button>
                   <button onClick={() => setInlineSection(false)} aria-label="Закрыть" title="Закрыть" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
                 </div>
               ) : (
                 <button onClick={() => setInlineSection(true)} title="Большая группа меню — Бар, Кухня"
-                  className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:border-blue-400/40 hover:bg-blue-500/10">
+                  className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/5 px-3 py-2 text-left transition hover:border-blue-400/40 hover:bg-blue-500/10">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                   </span>
                   <span className="leading-tight">
-                    <span className="block text-sm font-black text-white">Раздел</span>
+                    <span className="block text-sm font-semibold text-white">Раздел</span>
                     <span className="block text-[10px] font-bold text-slate-400">напр. Бар, Кухня</span>
                   </span>
                 </button>
@@ -1248,12 +1248,12 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               {/* ── Создать категорию inline ── */}
               {inlineCategory ? (
                 <div className="flex flex-1 flex-wrap items-center gap-2 rounded-2xl border border-violet-400/30 bg-violet-500/10 px-3 py-2">
-                  <span className="text-sm font-black text-violet-300 shrink-0">Категория:</span>
+                  <span className="text-sm font-semibold text-violet-300 shrink-0">Категория:</span>
                   {safe_sections.length > 0 && (
                     <select
                       value={newCategory.sectionId}
                       onChange={(e) => setNewCategory(p => ({ ...p, sectionId: e.target.value }))}
-                      className="rounded-xl border border-white/10 bg-slate-900 px-2 py-1 text-xs font-bold text-white outline-none shrink-0">
+                      className="rounded-xl border border-white/[0.08] bg-slate-900 px-2 py-1 text-xs font-bold text-white outline-none shrink-0">
                       <option value="">Выберите раздел…</option>
                       {safe_sections.map(s => <option key={s.id} value={s.id}>{prettyName(s.name)}</option>)}
                     </select>
@@ -1266,17 +1266,17 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     autoFocus
                     className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-violet-400/50"
                   />
-                  <button onClick={() => { createCategory(); setInlineCategory(false); }} className="shrink-0 rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-black text-white hover:bg-violet-500">Добавить</button>
+                  <button onClick={() => { createCategory(); setInlineCategory(false); }} className="shrink-0 rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-semibold text-white hover:bg-violet-500">Добавить</button>
                   <button onClick={() => setInlineCategory(false)} aria-label="Закрыть" title="Закрыть" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
                 </div>
               ) : (
                 <button onClick={() => { setNewCategory(p => ({ ...p, sectionId: selectedSectionId !== "all" ? selectedSectionId : "" })); setInlineCategory(true); }} title="Группа товаров внутри раздела — Коктейли, Чаи"
-                  className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:border-violet-400/40 hover:bg-violet-500/10">
+                  className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/5 px-3 py-2 text-left transition hover:border-violet-400/40 hover:bg-violet-500/10">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                   </span>
                   <span className="leading-tight">
-                    <span className="block text-sm font-black text-white">Категория</span>
+                    <span className="block text-sm font-semibold text-white">Категория</span>
                     <span className="block text-[10px] font-bold text-slate-400">напр. Коктейли, Чаи</span>
                   </span>
                 </button>
@@ -1287,14 +1287,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 title={openedCategory ? `Добавить товар в «${prettyName(openedCategory.name)}»` : "Сначала откройте категорию"}
                 className={`flex items-center gap-2.5 rounded-2xl px-3 py-2 text-left transition ${
                   openedCategory
-                    ? "bg-linear-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/30 hover:brightness-110"
-                    : "border border-dashed border-white/12 bg-white/[0.03] text-slate-400 cursor-not-allowed"
+                    ? "bg-indigo-600 text-white  hover:brightness-110"
+                    : "border border-dashed border-white/12 bg-white/[0.02] text-slate-400 cursor-not-allowed"
                 }`}>
                 <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${openedCategory ? "bg-white/20 text-white" : "bg-white/8 text-slate-400"}`}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                 </span>
                 <span className="leading-tight">
-                  <span className="block text-sm font-black">Товар</span>
+                  <span className="block text-sm font-semibold">Товар</span>
                   <span className={`block text-[10px] font-bold ${openedCategory ? "text-white/75" : "text-slate-500"}`}>
                     {openedCategory ? `в «${prettyName(openedCategory.name)}»` : "откройте категорию"}
                   </span>
@@ -1311,22 +1311,22 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 <button
                   key={p.id}
                   onClick={() => addToCart(p)}
-                  className="group relative flex min-h-[108px] flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 text-left transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:bg-white/[0.07] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:p-4"
+                  className="group relative flex min-h-[108px] flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 text-left transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:bg-white/[0.07] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:p-4"
                 >
                   <div className="min-w-0">
-                    <div className="line-clamp-2 text-sm font-black leading-tight text-white sm:text-[15px]">{prettyName(p.name)}</div>
+                    <div className="line-clamp-2 text-sm font-semibold leading-tight text-white sm:text-[15px]">{prettyName(p.name)}</div>
                     <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">{p._catName}</p>
                   </div>
                   <div className="mt-3 flex items-end justify-between gap-2">
-                    <span className="text-lg font-black tabular-nums text-white sm:text-xl">{formatMoney(p.price)}<span className="ml-0.5 text-xs font-bold text-slate-500">₽</span></span>
+                    <span className="text-lg font-semibold tabular-nums text-white sm:text-xl">{formatMoney(p.price)}<span className="ml-0.5 text-xs font-bold text-slate-500">₽</span></span>
                     <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-blue-500/15 text-blue-300 transition group-hover:bg-blue-500 group-hover:text-white"><Plus size={16} strokeWidth={2.8} /></span>
                   </div>
                 </button>
               ))}
 
               {!globalSearchResults.length && (
-                <div className="col-span-full rounded-2xl border border-white/10 bg-white/[0.04] p-10 text-center">
-                  <p className="text-xl font-black text-white">Ничего не найдено</p>
+                <div className="col-span-full rounded-2xl border border-white/[0.08] bg-white/[0.02] p-10 text-center">
+                  <p className="text-xl font-semibold text-white">Ничего не найдено</p>
                   <p className="mt-2 text-slate-400">Попробуйте другое название товара.</p>
                 </div>
               )}
@@ -1340,20 +1340,20 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     setOpenedCategory(cat);
                     setSearch("");
                   }}
-                  className="group flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 text-left transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:bg-white/[0.07] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  className="group flex items-center gap-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 text-left transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:bg-white/[0.07] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 >
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-blue-600/25 to-violet-600/20 text-blue-200"><FolderOpen className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[11px] font-bold text-blue-400">{prettyName(cat.typeName || cat.type || "Раздел")}</p>
-                    <h3 className="truncate text-sm font-black text-white sm:text-base">{prettyName(cat.name)}</h3>
+                    <h3 className="truncate text-sm font-semibold text-white sm:text-base">{prettyName(cat.name)}</h3>
                   </div>
                   <ChevronRight size={16} className="shrink-0 text-slate-600 transition group-hover:text-blue-300" />
                 </button>
               ))}
 
               {!visibleCategories.length && (
-                <div className="col-span-full rounded-2xl border border-white/10 bg-white/[0.04] p-10 text-center">
-                  <p className="text-xl font-black text-white">
+                <div className="col-span-full rounded-2xl border border-white/[0.08] bg-white/[0.02] p-10 text-center">
+                  <p className="text-xl font-semibold text-white">
                     Категорий пока нет
                   </p>
                   <p className="mt-2 text-slate-400">
@@ -1369,21 +1369,21 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 <button
                   key={p.id}
                   onClick={() => addToCart(p)}
-                  className="group relative flex min-h-[108px] flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 text-left transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:bg-white/[0.07] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:p-4"
+                  className="group relative flex min-h-[108px] flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 text-left transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:bg-white/[0.07] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:p-4"
                 >
-                  <div className="line-clamp-2 text-sm font-black leading-tight text-white sm:text-[15px]">
+                  <div className="line-clamp-2 text-sm font-semibold leading-tight text-white sm:text-[15px]">
                     {prettyName(p.name)}
                   </div>
                   <div className="mt-3 flex items-end justify-between gap-2">
-                    <span className="text-lg font-black tabular-nums text-white sm:text-xl">{formatMoney(p.price)}<span className="ml-0.5 text-xs font-bold text-slate-500">₽</span></span>
+                    <span className="text-lg font-semibold tabular-nums text-white sm:text-xl">{formatMoney(p.price)}<span className="ml-0.5 text-xs font-bold text-slate-500">₽</span></span>
                     <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-blue-500/15 text-blue-300 transition group-hover:bg-blue-500 group-hover:text-white"><Plus size={16} strokeWidth={2.8} /></span>
                   </div>
                 </button>
               ))}
 
               {!productsInsideCategory.length && (
-                <div className="col-span-full rounded-2xl border border-white/10 bg-white/[0.04] p-10 text-center">
-                  <p className="text-xl font-black text-white">
+                <div className="col-span-full rounded-2xl border border-white/[0.08] bg-white/[0.02] p-10 text-center">
+                  <p className="text-xl font-semibold text-white">
                     В этой категории пока нет товаров
                   </p>
                   <p className="mt-2 text-slate-400">
@@ -1405,14 +1405,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <div className="mb-3 flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300"><Plus size={15} strokeWidth={3} /></span>
               <div>
-                <p className="text-sm font-black text-white leading-tight">Быстрые допы</p>
+                <p className="text-sm font-semibold text-white leading-tight">Быстрые допы</p>
                 <p className="text-[11px] text-slate-400 leading-tight">Стаканчик, лёд и т.п. — в доходах отдельно</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
               {extraProducts.map((p) => (
                 <button key={p.id} type="button" onClick={() => addToCart(p)}
-                  className="flex min-w-0 items-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm font-black text-white transition hover:bg-amber-500/20 active:scale-95">
+                  className="flex min-w-0 items-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-500/20 active:scale-95">
                   <span className="truncate">{prettyName(p.name)}</span>
                   <span className="shrink-0 text-amber-300">{formatMoney(p.price)}</span>
                 </button>
@@ -1421,22 +1421,22 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           </div>
         )}
 
-        <div className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 sm:p-4 md:min-h-0 md:flex-1">
+        <div className="flex flex-col rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 sm:p-4 md:min-h-0 md:flex-1">
           <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
-            <h3 className="text-base font-black sm:text-lg">Корзина</h3>
+            <h3 className="text-base font-semibold sm:text-lg">Корзина</h3>
 
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => { setCustomForm({ name: "", price: "", qty: "1" }); setError(""); setCustomModal(true); }}
                 title="Произвольная продажа: название и цена"
-                className="inline-flex min-h-10 items-center gap-1 whitespace-nowrap rounded-2xl bg-blue-500/15 px-3 py-2 text-sm font-black text-blue-200 transition hover:bg-blue-500/25 active:scale-95"
+                className="inline-flex min-h-10 items-center gap-1 whitespace-nowrap rounded-2xl bg-blue-500/15 px-3 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/25 active:scale-95"
               >
                 <Plus size={16} strokeWidth={2.6} /> Произвольная продажа
               </button>
             {safe_cart.length > 0 && (
               <button
                 onClick={() => { if (!window.confirm(`Очистить всю корзину (${safe_cart.length} поз.)?`)) return; setCart([]); setDiscount(""); setPaidAmount(""); setCardId(""); }}
-                className="min-h-10 rounded-2xl bg-red-500/10 px-3 py-2 text-sm font-black text-red-300"
+                className="min-h-10 rounded-2xl bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-300"
               >
                 Очистить
               </button>
@@ -1448,7 +1448,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             {safe_cart.map((i) => (
               <div
                 key={i.productId}
-                className="flex items-center justify-between gap-3 rounded-3xl border border-white/10 bg-white/[0.03] p-3"
+                className="flex items-center justify-between gap-3 rounded-3xl border border-white/[0.08] bg-white/[0.02] p-3"
               >
                 <div className="min-w-0 flex-1">
                   <div className="font-bold truncate">{prettyName(i.name)}</div>
@@ -1462,7 +1462,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     onClick={() => decreaseCartItem(i.productId)}
                     aria-label="Уменьшить количество"
                     title="Уменьшить количество"
-                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/8 font-black text-white transition active:scale-95 hover:bg-white/15"
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/8 font-semibold text-white transition active:scale-95 hover:bg-white/15"
                   >
                     <Minus size={18} strokeWidth={3}/>
                   </button>
@@ -1470,7 +1470,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     onClick={() => increaseCartItem(i.productId)}
                     aria-label="Увеличить количество"
                     title="Увеличить количество"
-                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/12 font-black text-blue-300 transition active:scale-95 hover:bg-blue-500/20"
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/12 font-semibold text-blue-300 transition active:scale-95 hover:bg-blue-500/20"
                   >
                     <Plus size={18} strokeWidth={3}/>
                   </button>
@@ -1479,11 +1479,11 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             ))}
 
             {!safe_cart.length && (
-              <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[0.02] px-5 py-10 text-center">
+              <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-white/[0.08] bg-white/[0.02] px-5 py-10 text-center">
                 <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-slate-500">
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
                 </div>
-                <p className="text-sm font-black text-slate-300">Корзина пустая</p>
+                <p className="text-sm font-semibold text-slate-300">Корзина пустая</p>
                 <p className="mt-1 text-xs font-bold text-slate-500">Нажимайте товары в меню, чтобы добавить в чек</p>
               </div>
             )}
@@ -1497,11 +1497,11 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   onChange={(e) => setDiscount(e.target.value)}
                   inputMode="decimal"
                   placeholder="Скидка %"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 font-bold text-white outline-none placeholder:text-slate-500"
+                  className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-2.5 font-bold text-white outline-none placeholder:text-slate-500"
                 />
               </div>
 
-              <div className="mt-2 shrink-0 rounded-2xl border border-white/10 bg-linear-to-br from-blue-600/10 to-violet-600/10 p-3">
+              <div className="mt-2 shrink-0 rounded-2xl border border-white/[0.08] bg-linear-to-br from-blue-600/10 to-violet-600/10 p-3">
                 {discountAmount > 0 && (
                   <>
                     <div className="flex justify-between text-sm text-slate-300">
@@ -1514,9 +1514,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     </div>
                   </>
                 )}
-                <div className={`flex items-baseline justify-between ${discountAmount > 0 ? "mt-2 border-t border-white/10 pt-2" : ""}`}>
-                  <span className="text-base font-black">Итого</span>
-                  <b className="text-xl font-black">{formatMoney(total)}</b>
+                <div className={`flex items-baseline justify-between ${discountAmount > 0 ? "mt-2 border-t border-white/[0.08] pt-2" : ""}`}>
+                  <span className="text-base font-semibold">Итого</span>
+                  <b className="text-xl font-semibold">{formatMoney(total)}</b>
                 </div>
               </div>
             </>
@@ -1525,7 +1525,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           <button
             onClick={confirmSale}
             disabled={!safe_cart.length}
-            className="mt-2 w-full shrink-0 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 text-base font-black text-white shadow-lg shadow-blue-900/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:scale-100 sm:py-3.5 sm:text-lg"
+            className="mt-2 w-full shrink-0 rounded-2xl bg-indigo-600 px-5 py-3 text-base font-semibold text-white  transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:scale-100 sm:py-3.5 sm:text-lg"
           >
             {safe_cart.length ? `Подтвердить покупку · ${formatMoney(total)}` : "Подтвердить покупку"}
           </button>
@@ -1539,21 +1539,21 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             {/* Работа за сегодня: продаж, выручка, сколько нала принесли продажи за день */}
             <div className="rounded-3xl border border-violet-400/20 bg-violet-500/[0.08] p-4">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-black uppercase tracking-wide text-violet-300/80">Работа за сегодня</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-300/80">Работа за сегодня</p>
                 {cashCheckLoading && <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />}
               </div>
               <div className="mt-2.5 grid grid-cols-2 gap-2">
                 <div className="rounded-2xl bg-white/[0.05] px-2.5 py-2.5 text-center">
-                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Продаж</p>
-                  <p className="mt-0.5 text-2xl font-black tabular-nums text-white">{num(todayStats?.salesCount)}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Продаж</p>
+                  <p className="mt-0.5 text-2xl font-semibold tabular-nums text-white">{num(todayStats?.salesCount)}</p>
                 </div>
                 <div className="rounded-2xl bg-white/[0.05] px-2.5 py-2.5 text-center">
-                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Выручка</p>
-                  <p className="mt-0.5 text-base font-black tabular-nums text-white sm:text-lg">{formatMoney(num(todayStats?.totalRevenue))}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Выручка</p>
+                  <p className="mt-0.5 text-base font-semibold tabular-nums text-white sm:text-lg">{formatMoney(num(todayStats?.totalRevenue))}</p>
                 </div>
                 <div className="col-span-2 rounded-2xl bg-emerald-500/10 px-2.5 py-2.5 text-center">
-                  <p className="text-[10px] font-black uppercase tracking-wide text-emerald-300/80">Налом</p>
-                  <p className="mt-0.5 text-base font-black tabular-nums text-emerald-300 sm:text-lg">{formatMoney(num(todayStats?.cashTotal))}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-300/80">Налом</p>
+                  <p className="mt-0.5 text-base font-semibold tabular-nums text-emerald-300 sm:text-lg">{formatMoney(num(todayStats?.cashTotal))}</p>
                 </div>
               </div>
               <p className="mt-2 text-[11px] font-bold leading-snug text-slate-500">
@@ -1565,8 +1565,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <div className="space-y-4">
               {/* Главное число: сколько наличных должно быть в кассе прямо сейчас */}
               <div className="rounded-3xl border border-emerald-400/25 bg-emerald-500/[0.08] p-5 text-center sm:p-6">
-                <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">В кассе сейчас должно быть</p>
-                <p className={`mt-1 text-4xl font-black tabular-nums sm:text-5xl ${num(cashShift.expectedCash) < 0 ? "text-red-300" : "text-white"}`}>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-300/80">В кассе сейчас должно быть</p>
+                <p className={`mt-1 text-4xl font-semibold tabular-nums sm:text-5xl ${num(cashShift.expectedCash) < 0 ? "text-red-300" : "text-white"}`}>
                   {formatMoney(cashShift.expectedCash)}
                 </p>
                 <p className="mt-2 text-xs font-bold text-slate-400">
@@ -1576,28 +1576,28 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
               {/* Из чего складывается — чисто касса, без прибыли и безнала */}
               <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
-                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-300/80">Размен</p>
-                  <p className="mt-1 text-2xl font-black tabular-nums text-white">{formatMoney(cashShift.openingCash)}</p>
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.05] px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-300/80">Размен</p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{formatMoney(cashShift.openingCash)}</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
-                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-300/80">Продажи налом</p>
-                  <p className="mt-1 text-2xl font-black tabular-nums text-emerald-300">{formatMoney(cashShift.cashSales)}</p>
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.05] px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-300/80">Продажи налом</p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums text-emerald-300">{formatMoney(cashShift.cashSales)}</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
-                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-300/80">Внесено</p>
-                  <p className="mt-1 text-2xl font-black tabular-nums text-white">{formatMoney(cashShift.cashIn)}</p>
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.05] px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-300/80">Внесено</p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{formatMoney(cashShift.cashIn)}</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
-                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-300/80">Изъято</p>
-                  <p className="mt-1 text-2xl font-black tabular-nums text-red-300">{num(cashShift.cashOut) > 0 ? "−" : ""}{formatMoney(cashShift.cashOut)}</p>
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.05] px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-300/80">Изъято</p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums text-red-300">{num(cashShift.cashOut) > 0 ? "−" : ""}{formatMoney(cashShift.cashOut)}</p>
                 </div>
               </div>
 
               {num(cashShift.debtCash) > 0 && (
                 <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.06] px-4 py-3">
-                  <p className="text-[11px] font-black uppercase tracking-wide text-emerald-300/80">Оплата долгов</p>
-                  <p className="mt-1 text-2xl font-black tabular-nums text-emerald-300">+{formatMoney(cashShift.debtCash)}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-300/80">Оплата долгов</p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums text-emerald-300">+{formatMoney(cashShift.debtCash)}</p>
                 </div>
               )}
 
@@ -1613,17 +1613,17 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               <div className="grid grid-cols-2 gap-2">
                 <button type="button"
                   onClick={() => { setCashCheckModal(false); setShiftInput(""); setShiftNote(""); setShiftModal("in"); }}
-                  className="min-h-11 rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-emerald-300 transition hover:bg-white/10 active:scale-95">+ Внести</button>
+                  className="min-h-11 rounded-2xl border border-white/[0.08] bg-white/5 px-2 py-2.5 text-sm font-semibold text-emerald-300 transition hover:bg-white/10 active:scale-95">+ Внести</button>
                 <button type="button"
                   onClick={() => { setCashCheckModal(false); setShiftInput(""); setShiftNote(""); setShiftModal("out"); }}
-                  className="min-h-11 rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-sm font-black text-red-300 transition hover:bg-white/10 active:scale-95">− Изъять</button>
+                  className="min-h-11 rounded-2xl border border-white/[0.08] bg-white/5 px-2 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-white/10 active:scale-95">− Изъять</button>
                 <button type="button"
                   onClick={() => { setCashCheckModal(false); setShiftInput(""); setShiftNote(""); setShiftModal("close"); }}
-                  className="col-span-2 min-h-11 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-2 py-2.5 text-sm font-black leading-tight text-white transition hover:brightness-110 active:scale-95">Закрыть смену</button>
+                  className="col-span-2 min-h-11 rounded-2xl bg-indigo-600 px-2 py-2.5 text-sm font-semibold leading-tight text-white transition hover:brightness-110 active:scale-95">Закрыть смену</button>
               </div>
 
               <button type="button" onClick={() => setCashCheckModal(false)}
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">
+                className="w-full rounded-2xl border border-white/[0.08] bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
                 Закрыть
               </button>
             </div>
@@ -1632,7 +1632,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 text-slate-500">
                 <Wallet size={30} strokeWidth={1.8} />
               </div>
-              <p className="text-lg font-black text-white">{cashCheckLoading ? "Проверяю кассу…" : "Смена не открыта"}</p>
+              <p className="text-lg font-semibold text-white">{cashCheckLoading ? "Проверяю кассу…" : "Смена не открыта"}</p>
               {!cashCheckLoading && (
                 <p className="mt-1.5 max-w-xs text-sm font-bold text-slate-400">
                   Откройте смену с разменом — и касса начнёт считать наличные: продажи налом, внесения, погашения долгов.
@@ -1641,12 +1641,12 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               {!cashCheckLoading && (
                 <button type="button"
                   onClick={() => { setCashCheckModal(false); setShiftInput(""); setShiftNote(""); setShiftModal("open"); }}
-                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-3.5 font-black text-white shadow-lg shadow-emerald-950/30 transition hover:brightness-110 active:scale-95">
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3.5 font-semibold text-white shadow-lg shadow-emerald-950/30 transition hover:brightness-110 active:scale-95">
                   <Wallet size={18} strokeWidth={2.4} /> Открыть смену
                 </button>
               )}
               <button type="button" onClick={() => setCashCheckModal(false)}
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">
+                className="mt-2 w-full rounded-2xl border border-white/[0.08] bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
                 Закрыть
               </button>
             </div>
@@ -1663,13 +1663,13 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           <input type="number" value={shiftInput} autoFocus inputMode="decimal" onChange={(e) => setShiftInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); openShift(); } }}
             placeholder="Размен, сумма"
-            className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-4 focus:ring-emerald-500/10" />
+            className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-4 focus:ring-emerald-500/10" />
           <p className="mt-2 text-[11px] font-bold text-slate-500">Открывает: {currentProfile?.name || activeWorkerName}</p>
           <div className="mt-6 flex gap-3">
             <button type="button" onClick={() => setShiftModal(null)}
-              className="flex-1 rounded-2xl border border-white/10 bg-white/10 px-5 py-3.5 font-black text-white transition hover:bg-white/15">Отмена</button>
+              className="flex-1 rounded-2xl border border-white/[0.08] bg-white/10 px-5 py-3.5 font-semibold text-white transition hover:bg-white/15">Отмена</button>
             <button type="button" onClick={openShift} disabled={shiftBusy}
-              className="flex-1 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-5 py-3.5 font-black text-white shadow-lg shadow-emerald-950/30 transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
+              className="flex-1 rounded-2xl bg-emerald-600 px-5 py-3.5 font-semibold text-white shadow-lg shadow-emerald-950/30 transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
               {shiftBusy ? "Открываю…" : "Открыть смену"}
             </button>
           </div>
@@ -1681,27 +1681,27 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           <div className="space-y-4">
             <p className="text-sm text-slate-400">Карты и счета, на которые принимаете переводы. Новую можно добавить прямо здесь — она сразу появится при оплате переводом.</p>
 
-            <div className="grid gap-2.5 rounded-2xl border border-white/10 bg-slate-950/50 p-3">
+            <div className="grid gap-2.5 rounded-2xl border border-white/[0.08] bg-slate-950/50 p-3">
               <input
                 value={cardForm.name}
                 onChange={(e) => setCardForm((p) => ({ ...p, name: e.target.value }))}
                 autoFocus
                 placeholder="Название (напр. Сбер, Kaspi)"
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCard(); } }}
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-sky-400/70 focus:ring-4 focus:ring-sky-500/10"
+                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-sky-400/70 focus:ring-4 focus:ring-sky-500/10"
               />
               <input
                 value={cardForm.owner}
                 onChange={(e) => setCardForm((p) => ({ ...p, owner: e.target.value }))}
                 placeholder="Владелец / примечание (необязательно)"
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCard(); } }}
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-sky-400/70"
+                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-sky-400/70"
               />
               <button
                 type="button"
                 onClick={addCard}
                 disabled={cardBusy}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-600 to-blue-600 px-4 py-3 font-black text-white shadow-lg transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex items-center justify-center gap-2 rounded-2xl bg-sky-600 px-4 py-3 font-semibold text-white shadow-lg transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Plus size={18} strokeWidth={2.6} /> {cardBusy ? "Добавляю…" : "Добавить карту"}
               </button>
@@ -1713,14 +1713,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-slate-500">
                     <CreditCard size={26} strokeWidth={1.8} />
                   </div>
-                  <p className="font-black text-white">Пока нет карт</p>
+                  <p className="font-semibold text-white">Пока нет карт</p>
                   <p className="mt-1 text-sm font-bold text-slate-400">Добавьте первую карту выше.</p>
                 </div>
               ) : (
                 safe_cards.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                  <div key={c.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3">
                     <div className="min-w-0">
-                      <p className="truncate font-black text-white">{c.name}</p>
+                      <p className="truncate font-semibold text-white">{c.name}</p>
                       {c.owner && <p className="truncate text-xs font-bold text-slate-400">{c.owner}</p>}
                     </div>
                     <button
@@ -1728,7 +1728,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                       onClick={() => removeCard(c.id)}
                       disabled={cardBusy}
                       aria-label="Удалить карту"
-                      className="flex shrink-0 items-center gap-1.5 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs font-black text-red-300 transition hover:bg-red-500/20 active:scale-95 disabled:opacity-60"
+                      className="flex shrink-0 items-center gap-1.5 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-300 transition hover:bg-red-500/20 active:scale-95 disabled:opacity-60"
                     >
                       <Trash2 size={14} strokeWidth={2.4} /> Удалить
                     </button>
@@ -1740,7 +1740,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <button
               type="button"
               onClick={() => setCardModal(false)}
-              className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10"
+              className="w-full rounded-2xl border border-white/[0.08] bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
             >
               Закрыть
             </button>
@@ -1754,7 +1754,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <div className="flex gap-1.5 rounded-2xl bg-white/[0.05] p-1">
               {[["today", "Сегодня"], ["yesterday", "Вчера"]].map(([k, label]) => (
                 <button key={k} type="button" onClick={() => switchReceiptsDay(k)} disabled={receiptsLoading && receiptsDay === k}
-                  className={`flex-1 rounded-xl px-3 py-2 text-[13px] font-black transition active:scale-95 ${receiptsDay === k ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg" : "text-slate-300 hover:bg-white/5"}`}>
+                  className={`flex-1 rounded-xl px-3 py-2 text-[13px] font-semibold transition active:scale-95 ${receiptsDay === k ? "bg-indigo-600 text-white shadow-lg" : "text-slate-300 hover:bg-white/5"}`}>
                   {label}
                 </button>
               ))}
@@ -1769,18 +1769,18 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               <>
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3">
                   <div className="min-w-0">
-                    <p className="truncate text-[11px] font-black uppercase tracking-wide text-violet-300/80">Чеков {scopeLabel}</p>
-                    <p className="text-2xl font-black text-white">{sales.length}</p>
+                    <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-violet-300/80">Чеков {scopeLabel}</p>
+                    <p className="text-2xl font-semibold text-white">{sales.length}</p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-[11px] font-black uppercase tracking-wide text-violet-300/80">Сумма</p>
-                    <p className="text-2xl font-black text-emerald-300">{formatMoney(sum)}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-300/80">Сумма</p>
+                    <p className="text-2xl font-semibold text-emerald-300">{formatMoney(sum)}</p>
                   </div>
                 </div>
                 {sales.length === 0 ? (
                   <div className="flex flex-col items-center py-8 text-center">
                     <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-slate-500"><Receipt size={26} strokeWidth={1.8} /></div>
-                    <p className="font-black text-white">{receiptsDay === "yesterday" ? "Вчера чеков не было" : "Пока нет чеков"}</p>
+                    <p className="font-semibold text-white">{receiptsDay === "yesterday" ? "Вчера чеков не было" : "Пока нет чеков"}</p>
                     <p className="mt-1 text-sm font-bold text-slate-400">{receiptsDay === "yesterday" ? "За вчерашний день продаж нет." : "Как пробьёте первую продажу — она появится здесь."}</p>
                   </div>
                 ) : (
@@ -1795,14 +1795,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                       const time = String(s.createdAt || s.created_at || "").slice(11, 16);
                       const items = Array.isArray(s.items) ? s.items : [];
                       return (
-                        <div key={s.id} className="rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3">
+                        <div key={s.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-3">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex min-w-0 items-center gap-1.5">
-                              <span className="shrink-0 rounded-lg bg-white/5 px-2 py-1 text-xs font-black text-slate-300">{time || "—"}</span>
-                              <span className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-black ${pay.c}`}>{pay.t}</span>
+                              <span className="shrink-0 rounded-lg bg-white/5 px-2 py-1 text-xs font-semibold text-slate-300">{time || "—"}</span>
+                              <span className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold ${pay.c}`}>{pay.t}</span>
                               {s.employeeName && <span className="truncate text-xs font-bold text-slate-400">· {s.employeeName}</span>}
                             </div>
-                            <span className="shrink-0 text-base font-black text-white">{formatMoney(s.total)}</span>
+                            <span className="shrink-0 text-base font-semibold text-white">{formatMoney(s.total)}</span>
                           </div>
                           {items.length > 0 && (
                             <div className="mt-2 space-y-0.5 border-t border-white/5 pt-2">
@@ -1825,7 +1825,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               </>
               );
             })()}
-            <button type="button" onClick={() => setReceiptsModal(false)} className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/10">Закрыть</button>
+            <button type="button" onClick={() => setReceiptsModal(false)} className="w-full rounded-2xl border border-white/[0.08] bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10">Закрыть</button>
           </div>
         </Modal>
       )}
@@ -1836,9 +1836,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             {shiftModal === "in" ? "Деньги, которые вы кладёте в кассу (не продажа)." : "Деньги, которые вы забираете из кассы (выплата, инкассация, такси и т.п.)."}
           </p>
           <input type="number" value={shiftInput} autoFocus onChange={(e) => setShiftInput(e.target.value)}
-            placeholder="Сумма, ₽" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
+            placeholder="Сумма, ₽" className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
           <input type="text" value={shiftNote} onChange={(e) => setShiftNote(e.target.value)}
-            placeholder="Комментарий (за что)" className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
+            placeholder="Комментарий (за что)" className="mt-3 w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
           <div className="mt-6 flex gap-3">
             <button type="button" onClick={() => setShiftModal(null)} className="btn-white flex-1">Отмена</button>
             <button type="button" onClick={() => addShiftMovement(shiftModal)} disabled={shiftBusy} className="btn-blue flex-1 disabled:cursor-not-allowed disabled:opacity-60">{shiftBusy ? "…" : shiftModal === "in" ? "Внести" : "Изъять"}</button>
@@ -1854,18 +1854,18 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               Вы закрываете смену. Касса обнулится: чтобы продолжить продавать, потом откройте новую смену с разменом. Отменить закрытие нельзя.
             </p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
             <div className="flex items-baseline justify-between">
               <span className="text-sm text-slate-400">По программе должно быть</span>
-              <b className="text-xl font-black text-white">{formatMoney(cashShift.expectedCash)}</b>
+              <b className="text-xl font-semibold text-white">{formatMoney(cashShift.expectedCash)}</b>
             </div>
             <div className="mt-1 text-[11px] text-slate-500">размен {formatMoney(cashShift.openingCash)} + налом {formatMoney(cashShift.cashSales)} + внесено {formatMoney(cashShift.cashIn)} − изъято {formatMoney(cashShift.cashOut)}{cashShift.cashExpenses > 0 ? <> − расходы {formatMoney(cashShift.cashExpenses)}</> : null}{cashShift.ownerCash ? <> {cashShift.ownerCash > 0 ? "+ владелец " : "− владельцу "}{formatMoney(Math.abs(cashShift.ownerCash))}</> : null}</div>
           </div>
           <p className="mb-2 mt-4 text-sm font-bold text-slate-300">Пересчитайте деньги в кассе и впишите фактическую сумму:</p>
           <input type="number" value={shiftInput} autoFocus onChange={(e) => setShiftInput(e.target.value)}
-            placeholder="Фактически в кассе, ₽" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
+            placeholder="Фактически в кассе, ₽" className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
           {shiftInput !== "" && (
-            <p className={`mt-2 text-sm font-black ${num(shiftInput) - cashShift.expectedCash < -0.005 ? "text-red-400" : num(shiftInput) - cashShift.expectedCash > 0.005 ? "text-amber-400" : "text-emerald-400"}`}>
+            <p className={`mt-2 text-sm font-semibold ${num(shiftInput) - cashShift.expectedCash < -0.005 ? "text-red-400" : num(shiftInput) - cashShift.expectedCash > 0.005 ? "text-amber-400" : "text-emerald-400"}`}>
               {(() => { const d = num(shiftInput) - cashShift.expectedCash; if (Math.abs(d) < 0.005) return <><Check size={14} className="inline"/> Сходится</>; return d < 0 ? `Недостача ${formatMoney(-d)}` : `Излишек ${formatMoney(d)}`; })()}
             </p>
           )}
@@ -1886,10 +1886,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             {shiftResult.cashExpenses > 0 && (
               <div className="flex justify-between text-slate-300"><span>Расходы из кассы</span><b className="text-white">−{formatMoney(shiftResult.cashExpenses)}</b></div>
             )}
-            <div className="flex justify-between border-t border-white/10 pt-2 text-lg"><span className="font-black">Должно быть</span><b className="font-black text-white">{formatMoney(shiftResult.expectedCash)}</b></div>
-            <div className="flex justify-between text-lg"><span className="font-black">По факту</span><b className="font-black text-white">{formatMoney(shiftResult.countedCash)}</b></div>
+            <div className="flex justify-between border-t border-white/[0.08] pt-2 text-lg"><span className="font-semibold">Должно быть</span><b className="font-semibold text-white">{formatMoney(shiftResult.expectedCash)}</b></div>
+            <div className="flex justify-between text-lg"><span className="font-semibold">По факту</span><b className="font-semibold text-white">{formatMoney(shiftResult.countedCash)}</b></div>
           </div>
-          <div className={`mt-4 rounded-2xl p-4 text-center font-black ${Math.abs(shiftResult.difference) < 0.005 ? "bg-emerald-500/15 text-emerald-300" : shiftResult.difference < 0 ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300"}`}>
+          <div className={`mt-4 rounded-2xl p-4 text-center font-semibold ${Math.abs(shiftResult.difference) < 0.005 ? "bg-emerald-500/15 text-emerald-300" : shiftResult.difference < 0 ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300"}`}>
             {Math.abs(shiftResult.difference) < 0.005 ? <><Check size={14} className="inline"/> Касса сошлась</> : shiftResult.difference < 0 ? `Недостача ${formatMoney(-shiftResult.difference)}` : `Излишек ${formatMoney(shiftResult.difference)}`}
           </div>
           <button type="button" onClick={() => setShiftResult(null)} className="btn-blue mt-6 w-full">Закрыть</button>
@@ -1901,34 +1901,34 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           <div className="space-y-3">
             <p className="text-sm font-bold text-slate-400">Произвольная продажа — впишите название и цену. Позиция не привязана к меню и не списывает склад.</p>
             <label className="block">
-              <span className="mb-1.5 block text-xs font-black text-slate-400">Название</span>
+              <span className="mb-1.5 block text-xs font-semibold text-slate-400">Название</span>
               <input autoFocus value={customForm.name} onChange={(e) => setCustomForm((f) => ({ ...f, name: e.target.value }))}
                 onKeyDown={(e) => { if (e.key === "Enter") addCustomItem(); }}
                 placeholder="Напр. Пакет, Разное, Печенье"
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70" />
+                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70" />
             </label>
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
-                <span className="mb-1.5 block text-xs font-black text-slate-400">Цена, ₽</span>
+                <span className="mb-1.5 block text-xs font-semibold text-slate-400">Цена, ₽</span>
                 <input type="number" inputMode="decimal" value={customForm.price} onChange={(e) => setCustomForm((f) => ({ ...f, price: e.target.value }))}
                   onKeyDown={(e) => { if (e.key === "Enter") addCustomItem(); }}
-                  placeholder="0" className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70" />
+                  placeholder="0" className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70" />
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-xs font-black text-slate-400">Кол-во</span>
+                <span className="mb-1.5 block text-xs font-semibold text-slate-400">Кол-во</span>
                 <input type="number" inputMode="numeric" value={customForm.qty} onChange={(e) => setCustomForm((f) => ({ ...f, qty: e.target.value }))}
                   onKeyDown={(e) => { if (e.key === "Enter") addCustomItem(); }}
-                  placeholder="1" className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70" />
+                  placeholder="1" className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70" />
               </label>
             </div>
             {num(customForm.price) > 0 && (
-              <div className="rounded-2xl bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-200">
+              <div className="rounded-2xl bg-blue-500/10 px-4 py-3 text-sm font-semibold text-blue-200">
                 В чек: {customForm.name.trim() || "позиция"} · {Math.max(1, Math.floor(num(customForm.qty) || 1))} шт · {formatMoney(num(customForm.price) * Math.max(1, Math.floor(num(customForm.qty) || 1)))}
               </div>
             )}
             <div className="flex gap-2 pt-1">
-              <button type="button" onClick={() => setCustomModal(false)} className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-200 transition hover:bg-white/10">Отмена</button>
-              <button type="button" onClick={addCustomItem} className="flex-1 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-lg transition active:scale-95">Добавить в чек</button>
+              <button type="button" onClick={() => setCustomModal(false)} className="flex-1 rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-200 transition hover:bg-white/10">Отмена</button>
+              <button type="button" onClick={addCustomItem} className="flex-1 rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white shadow-lg transition active:scale-95">Добавить в чек</button>
             </div>
           </div>
         </Modal>
@@ -1936,7 +1936,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
       {paymentModal && (
         <Modal title="Способ оплаты" wide onClose={() => setPaymentModal(false)}>
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-4">
             <div className="flex justify-between text-lg">
               <span>К оплате</span>
               <b>{formatMoney(total)}</b>
@@ -1977,15 +1977,15 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 onChange={(e) => setPaidAmount(e.target.value)}
                 inputMode="decimal"
                 placeholder="Сколько дал клиент, необязательно"
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
+                className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
               />
               {paidAmount !== "" && (
                 change < 0 ? (
-                  <div className="rounded-2xl bg-red-500/10 px-4 py-3 font-black text-red-300">
+                  <div className="rounded-2xl bg-red-500/10 px-4 py-3 font-semibold text-red-300">
                     Не хватает {formatMoney(-change)} ₽
                   </div>
                 ) : (
-                  <div className="rounded-2xl bg-blue-500/10 px-4 py-3 font-black text-blue-300">
+                  <div className="rounded-2xl bg-blue-500/10 px-4 py-3 font-semibold text-blue-300">
                     Сдача: {formatMoney(change)} ₽
                   </div>
                 )
@@ -2000,7 +2000,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   <select
                     value={cardId}
                     onChange={(e) => setCardId(e.target.value)}
-                    className="w-full flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
+                    className="w-full flex-1 rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
                   >
                     <option value="">Выберите карту</option>
                     {safe_cards.map((c) => (
@@ -2014,7 +2014,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     type="button"
                     onClick={openCardModal}
                     title="Добавить новую карту"
-                    className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3.5 font-black text-sky-200 transition hover:bg-sky-500/20 active:scale-95"
+                    className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3.5 font-semibold text-sky-200 transition hover:bg-sky-500/20 active:scale-95"
                   >
                     <Plus size={18} strokeWidth={2.6} /> Карта
                   </button>
@@ -2023,7 +2023,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 <button
                   type="button"
                   onClick={openCardModal}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-400/30 bg-sky-500/10 px-4 py-3.5 font-black text-sky-200 transition hover:bg-sky-500/20 active:scale-95"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-400/30 bg-sky-500/10 px-4 py-3.5 font-semibold text-sky-200 transition hover:bg-sky-500/20 active:scale-95"
                 >
                   <Plus size={18} strokeWidth={2.6} /> Добавить карту для перевода
                 </button>
@@ -2037,7 +2037,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 value={debtName}
                 onChange={(e) => setDebtName(e.target.value)}
                 placeholder="Имя клиента"
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
+                className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
                 list="debt-customers"
               />
               <datalist id="debt-customers">
@@ -2051,7 +2051,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     <button
                       key={c.id}
                       onClick={() => setDebtName(c.name)}
-                      className="rounded-2xl bg-white/[0.07] px-3 py-2 text-sm font-black text-slate-200"
+                      className="rounded-2xl bg-white/[0.07] px-3 py-2 text-sm font-semibold text-slate-200"
                     >
                       {c.name} · {formatMoney(c.debtTotal || 0)}
                     </button>
@@ -2062,11 +2062,11 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           )}
 
           {/* «Отложить чек» — не способ оплаты, а отложенный чек: отделено от способов */}
-          <div className="mt-5 border-t border-white/10 pt-4">
+          <div className="mt-5 border-t border-white/[0.08] pt-4">
             <button
               type="button"
               onClick={() => setPaymentType("pending")}
-              className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border px-4 py-2.5 font-black transition active:scale-95 ${
+              className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border px-4 py-2.5 font-semibold transition active:scale-95 ${
                 paymentType === "pending"
                   ? "border-amber-400/60 bg-amber-500/25 text-amber-100"
                   : "border-amber-400/25 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
@@ -2078,11 +2078,11 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
           </div>
 
           <div className="mt-6 flex gap-3">
-            <button onClick={() => setPaymentModal(false)} className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-slate-200 transition hover:bg-white/10">
+            <button onClick={() => setPaymentModal(false)} className="flex-1 rounded-2xl border border-white/[0.08] bg-white/5 px-5 py-3 font-semibold text-slate-200 transition hover:bg-white/10">
               Назад
             </button>
             <button onClick={() => submitSale(paymentType)} disabled={submitting}
-              className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60">
+              className="flex-1 rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white  transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60">
               {submitting ? "Проводим…" : paymentType === "pending" ? "Отложить чек" : "Подтвердить"}
             </button>
           </div>
@@ -2100,7 +2100,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   categoryId: e.target.value,
                 }))
               }
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 sm:col-span-2"
+              className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 sm:col-span-2"
             >
               <option value="">Выберите категорию</option>
               {safe_categories.map((c) => (
@@ -2113,7 +2113,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <div className="sm:col-span-2 flex flex-col gap-2">
               {/* AI советник — переключатель отдельной строкой над полем */}
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-black text-slate-400">Название позиции</span>
+                <span className="text-xs font-semibold text-slate-400">Название позиции</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -2122,10 +2122,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                     if (!next) setAiSuggestion(null);
                     else if (newProduct.name?.trim().length >= 3) analyzeProductName(newProduct.name);
                   }}
-                  className={`flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition ${
+                  className={`flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
                     aiAdvisorEnabled
                       ? "bg-violet-500/20 text-violet-300 border border-violet-400/30"
-                      : "bg-white/5 text-slate-500 border border-white/10"
+                      : "bg-white/5 text-slate-500 border border-white/[0.08]"
                   }`}
                 >
                   {aiSuggestionLoading
@@ -2144,7 +2144,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                   }
                 }}
                 placeholder="Название позиции..."
-                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
+                className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
               />
             </div>
 
@@ -2153,8 +2153,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               <div className="sm:col-span-2 rounded-2xl border border-violet-400/20 bg-linear-to-br from-violet-500/10 to-blue-500/5 p-4">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-wide text-violet-300"><Sparkles size={13} strokeWidth={2.4} className="mr-1 inline" />AI предлагает</p>
-                    <p className="mt-1 text-base font-black text-white">{aiSuggestion.displayName}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-violet-300"><Sparkles size={13} strokeWidth={2.4} className="mr-1 inline" />AI предлагает</p>
+                    <p className="mt-1 text-base font-semibold text-white">{aiSuggestion.displayName}</p>
                     <p className="text-sm text-slate-400">{aiSuggestion.description}</p>
                   </div>
                   <button type="button" onClick={() => setAiSuggestion(null)} aria-label="Закрыть" title="Закрыть"
@@ -2164,16 +2164,16 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 <div className="flex gap-3 mb-3 text-sm">
                   <div className="rounded-xl bg-emerald-500/10 border border-emerald-400/20 px-3 py-2">
                     <p className="text-xs text-slate-400">Типичная цена</p>
-                    <p className="font-black text-emerald-300">{aiSuggestion.typicalPrice} ₽</p>
+                    <p className="font-semibold text-emerald-300">{aiSuggestion.typicalPrice} ₽</p>
                   </div>
                   <div className="rounded-xl bg-orange-500/10 border border-orange-400/20 px-3 py-2">
                     <p className="text-xs text-slate-400">Себестоимость</p>
-                    <p className="font-black text-orange-300">{aiSuggestion.estimatedCost} ₽</p>
+                    <p className="font-semibold text-orange-300">{aiSuggestion.estimatedCost} ₽</p>
                   </div>
                 </div>
 
                 <div className="mb-3 space-y-1.5">
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-wide">Состав:</p>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Состав:</p>
                   {(aiSuggestion.ingredients || []).map((ing, i) => {
                     const found = safe_warehouseItems.find(w =>
                       String(w.name || "").toLowerCase().includes(String(ing.name || "").toLowerCase()) ||
@@ -2198,7 +2198,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 )}
 
                 <button type="button" onClick={applyAiSuggestion}
-                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-linear-to-r from-violet-600 to-blue-600 py-2.5 font-black text-white text-sm hover:opacity-90 transition">
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-600 py-2.5 font-semibold text-white text-sm hover:opacity-90 transition">
                   <Sparkles size={15} strokeWidth={2.4} /> Применить всё — заполнить состав и цены
                 </button>
               </div>
@@ -2211,7 +2211,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               }
               inputMode="decimal"
               placeholder="Себестоимость"
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
+              className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
               readOnly={safe_recipe.length > 0}
             />
 
@@ -2222,24 +2222,24 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               }
               inputMode="decimal"
               placeholder="Цена продажи"
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
+              className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
             />
           </div>
 
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
             <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h3 className="text-xl font-black">Состав / рецепт</h3>
+                <h3 className="text-xl font-semibold">Состав / рецепт</h3>
                 <p className="text-sm text-slate-400">
                   Опционально. Укажите, сколько сырья уходит на 1 позицию. Например: эспрессо — зерно 20 г, капучино — зерно 18 г и молоко 180 мл.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-right shadow-sm">
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-right shadow-sm">
                 <p className="text-xs font-bold text-slate-400">
                   Авто себестоимость
                 </p>
-                <p className="font-black text-blue-400">
+                <p className="font-semibold text-blue-400">
                   {formatMoney(recipeCost)}
                 </p>
               </div>
@@ -2253,22 +2253,22 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 const isManual = row.mode === "manual";
 
                 return (
-                  <div key={index} className="flex flex-col gap-2 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                  <div key={index} className="flex flex-col gap-2 rounded-2xl border border-white/8 bg-white/[0.02] p-3">
                     {/* Переключатель режима */}
                     <div className="flex flex-wrap items-center gap-2">
                       <button type="button"
                         onClick={() => updateRecipeRow(index, "mode", "warehouse")}
-                        className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 min-h-[40px] text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 min-h-[40px] text-xs font-semibold transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/[0.08] hover:bg-white/10"}`}>
                         <Package size={13} strokeWidth={2.5}/> Со склада
                       </button>
                       <button type="button"
                         onClick={() => { updateRecipeRow(index, "mode", "manual"); updateRecipeRow(index, "warehouseItemId", ""); }}
-                        className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 min-h-[40px] text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 min-h-[40px] text-xs font-semibold transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/[0.08] hover:bg-white/10"}`}>
                         <Sparkles size={13} strokeWidth={2.5} /> Вручную (AI)
                       </button>
                       <button type="button" onClick={() => removeRecipeRow(index)}
                         aria-label="Удалить ингредиент" title="Удалить ингредиент"
-                        className="ml-auto rounded-xl bg-red-500/10 px-3 py-2 min-h-[40px] text-xs font-black text-red-400 hover:bg-red-500/20">
+                        className="ml-auto rounded-xl bg-red-500/10 px-3 py-2 min-h-[40px] text-xs font-semibold text-red-400 hover:bg-red-500/20">
                         удалить
                       </button>
                     </div>
@@ -2294,7 +2294,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                             updateRecipeRow(index, "warehouseItemId", e.target.value);
                             if (item) updateRecipeRow(index, "quantityUnit", item.unit);
                           }}
-                          className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none"
+                          className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none"
                         >
                           <option value="">Выберите сырьё со склада</option>
                           {safe_warehouseItems.map((item) => (
@@ -2308,12 +2308,12 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                       <input type="number" value={row.quantity}
                         onChange={(e) => updateRecipeRow(index, "quantity", e.target.value)}
                         placeholder="Кол-во"
-                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
+                        className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
                       />
 
                       <select value={row.quantityUnit || selected?.unit || "pcs"}
                         onChange={(e) => updateRecipeRow(index, "quantityUnit", e.target.value)}
-                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none">
+                        className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none">
                         {RECIPE_UNITS.map(([value, label]) => (
                           <option key={value} value={value}>{label}</option>
                         ))}
@@ -2336,7 +2336,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
               })}
 
               {!safe_recipe.length && (
-                <p className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-400">
+                <p className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm text-slate-400">
                   Состав можно не указывать. Без состава позиция будет продаваться без списания со склада.
                 </p>
               )}
@@ -2351,12 +2351,12 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <div className="mt-3 flex gap-2">
               <button type="button"
                 onClick={() => addRecipeRow("warehouse")}
-                className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 transition hover:bg-white/10">
+                className="flex-1 rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-100 transition hover:bg-white/10">
                 + Со склада
               </button>
               <button type="button"
                 onClick={() => addRecipeRow("manual")}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-violet-400/20 bg-violet-500/8 px-4 py-3 font-black text-violet-200 transition hover:bg-violet-500/15">
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-violet-400/20 bg-violet-500/8 px-4 py-3 font-semibold text-violet-200 transition hover:bg-violet-500/15">
                 <Sparkles size={15} strokeWidth={2.4} /> Вручную (AI)
               </button>
             </div>
@@ -2368,12 +2368,12 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 setProductModal(false);
                 setRecipe([]);
               }}
-              className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-slate-200 transition hover:bg-white/10"
+              className="flex-1 rounded-2xl border border-white/[0.08] bg-white/5 px-5 py-3 font-semibold text-slate-200 transition hover:bg-white/10"
             >
               Отмена
             </button>
 
-            <button onClick={createProduct} disabled={savingProduct} className="flex-1 rounded-2xl bg-linear-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30 disabled:cursor-not-allowed disabled:opacity-60">
+            <button onClick={createProduct} disabled={savingProduct} className="flex-1 rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white  disabled:cursor-not-allowed disabled:opacity-60">
               {savingProduct ? "Сохраняю…" : "Создать"}
             </button>
           </div>

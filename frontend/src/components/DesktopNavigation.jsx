@@ -37,7 +37,7 @@ export default function DesktopNavigation({
   const showWorkspaceChip = workspaceName && accountName !== workspaceName;
 
   return (
-    <header className="sticky top-0 z-30 mb-5 hidden rounded-[1.4rem] border border-white/10 bg-slate-950/80 p-2 text-white shadow-xl shadow-slate-950/25 backdrop-blur-xl md:block">
+    <header className="sticky top-0 z-30 mb-5 hidden rounded-[1.4rem] border border-white/[0.08] bg-slate-950/80 p-2 text-white shadow-xl shadow-slate-950/25 backdrop-blur-xl md:block">
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
         <WorkspaceSwitcher
           accountName={accountName}
@@ -59,9 +59,9 @@ export default function DesktopNavigation({
               title={label}
               aria-label={label}
               className={({ isActive }) =>
-                `group relative flex h-11 shrink-0 items-center gap-2 rounded-xl px-2 text-xs font-black transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-500/20 lg:px-3 ${
+                `group relative flex h-11 shrink-0 items-center gap-2 rounded-xl px-2 text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-500/20 lg:px-3 ${
                   isActive
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
+                    ? "bg-blue-600 text-white "
                     : "bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
                 }`
               }
@@ -70,12 +70,12 @@ export default function DesktopNavigation({
                 <Icon size={18} strokeWidth={2.4} />
 
                 {badge === "pending" && pendingCount > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
+                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-slate-950">
                     {pendingCount > 99 ? "99+" : pendingCount}
                   </span>
                 )}
                 {badge === "debt" && debtCount > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white ring-2 ring-slate-950">
+                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-slate-950">
                     {debtCount > 99 ? "99+" : debtCount}
                   </span>
                 )}
@@ -94,7 +94,7 @@ export default function DesktopNavigation({
             <button
               type="button"
               onClick={onToggleMode}
-              className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-2.5 text-xs font-black text-blue-200 transition hover:bg-blue-500/20 lg:px-3"
+              className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-2.5 text-xs font-semibold text-blue-200 transition hover:bg-blue-500/20 lg:px-3"
               title="Переключить меню сбоку / сверху"
               aria-label="Переключить расположение меню"
             >
@@ -108,7 +108,7 @@ export default function DesktopNavigation({
             onClick={onLogout}
             title="Выйти"
             aria-label="Выйти"
-            className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2.5 text-xs font-black text-slate-300 transition hover:border-red-500/40 hover:bg-red-600 hover:text-white lg:px-3"
+            className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/5 px-2.5 text-xs font-semibold text-slate-300 transition hover:border-red-500/40 hover:bg-red-600 hover:text-white lg:px-3"
           >
             <LogOut size={18} strokeWidth={2.4} />
             <span className="hidden lg:inline">Выйти</span>

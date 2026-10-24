@@ -512,12 +512,12 @@ export default function ProfilePage({
       <div className="relative z-10">
         <header className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-lg shadow-blue-900/30">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 ">
               <Settings2 size={22} strokeWidth={2.4} className="text-white" />
             </span>
             <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-wider text-blue-400">{accountTypeLabel}</p>
-              <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">Настройки</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-400">{accountTypeLabel}</p>
+              <h2 className="text-2xl font-semibold leading-none text-white sm:text-3xl">Настройки</h2>
               <p className="mt-1 truncate text-sm text-slate-400">
                 {isOwner ? "Точки, логины и продавцы" : "Продавцы и текущая точка"}
               </p>
@@ -526,7 +526,7 @@ export default function ProfilePage({
           <div className="flex w-full gap-2 lg:w-auto">
             <ThemeToggle variant="full" className="flex-1 lg:flex-none" />
             <button type="button" onClick={logout}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-red-500/25 bg-red-500/10 px-5 py-3 font-black text-red-300 transition hover:bg-red-500/20 lg:flex-none">
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-red-500/25 bg-red-500/10 px-5 py-3 font-semibold text-red-300 transition hover:bg-red-500/20 lg:flex-none">
               <LogOut size={16} strokeWidth={2.4} /> Выйти
             </button>
           </div>
@@ -541,7 +541,7 @@ export default function ProfilePage({
         {/* Навигация (боковой рейл на десктопе, лента на телефоне) + контент */}
         <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[256px_1fr]">
           <aside className="lg:sticky lg:top-4 lg:self-start">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.04] shadow-lg backdrop-blur">
+            <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02]">
               {/* Мобильная лента вкладок */}
               <nav role="tablist" aria-label="Разделы настроек"
                 className="flex gap-2 overflow-x-auto p-2 lg:hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
@@ -550,8 +550,8 @@ export default function ProfilePage({
                   return (
                     <button key={tab.id} ref={active ? activePillRef : null} type="button" role="tab" aria-selected={active}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex shrink-0 snap-start items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
-                        active ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg" : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"
+                      className={`flex shrink-0 snap-start items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
+                        active ? "bg-indigo-600 text-white shadow-lg" : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200"
                       }`}>
                       <tab.icon size={16} strokeWidth={2.4} /> <span>{tab.label}</span>
                     </button>
@@ -560,17 +560,17 @@ export default function ProfilePage({
               </nav>
               {/* Десктоп-рейл */}
               <nav role="tablist" aria-label="Разделы настроек" className="hidden lg:flex lg:flex-col lg:gap-1 lg:p-3">
-                <p className="px-3.5 pb-2 pt-1 text-[11px] font-black uppercase tracking-wider text-slate-500">Разделы</p>
+                <p className="px-3.5 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Разделы</p>
                 {tabs.map((tab) => {
                   const active = activeTab === tab.id;
                   return (
                     <button key={tab.id} type="button" role="tab" aria-selected={active}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`group relative flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-black transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
-                        active ? "bg-gradient-to-r from-blue-600/20 to-violet-600/15 text-white" : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-100"
+                      className={`group relative flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
+                        active ? "bg-gradient-to-r from-blue-600/20 to-violet-600/15 text-white" : "text-slate-400 hover:bg-white/[0.02] hover:text-slate-100"
                       }`}>
-                      {active && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-full bg-gradient-to-b from-blue-400 to-violet-400" />}
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition ${active ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/40" : "bg-white/5 text-slate-400 group-hover:text-slate-200"}`}>
+                      {active && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-full bg-indigo-400" />}
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition ${active ? "bg-indigo-600 text-white " : "bg-white/5 text-slate-400 group-hover:text-slate-200"}`}>
                         <tab.icon size={18} strokeWidth={2.4} />
                       </span>
                       <span className="min-w-0 flex-1 truncate text-left">{tab.label}</span>
@@ -589,42 +589,42 @@ export default function ProfilePage({
         {activeTab === "overview" && (
           <section className="grid gap-5 xl:grid-cols-3">
             {/* Идентичность + статистика */}
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] xl:col-span-2">
-              <div className="relative bg-white/[0.04] p-5 sm:p-6">
+            <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] xl:col-span-2">
+              <div className="relative bg-white/[0.02] p-5 sm:p-6">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-2xl font-black text-white shadow-lg shadow-blue-900/40 sm:h-20 sm:w-20 sm:text-3xl">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-2xl font-semibold text-white  sm:h-20 sm:w-20 sm:text-3xl">
                     {(session?.username || "?").slice(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="break-all text-xl font-black text-white sm:text-2xl">{session?.username}</h3>
-                    <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-3 py-1 text-xs font-black text-blue-300">
+                    <h3 className="break-all text-xl font-semibold text-white sm:text-2xl">{session?.username}</h3>
+                    <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-3 py-1 text-xs font-semibold text-blue-300">
                       <ShieldCheck size={13} strokeWidth={2.6} /> {accountTypeLabel}
                     </span>
                   </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 p-4 sm:p-5">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5"><Building2 size={16} className="text-slate-300" /></span>
                   <p className="mt-2 text-xs font-bold text-slate-400">Текущая точка</p>
-                  <p className="mt-0.5 break-words text-lg font-black text-white sm:text-2xl">{workspace?.name || "Основная точка"}</p>
+                  <p className="mt-0.5 break-words text-lg font-semibold text-white sm:text-2xl">{workspace?.name || "Основная точка"}</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5"><UserRound size={16} className="text-slate-300" /></span>
                   <p className="mt-2 text-xs font-bold text-slate-400">{isOwner ? "Владелец" : "Сейчас работает"}</p>
-                  <p className="mt-0.5 break-words text-lg font-black text-blue-300 sm:text-2xl">{isOwner ? (ownerName || currentWorker) : currentWorker}</p>
+                  <p className="mt-0.5 break-words text-lg font-semibold text-blue-300 sm:text-2xl">{isOwner ? (ownerName || currentWorker) : currentWorker}</p>
                 </div>
                 {isOwner && (
                   <>
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
                       <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5"><Store size={16} className="text-slate-300" /></span>
                       <p className="mt-2 text-xs font-bold text-slate-400">Точек</p>
-                      <p className="mt-0.5 text-lg font-black text-white sm:text-2xl">{safe_workspaces.length}</p>
+                      <p className="mt-0.5 text-lg font-semibold text-white sm:text-2xl">{safe_workspaces.length}</p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
                       <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5"><KeyRound size={16} className="text-slate-300" /></span>
                       <p className="mt-2 text-xs font-bold text-slate-400">Логинов</p>
-                      <p className="mt-0.5 text-lg font-black text-white sm:text-2xl">{safe_workspaceUsers.length}</p>
+                      <p className="mt-0.5 text-lg font-semibold text-white sm:text-2xl">{safe_workspaceUsers.length}</p>
                     </div>
                   </>
                 )}
@@ -632,9 +632,9 @@ export default function ProfilePage({
             </div>
 
             {isOwner && (
-              <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 shadow-lg backdrop-blur">
+              <div className="rounded-[28px] border border-white/[0.08] bg-white/[0.02] p-5">
                 <div className="flex items-center gap-2 text-blue-400"><Pencil size={15} strokeWidth={2.4} /><p className="text-sm font-bold">Владелец</p></div>
-                <h3 className="mt-1 text-xl font-black text-white">Имя владельца</h3>
+                <h3 className="mt-1 text-xl font-semibold text-white">Имя владельца</h3>
                 <p className="mt-1 text-sm leading-6 text-slate-400">Показывается в приветствии и отчётах. Можно указать имя человека или название компании.</p>
                 <div className="mt-4 flex flex-col gap-2.5">
                   <input
@@ -642,13 +642,13 @@ export default function ProfilePage({
                     onChange={(e) => setOwnerName(e.target.value)}
                     maxLength={60}
                     placeholder="Например: Ахмед или Okvion Sales"
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
+                    className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
                   />
                   <button
                     type="button"
                     onClick={saveOwnerName}
                     disabled={ownerSaving || !ownerName.trim() || ownerName.trim() === (session?.ownerName || "")}
-                    className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white  transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {ownerSaving ? "Сохраняю…" : ownerSaved ? "Сохранено ✓" : "Сохранить имя"}
                   </button>
@@ -661,22 +661,22 @@ export default function ProfilePage({
         {activeTab === "settings" && (isOwner || isBranchAdmin) && (
           <section className="grid gap-5 xl:grid-cols-2">
             {(isOwner || isBranchAdmin) && (
-              <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
+              <div className="rounded-[32px] border border-white/[0.08] bg-white/[0.02] p-5">
                 <div className="flex items-center gap-2 text-blue-400">
                   <Clock size={16} strokeWidth={2.4} />
                   <p className="text-sm font-bold">Рабочий день точки</p>
                 </div>
-                <h3 className="mt-1 text-xl font-black text-white">Во сколько открываетесь</h3>
+                <h3 className="mt-1 text-xl font-semibold text-white">Во сколько открываетесь</h3>
                 <p className="mt-1 text-sm leading-6 text-slate-400">
                   Если работаете ночью (например, с 09:00 до 01:00), продажи после полуночи будут считаться за тот же день. Влияет на «выручку за сегодня» и отчёты.
                 </p>
                 <div className="mt-4">
-                  <label className="mb-2 block text-sm font-black text-slate-300">Начало дня</label>
+                  <label className="mb-2 block text-sm font-semibold text-slate-300">Начало дня</label>
                   <select
                     value={dayStart}
                     disabled={dayStartSaving}
                     onChange={(e) => saveDayStart(Number(e.target.value))}
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none [color-scheme:dark] focus:border-blue-400/60 disabled:opacity-60"
+                    className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none [color-scheme:dark] focus:border-blue-400/60 disabled:opacity-60"
                   >
                     {Array.from({ length: 24 }, (_, h) => (
                       <option key={h} value={h}>
@@ -692,25 +692,25 @@ export default function ProfilePage({
             )}
 
             {(isOwner || isBranchAdmin) && (
-              <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
+              <div className="rounded-[32px] border border-white/[0.08] bg-white/[0.02] p-5">
                 <div className="flex items-center gap-2 text-indigo-400">
                   <ClipboardList size={16} strokeWidth={2.4} />
                   <p className="text-sm font-bold">Заказы с сайта</p>
                 </div>
-                <h3 className="mt-1 text-xl font-black text-white">Ключ приёма заказов</h3>
+                <h3 className="mt-1 text-xl font-semibold text-white">Ключ приёма заказов</h3>
                 <p className="mt-1 text-sm leading-6 text-slate-400">
                   Вставьте этот ключ на сайте меню — заказы будут падать в кассу во вкладку «Заказы». Ключ секретный, не публикуйте его.
                 </p>
                 <div className="mt-4">
-                  <label className="mb-2 block text-sm font-black text-slate-300">Ключ</label>
+                  <label className="mb-2 block text-sm font-semibold text-slate-300">Ключ</label>
                   <div className="flex items-center gap-2">
-                    <code className="min-w-0 flex-1 truncate rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-slate-200">{intakeKey || "…"}</code>
+                    <code className="min-w-0 flex-1 truncate rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-slate-200">{intakeKey || "…"}</code>
                     <button type="button" onClick={() => { if (intakeKey) { navigator.clipboard?.writeText(intakeKey); window.notify?.("Ключ скопирован", "success"); } }}
                       aria-label="Скопировать ключ" title="Скопировать"
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10"><Copy size={17} strokeWidth={2.4} /></button>
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/5 text-slate-300 transition hover:bg-white/10"><Copy size={17} strokeWidth={2.4} /></button>
                     <button type="button" onClick={rotateIntakeKey} disabled={keyBusy}
                       aria-label="Перевыпустить ключ" title="Перевыпустить"
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 disabled:opacity-50"><RefreshCw size={17} strokeWidth={2.4} /></button>
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/5 text-slate-300 transition hover:bg-white/10 disabled:opacity-50"><RefreshCw size={17} strokeWidth={2.4} /></button>
                   </div>
                   <p className="mt-2 text-[11px] font-bold text-slate-500">
                     Эндпоинт для сайта: <span className="text-slate-300">https://okvionsales.ru/api/public/orders</span>
@@ -720,47 +720,47 @@ export default function ProfilePage({
             )}
 
             {(isOwner || isBranchAdmin) && (
-              <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
+              <div className="rounded-[32px] border border-white/[0.08] bg-white/[0.02] p-5">
                 <div className="flex items-center gap-2 text-violet-400">
                   <Bot size={16} strokeWidth={2.4} />
                   <p className="text-sm font-bold">Нейросеть</p>
                 </div>
-                <h3 className="mt-1 text-xl font-black text-white">Подключение нейросети</h3>
+                <h3 className="mt-1 text-xl font-semibold text-white">Подключение нейросети</h3>
                 <p className="mt-1 text-sm leading-6 text-slate-400">
                   Ключ, модель и адрес провайдера ИИ (OpenRouter, odirouter, OpenAI…). Применяется сразу, без перезапуска сервера.
                 </p>
                 <div className="mt-4 space-y-3">
                   <div>
-                    <label className="mb-1.5 block text-sm font-black text-slate-300">Адрес провайдера (URL)</label>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-300">Адрес провайдера (URL)</label>
                     <input value={ai.baseUrl} onChange={(e) => setAi((p) => ({ ...p, baseUrl: e.target.value }))}
                       placeholder="https://api.odirouter.ai/v1"
-                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60" />
+                      className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60" />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-black text-slate-300">Модель</label>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-300">Модель</label>
                     <input value={ai.model} onChange={(e) => setAi((p) => ({ ...p, model: e.target.value }))}
                       placeholder="напр. gpt-4o-mini или anthropic/claude-sonnet-4"
-                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60" />
+                      className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60" />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-black text-slate-300">API-ключ</label>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-300">API-ключ</label>
                     <input type="password" value={aiKeyInput} onChange={(e) => setAiKeyInput(e.target.value)}
                       autoComplete="off"
                       placeholder={ai.hasKey ? `сохранён (${ai.keyMasked}) — пусто = не менять` : "вставьте ключ провайдера"}
-                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60" />
+                      className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60" />
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button type="button" onClick={saveAI} disabled={aiSaving}
-                      className="rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-5 py-3 font-black text-white shadow-lg transition hover:scale-[1.01] disabled:opacity-60">
+                      className="rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white shadow-lg transition hover:scale-[1.01] disabled:opacity-60">
                       {aiSaving ? "Сохраняю…" : "Сохранить"}
                     </button>
                     <button type="button" onClick={testAI} disabled={aiTesting}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-slate-100 transition hover:bg-white/10 disabled:opacity-60">
+                      className="rounded-2xl border border-white/[0.08] bg-white/5 px-5 py-3 font-semibold text-slate-100 transition hover:bg-white/10 disabled:opacity-60">
                       {aiTesting ? "Проверяю…" : "Проверить"}
                     </button>
                   </div>
                   {aiTest && (
-                    <p className={`text-sm font-black ${aiTest.ok ? "text-emerald-300" : "text-red-300"}`}>
+                    <p className={`text-sm font-semibold ${aiTest.ok ? "text-emerald-300" : "text-red-300"}`}>
                       {aiTest.ok ? "✓ " : "✕ "}{aiTest.msg}
                     </p>
                   )}
@@ -775,13 +775,13 @@ export default function ProfilePage({
 
         {/* ── Точки (owner) ── */}
         {activeTab === "branches" && isOwner && (
-          <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
+          <section className="rounded-[32px] border border-white/[0.08] bg-white/[0.02] p-5">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/15 text-blue-300"><Building2 size={18} strokeWidth={2.4} /></span>
                 <div className="min-w-0">
-                  <p className="text-xs font-black uppercase tracking-wider text-blue-400">Точки</p>
-                  <h3 className="text-xl font-black text-white sm:text-2xl">Точки и филиалы</h3>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400">Точки</p>
+                  <h3 className="text-xl font-semibold text-white sm:text-2xl">Точки и филиалы</h3>
                   <p className="mt-1 max-w-xl text-sm text-slate-400">Каждая точка — отдельный магазин со своими товарами, складом и продажами. Нажмите на точку, чтобы переключиться на неё.</p>
                 </div>
               </div>
@@ -795,14 +795,14 @@ export default function ProfilePage({
                 <button key={w.id} type="button" onClick={() => switchWorkspace(w)}
                   className={`relative rounded-3xl border p-5 text-left transition hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
                     active
-                      ? "border-transparent bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-xl shadow-blue-900/30"
-                      : "border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.06]"
+                      ? "border-transparent bg-indigo-600 text-white "
+                      : "border-white/[0.08] bg-white/[0.02] text-white hover:bg-white/[0.06]"
                   }`}>
                   <div className="flex items-center justify-between">
-                    <p className={`text-xs font-black uppercase tracking-wide ${active ? "text-blue-100" : "text-blue-400"}`}>{w.isMain ? "Основная точка" : "Филиал"}</p>
-                    {active && <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-black">Активна</span>}
+                    <p className={`text-xs font-semibold uppercase tracking-wide ${active ? "text-blue-100" : "text-blue-400"}`}>{w.isMain ? "Основная точка" : "Филиал"}</p>
+                    {active && <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold">Активна</span>}
                   </div>
-                  <h4 className="mt-1.5 break-words text-2xl font-black">{w.name}</h4>
+                  <h4 className="mt-1.5 break-words text-2xl font-semibold">{w.name}</h4>
                   <p className={`mt-3 text-sm ${active ? "text-blue-100/80" : "text-slate-400"}`}>Логинов: {(usersByWorkspace[String(w.id)] || []).length}</p>
                 </button>
                 );
@@ -813,13 +813,13 @@ export default function ProfilePage({
 
         {/* ── Доступы (owner) ── */}
         {activeTab === "access" && isOwner && (
-          <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
+          <section className="rounded-[32px] border border-white/[0.08] bg-white/[0.02] p-5">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/15 text-blue-300"><Share2 size={18} strokeWidth={2.4} /></span>
                 <div className="min-w-0">
-                  <p className="text-xs font-black uppercase tracking-wider text-blue-400">Доступ</p>
-                  <h3 className="text-xl font-black text-white sm:text-2xl">Доступы к точкам</h3>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400">Доступ</p>
+                  <h3 className="text-xl font-semibold text-white sm:text-2xl">Доступы к точкам</h3>
                   <p className="mt-1 text-sm text-slate-400">
                     Дайте одному пользователю доступ к нескольким точкам. Например, сделайте Ахмеда администратором и «Okvion Sales», и «Ресторана Адол».
                   </p>
@@ -831,16 +831,16 @@ export default function ProfilePage({
             </div>
 
             {safe_workspaceAccess.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-white/10 p-10 text-center">
-                <p className="text-lg font-black text-white">Мультидоступ не настроен</p>
+              <div className="rounded-3xl border border-dashed border-white/[0.08] p-10 text-center">
+                <p className="text-lg font-semibold text-white">Мультидоступ не настроен</p>
                 <p className="mt-1 text-sm text-slate-400">Нажмите «Добавить доступ», чтобы дать пользователю доступ к нескольким точкам.</p>
               </div>
             ) : (
               <>
                 {/* Таблица — планшет и десктоп */}
-                <div className="hidden overflow-x-auto rounded-2xl border border-white/10 md:block">
+                <div className="hidden overflow-x-auto rounded-2xl border border-white/[0.08] md:block">
                   <table className="w-full text-sm">
-                    <thead className="border-b border-white/10 bg-white/5 text-xs uppercase tracking-wide text-slate-400">
+                    <thead className="border-b border-white/[0.08] bg-white/5 text-xs uppercase tracking-wide text-slate-400">
                       <tr>
                         <th className="px-4 py-3 text-left">Пользователь</th>
                         <th className="px-4 py-3 text-left">Точка</th>
@@ -850,11 +850,11 @@ export default function ProfilePage({
                     </thead>
                     <tbody>
                       {safe_workspaceAccess.map((a) => (
-                        <tr key={a.id} className="border-t border-white/10 hover:bg-white/[0.03]">
-                          <td className="px-4 py-3 font-black text-white">{a.username}</td>
+                        <tr key={a.id} className="border-t border-white/[0.08] hover:bg-white/[0.02]">
+                          <td className="px-4 py-3 font-semibold text-white">{a.username}</td>
                           <td className="px-4 py-3 text-slate-300">{a.workspaceName}</td>
                           <td className="px-4 py-3">
-                            <span className={`rounded-xl px-3 py-1 text-xs font-black ${
+                            <span className={`rounded-xl px-3 py-1 text-xs font-semibold ${
                               a.role === "branch_admin"
                                 ? "bg-blue-500/20 text-blue-300"
                                 : "bg-slate-500/20 text-slate-300"
@@ -864,7 +864,7 @@ export default function ProfilePage({
                           </td>
                           <td className="px-4 py-3 text-right">
                             <button type="button" onClick={() => revokeAccess(a.id)}
-                              className="min-h-[40px] rounded-xl bg-red-500/10 px-3 py-2.5 text-xs font-black text-red-400 hover:bg-red-500/20">
+                              className="min-h-[40px] rounded-xl bg-red-500/10 px-3 py-2.5 text-xs font-semibold text-red-400 hover:bg-red-500/20">
                               Убрать доступ
                             </button>
                           </td>
@@ -877,20 +877,20 @@ export default function ProfilePage({
                 {/* Карточки — телефон */}
                 <div className="grid gap-3 md:hidden">
                   {safe_workspaceAccess.map((a) => (
-                    <div key={a.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <div key={a.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate font-black text-white">{a.username}</p>
+                          <p className="truncate font-semibold text-white">{a.username}</p>
                           <p className="mt-0.5 truncate text-sm text-slate-400">{a.workspaceName}</p>
                         </div>
-                        <span className={`shrink-0 rounded-xl px-3 py-1 text-xs font-black ${
+                        <span className={`shrink-0 rounded-xl px-3 py-1 text-xs font-semibold ${
                           a.role === "branch_admin" ? "bg-blue-500/20 text-blue-300" : "bg-slate-500/20 text-slate-300"
                         }`}>
                           {a.role === "branch_admin" ? "Администратор" : "Кассир"}
                         </span>
                       </div>
                       <button type="button" onClick={() => revokeAccess(a.id)}
-                        className="mt-3 w-full rounded-xl bg-red-500/10 px-3 py-2 text-sm font-black text-red-400 hover:bg-red-500/20">
+                        className="mt-3 w-full rounded-xl bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-400 hover:bg-red-500/20">
                         Убрать доступ
                       </button>
                     </div>
@@ -903,13 +903,13 @@ export default function ProfilePage({
 
         {/* ── Аккаунты точек ── */}
         {activeTab === "accounts" && (isOwner || isBranchAdmin) && (
-          <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
+          <section className="rounded-[32px] border border-white/[0.08] bg-white/[0.02] p-5">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/15 text-blue-300"><KeyRound size={18} strokeWidth={2.4} /></span>
                 <div className="min-w-0">
-                  <p className="text-xs font-black uppercase tracking-wider text-blue-400">Логины</p>
-                  <h3 className="text-xl font-black text-white sm:text-2xl">Логины для входа</h3>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400">Логины</p>
+                  <h3 className="text-xl font-semibold text-white sm:text-2xl">Логины для входа</h3>
                   <p className="mt-1 max-w-xl text-sm text-slate-400">Логин и пароль, под которым сотрудники заходят в приложение. У каждого логина своя точка и роль — кассир или администратор.</p>
                 </div>
               </div>
@@ -917,29 +917,29 @@ export default function ProfilePage({
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {visibleWorkspaceUsers.map((u) => (
-                <article key={u.id} className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+                <article key={u.id} className="flex flex-col rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="break-words text-lg font-black">{u.username}</p>
+                      <p className="break-words text-lg font-semibold">{u.username}</p>
                       <p className="mt-1 text-sm text-slate-400">{u.workspaceName}</p>
                     </div>
-                    <span className="shrink-0 rounded-xl bg-blue-500/15 px-3 py-1.5 text-xs font-black text-blue-300">{roleName(u.role)}</span>
+                    <span className="shrink-0 rounded-xl bg-blue-500/15 px-3 py-1.5 text-xs font-semibold text-blue-300">{roleName(u.role)}</span>
                   </div>
                   <div className="mt-auto grid gap-2 pt-5">
                     <button type="button" onClick={() => openManageProfiles(u)}
-                      className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white transition hover:brightness-110">
+                      className="rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:brightness-110">
                       Продавцы под логином
                     </button>
                     <button type="button" onClick={() => removeWorkspaceUser(u.id)}
-                      className="rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm font-black text-red-300 transition hover:bg-red-500/20">
+                      className="rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/20">
                       Удалить логин
                     </button>
                   </div>
                 </article>
               ))}
               {!visibleWorkspaceUsers.length && (
-                <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center md:col-span-2 xl:col-span-3">
-                  <p className="text-lg font-black text-white">Логинов пока нет</p>
+                <div className="rounded-3xl border border-dashed border-white/[0.08] bg-white/[0.02] p-8 text-center md:col-span-2 xl:col-span-3">
+                  <p className="text-lg font-semibold text-white">Логинов пока нет</p>
                   <p className="mt-1 text-sm text-slate-400">Создайте логин — это вход в кассу для сотрудника. Потом добавьте под ним продавцов.</p>
                 </div>
               )}
@@ -949,13 +949,13 @@ export default function ProfilePage({
 
         {/* ── Работники ── */}
         {activeTab === "employees" && (isOwner || isBranchAdmin) && (
-          <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
+          <section className="rounded-[32px] border border-white/[0.08] bg-white/[0.02] p-5">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/15 text-blue-300"><Users size={18} strokeWidth={2.4} /></span>
                 <div className="min-w-0">
-                  <p className="text-xs font-black uppercase tracking-wider text-blue-400">Продавцы</p>
-                  <h3 className="text-xl font-black text-white sm:text-2xl">Продавцы</h3>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400">Продавцы</p>
+                  <h3 className="text-xl font-semibold text-white sm:text-2xl">Продавцы</h3>
                   <p className="mt-1 max-w-xl text-sm text-slate-400">Имена продавцов — на кого записывается продажа. Пароль можно задать по желанию (тогда продавец вводит его, вставая за кассу). Отметьте, кто сейчас за кассой.</p>
                 </div>
               </div>
@@ -967,26 +967,26 @@ export default function ProfilePage({
                 return (
                 <article key={e.id} className={`rounded-3xl border p-4 transition ${
                   active
-                    ? "border-transparent bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-xl shadow-blue-900/30"
-                    : "border-white/10 bg-white/[0.03]"
+                    ? "border-transparent bg-indigo-600 text-white "
+                    : "border-white/[0.08] bg-white/[0.02]"
                 }`}>
                   <div className="flex items-center justify-between gap-2">
-                    <p className="min-w-0 truncate text-xl font-black">{e.name}</p>
-                    {active && <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-black">За кассой</span>}
+                    <p className="min-w-0 truncate text-xl font-semibold">{e.name}</p>
+                    {active && <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold">За кассой</span>}
                   </div>
                   <p className={`mt-1 text-sm ${active ? "text-blue-100/80" : "text-slate-400"}`}>
                     {active ? "Сейчас оформляет продажи" : "Продавец"}
                   </p>
                   <div className="mt-4 flex gap-2">
                     <button type="button" onClick={() => pickEmployee(e)} disabled={active}
-                      className={`flex-1 rounded-2xl px-4 py-3 font-black transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
-                        active ? "bg-white/15 text-white" : "bg-gradient-to-r from-blue-600 to-violet-600 text-white hover:brightness-110"
+                      className={`flex-1 rounded-2xl px-4 py-3 font-semibold transition focus:outline-none focus:ring-4 focus:ring-blue-500/30 ${
+                        active ? "bg-white/15 text-white" : "bg-indigo-600 text-white hover:brightness-110"
                       }`}>
                       {active ? "Выбран" : "За кассу"}
                     </button>
                     <button type="button" onClick={() => removeEmployee(e.id)}
                       aria-label="Удалить продавца" title="Удалить продавца"
-                      className={`flex items-center justify-center rounded-2xl px-4 py-3 font-black transition focus:outline-none ${
+                      className={`flex items-center justify-center rounded-2xl px-4 py-3 font-semibold transition focus:outline-none ${
                         active ? "bg-red-500/25 text-red-100 hover:bg-red-500/35" : "bg-red-500/10 text-red-300 hover:bg-red-500/20"
                       }`}>
                       <Trash2 size={16} />
@@ -996,8 +996,8 @@ export default function ProfilePage({
                 );
               })}
               {!safe_employees.length && (
-                <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center md:col-span-2 xl:col-span-3">
-                  <p className="text-lg font-black text-white">Продавцов пока нет</p>
+                <div className="rounded-3xl border border-dashed border-white/[0.08] bg-white/[0.02] p-8 text-center md:col-span-2 xl:col-span-3">
+                  <p className="text-lg font-semibold text-white">Продавцов пока нет</p>
                   <p className="mt-1 text-sm text-slate-400">Добавьте продавца — его имя будет в чеках и отчётах по продажам.</p>
                 </div>
               )}
@@ -1007,12 +1007,12 @@ export default function ProfilePage({
 
         {/* ── Права на страницы ── */}
         {activeTab === "permissions" && isOwner && (
-          <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
+          <section className="rounded-[32px] border border-white/[0.08] bg-white/[0.02] p-5">
             <div className="mb-5 flex items-start gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/15 text-blue-300"><ShieldCheck size={18} strokeWidth={2.4} /></span>
               <div className="min-w-0">
-                <p className="text-xs font-black uppercase tracking-wider text-blue-400">Права</p>
-                <h3 className="text-xl font-black text-white sm:text-2xl">Права на страницы</h3>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400">Права</p>
+                <h3 className="text-xl font-semibold text-white sm:text-2xl">Права на страницы</h3>
                 <p className="mt-1 text-sm text-slate-400">
                   Выберите пользователя и настройте, какие страницы он видит. Владелец и администратор всегда имеют полный доступ.
                 </p>
@@ -1020,8 +1020,8 @@ export default function ProfilePage({
             </div>
 
             {safe_workspaceUsers.filter(isAssignable).length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-white/10 p-10 text-center">
-                <p className="text-lg font-black text-white">Логинов пока нет</p>
+              <div className="rounded-3xl border border-dashed border-white/[0.08] p-10 text-center">
+                <p className="text-lg font-semibold text-white">Логинов пока нет</p>
                 <p className="mt-1 text-sm text-slate-400">Создайте логин в разделе «Логины».</p>
               </div>
             ) : (
@@ -1033,20 +1033,20 @@ export default function ProfilePage({
                     : ["/pos", "/pending-payments"];
                   const hasFullAccess = pages.includes("*");
                   return (
-                    <article key={u.id} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+                    <article key={u.id} className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5">
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate font-black text-white">{u.username}</p>
+                          <p className="truncate font-semibold text-white">{u.username}</p>
                           <p className="text-xs text-slate-400">{u.workspaceName}</p>
                         </div>
                         <button type="button" onClick={() => openEditPerms(u)}
-                          className="min-h-[40px] shrink-0 rounded-xl bg-blue-500/20 px-4 py-2.5 text-sm font-black text-blue-300 hover:bg-blue-500/30">
+                          className="min-h-[40px] shrink-0 rounded-xl bg-blue-500/20 px-4 py-2.5 text-sm font-semibold text-blue-300 hover:bg-blue-500/30">
                           Настроить
                         </button>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {hasFullAccess ? (
-                          <span className="rounded-xl bg-emerald-500/20 px-2 py-1 text-[10px] font-black text-emerald-300">Полный доступ</span>
+                          <span className="rounded-xl bg-emerald-500/20 px-2 py-1 text-[10px] font-semibold text-emerald-300">Полный доступ</span>
                         ) : pages.map(path => {
                           const page = ALL_PAGES.find(p => p.path === path);
                           return page ? (
@@ -1066,13 +1066,13 @@ export default function ProfilePage({
 
         {/* ── Карты ── */}
         {activeTab === "cards" && (isOwner || isBranchAdmin) && (
-          <section className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/20 backdrop-blur">
+          <section className="rounded-[32px] border border-white/[0.08] bg-white/[0.02] p-5">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/15 text-blue-300"><CreditCard size={18} strokeWidth={2.4} /></span>
                 <div className="min-w-0">
-                  <p className="text-xs font-black uppercase tracking-wider text-blue-400">Карты</p>
-                  <h3 className="text-xl font-black text-white sm:text-2xl">Карты</h3>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400">Карты</p>
+                  <h3 className="text-xl font-semibold text-white sm:text-2xl">Карты</h3>
                   <p className="mt-1 text-sm text-slate-400">Карты для учёта переводов и расходов.</p>
                 </div>
               </div>
@@ -1080,22 +1080,22 @@ export default function ProfilePage({
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {safe_cards.map((card) => (
-                <article key={card.id} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 shadow-sm">
+                <article key={card.id} className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="break-words text-xl font-black text-white">{card.name}</p>
+                      <p className="break-words text-xl font-semibold text-white">{card.name}</p>
                       <p className="mt-1 break-words text-sm font-bold text-slate-400">{card.owner || "Владелец не указан"}</p>
                     </div>
                     <button type="button" onClick={() => removeCard(card.id)}
-                      className="shrink-0 rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm font-black text-red-300 transition hover:bg-red-500/20">
+                      className="shrink-0 rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/20">
                       Удалить
                     </button>
                   </div>
                 </article>
               ))}
               {!safe_cards.length && (
-                <div className="rounded-3xl bg-white/[0.03] p-8 text-center md:col-span-2 xl:col-span-3">
-                  <p className="text-xl font-black text-white">Карт пока нет</p>
+                <div className="rounded-3xl bg-white/[0.02] p-8 text-center md:col-span-2 xl:col-span-3">
+                  <p className="text-xl font-semibold text-white">Карт пока нет</p>
                 </div>
               )}
             </div>
@@ -1120,9 +1120,9 @@ export default function ProfilePage({
                     className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
                       checked
                         ? "border-blue-400/40 bg-blue-500/15 text-blue-200"
-                        : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                        : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"
                     }`}>
-                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border-2 text-xs font-black ${checked ? "border-blue-400 bg-blue-500 text-white" : "border-white/20"}`}>
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border-2 text-xs font-semibold ${checked ? "border-blue-400 bg-blue-500 text-white" : "border-white/20"}`}>
                       {checked && "✓"}
                     </span>
                     <page.icon size={18} className="shrink-0" />
@@ -1131,12 +1131,12 @@ export default function ProfilePage({
                 );
               })}
             </div>
-            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3">
               <span className="text-sm font-bold text-slate-400">Выбрано страниц: {editingPerms.pages.length} из {ALL_PAGES.length}</span>
               <button type="button" onClick={() => setEditingPerms(p => ({...p, pages: ALL_PAGES.map(x => x.path)}))}
-                className="ml-auto min-h-[40px] rounded-xl bg-white/10 px-3 py-2.5 text-xs font-black text-white hover:bg-white/15">Выбрать все</button>
+                className="ml-auto min-h-[40px] rounded-xl bg-white/10 px-3 py-2.5 text-xs font-semibold text-white hover:bg-white/15">Выбрать все</button>
               <button type="button" onClick={() => setEditingPerms(p => ({...p, pages: ["/pos", "/pending-payments"]}))}
-                className="min-h-[40px] rounded-xl bg-white/10 px-3 py-2.5 text-xs font-black text-white hover:bg-white/15">По умолчанию</button>
+                className="min-h-[40px] rounded-xl bg-white/10 px-3 py-2.5 text-xs font-semibold text-white hover:bg-white/15">По умолчанию</button>
             </div>
             <div className="mt-6 flex gap-3">
               <button type="button" onClick={() => setModal(null)} className="btn-white flex-1">Отмена</button>
@@ -1153,9 +1153,9 @@ export default function ProfilePage({
             </div>
             <div className="grid gap-3">
               <label className="block">
-                <span className="mb-1.5 block text-sm font-black text-slate-300">Пользователь</span>
+                <span className="mb-1.5 block text-sm font-semibold text-slate-300">Пользователь</span>
                 <select value={grantForm.userId} onChange={(e) => setGrantForm((p) => ({ ...p, userId: e.target.value }))}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
+                  className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
                   <option value="">Выберите пользователя</option>
                   {safe_workspaceUsers.map((u) => (
                     <option key={u.id} value={u.id}>{u.username} — {u.workspaceName}</option>
@@ -1163,9 +1163,9 @@ export default function ProfilePage({
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-sm font-black text-slate-300">Точка доступа</span>
+                <span className="mb-1.5 block text-sm font-semibold text-slate-300">Точка доступа</span>
                 <select value={grantForm.workspaceId} onChange={(e) => setGrantForm((p) => ({ ...p, workspaceId: e.target.value }))}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
+                  className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
                   <option value="">Выберите точку</option>
                   {safe_workspaces.map((w) => (
                     <option key={w.id} value={w.id}>{w.name}</option>
@@ -1173,9 +1173,9 @@ export default function ProfilePage({
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-sm font-black text-slate-300">Роль</span>
+                <span className="mb-1.5 block text-sm font-semibold text-slate-300">Роль</span>
                 <select value={grantForm.role} onChange={(e) => setGrantForm((p) => ({ ...p, role: e.target.value }))}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
+                  className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
                   <option value="branch_admin">Администратор точки</option>
                   <option value="worker">Кассир</option>
                 </select>
@@ -1190,24 +1190,24 @@ export default function ProfilePage({
 
         {modal === "manageProfiles" && (
           <Modal title="Продавцы под логином" wide legacyLight={false} onClose={() => setModal(null)}>
-            <div className="mb-4 rounded-3xl bg-gradient-to-r from-blue-600 to-violet-600 p-4 text-white">
+            <div className="mb-4 rounded-3xl bg-indigo-600 p-4 text-white">
               <p className="text-sm text-blue-100">Логин для входа</p>
-              <p className="break-words text-2xl font-black">{managedAccount?.username}</p>
+              <p className="break-words text-2xl font-semibold">{managedAccount?.username}</p>
               <p className="mt-1 text-sm text-blue-100">{managedAccount?.workspaceName}</p>
             </div>
             <p className="mb-3 text-sm text-slate-400">Добавьте продавцов — их имена попадут в чеки и отчёты. Пароль необязателен: если задать, продавец будет вводить его, когда встаёт за кассу.</p>
             <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
               <label className="block">
-                <span className="mb-2 block text-sm font-black text-slate-400">Имя продавца</span>
+                <span className="mb-2 block text-sm font-semibold text-slate-400">Имя продавца</span>
                 <input value={managedEmployeeName} onChange={(e) => setManagedEmployeeName(e.target.value)}
                   placeholder="Например: Ахмед" autoFocus
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+                  className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
               </label>
               <label className="block">
-                <span className="mb-2 block text-sm font-black text-slate-400">Пароль <span className="font-bold text-slate-500">(необязательно)</span></span>
+                <span className="mb-2 block text-sm font-semibold text-slate-400">Пароль <span className="font-bold text-slate-500">(необязательно)</span></span>
                 <input value={managedEmployeePass} onChange={(e) => setManagedEmployeePass(e.target.value)}
                   placeholder="без пароля" type="text"
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+                  className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
               </label>
               <div className="flex items-end">
                 <button type="button" onClick={createManagedEmployee} className="btn-blue w-full">+ Добавить</button>
@@ -1216,10 +1216,10 @@ export default function ProfilePage({
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {safe_managedEmployees.map((e) => (
                 <div key={e.id} className="flex items-center justify-between rounded-2xl bg-white/5 p-4">
-                  <p className="font-black">{e.name}</p>
+                  <p className="font-semibold">{e.name}</p>
                   <button type="button" onClick={() => removeManagedEmployee(e.id)}
                     aria-label="Удалить продавца" title="Удалить продавца"
-                    className="flex min-h-[40px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-300 transition hover:bg-red-500/20"><Trash2 size={16} /></button>
+                    className="flex min-h-[40px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 font-semibold text-red-300 transition hover:bg-red-500/20"><Trash2 size={16} /></button>
                 </div>
               ))}
               {!safe_managedEmployees.length && (
@@ -1233,16 +1233,16 @@ export default function ProfilePage({
         {modal === "employee" && (
           <Modal title="Новый продавец" legacyLight={false} onClose={() => setModal(null)}>
             <label className="block">
-              <span className="mb-2 block text-sm font-black text-slate-400">Имя продавца</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-400">Имя продавца</span>
               <input value={employeeName} onChange={(e) => setEmployeeName(e.target.value)}
                 placeholder="Например: Ахмед" autoFocus
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+                className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
             </label>
             <label className="mt-3 block">
-              <span className="mb-2 block text-sm font-black text-slate-400">Пароль <span className="font-bold text-slate-500">(необязательно)</span></span>
+              <span className="mb-2 block text-sm font-semibold text-slate-400">Пароль <span className="font-bold text-slate-500">(необязательно)</span></span>
               <input value={employeePass} onChange={(e) => setEmployeePass(e.target.value)}
                 placeholder="Продавец введёт его, когда встаёт за кассу" type="text"
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+                className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
             </label>
             <div className="mt-6 flex gap-3">
               <button type="button" onClick={() => setModal(null)} className="btn-white flex-1">Отмена</button>
@@ -1254,16 +1254,16 @@ export default function ProfilePage({
         {modal === "card" && (
           <Modal title="Новая карта" legacyLight={false} onClose={() => setModal(null)}>
             <label className="block">
-              <span className="mb-2 block text-sm font-black text-slate-400">Название карты или банка</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-400">Название карты или банка</span>
               <input value={cardName} onChange={(e) => setCardName(e.target.value)}
                 placeholder="Например: Сбербанк" autoFocus
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+                className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
             </label>
             <label className="mt-3 block">
-              <span className="mb-2 block text-sm font-black text-slate-400">Владелец <span className="font-bold text-slate-500">(необязательно)</span></span>
+              <span className="mb-2 block text-sm font-semibold text-slate-400">Владелец <span className="font-bold text-slate-500">(необязательно)</span></span>
               <input value={cardOwner} onChange={(e) => setCardOwner(e.target.value)}
                 placeholder="Например: Ахмед"
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+                className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
             </label>
             {error && <p role="alert" className="mt-3 text-sm font-bold text-red-400">{error}</p>}
             <div className="mt-6 flex gap-3">
@@ -1282,7 +1282,7 @@ export default function ProfilePage({
               onChange={(e) => { setPwInput(e.target.value); setError(""); }}
               onKeyDown={(e) => e.key === "Enter" && confirmPwPrompt()}
               placeholder="Пароль"
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+              className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
             {error && <p className="mt-2 text-sm font-bold text-red-400">{error}</p>}
             <div className="mt-6 flex gap-3">
               <button type="button" onClick={() => { setPwPrompt(null); setPwInput(""); setError(""); }} className="btn-white flex-1">Отмена</button>
@@ -1294,10 +1294,10 @@ export default function ProfilePage({
         {modal === "workspace" && (
           <Modal title="Новая точка" legacyLight={false} onClose={() => setModal(null)}>
             <label className="block">
-              <span className="mb-2 block text-sm font-black text-slate-400">Название точки</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-400">Название точки</span>
               <input value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)}
                 placeholder="Например: Okvion Sales Центр" autoFocus
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+                className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
             </label>
             <div className="mt-6 flex gap-3">
               <button type="button" onClick={() => setModal(null)} className="btn-white flex-1">Отмена</button>
@@ -1311,37 +1311,37 @@ export default function ProfilePage({
             <div className="space-y-3">
               {isOwner && (
                 <label className="block">
-                  <span className="mb-2 block text-sm font-black text-slate-400">Точка</span>
+                  <span className="mb-2 block text-sm font-semibold text-slate-400">Точка</span>
                   <select value={accountForm.workspaceId}
                     onChange={(e) => setAccountForm((p) => ({ ...p, workspaceId: e.target.value }))}
-                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
+                    className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
                     <option value="">Выберите точку</option>
                     {safe_workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
                   </select>
                 </label>
               )}
               <label className="block">
-                <span className="mb-2 block text-sm font-black text-slate-400">Роль</span>
+                <span className="mb-2 block text-sm font-semibold text-slate-400">Роль</span>
                 <select value={accountForm.role}
                   onChange={(e) => setAccountForm((p) => ({ ...p, role: e.target.value }))}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
+                  className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none w-full">
                   <option value="worker">Кассир — только продажи и касса</option>
                   <option value="branch_admin">Администратор — полный доступ к точке</option>
                 </select>
               </label>
               <label className="block">
-                <span className="mb-2 block text-sm font-black text-slate-400">Логин</span>
+                <span className="mb-2 block text-sm font-semibold text-slate-400">Логин</span>
                 <input value={accountForm.username}
                   onChange={(e) => setAccountForm((p) => ({ ...p, username: e.target.value }))}
                   placeholder="Например: ahmed@okvion.ru"
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+                  className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
               </label>
               <label className="block">
-                <span className="mb-2 block text-sm font-black text-slate-400">Пароль</span>
+                <span className="mb-2 block text-sm font-semibold text-slate-400">Пароль</span>
                 <input value={accountForm.password} type="password"
                   onChange={(e) => setAccountForm((p) => ({ ...p, password: e.target.value }))}
                   placeholder="Пароль"
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
+                  className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full" />
               </label>
             </div>
             <div className="mt-6 flex gap-3">

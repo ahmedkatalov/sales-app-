@@ -122,17 +122,17 @@ function SmartIngredientInput({ value, onChange, warehouseItems = [], onSelectIt
         <div
           data-ingredient-dropdown
           style={{ position: "fixed", left: rect.left, width: rect.width, zIndex: 80, maxHeight: rect.maxHeight, overflowY: "auto", ...(rect.dropUp ? { bottom: rect.bottom } : { top: rect.top }) }}
-          className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/50"
+          className="overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-900 shadow-lg shadow-black/50"
         >
           {merged.map((s) => (
             <button key={s.key} type="button"
               onMouseDown={(e) => { e.preventDefault(); pick(s); }}
               className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/8">
-              <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black ${s.source === "warehouse" ? "bg-emerald-500/20 text-emerald-300" : "bg-violet-500/20 text-violet-300"}`}>
+              <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-semibold ${s.source === "warehouse" ? "bg-emerald-500/20 text-emerald-300" : "bg-violet-500/20 text-violet-300"}`}>
                 {s.source === "warehouse" ? "склад" : "AI"}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-black text-white">{s.name}</p>
+                <p className="truncate text-sm font-semibold text-white">{s.name}</p>
                 <p className="truncate text-xs text-slate-400">{s.sub}</p>
               </div>
             </button>
@@ -214,7 +214,7 @@ const TONE = {
   amber: { bl: "border-l-amber-400/70", text: "text-amber-300", bar: "from-amber-500 to-amber-400", chip: "border-amber-400/30 bg-amber-500/15 text-amber-300", ring: "stroke-amber-400" },
   orange: { bl: "border-l-orange-400/70", text: "text-orange-300", bar: "from-orange-500 to-orange-400", chip: "border-orange-400/30 bg-orange-500/15 text-orange-300", ring: "stroke-orange-400" },
   rose: { bl: "border-l-rose-500/70", text: "text-rose-300", bar: "from-rose-500 to-rose-400", chip: "border-rose-400/30 bg-rose-500/15 text-rose-300", ring: "stroke-rose-400" },
-  slate: { bl: "border-l-slate-500/60", text: "text-slate-300", bar: "from-slate-500 to-slate-400", chip: "border-white/10 bg-slate-600/30 text-slate-300", ring: "stroke-slate-500" },
+  slate: { bl: "border-l-slate-500/60", text: "text-slate-300", bar: "from-slate-500 to-slate-400", chip: "border-white/[0.08] bg-slate-600/30 text-slate-300", ring: "stroke-slate-500" },
 };
 
 // Тинты аватара по категории (хэш → палитра, НЕ пересекается с health-тонами выше).
@@ -238,7 +238,7 @@ const initialsOf = (name) => {
 function CategoryAvatar({ name, category, type, size = 44 }) {
   const radius = size <= 36 ? "rounded-lg" : "rounded-2xl";
   return (
-    <span className={`grid shrink-0 place-items-center font-black ${radius} ${catTint(category || type)}`}
+    <span className={`grid shrink-0 place-items-center font-semibold ${radius} ${catTint(category || type)}`}
       style={{ width: size, height: size, fontSize: size * 0.34 }}>
       {initialsOf(name)}
     </span>
@@ -248,9 +248,9 @@ function CategoryAvatar({ name, category, type, size = 44 }) {
 // Мини-тайл сводки (мобильная сетка 2×2) — единый язык со страницей «Долги».
 function MiniTile({ label, value, sub, valueClass = "text-white" }) {
   return (
-    <div className="min-w-0 rounded-lg bg-white/[0.03] px-3 py-2">
-      <p className="truncate text-[10px] font-black uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`truncate text-base font-black tabular-nums ${valueClass}`}>{value}</p>
+    <div className="min-w-0 rounded-lg bg-white/[0.02] px-3 py-2">
+      <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className={`truncate text-base font-semibold tabular-nums ${valueClass}`}>{value}</p>
       {sub && <p className="truncate text-[10px] font-semibold text-slate-500">{sub}</p>}
     </div>
   );
@@ -263,12 +263,12 @@ function ProductCard({ p, onEdit, onDuplicate, onDelete }) {
   const hasRecipe = Array.isArray(p.recipe) && p.recipe.length > 0;
   const unlinked = hasRecipe ? p.recipe.filter((r) => r.unlinked).length : 0;
   return (
-    <div className={`group relative flex h-full flex-col overflow-hidden rounded-xl border border-l-2 border-white/10 bg-white/[0.04] px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.06] ${t.bl} ${p.lossmaking ? "ring-1 ring-rose-500/30" : ""} ${p.hidden ? "opacity-60" : ""}`}>
+    <div className={`group relative flex h-full flex-col overflow-hidden rounded-xl border border-l-2 border-white/[0.08] bg-white/[0.02] px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.06] ${t.bl} ${p.lossmaking ? "ring-1 ring-rose-500/30" : ""} ${p.hidden ? "opacity-60" : ""}`}>
       {/* Шапка: аватар + имя + %-чип маржи */}
       <div className="flex items-center gap-2.5">
         <CategoryAvatar name={p.name} category={p.category} type={p.typeName || p.type} size={34} />
-        <p className="min-w-0 flex-1 truncate text-[13px] font-black leading-tight text-white">{p.name}</p>
-        <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] font-black tabular-nums transition group-hover:opacity-0 ${t.chip}`} title={p.marginIsPotential ? "Маржа расчётная (нет продаж)" : "Маржа"}>
+        <p className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-tight text-white">{p.name}</p>
+        <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold tabular-nums transition group-hover:opacity-0 ${t.chip}`} title={p.marginIsPotential ? "Маржа расчётная (нет продаж)" : "Маржа"}>
           {Math.round(num(p.marginPct))}%{p.marginIsPotential && <span className="opacity-60">*</span>}
         </span>
       </div>
@@ -278,9 +278,9 @@ function ProductCard({ p, onEdit, onDuplicate, onDelete }) {
         <span className="min-w-0 flex-1 truncate text-[10px] font-bold text-slate-500">{prettyName(p.typeName || p.type)} · {prettyName(p.category)}</span>
         {hasRecipe ? (
           unlinked > 0 ? (
-            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-black text-amber-300" title={`${unlinked} ингр. не на складе`}><AlertTriangle size={11} /> {unlinked}</span>
+            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold text-amber-300" title={`${unlinked} ингр. не на складе`}><AlertTriangle size={11} /> {unlinked}</span>
           ) : (
-            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-black text-emerald-300" title={`${p.recipe.length} ингр. в составе`}><Check size={11} /> {p.recipe.length}</span>
+            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold text-emerald-300" title={`${p.recipe.length} ингр. в составе`}><Check size={11} /> {p.recipe.length}</span>
           )
         ) : (
           <span className="inline-flex shrink-0 items-center text-slate-400" title="Без состава"><PackageX size={11} /></span>
@@ -291,11 +291,11 @@ function ProductCard({ p, onEdit, onDuplicate, onDelete }) {
       {/* Цена + с/с·продажи + прибыль */}
       <div className="mt-auto flex items-end justify-between gap-2 pt-2">
         <div className="min-w-0">
-          <p className="truncate text-xl font-black leading-none tabular-nums text-white">{formatMoney(p.price)}</p>
+          <p className="truncate text-xl font-semibold leading-none tabular-nums text-white">{formatMoney(p.price)}</p>
           <p className="mt-1 truncate text-[10px] font-semibold text-slate-500">с/с {formatMoney(p.cost)}{p.incompleteCost && <span className="text-amber-300"> неполн.</span>} · ×{num(p.quantity)}</p>
         </div>
         <div className="shrink-0 text-right">
-          <p className={`text-[13px] font-black leading-none tabular-nums ${p.cleanProfit < 0 ? "text-rose-300" : "text-emerald-400"}`}>{formatMoney(p.cleanProfit)}</p>
+          <p className={`text-[13px] font-semibold leading-none tabular-nums ${p.cleanProfit < 0 ? "text-rose-300" : "text-emerald-400"}`}>{formatMoney(p.cleanProfit)}</p>
           <p className="mt-0.5 text-[9px] font-semibold text-slate-500">прибыль</p>
         </div>
       </div>
@@ -323,8 +323,8 @@ function ProblemChip({ active, onClick, icon: Icon, label, count, tone = "slate"
       type="button"
       onClick={onClick}
       disabled={dim}
-      className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-black transition ${
-        active ? t.chip : dim ? "border-white/10 bg-white/[0.02] text-slate-600" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+      className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition ${
+        active ? t.chip : dim ? "border-white/[0.08] bg-white/[0.02] text-slate-600" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"
       }`}
     >
       <Icon size={13} /> {label}
@@ -1318,7 +1318,7 @@ export default function WorkPage() {
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-sm font-bold text-blue-400">Работа</p>
-          <h2 className="text-2xl font-black leading-none text-white sm:text-3xl">Меню товаров</h2>
+          <h2 className="text-2xl font-semibold leading-none text-white sm:text-3xl">Меню товаров</h2>
           <p className="mt-2 text-sm text-slate-400">Прибыльность меню за месяц · количество из продаж</p>
         </div>
 
@@ -1326,14 +1326,14 @@ export default function WorkPage() {
           <div className="relative">
             <button
               onClick={() => setMoreOpen((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-black text-slate-100 backdrop-blur transition hover:bg-white/10 sm:px-4 sm:py-3"
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-white/[0.08] bg-white/5 px-3 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-white/10 sm:px-4 sm:py-3"
             >
               <MoreHorizontal size={18} /> <span className="hidden sm:inline">Ещё</span>
             </button>
             {moreOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
-                <div className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-2xl border border-white/10 bg-[#0b1020] p-1.5 shadow-2xl backdrop-blur-xl">
+                <div className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b1020] p-1.5 shadow-lg backdrop-blur-xl">
                   {[
                     { Ic: Settings, label: "Разделы и категории", on: () => setStructureModal(true) },
                     isOwner && { Ic: Copy, label: "Перенос в точку", on: () => setTransferModal(true) },
@@ -1356,7 +1356,7 @@ export default function WorkPage() {
 
           <button
             onClick={openProductModal}
-            className="hidden rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] sm:block"
+            className="hidden rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white  transition hover:scale-[1.01] sm:block"
           >
             + Товар
           </button>
@@ -1364,13 +1364,13 @@ export default function WorkPage() {
       </div>
 
       {/* Герой: чистая прибыль + маржа + факты (плоско) */}
-      <div className="mb-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
+      <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Чистая прибыль · месяц</p>
-            <p className={`mt-1 text-4xl font-black leading-none tabular-nums sm:text-5xl ${monthTotals.cleanProfit < 0 ? "text-rose-400" : "text-emerald-400"}`}>{formatMoney(monthTotals.cleanProfit)}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Чистая прибыль · месяц</p>
+            <p className={`mt-1 whitespace-nowrap text-4xl font-semibold leading-none tabular-nums sm:text-5xl ${monthTotals.cleanProfit < 0 ? "text-rose-400" : "text-emerald-400"}`}>{formatMoney(monthTotals.cleanProfit)}</p>
             {menuHealth.avgMargin != null && (
-              <div className="mt-2.5 flex items-center gap-2 text-[11px] font-bold">
+              <div className="mt-2.5 flex items-center gap-2 whitespace-nowrap text-[11px] font-bold">
                 <div className="h-1.5 w-40 overflow-hidden rounded-full bg-white/10 sm:w-56">
                   <div className="h-full rounded-full bg-emerald-400" style={{ width: `${Math.min(100, Math.max(0, menuHealth.avgMargin))}%` }} />
                 </div>
@@ -1381,7 +1381,7 @@ export default function WorkPage() {
           </div>
 
           {/* Десктоп: инлайн-факты */}
-          <div className="hidden shrink-0 flex-wrap items-center justify-end gap-x-5 gap-y-2 text-sm sm:flex">
+          <div className="hidden min-w-0 flex-wrap items-center justify-end gap-x-5 gap-y-2 text-sm sm:flex">
             <span className="inline-flex items-center gap-1.5 text-slate-400"><Boxes size={15} /> Продано <b className="tabular-nums text-white">{num(monthTotals.quantity).toLocaleString("ru-RU")}</b> · {productRows.length} поз.</span>
             <span className="inline-flex items-center gap-1.5 text-slate-400"><Wallet size={15} /> Выручка <b className="tabular-nums text-white">{formatMoney(monthTotals.revenue)}</b></span>
             <span className="inline-flex items-center gap-1.5 text-slate-400"><PackageX size={15} /> Себест. <b className="tabular-nums text-white">{formatMoney(monthTotals.cost)}</b></span>
@@ -1409,7 +1409,7 @@ export default function WorkPage() {
           {/* Ряд 1: заголовок + поиск + фильтр + товар */}
           <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
-              <h3 className="truncate text-lg font-black leading-tight text-white sm:text-xl">
+              <h3 className="truncate text-lg font-semibold leading-tight text-white sm:text-xl">
                 {selectedFolder?.name || (selectedType ? `Все: ${selectedType.name}` : "Все товары")}
               </h3>
               <p className="text-xs font-semibold text-slate-400">
@@ -1424,18 +1424,18 @@ export default function WorkPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Найти товар"
-                  className="h-10 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60 lg:w-64"
+                  className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/5 pl-10 pr-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60 lg:w-64"
                 />
               </div>
               <button
                 onClick={() => setFilterModal(true)}
-                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-black text-slate-100 transition hover:bg-white/10"
+                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/5 px-4 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
               >
                 <SlidersHorizontal size={16} /> <span className="hidden sm:inline">Фильтр</span>
               </button>
               <button
                 onClick={openProductModal}
-                className="hidden h-10 shrink-0 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 text-sm font-black text-white transition hover:scale-[1.01] sm:block"
+                className="hidden h-10 shrink-0 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white transition hover:scale-[1.01] sm:block"
               >
                 + Товар
               </button>
@@ -1447,7 +1447,7 @@ export default function WorkPage() {
             <div className="no-scrollbar -mx-1 flex flex-1 gap-2 overflow-x-auto px-1">
               <button
                 onClick={() => setSelectedTypeId("")}
-                className={`inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-xs font-black transition ${selectedTypeId === "" ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
+                className={`inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-xs font-semibold transition ${selectedTypeId === "" ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"}`}
               >
                 Все
               </button>
@@ -1455,7 +1455,7 @@ export default function WorkPage() {
                 <button
                   key={t.id}
                   onClick={() => setSelectedTypeId(String(t.id))}
-                  className={`inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-xs font-black transition ${String(selectedTypeId) === String(t.id) ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"}`}
+                  className={`inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-xs font-semibold transition ${String(selectedTypeId) === String(t.id) ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"}`}
                 >
                   {t.name}
                 </button>
@@ -1466,7 +1466,7 @@ export default function WorkPage() {
               <select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value)}
-                className="h-8 rounded-lg border border-white/10 bg-white/5 px-2.5 text-xs font-bold text-white outline-none focus:border-blue-400/60"
+                className="h-8 rounded-lg border border-white/[0.08] bg-white/5 px-2.5 text-xs font-bold text-white outline-none focus:border-blue-400/60"
               >
                 {Object.entries(SORT_LABELS).map(([k, l]) => (
                   <option key={k} value={k} className="bg-slate-900">{l}</option>
@@ -1476,7 +1476,7 @@ export default function WorkPage() {
                 onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
                 aria-label="Направление сортировки"
                 title={sortDir === "asc" ? "По возрастанию" : "По убыванию"}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/[0.08] bg-white/5 text-slate-200 transition hover:bg-white/10"
               >
                 {sortDir === "asc" ? <ArrowUp size={15} /> : <ArrowDown size={15} />}
               </button>
@@ -1501,7 +1501,7 @@ export default function WorkPage() {
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
             <EmptyState
               title={problemFilter !== "all" ? "Под фильтр ничего не попало" : (search ? "Ничего не найдено" : "Товаров пока нет")}
               text={problemFilter !== "all" ? "Сбросьте быстрый фильтр, чтобы увидеть остальные товары." : (search ? "Попробуйте изменить запрос." : "Добавьте первый товар в меню — из него будут складываться продажи и себестоимость.")}
@@ -1513,8 +1513,8 @@ export default function WorkPage() {
 
         {/* Итого по выбранным */}
         {displayRows.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Итого по выбранным</p>
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Итого по выбранным</p>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm font-semibold">
               <span className="text-slate-400">Продано <b className="tabular-nums text-white">{displayTotals.quantity}</b></span>
               <span className="text-slate-400">Выручка <b className="tabular-nums text-white">{formatMoney(displayTotals.revenue)}</b></span>
@@ -1533,7 +1533,7 @@ export default function WorkPage() {
       <button
         onClick={openProductModal}
         style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 10px)" }}
-        className="fixed left-4 right-4 z-30 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-lg shadow-blue-950/50 sm:hidden"
+        className="fixed left-4 right-4 z-30 rounded-2xl bg-indigo-600 px-5 py-4 font-semibold text-white  sm:hidden"
       >
         + Товар
       </button>
@@ -1551,13 +1551,13 @@ export default function WorkPage() {
         <Modal title="Фильтр товаров" onClose={() => setFilterModal(false)}>
           <div className="space-y-3">
             <label className="block">
-              <span className="mb-2 block text-sm font-black text-slate-400">
+              <span className="mb-2 block text-sm font-semibold text-slate-400">
                 Тип
               </span>
               <select
                 value={selectedTypeId}
                 onChange={(e) => setSelectedTypeId(e.target.value)}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 w-full"
+                className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 w-full"
               >
                 <option value="">Все типы</option>
                 {safeTypes.map((t) => (
@@ -1569,13 +1569,13 @@ export default function WorkPage() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-black text-slate-400">
+              <span className="mb-2 block text-sm font-semibold text-slate-400">
                 Папка / раздел
               </span>
               <select
                 value={selectedFolderId}
                 onChange={(e) => setSelectedFolderId(e.target.value)}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 w-full"
+                className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 w-full"
               >
                 <option value="">Все папки</option>
                 {typeFolders.map((f) => (
@@ -1594,14 +1594,14 @@ export default function WorkPage() {
                 setSelectedFolderId("");
                 setSearch("");
               }}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 flex-1"
+              className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-100 shadow-lg shadow-black/10 transition hover:bg-white/10 flex-1"
             >
               Сбросить
             </button>
 
             <button
               onClick={() => setFilterModal(false)}
-              className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] flex-1"
+              className="rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white  transition hover:scale-[1.01] flex-1"
             >
               Показать
             </button>
@@ -1612,15 +1612,15 @@ export default function WorkPage() {
       {structureModal && (
         <Modal title="Разделы и категории" wide onClose={() => setStructureModal(false)}>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-3xl border border-white/10 p-4">
+            <div className="rounded-3xl border border-white/[0.08] p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 className="text-xl font-black">Разделы</h3>
+                <h3 className="text-xl font-semibold">Разделы</h3>
                 <button
                   onClick={() => {
                     setStructureModal(false);
                     setTypeModal(true);
                   }}
-                  className="font-black text-blue-400"
+                  className="font-semibold text-blue-400"
                 >
                   + раздел
                 </button>
@@ -1637,13 +1637,13 @@ export default function WorkPage() {
                           <input autoFocus value={renaming.name}
                             onChange={(e) => setRenaming((p) => ({ ...p, name: e.target.value }))}
                             onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setRenaming(null); }}
-                            className="min-w-0 flex-1 rounded-xl border border-blue-400/50 bg-slate-950/60 px-3 py-3 font-black text-white outline-none" />
+                            className="min-w-0 flex-1 rounded-xl border border-blue-400/50 bg-slate-950/60 px-3 py-3 font-semibold text-white outline-none" />
                           <button onClick={saveRename} disabled={renameBusy} aria-label="Сохранить" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white disabled:opacity-50"><Check size={18} strokeWidth={2.6} /></button>
                           <button onClick={() => setRenaming(null)} aria-label="Отмена" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-slate-300"><X size={18} strokeWidth={2.6} /></button>
                         </>
                       ) : (
                         <>
-                          <button onClick={() => setSelectedTypeId(String(t.id))} className={`min-w-0 flex-1 truncate rounded-xl px-2 py-3 text-left font-black ${active ? "text-white" : "text-slate-100"}`}>{t.name}</button>
+                          <button onClick={() => setSelectedTypeId(String(t.id))} className={`min-w-0 flex-1 truncate rounded-xl px-2 py-3 text-left font-semibold ${active ? "text-white" : "text-slate-100"}`}>{t.name}</button>
                           <button onClick={() => startRename("type", t)} aria-label="Переименовать раздел" title="Переименовать" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white/10 hover:text-blue-300"><Pencil size={16} strokeWidth={2.4} /></button>
                         </>
                       )}
@@ -1659,10 +1659,10 @@ export default function WorkPage() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 p-4">
+            <div className="rounded-3xl border border-white/[0.08] p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-xl font-black">Категории</h3>
+                  <h3 className="text-xl font-semibold">Категории</h3>
                   <p className="text-sm text-slate-400">
                     для раздела: {selectedType?.name || "не выбран"}
                   </p>
@@ -1673,7 +1673,7 @@ export default function WorkPage() {
                     setStructureModal(false);
                     setFolderModal(true);
                   }}
-                  className="font-black text-blue-400"
+                  className="font-semibold text-blue-400"
                 >
                   + категория
                 </button>
@@ -1690,13 +1690,13 @@ export default function WorkPage() {
                           <input autoFocus value={renaming.name}
                             onChange={(e) => setRenaming((p) => ({ ...p, name: e.target.value }))}
                             onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setRenaming(null); }}
-                            className="min-w-0 flex-1 rounded-xl border border-blue-400/50 bg-slate-950/60 px-3 py-3 font-black text-white outline-none" />
+                            className="min-w-0 flex-1 rounded-xl border border-blue-400/50 bg-slate-950/60 px-3 py-3 font-semibold text-white outline-none" />
                           <button onClick={saveRename} disabled={renameBusy} aria-label="Сохранить" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white disabled:opacity-50"><Check size={18} strokeWidth={2.6} /></button>
                           <button onClick={() => setRenaming(null)} aria-label="Отмена" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-slate-300"><X size={18} strokeWidth={2.6} /></button>
                         </>
                       ) : (
                         <>
-                          <button onClick={() => setSelectedFolderId(String(f.id))} className={`min-w-0 flex-1 truncate rounded-xl px-2 py-3 text-left font-black ${active ? "text-white" : "text-slate-100"}`}>{f.name}</button>
+                          <button onClick={() => setSelectedFolderId(String(f.id))} className={`min-w-0 flex-1 truncate rounded-xl px-2 py-3 text-left font-semibold ${active ? "text-white" : "text-slate-100"}`}>{f.name}</button>
                           <button onClick={() => startRename("folder", f)} aria-label="Переименовать категорию" title="Переименовать" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white/10 hover:text-blue-300"><Pencil size={16} strokeWidth={2.4} /></button>
                         </>
                       )}
@@ -1718,7 +1718,7 @@ export default function WorkPage() {
           <div className="mt-6 flex gap-3">
             <button
               onClick={() => setStructureModal(false)}
-              className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] flex-1"
+              className="rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white  transition hover:scale-[1.01] flex-1"
             >
               Готово
             </button>
@@ -1728,7 +1728,7 @@ export default function WorkPage() {
                 setStructureModal(false);
                 openProductModal();
               }}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 flex-1"
+              className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-100 shadow-lg shadow-black/10 transition hover:bg-white/10 flex-1"
             >
               + Товар
             </button>
@@ -1750,7 +1750,7 @@ export default function WorkPage() {
               себестоимость; остальные останутся «без привязки».
             </p>
 
-            <button onClick={exportExcel} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 w-full">
+            <button onClick={exportExcel} className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-100 shadow-lg shadow-black/10 transition hover:bg-white/10 w-full">
               Выгрузить текущие товары в файл
             </button>
 
@@ -1759,14 +1759,14 @@ export default function WorkPage() {
               type="file"
               accept=".csv,.txt"
               onChange={importExcel}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 w-full"
+              className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 w-full"
             />
           </div>
 
           {/* Обслуживание меню — необратимое действие, отделено от загрузки файла */}
-          <div className="mt-6 border-t border-white/10 pt-4">
-            <p className="mb-3 text-sm font-black text-slate-300">Обслуживание меню</p>
-            <button onClick={removeMenuDuplicates} className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 font-black text-amber-200 transition hover:bg-amber-500/20 w-full">
+          <div className="mt-6 border-t border-white/[0.08] pt-4">
+            <p className="mb-3 text-sm font-semibold text-slate-300">Обслуживание меню</p>
+            <button onClick={removeMenuDuplicates} className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 font-semibold text-amber-200 transition hover:bg-amber-500/20 w-full">
               Убрать дубли (если импорт запускали несколько раз)
             </button>
           </div>
@@ -1774,7 +1774,7 @@ export default function WorkPage() {
           <div className="mt-6 flex gap-3">
             <button
               onClick={() => setImportModal(false)}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 flex-1"
+              className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-100 shadow-lg shadow-black/10 transition hover:bg-white/10 flex-1"
             >
               Закрыть
             </button>
@@ -1788,7 +1788,7 @@ export default function WorkPage() {
             value={newTypeName}
             onChange={(e) => setNewTypeName(e.target.value)}
             placeholder="Например: Бар, Кухня"
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 w-full"
+            className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 w-full"
           />
 
           <div className="mt-6 flex gap-3">
@@ -1797,12 +1797,12 @@ export default function WorkPage() {
                 setTypeModal(false);
                 setStructureModal(true);
               }}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 flex-1"
+              className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-100 shadow-lg shadow-black/10 transition hover:bg-white/10 flex-1"
             >
               Отмена
             </button>
 
-            <button onClick={createType} className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] flex-1">
+            <button onClick={createType} className="rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white  transition hover:scale-[1.01] flex-1">
               Создать
             </button>
           </div>
@@ -1814,7 +1814,7 @@ export default function WorkPage() {
           <select
             value={selectedTypeId}
             onChange={(e) => setSelectedTypeId(e.target.value)}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 mb-3 w-full"
+            className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 mb-3 w-full"
           >
             <option value="">Выберите раздел</option>
             {safeTypes.map((t) => (
@@ -1828,7 +1828,7 @@ export default function WorkPage() {
             value={newFolderName}
             onChange={(e) => setNewFolderName(e.target.value)}
             placeholder="Например: Коктейли, Чаи"
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 w-full"
+            className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 w-full"
           />
 
           <div className="mt-6 flex gap-3">
@@ -1837,12 +1837,12 @@ export default function WorkPage() {
                 setFolderModal(false);
                 setStructureModal(true);
               }}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 flex-1"
+              className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-100 shadow-lg shadow-black/10 transition hover:bg-white/10 flex-1"
             >
               Отмена
             </button>
 
-            <button onClick={createFolder} className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] flex-1">
+            <button onClick={createFolder} className="rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white  transition hover:scale-[1.01] flex-1">
               Создать
             </button>
           </div>
@@ -1857,14 +1857,14 @@ export default function WorkPage() {
                 <select
                   value={selectedTypeId}
                   onChange={(e) => { setSelectedTypeId(e.target.value); setSelectedFolderId(""); setShowNewType(false); }}
-                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
+                  className="min-w-0 flex-1 rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
                 >
                   <option value="">Выберите раздел</option>
                   {safeTypes.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
                 </select>
                 <button type="button"
                   onClick={() => { setShowNewType((v) => !v); setShowNewFolder(false); setQuickName(""); }}
-                  className="shrink-0 whitespace-nowrap rounded-2xl border border-white/10 bg-white/[0.06] px-3.5 text-sm font-black text-blue-300 transition hover:bg-white/10">
+                  className="shrink-0 whitespace-nowrap rounded-2xl border border-white/[0.08] bg-white/[0.06] px-3.5 text-sm font-semibold text-blue-300 transition hover:bg-white/10">
                   {showNewType ? "Отмена" : "+ Новый раздел"}
                 </button>
               </div>
@@ -1875,7 +1875,7 @@ export default function WorkPage() {
                     placeholder="Название раздела (напр. Бар)"
                     className="min-w-0 flex-1 rounded-2xl border border-blue-400/40 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
                   <button type="button" onClick={quickCreateType}
-                    className="shrink-0 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 font-black text-white transition hover:brightness-110">Создать</button>
+                    className="shrink-0 rounded-2xl bg-indigo-600 px-4 font-semibold text-white transition hover:brightness-110">Создать</button>
                 </div>
               )}
             </div>
@@ -1885,14 +1885,14 @@ export default function WorkPage() {
                 <select
                   value={selectedFolderId}
                   onChange={(e) => { setSelectedFolderId(e.target.value); setShowNewFolder(false); }}
-                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
+                  className="min-w-0 flex-1 rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
                 >
                   <option value="">Выберите категорию</option>
                   {typeFolders.map((f) => (<option key={f.id} value={f.id}>{f.name}</option>))}
                 </select>
                 <button type="button"
                   onClick={() => { if (!selectedTypeId) { setError("Сначала выберите раздел"); return; } setShowNewFolder((v) => !v); setShowNewType(false); setQuickName(""); }}
-                  className="shrink-0 whitespace-nowrap rounded-2xl border border-white/10 bg-white/[0.06] px-3.5 text-sm font-black text-blue-300 transition hover:bg-white/10">
+                  className="shrink-0 whitespace-nowrap rounded-2xl border border-white/[0.08] bg-white/[0.06] px-3.5 text-sm font-semibold text-blue-300 transition hover:bg-white/10">
                   {showNewFolder ? "Отмена" : "+ Новая категория"}
                 </button>
               </div>
@@ -1903,7 +1903,7 @@ export default function WorkPage() {
                     placeholder="Название категории (напр. Кофе)"
                     className="min-w-0 flex-1 rounded-2xl border border-blue-400/40 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
                   <button type="button" onClick={quickCreateFolder}
-                    className="shrink-0 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 font-black text-white transition hover:brightness-110">Создать</button>
+                    className="shrink-0 rounded-2xl bg-indigo-600 px-4 font-semibold text-white transition hover:brightness-110">Создать</button>
                 </div>
               )}
             </div>
@@ -1919,7 +1919,7 @@ export default function WorkPage() {
                   }
                 }}
                 placeholder="Эспрессо, Капучино, Боул с курицей..."
-                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 pr-32 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60"
+                className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 pr-32 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60"
               />
               <button type="button"
                 onClick={() => {
@@ -1928,8 +1928,8 @@ export default function WorkPage() {
                   if (!next) setAiSuggestion(null);
                   else if (productForm.name?.trim().length >= 3) analyzeProductNameWork(productForm.name);
                 }}
-                className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-black transition ${
-                  aiAdvisorEnabled ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-500 border border-white/10"
+                className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold transition ${
+                  aiAdvisorEnabled ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-500 border border-white/[0.08]"
                 }`}>
                 {aiSuggestionLoading
                   ? <><span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400"/>Думаю...</>
@@ -1941,8 +1941,8 @@ export default function WorkPage() {
               <div className="sm:col-span-2 rounded-2xl border border-violet-400/20 bg-violet-500/[0.06] p-4">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
-                    <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-violet-300"><Sparkles size={14}/> AI предлагает</p>
-                    <p className="mt-1 font-black text-white">{aiSuggestion.displayName}</p>
+                    <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-violet-300"><Sparkles size={14}/> AI предлагает</p>
+                    <p className="mt-1 font-semibold text-white">{aiSuggestion.displayName}</p>
                     <p className="text-xs text-slate-400">{aiSuggestion.description}</p>
                   </div>
                   <button type="button" onClick={() => setAiSuggestion(null)} aria-label="Закрыть" title="Закрыть" className="text-slate-500 hover:text-white"><X size={16} /></button>
@@ -1950,11 +1950,11 @@ export default function WorkPage() {
                 <div className="flex gap-3 mb-3 text-sm">
                   <div className="rounded-xl bg-emerald-500/10 border border-emerald-400/20 px-3 py-2">
                     <p className="text-[10px] text-slate-400">Цена</p>
-                    <p className="font-black text-emerald-300">{aiSuggestion.typicalPrice} ₽</p>
+                    <p className="font-semibold text-emerald-300">{aiSuggestion.typicalPrice} ₽</p>
                   </div>
                   <div className="rounded-xl bg-orange-500/10 border border-orange-400/20 px-3 py-2">
                     <p className="text-[10px] text-slate-400">Себест.</p>
-                    <p className="font-black text-orange-300">{aiSuggestion.estimatedCost} ₽</p>
+                    <p className="font-semibold text-orange-300">{aiSuggestion.estimatedCost} ₽</p>
                   </div>
                 </div>
                 <div className="mb-3 space-y-1">
@@ -1972,7 +1972,7 @@ export default function WorkPage() {
                 </div>
                 {aiSuggestion.tip && <p className="flex items-start gap-1.5 text-xs text-slate-400 italic mb-3"><Lightbulb size={14} className="mt-0.5 shrink-0" /> {aiSuggestion.tip}</p>}
                 <button type="button" onClick={applyAiSuggestionWork}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 py-2 font-black text-white text-xs hover:opacity-90">
+                  className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-600 py-2 font-semibold text-white text-xs hover:opacity-90">
                   <Sparkles size={14}/> Применить — заполнить состав и цены
                 </button>
               </div>
@@ -1987,7 +1987,7 @@ export default function WorkPage() {
                   setProductForm((p) => ({ ...p, cost: e.target.value }))
                 }
                 placeholder="Себестоимость"
-                className={`w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 ${safe_recipe.length > 0 ? "opacity-60 cursor-not-allowed" : ""}`}
+                className={`w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 ${safe_recipe.length > 0 ? "opacity-60 cursor-not-allowed" : ""}`}
                 readOnly={safe_recipe.length > 0}
               />
               {safe_recipe.length > 0 && (
@@ -2007,7 +2007,7 @@ export default function WorkPage() {
                 setProductForm((p) => ({ ...p, price: e.target.value }))
               }
               placeholder="Цена продажи"
-              className="w-full self-start rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
+              className="w-full self-start rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner shadow-black/10 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
             />
 
             <button
@@ -2016,11 +2016,11 @@ export default function WorkPage() {
               className={`sm:col-span-2 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
                 productForm.isExtra
                   ? "border-amber-400/40 bg-amber-500/10"
-                  : "border-white/10 bg-white/5 hover:bg-white/10"
+                  : "border-white/[0.08] bg-white/5 hover:bg-white/10"
               }`}
             >
               <span className="min-w-0">
-                <span className="block text-sm font-black text-white">Доп. товар</span>
+                <span className="block text-sm font-semibold text-white">Доп. товар</span>
                 <span className="block text-xs text-slate-400">Стаканчик, лёд и т.п. — в доходах считается отдельно</span>
               </span>
               <span className={`relative h-6 w-11 shrink-0 rounded-full transition ${productForm.isExtra ? "bg-amber-500" : "bg-white/15"}`}>
@@ -2033,12 +2033,12 @@ export default function WorkPage() {
               onClick={() => setProductForm((p) => ({ ...p, hidden: !p.hidden }))}
               className={`sm:col-span-2 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
                 productForm.hidden
-                  ? "border-white/10 bg-white/5 hover:bg-white/10"
+                  ? "border-white/[0.08] bg-white/5 hover:bg-white/10"
                   : "border-emerald-400/40 bg-emerald-500/10"
               }`}
             >
               <span className="min-w-0">
-                <span className="block text-sm font-black text-white">Доступен в кассе</span>
+                <span className="block text-sm font-semibold text-white">Доступен в кассе</span>
                 <span className="block text-xs text-slate-400">{productForm.hidden ? "Скрыт из витрины кассы (стоп-лист) — остаётся в меню" : "Показывается в кассе для продажи"}</span>
               </span>
               <span className={`relative h-6 w-11 shrink-0 rounded-full transition ${productForm.hidden ? "bg-white/15" : "bg-emerald-500"}`}>
@@ -2047,10 +2047,10 @@ export default function WorkPage() {
             </button>
           </div>
 
-          <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-[#0f172a]/90 p-4">
+          <div className="mt-6 rounded-[1.5rem] border border-white/[0.08] bg-[#0f172a]/90 p-4">
             <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h3 className="text-xl font-black">Состав / рецепт</h3>
+                <h3 className="text-xl font-semibold">Состав / рецепт</h3>
                 <p className="text-sm text-slate-400">
                   Укажите, сколько сырья уходит на 1 товар. Например: эспрессо —
                   зерно 20 г, капучино — зерно 18 г и молоко 180 мл.
@@ -2061,7 +2061,7 @@ export default function WorkPage() {
                 <p className="text-xs font-bold text-slate-400">
                   Авто себестоимость
                 </p>
-                <p className="font-black text-blue-400">
+                <p className="font-semibold text-blue-400">
                   {formatMoney(recipeCost)}
                 </p>
               </div>
@@ -2076,21 +2076,21 @@ export default function WorkPage() {
                 const isUnlinked = isManual && row.ingredientName && !row.warehouseItemId;
 
                 return (
-                  <div key={index} className="flex flex-col gap-1.5 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                  <div key={index} className="flex flex-col gap-1.5 rounded-2xl border border-white/8 bg-white/[0.02] p-3">
                     {/* Переключатель режима */}
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <button type="button"
                         onClick={() => updateRecipeRow(index, "mode", "warehouse")}
-                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/[0.08] hover:bg-white/10"}`}>
                         <Package size={14} /> Со склада
                       </button>
                       <button type="button"
                         onClick={() => { updateRecipeRow(index, "mode", "manual"); updateRecipeRow(index, "warehouseItemId", ""); }}
-                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"}`}>
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/[0.08] hover:bg-white/10"}`}>
                         <PackageX size={14} /> Нет на складе
                       </button>
                       <button type="button" onClick={() => removeRecipeRow(index)}
-                        className="ml-auto inline-flex min-h-[44px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-400 hover:bg-red-500/20">
+                        className="ml-auto inline-flex min-h-[44px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/20">
                         удалить
                       </button>
                     </div>
@@ -2116,7 +2116,7 @@ export default function WorkPage() {
                             updateRecipeRow(index, "warehouseItemId", e.target.value);
                             if (item) updateRecipeRow(index, "quantityUnit", item.unit);
                           }}
-                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
+                          className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10"
                         >
                           <option value="">Выберите сырьё со склада</option>
                           {safeWarehouseItems.map((item) => (
@@ -2130,13 +2130,13 @@ export default function WorkPage() {
                       <input type="number" inputMode="decimal" min="0" step="any" value={row.quantity}
                         onChange={(e) => updateRecipeRow(index, "quantity", e.target.value)}
                         placeholder="Кол-во"
-                        className={`rounded-2xl border bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60 ${num(row.quantity) <= 0 && (row.warehouseItemId || row.ingredientName) ? "border-red-500/60" : "border-white/10"}`}
+                        className={`rounded-2xl border bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60 ${num(row.quantity) <= 0 && (row.warehouseItemId || row.ingredientName) ? "border-red-500/60" : "border-white/[0.08]"}`}
                       />
 
                       <select
                         value={row.quantityUnit || selected?.unit || "g"}
                         onChange={(e) => updateRecipeRow(index, "quantityUnit", e.target.value)}
-                        className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 font-bold text-white outline-none focus:border-blue-400/60"
+                        className="rounded-2xl border border-white/[0.08] bg-white/5 px-3 py-3 font-bold text-white outline-none focus:border-blue-400/60"
                       >
                         {UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
@@ -2179,11 +2179,11 @@ export default function WorkPage() {
 
             <div className="mt-3 flex gap-2">
               <button type="button" onClick={() => addRecipeRow("warehouse")}
-                className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 transition hover:bg-white/10">
+                className="flex-1 rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-100 transition hover:bg-white/10">
                 + Со склада
               </button>
               <button type="button" onClick={() => addRecipeRow("manual")}
-                className="flex-1 rounded-2xl border border-violet-400/20 bg-violet-500/8 px-4 py-3 font-black text-violet-200 transition hover:bg-violet-500/15">
+                className="flex-1 rounded-2xl border border-violet-400/20 bg-violet-500/8 px-4 py-3 font-semibold text-violet-200 transition hover:bg-violet-500/15">
                 + Нет на складе
               </button>
             </div>
@@ -2196,12 +2196,12 @@ export default function WorkPage() {
                 setRecipe([]);
                 setProductForm({ name: "", cost: "", price: "", isExtra: false, hidden: false });
               }}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 flex-1"
+              className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-100 shadow-lg shadow-black/10 transition hover:bg-white/10 flex-1"
             >
               Отмена
             </button>
 
-            <button onClick={createProduct} disabled={saving} className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] flex-1 disabled:cursor-not-allowed disabled:opacity-60">
+            <button onClick={createProduct} disabled={saving} className="rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white  transition hover:scale-[1.01] flex-1 disabled:cursor-not-allowed disabled:opacity-60">
               {saving ? "Сохраняю…" : "Создать"}
             </button>
           </div>
@@ -2213,13 +2213,13 @@ export default function WorkPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <input value={editProduct.name}
               onChange={e => setEditProduct(p => ({...p, name: e.target.value}))}
-              placeholder="Название" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60 sm:col-span-2"/>
+              placeholder="Название" className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60 sm:col-span-2"/>
 
             <select
               value={String(editProduct.typeId || "")}
               onChange={e => setEditProduct(p => ({...p, typeId: Number(e.target.value) || 0, categoryId: 0}))}
               aria-label="Тип"
-              className="w-full min-w-0 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60"
+              className="w-full min-w-0 rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60"
             >
               <option value="">Выберите раздел</option>
               {safeTypes.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
@@ -2230,7 +2230,7 @@ export default function WorkPage() {
                 value={String(editProduct.categoryId || "")}
                 onChange={e => setEditProduct(p => ({...p, categoryId: Number(e.target.value) || 0}))}
                 aria-label="Папка"
-                className="w-full min-w-0 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60"
+                className="w-full min-w-0 rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60"
               >
                 <option value="">Выберите категорию</option>
                 {editTypeFolders.map((f) => (<option key={f.id} value={f.id}>{f.name}</option>))}
@@ -2242,17 +2242,17 @@ export default function WorkPage() {
 
             <input value={editProduct.price}
               onChange={e => setEditProduct(p => ({...p, price: e.target.value}))}
-              placeholder="Цена продажи" type="number" inputMode="decimal" className="w-full self-start rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60"/>
+              placeholder="Цена продажи" type="number" inputMode="decimal" className="w-full self-start rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60"/>
 
             {/* Переключатель себестоимости */}
-            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-              <span className="text-sm font-black text-slate-300">Себестоимость:</span>
+            <div className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3">
+              <span className="text-sm font-semibold text-slate-300">Себестоимость:</span>
               <button type="button" onClick={() => setEditCostMode("auto")}
-                className={`inline-flex min-h-[40px] items-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${editCostMode === "auto" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                className={`inline-flex min-h-[40px] items-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold transition ${editCostMode === "auto" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/[0.08]"}`}>
                 <Zap size={14} /> Авто
               </button>
               <button type="button" onClick={() => setEditCostMode("manual")}
-                className={`inline-flex min-h-[40px] items-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${editCostMode === "manual" ? "bg-orange-500/20 text-orange-300 border border-orange-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                className={`inline-flex min-h-[40px] items-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold transition ${editCostMode === "manual" ? "bg-orange-500/20 text-orange-300 border border-orange-400/30" : "bg-white/5 text-slate-400 border border-white/[0.08]"}`}>
                 <Pencil size={14} /> Вручную
               </button>
             </div>
@@ -2260,7 +2260,7 @@ export default function WorkPage() {
             {editCostMode === "manual" && (
               <input value={editProduct.cost}
                 onChange={e => setEditProduct(p => ({...p, cost: e.target.value}))}
-                placeholder="Себестоимость (вручную)" type="number" inputMode="decimal" className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60 sm:col-span-2"/>
+                placeholder="Себестоимость (вручную)" type="number" inputMode="decimal" className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60 sm:col-span-2"/>
             )}
 
             {editCostMode === "auto" && (
@@ -2274,12 +2274,12 @@ export default function WorkPage() {
               onClick={() => setEditProduct(p => ({ ...p, hidden: !p.hidden }))}
               className={`sm:col-span-2 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
                 editProduct.hidden
-                  ? "border-white/10 bg-white/5 hover:bg-white/10"
+                  ? "border-white/[0.08] bg-white/5 hover:bg-white/10"
                   : "border-emerald-400/40 bg-emerald-500/10"
               }`}
             >
               <span className="min-w-0">
-                <span className="block text-sm font-black text-white">Доступен в кассе</span>
+                <span className="block text-sm font-semibold text-white">Доступен в кассе</span>
                 <span className="block text-xs text-slate-400">{editProduct.hidden ? "Скрыт из витрины кассы (стоп-лист) — остаётся в меню и истории" : "Показывается в кассе для продажи"}</span>
               </span>
               <span className={`relative h-6 w-11 shrink-0 rounded-full transition ${editProduct.hidden ? "bg-white/15" : "bg-emerald-500"}`}>
@@ -2289,25 +2289,25 @@ export default function WorkPage() {
           </div>
 
           {/* Состав / рецепт */}
-          <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
-            <h3 className="mb-3 text-lg font-black text-white">Состав / рецепт</h3>
+          <div className="mt-4 rounded-[24px] border border-white/[0.08] bg-white/[0.02] p-4">
+            <h3 className="mb-3 text-lg font-semibold text-white">Состав / рецепт</h3>
             <div className="space-y-3">
               {editRecipe.map((row, index) => {
                 const selected = safeWarehouseItems.find(i => String(i.id) === String(row.warehouseItemId));
                 const isManual = row.mode === "manual";
                 return (
-                  <div key={index} className="flex flex-col gap-2 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                  <div key={index} className="flex flex-col gap-2 rounded-2xl border border-white/8 bg-white/[0.02] p-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <button type="button" onClick={() => updateEditRecipeRow(index, "mode", "warehouse")}
-                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold transition ${!isManual ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30" : "bg-white/5 text-slate-400 border border-white/[0.08]"}`}>
                         <Package size={14} /> Со склада
                       </button>
                       <button type="button" onClick={() => { updateEditRecipeRow(index, "mode", "manual"); updateEditRecipeRow(index, "warehouseItemId", ""); }}
-                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-black transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                        className={`inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold transition ${isManual ? "bg-violet-500/20 text-violet-300 border border-violet-400/30" : "bg-white/5 text-slate-400 border border-white/[0.08]"}`}>
                         <PackageX size={14} /> Нет на складе
                       </button>
                       <button type="button" onClick={() => removeEditRecipeRow(index)}
-                        className="ml-auto inline-flex min-h-[44px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-400">удалить</button>
+                        className="ml-auto inline-flex min-h-[44px] items-center justify-center rounded-xl bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400">удалить</button>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-[1fr_90px_72px]">
                       {isManual ? (
@@ -2327,7 +2327,7 @@ export default function WorkPage() {
                           const item = safeWarehouseItems.find(w => String(w.id) === String(e.target.value));
                           updateEditRecipeRow(index, "warehouseItemId", e.target.value);
                           if (item) updateEditRecipeRow(index, "quantityUnit", item.unit);
-                        }} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none">
+                        }} className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none">
                           <option value="">Выберите со склада</option>
                           {safeWarehouseItems.map(item => (
                             <option key={item.id} value={item.id}>{item.name} ({item.unit}) — {item.quantity}</option>
@@ -2336,10 +2336,10 @@ export default function WorkPage() {
                       )}
                       <input type="number" inputMode="decimal" min="0" step="any" value={row.quantity} onChange={e => updateEditRecipeRow(index, "quantity", e.target.value)}
                         placeholder="Кол-во"
-                        className={`rounded-2xl border bg-white/5 px-4 py-3 font-bold text-white outline-none ${num(row.quantity) <= 0 && (row.warehouseItemId || row.ingredientName) ? "border-red-500/60" : "border-white/10"}`}/>
+                        className={`rounded-2xl border bg-white/5 px-4 py-3 font-bold text-white outline-none ${num(row.quantity) <= 0 && (row.warehouseItemId || row.ingredientName) ? "border-red-500/60" : "border-white/[0.08]"}`}/>
                       <select value={row.quantityUnit || selected?.unit || "g"}
                         onChange={e => updateEditRecipeRow(index, "quantityUnit", e.target.value)}
-                        className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 font-bold text-white outline-none">
+                        className="rounded-2xl border border-white/[0.08] bg-white/5 px-3 py-3 font-bold text-white outline-none">
                         {UNIT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     </div>
@@ -2364,11 +2364,11 @@ export default function WorkPage() {
 
             <div className="mt-3 flex gap-2">
               <button type="button" onClick={() => addEditRecipeRow("warehouse")}
-                className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-200 hover:bg-white/10">
+                className="flex-1 rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-white/10">
                 + Со склада
               </button>
               <button type="button" onClick={() => addEditRecipeRow("manual")}
-                className="flex-1 rounded-2xl border border-violet-400/20 bg-violet-500/8 px-4 py-2.5 text-sm font-black text-violet-200 hover:bg-violet-500/15">
+                className="flex-1 rounded-2xl border border-violet-400/20 bg-violet-500/8 px-4 py-2.5 text-sm font-semibold text-violet-200 hover:bg-violet-500/15">
                 + Нет на складе
               </button>
             </div>
@@ -2376,9 +2376,9 @@ export default function WorkPage() {
 
           <div className="mt-6 flex gap-3">
             <button type="button" onClick={() => setEditModal(false)}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-100 shadow-lg shadow-black/10 backdrop-blur transition hover:bg-white/10 flex-1">Отмена</button>
+              className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-100 shadow-lg shadow-black/10 transition hover:bg-white/10 flex-1">Отмена</button>
             <button type="button" onClick={saveEditProduct} disabled={saving}
-              className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-xl shadow-blue-950/40 transition hover:scale-[1.01] flex-1 disabled:cursor-not-allowed disabled:opacity-60">{saving ? "Сохраняю…" : "Сохранить"}</button>
+              className="rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white  transition hover:scale-[1.01] flex-1 disabled:cursor-not-allowed disabled:opacity-60">{saving ? "Сохраняю…" : "Сохранить"}</button>
           </div>
         </Modal>
       )}

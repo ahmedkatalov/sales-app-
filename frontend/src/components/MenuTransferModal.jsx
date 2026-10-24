@@ -118,7 +118,7 @@ export default function MenuTransferModal({ onClose }) {
     if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
     return many;
   };
-  const selectClass = "w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70";
+  const selectClass = "w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-3 font-bold text-white outline-none focus:border-blue-400/70";
 
   return (
     <Modal title="Перенос меню между точками" section="Точки" wide onClose={onClose}>
@@ -128,12 +128,12 @@ export default function MenuTransferModal({ onClose }) {
         </div>
       ) : !hasTwoPoints ? (
         <div className="py-8 text-center">
-          <p className="text-lg font-black text-white">Нужно минимум две точки</p>
+          <p className="text-lg font-semibold text-white">Нужно минимум две точки</p>
           <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-400">
             Создайте вторую точку в настройках, тогда сюда можно будет перенести меню.
           </p>
           <button type="button" onClick={onClose}
-            className="mt-5 rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-3 font-black text-slate-200 transition hover:bg-white/10">
+            className="mt-5 rounded-2xl border border-white/[0.08] bg-white/[0.06] px-5 py-3 font-semibold text-slate-200 transition hover:bg-white/10">
             Понятно
           </button>
         </div>
@@ -142,7 +142,7 @@ export default function MenuTransferModal({ onClose }) {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
             <Check size={28} strokeWidth={2.6} />
           </div>
-          <p className="text-center text-lg font-black text-white">Готово — меню скопировано</p>
+          <p className="text-center text-lg font-semibold text-white">Готово — меню скопировано</p>
           <p className="mt-1 text-center text-sm text-slate-400">
             В точку «{wsName(targetId)}»
           </p>
@@ -162,11 +162,11 @@ export default function MenuTransferModal({ onClose }) {
           )}
           <div className="mt-5 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
             <button type="button" onClick={() => { setResult(null); setSelected(new Set()); }}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 font-black text-slate-200 transition hover:bg-white/10">
+              className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-5 py-3 font-semibold text-slate-200 transition hover:bg-white/10">
               Скопировать ещё
             </button>
             <button type="button" onClick={onClose}
-              className="rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110">
+              className="rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white  transition hover:brightness-110">
               Готово
             </button>
           </div>
@@ -180,7 +180,7 @@ export default function MenuTransferModal({ onClose }) {
           {/* Откуда → куда */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
             <label className="block">
-              <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">Откуда (источник)</span>
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Откуда (источник)</span>
               <select value={sourceId} onChange={(e) => setSourceId(Number(e.target.value))} className={selectClass}>
                 {workspaces.map((w) => (
                   <option key={w.dataAccountId} value={w.dataAccountId}>{w.name}{w.isMain ? " · основная" : ""}</option>
@@ -189,7 +189,7 @@ export default function MenuTransferModal({ onClose }) {
             </label>
             <div className="hidden shrink-0 pb-3 text-slate-500 sm:block"><ArrowRight size={20} strokeWidth={2.4} /></div>
             <label className="block">
-              <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">Куда (получатель)</span>
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Куда (получатель)</span>
               <select value={targetId} onChange={(e) => setTargetId(Number(e.target.value))} className={selectClass}>
                 <option value={0}>Выберите точку…</option>
                 {workspaces.filter((w) => w.dataAccountId !== Number(sourceId)).map((w) => (
@@ -205,14 +205,14 @@ export default function MenuTransferModal({ onClose }) {
 
           {/* Что копировать */}
           <div className="mt-5 flex items-center justify-between gap-3">
-            <p className="text-sm font-black text-white">Что скопировать</p>
-            <div className="flex items-center gap-2 text-xs font-black">
+            <p className="text-sm font-semibold text-white">Что скопировать</p>
+            <div className="flex items-center gap-2 text-xs font-semibold">
               <button type="button" onClick={() => setSelected(new Set(allCatIds))} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-slate-200 transition hover:bg-white/15">Выбрать всё</button>
               <button type="button" onClick={() => setSelected(new Set())} className="rounded-lg bg-white/5 px-2.5 py-1.5 text-slate-400 transition hover:bg-white/10">Сбросить</button>
             </div>
           </div>
 
-          <div className="mt-2.5 max-h-[42vh] space-y-2 overflow-y-auto rounded-2xl border border-white/10 bg-slate-950/40 p-2.5">
+          <div className="mt-2.5 max-h-[42vh] space-y-2 overflow-y-auto rounded-2xl border border-white/[0.08] bg-slate-950/40 p-2.5">
             {loadingTree ? (
               <div className="flex items-center justify-center gap-2 py-10 text-slate-400"><RefreshCw size={16} className="animate-spin" /> Загрузка меню…</div>
             ) : tree.length === 0 ? (
@@ -223,14 +223,14 @@ export default function MenuTransferModal({ onClose }) {
                 const allOn = ids.length > 0 && ids.every((id) => selected.has(id));
                 const someOn = ids.some((id) => selected.has(id));
                 return (
-                  <div key={t.name} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+                  <div key={t.name} className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02]">
                     <button type="button" onClick={() => toggleType(t)}
-                      className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition hover:bg-white/[0.04]">
+                      className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition hover:bg-white/[0.02]">
                       <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${allOn ? "border-blue-400 bg-blue-500" : someOn ? "border-blue-400/60 bg-blue-500/30" : "border-white/20 bg-transparent"}`}>
                         {allOn && <Check size={13} strokeWidth={3} className="text-white" />}
                         {!allOn && someOn && <span className="h-0.5 w-2.5 rounded bg-white" />}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-black text-white">{t.name}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{t.name}</span>
                       <span className="shrink-0 text-[11px] font-bold text-slate-500">{t.categories.length} {plural(t.categories.length, "категория", "категории", "категорий")}</span>
                     </button>
                     {t.categories.length > 0 && (
@@ -239,7 +239,7 @@ export default function MenuTransferModal({ onClose }) {
                           const on = selected.has(c.id);
                           return (
                             <button key={c.id} type="button" onClick={() => toggleCat(c.id)}
-                              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition ${on ? "bg-blue-500/10" : "hover:bg-white/[0.04]"}`}>
+                              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition ${on ? "bg-blue-500/10" : "hover:bg-white/[0.02]"}`}>
                               <span className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-md border ${on ? "border-blue-400 bg-blue-500" : "border-white/20"}`} style={{ height: 18, width: 18 }}>
                                 {on && <Check size={12} strokeWidth={3} className="text-white" />}
                               </span>
@@ -259,12 +259,12 @@ export default function MenuTransferModal({ onClose }) {
 
           {/* Рецепты */}
           <button type="button" onClick={() => setWithRecipes((v) => !v)}
-            className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition hover:bg-white/[0.05]">
+            className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-left transition hover:bg-white/[0.05]">
             <span className={`relative h-6 w-11 shrink-0 rounded-full transition ${withRecipes ? "bg-blue-500" : "bg-white/15"}`}>
               <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${withRecipes ? "left-[22px]" : "left-0.5"}`} />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-black text-white">Переносить рецепты (состав)</span>
+              <span className="block text-sm font-semibold text-white">Переносить рецепты (состав)</span>
               <span className="block text-xs font-bold text-slate-400">Недостающее сырьё создастся в складе получателя с нулевым остатком.</span>
             </span>
           </button>
@@ -278,11 +278,11 @@ export default function MenuTransferModal({ onClose }) {
             </p>
             <div className="flex flex-col-reverse gap-2.5 sm:flex-row">
               <button type="button" onClick={onClose}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 font-black text-slate-200 transition hover:bg-white/10">
+                className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-5 py-3 font-semibold text-slate-200 transition hover:bg-white/10">
                 Отмена
               </button>
               <button type="button" onClick={doCopy} disabled={!canCopy}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100">
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white  transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100">
                 {copying ? <RefreshCw size={16} className="animate-spin" /> : <Copy size={16} strokeWidth={2.4} />}
                 {copying ? "Копирую…" : "Скопировать"}
               </button>
@@ -297,9 +297,9 @@ export default function MenuTransferModal({ onClose }) {
 function Stat({ label, value, tone = "slate" }) {
   const toneCls = tone === "emerald" ? "text-emerald-300" : tone === "amber" ? "text-amber-300" : "text-white";
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
-      <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`mt-1 text-2xl font-black tabular-nums ${toneCls}`}>{value ?? 0}</p>
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-3 py-2.5">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold tabular-nums ${toneCls}`}>{value ?? 0}</p>
     </div>
   );
 }

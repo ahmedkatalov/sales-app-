@@ -90,7 +90,7 @@ export default function PendingPaymentsModal({ onClose }) {
           <b className="text-white">{safe_list.length}</b> чеков · <b className="text-emerald-300">{formatMoney(totalWaiting)}</b> к оплате
         </p>
         <button type="button" onClick={load} aria-label="Обновить" title="Обновить"
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200 transition hover:bg-white/10">
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/5 text-slate-200 transition hover:bg-white/10">
           <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
         </button>
       </div>
@@ -100,7 +100,7 @@ export default function PendingPaymentsModal({ onClose }) {
       ) : safe_list.length === 0 ? (
         <div className="py-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300"><CheckCircle2 size={28} strokeWidth={2.4} /></div>
-          <p className="text-lg font-black text-white">Всё оплачено</p>
+          <p className="text-lg font-semibold text-white">Всё оплачено</p>
           <p className="mt-1 text-sm text-slate-400">Чеков в ожидании нет.</p>
         </div>
       ) : (
@@ -108,16 +108,16 @@ export default function PendingPaymentsModal({ onClose }) {
           {safe_list.map((s) => {
             const paying = selectedId === s.id;
             return (
-              <div key={s.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <div key={s.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-slate-500">Чек #{s.id}{s.createdAt ? ` · ${new Date(s.createdAt).toLocaleDateString("ru-RU")}` : ""}</p>
-                    <h3 className="mt-0.5 text-2xl font-black tabular-nums text-white">{formatMoney(s.total)}</h3>
+                    <h3 className="mt-0.5 text-2xl font-semibold tabular-nums text-white">{formatMoney(s.total)}</h3>
                   </div>
-                  <span className="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-black text-amber-300">Ожидает</span>
+                  <span className="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">Ожидает</span>
                 </div>
 
-                <div className="mt-2.5 space-y-1 rounded-xl border border-white/10 bg-slate-950/40 p-2.5 text-sm">
+                <div className="mt-2.5 space-y-1 rounded-xl border border-white/[0.08] bg-slate-950/40 p-2.5 text-sm">
                   {(s.items || []).map((i) => (
                     <div key={`${s.id}-${i.productId}-${i.name}`} className="flex items-center justify-between gap-3">
                       <span className="min-w-0 truncate font-bold text-slate-200">{i.name} × {i.qty}</span>
@@ -130,30 +130,30 @@ export default function PendingPaymentsModal({ onClose }) {
                 {!paying ? (
                   <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
                     <button type="button" onClick={() => startPay(s)}
-                      className="rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3 font-black text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110 active:scale-[0.98]">
+                      className="rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white  transition hover:brightness-110 active:scale-[0.98]">
                       Принять оплату
                     </button>
                     <button type="button" onClick={() => cancel(s.id)}
-                      className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 font-black text-red-300 transition hover:bg-red-500/20">
+                      className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 font-semibold text-red-300 transition hover:bg-red-500/20">
                       Убрать
                     </button>
                   </div>
                 ) : (
-                  <div className="mt-3 rounded-xl border border-white/10 bg-slate-950/40 p-3">
+                  <div className="mt-3 rounded-xl border border-white/[0.08] bg-slate-950/40 p-3">
                     <div className="grid grid-cols-2 gap-2">
                       <button type="button" onClick={() => { setPaymentType("cash"); setRowError(""); }}
-                        className={paymentType === "cash" ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 font-black text-white" : "rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-black text-slate-200"}>Наличные</button>
+                        className={paymentType === "cash" ? "rounded-xl bg-indigo-600 px-4 py-2.5 font-semibold text-white" : "rounded-xl border border-white/[0.08] bg-white/5 px-4 py-2.5 font-semibold text-slate-200"}>Наличные</button>
                       <button type="button" onClick={() => { setPaymentType("transfer"); setRowError(""); }}
-                        className={paymentType === "transfer" ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 font-black text-white" : "rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-black text-slate-200"}>Перевод</button>
+                        className={paymentType === "transfer" ? "rounded-xl bg-indigo-600 px-4 py-2.5 font-semibold text-white" : "rounded-xl border border-white/[0.08] bg-white/5 px-4 py-2.5 font-semibold text-slate-200"}>Перевод</button>
                     </div>
 
                     {paymentType === "cash" ? (
                       <input value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} type="number" inputMode="decimal"
                         placeholder="Получено наличными, ₽"
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
+                        className="mt-2 w-full rounded-xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
                     ) : (
                       <select value={cardId} onChange={(e) => { setCardId(e.target.value); setRowError(""); }}
-                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none">
+                        className="mt-2 w-full rounded-xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none">
                         <option value="">Выберите карту</option>
                         {safe_cards.map((c) => (<option key={c.id} value={c.id}>{c.name}{c.owner ? ` · ${c.owner}` : ""}</option>))}
                       </select>
@@ -163,9 +163,9 @@ export default function PendingPaymentsModal({ onClose }) {
 
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <button type="button" onClick={() => { setSelectedId(null); setRowError(""); }}
-                        className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-black text-slate-200 transition hover:bg-white/10">Отмена</button>
+                        className="rounded-xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-200 transition hover:bg-white/10">Отмена</button>
                       <button type="button" onClick={() => confirmPayment(s)} disabled={confirming}
-                        className="rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-3 font-black text-white shadow-lg shadow-emerald-900/30 transition hover:brightness-110 disabled:opacity-60">
+                        className="rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white shadow-lg shadow-emerald-900/30 transition hover:brightness-110 disabled:opacity-60">
                         {confirming ? "Подтверждаю…" : "Оплачено"}
                       </button>
                     </div>
@@ -179,7 +179,7 @@ export default function PendingPaymentsModal({ onClose }) {
 
       <div className="mt-5 flex justify-end">
         <button type="button" onClick={onClose}
-          className="rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-3 font-black text-slate-200 transition hover:bg-white/10">
+          className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-6 py-3 font-semibold text-slate-200 transition hover:bg-white/10">
           Закрыть
         </button>
       </div>

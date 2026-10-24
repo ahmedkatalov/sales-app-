@@ -123,7 +123,7 @@ export default function SuperAdminPage() {
     }
   };
 
-  const inputClass = "w-full rounded-2xl border-2 border-white/10 bg-slate-950/60 px-4 py-3 text-sm font-bold text-white placeholder:text-slate-500 outline-none focus:border-blue-500/70 focus:ring-2 focus:ring-blue-500/20 transition";
+  const inputClass = "w-full rounded-2xl border-2 border-white/[0.08] bg-slate-950/60 px-4 py-3 text-sm font-bold text-white placeholder:text-slate-500 outline-none focus:border-blue-500/70 focus:ring-2 focus:ring-blue-500/20 transition";
 
   // Экран авторизации
   if (!authed) {
@@ -135,13 +135,13 @@ export default function SuperAdminPage() {
         </div>
 
         <div className="relative z-10 w-full max-w-[400px]">
-          <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-7">
+          <div className="rounded-2xl border border-white/[0.08] bg-slate-900/80 p-7">
             <div className="mb-6">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-violet-700 shadow-lg shadow-violet-600/30">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-600 ">
                 <Settings size={22} strokeWidth={2.4} className="text-white" />
               </div>
-              <p className="text-xs font-black uppercase tracking-widest text-violet-400">Super Admin</p>
-              <h1 className="mt-1 text-2xl font-black text-white">Панель управления</h1>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400">Super Admin</p>
+              <h1 className="mt-1 text-2xl font-semibold text-white">Панель управления</h1>
               <p className="mt-1 text-sm text-slate-400">Введи SUPER_ADMIN_TOKEN из .env</p>
             </div>
 
@@ -163,7 +163,7 @@ export default function SuperAdminPage() {
               />
               <button
                 onClick={handleAuth}
-                className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-violet-500 py-3.5 text-sm font-black text-white shadow-lg shadow-violet-600/30 transition hover:from-violet-500 hover:to-violet-400"
+                className="w-full rounded-2xl bg-violet-600 py-3.5 text-sm font-semibold text-white  transition hover:from-violet-500 hover:to-violet-400"
               >
                 Войти
               </button>
@@ -181,15 +181,15 @@ export default function SuperAdminPage() {
         {/* Header */}
         <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-widest text-violet-400">Super Admin</p>
-            <h1 className="text-3xl font-black text-white">Компании</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400">Super Admin</p>
+            <h1 className="text-3xl font-semibold text-white">Компании</h1>
             <p className="mt-1 text-sm text-slate-400">
               Создавай аккаунты компаний и передавай им логин/пароль owner-аккаунта
             </p>
           </div>
           <button
             onClick={() => { sessionStorage.removeItem("super_token"); setAuthed(false); setToken(""); }}
-            className="shrink-0 self-start rounded-2xl border border-white/10 bg-slate-900 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-red-600 hover:text-white sm:self-auto"
+            className="shrink-0 self-start rounded-2xl border border-white/[0.08] bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-red-600 hover:text-white sm:self-auto"
           >
             Выйти
           </button>
@@ -198,7 +198,7 @@ export default function SuperAdminPage() {
         {/* Alerts */}
         {error && (
           <div className="mb-4 flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3.5">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500 text-[11px] font-black text-white">!</span>
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500 text-[11px] font-semibold text-white">!</span>
             <p className="text-sm font-bold text-red-300">{error}</p>
           </div>
         )}
@@ -213,16 +213,16 @@ export default function SuperAdminPage() {
         {!showForm ? (
           <button
             onClick={() => { setShowForm(true); setError(""); setSuccess(""); }}
-            className="mb-6 rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3.5 font-black text-white shadow-lg transition hover:opacity-90"
+            className="mb-6 rounded-2xl bg-indigo-600 px-6 py-3.5 font-semibold text-white shadow-lg transition hover:opacity-90"
           >
             + Создать компанию
           </button>
         ) : (
-          <div className="mb-6 rounded-2xl border border-white/10 bg-slate-900/80 p-6">
-            <h2 className="mb-4 text-xl font-black">Новая компания</h2>
+          <div className="mb-6 rounded-2xl border border-white/[0.08] bg-slate-900/80 p-6">
+            <h2 className="mb-4 text-xl font-semibold">Новая компания</h2>
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
-                <label className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">Название компании</label>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Название компании</label>
                 <input
                   value={form.companyName}
                   onChange={(e) => setForm((p) => ({ ...p, companyName: e.target.value }))}
@@ -232,7 +232,7 @@ export default function SuperAdminPage() {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">Логин owner</label>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Логин owner</label>
                 <input
                   value={form.username}
                   onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))}
@@ -241,7 +241,7 @@ export default function SuperAdminPage() {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">Пароль owner</label>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Пароль owner</label>
                 <input
                   value={form.password}
                   onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
@@ -254,14 +254,14 @@ export default function SuperAdminPage() {
             <div className="mt-4 flex gap-3">
               <button
                 onClick={() => { setShowForm(false); setForm({ companyName: "", username: "", password: "" }); }}
-                className="rounded-2xl border border-white/10 bg-slate-950 px-5 py-3 font-black text-slate-300 transition hover:bg-slate-800"
+                className="rounded-2xl border border-white/[0.08] bg-slate-950 px-5 py-3 font-semibold text-slate-300 transition hover:bg-slate-800"
               >
                 Отмена
               </button>
               <button
                 onClick={handleCreate}
                 disabled={creating}
-                className="rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3 font-black text-white shadow-lg transition disabled:opacity-60 hover:opacity-90"
+                className="rounded-2xl bg-indigo-600 px-6 py-3 font-semibold text-white shadow-lg transition disabled:opacity-60 hover:opacity-90"
               >
                 {creating ? "Создаю..." : "Создать"}
               </button>
@@ -271,34 +271,34 @@ export default function SuperAdminPage() {
 
         {/* Список компаний */}
         {loading ? (
-          <div className="rounded-3xl border border-white/10 bg-slate-900 p-8 text-center text-slate-400 font-black">
+          <div className="rounded-3xl border border-white/[0.08] bg-slate-900 p-8 text-center text-slate-400 font-semibold">
             Загрузка...
           </div>
         ) : safe_accounts.length === 0 ? (
-          <div className="rounded-3xl border border-white/10 bg-slate-900 p-10 text-center">
-            <p className="text-xl font-black text-white">Компаний пока нет</p>
+          <div className="rounded-3xl border border-white/[0.08] bg-slate-900 p-10 text-center">
+            <p className="text-xl font-semibold text-white">Компаний пока нет</p>
             <p className="mt-1 text-slate-400">Создай первую компанию выше</p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {safe_accounts.map((acc) => (
-              <article key={acc.id} className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+              <article key={acc.id} className="rounded-2xl border border-white/[0.08] bg-slate-900 p-5">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-wide text-violet-400">#{acc.id}</p>
-                    <h3 className="mt-0.5 text-xl font-black text-white">{acc.name}</h3>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-violet-400">#{acc.id}</p>
+                    <h3 className="mt-0.5 text-xl font-semibold text-white">{acc.name}</h3>
                     <p className="mt-1 text-xs text-slate-500">
                       {acc.createdAt ? new Date(acc.createdAt).toLocaleDateString("ru-RU") : "—"}
                     </p>
                   </div>
-                  <span className="rounded-xl border border-white/10 bg-slate-950 px-3 py-1.5 text-xs font-black text-slate-300">
+                  <span className="rounded-xl border border-white/[0.08] bg-slate-950 px-3 py-1.5 text-xs font-semibold text-slate-300">
                     {acc.userCount} вл.
                   </span>
                 </div>
 
                 <button
                   onClick={() => handleDelete(acc)}
-                  className="mt-2 w-full rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm font-black text-red-400 transition hover:bg-red-500/20 hover:text-red-300"
+                  className="mt-2 w-full rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 hover:text-red-300"
                 >
                   Удалить компанию
                 </button>
@@ -308,7 +308,7 @@ export default function SuperAdminPage() {
         )}
 
         <div className="mt-8 rounded-2xl border border-white/5 bg-slate-900/40 p-5">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-500 mb-2">Инструкция</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Инструкция</p>
           <ol className="space-y-1.5 text-sm text-slate-400 list-decimal list-inside">
             <li>Создай компанию с логином и паролем — это будет owner-аккаунт клиента</li>
             <li>Передай клиенту логин и пароль (безопасным способом)</li>

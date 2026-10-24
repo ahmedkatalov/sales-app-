@@ -78,7 +78,7 @@ export default function MenuPdfImportModal({ onClose, onImported }) {
                 <Check size={22} strokeWidth={2.6} />
               </span>
               <div>
-                <p className="text-base font-black text-white">Импорт завершён</p>
+                <p className="text-base font-semibold text-white">Импорт завершён</p>
                 <p className="text-sm font-bold text-slate-400">Меню обновлено</p>
               </div>
             </div>
@@ -91,24 +91,24 @@ export default function MenuPdfImportModal({ onClose, onImported }) {
                 ["Строк состава", result.recipeRows],
                 ["Сырья на склад", result.createdWarehouseItems],
               ].map(([label, val]) => (
-                <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.05] p-3">
-                  <p className="text-xl font-black text-white">{val ?? 0}</p>
+                <div key={label} className="rounded-2xl border border-white/[0.08] bg-white/[0.05] p-3">
+                  <p className="text-xl font-semibold text-white">{val ?? 0}</p>
                   <p className="text-[11px] font-bold leading-tight text-slate-400">{label}</p>
                 </div>
               ))}
             </div>
-            <button onClick={onClose} className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg transition hover:brightness-110 active:scale-[0.98]">
+            <button onClick={onClose} className="w-full rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white shadow-lg transition hover:brightness-110 active:scale-[0.98]">
               Готово
             </button>
           </div>
         ) : (
           <>
             {/* Загрузка файла */}
-            <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-white/15 bg-white/[0.03] px-4 py-8 text-center transition hover:border-blue-400/50 hover:bg-white/[0.06]">
+            <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-white/15 bg-white/[0.02] px-4 py-8 text-center transition hover:border-blue-400/50 hover:bg-white/[0.06]">
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-300">
                 {parsing ? <Loader2 size={24} className="animate-spin" /> : <Upload size={24} strokeWidth={2.2} />}
               </span>
-              <span className="text-sm font-black text-white">{parsing ? "Читаю PDF…" : fileName || "Выберите PDF с меню"}</span>
+              <span className="text-sm font-semibold text-white">{parsing ? "Читаю PDF…" : fileName || "Выберите PDF с меню"}</span>
               <span className="max-w-md text-xs font-bold leading-5 text-slate-400">
                 Формат «Меню — состав блюд»: категории, блюда и состав в граммах. Всё распознаётся на устройстве, без интернета.
               </span>
@@ -127,7 +127,7 @@ export default function MenuPdfImportModal({ onClose, onImported }) {
               <>
                 <div className="flex flex-wrap gap-2">
                   {[["категорий", stats.cats], ["блюд", stats.dishes], ["ингредиентов", stats.ings]].map(([l, v]) => (
-                    <span key={l} className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-black text-white">
+                    <span key={l} className="rounded-full border border-white/[0.08] bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-white">
                       {v} <span className="font-bold text-slate-400">{l}</span>
                     </span>
                   ))}
@@ -135,13 +135,13 @@ export default function MenuPdfImportModal({ onClose, onImported }) {
 
                 <div className="max-h-[38vh] space-y-2 overflow-y-auto pr-1">
                   {parsed.categories.map((c) => (
-                    <div key={c.name} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                    <div key={c.name} className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
                       <button
                         type="button"
                         onClick={() => setOpen((o) => ({ ...o, [c.name]: !o[c.name] }))}
-                        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left transition hover:bg-white/[0.04]"
+                        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left transition hover:bg-white/[0.02]"
                       >
-                        <span className="flex items-center gap-2 font-black text-white">
+                        <span className="flex items-center gap-2 font-semibold text-white">
                           <FileText size={15} className="text-blue-300" /> {c.name}
                         </span>
                         <span className="flex items-center gap-2">
@@ -152,8 +152,8 @@ export default function MenuPdfImportModal({ onClose, onImported }) {
                       {open[c.name] && (
                         <div className="space-y-1.5 px-4 pb-3">
                           {c.dishes.map((d) => (
-                            <div key={d.name} className="rounded-xl bg-white/[0.04] px-3 py-2">
-                              <p className="text-sm font-black text-white">{d.name}</p>
+                            <div key={d.name} className="rounded-xl bg-white/[0.02] px-3 py-2">
+                              <p className="text-sm font-semibold text-white">{d.name}</p>
                               <p className="mt-0.5 text-[11px] font-bold leading-snug text-slate-400">
                                 {d.recipe.map((r) => `${r.name} ${r.quantity}${r.unit}`).join(" · ") || "состав пуст"}
                               </p>
@@ -165,10 +165,10 @@ export default function MenuPdfImportModal({ onClose, onImported }) {
                   ))}
                 </div>
 
-                <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
+                <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5">
                   <input type="checkbox" checked={createWh} onChange={(e) => setCreateWh(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-blue-500" />
                   <span>
-                    <span className="block text-sm font-black text-white">Завести недостающее сырьё на складе</span>
+                    <span className="block text-sm font-semibold text-white">Завести недостающее сырьё на складе</span>
                     <span className="block text-xs font-bold leading-snug text-slate-400">
                       Создаст ингредиенты на складе с количеством 0 (потом проставите остатки и цены). Без галочки состав всё равно импортируется и свяжется с уже существующим сырьём.
                     </span>
@@ -180,13 +180,13 @@ export default function MenuPdfImportModal({ onClose, onImported }) {
                 </p>
 
                 <div className="flex gap-2.5">
-                  <button onClick={onClose} className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 font-black text-slate-200 transition hover:bg-white/10">
+                  <button onClick={onClose} className="rounded-2xl border border-white/[0.08] bg-white/[0.05] px-5 py-3 font-semibold text-slate-200 transition hover:bg-white/10">
                     Отмена
                   </button>
                   <button
                     onClick={doImport}
                     disabled={importing}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-black text-white shadow-lg transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white shadow-lg transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
                   >
                     {importing ? <><Loader2 size={16} className="animate-spin" /> Импортирую…</> : <>Импортировать {stats.dishes} блюд</>}
                   </button>

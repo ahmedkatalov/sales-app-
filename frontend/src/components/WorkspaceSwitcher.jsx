@@ -41,18 +41,18 @@ export default function WorkspaceSwitcher({ accountName, accountLabel, workspace
         title="Переключить точку"
         className="flex w-full min-w-[210px] items-center gap-2 rounded-xl px-1 py-1 text-left transition hover:bg-white/5"
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-600/25">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 ">
           <ShoppingCart size={22} strokeWidth={2.6} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-black text-white">{accountName}</p>
+          <p className="truncate text-sm font-semibold text-white">{accountName}</p>
           <div className="mt-0.5 flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
             <p className="truncate text-xs font-bold text-slate-400">{accountLabel}</p>
             {showWorkspaceChip && (
               <>
                 <span className="text-slate-600">·</span>
-                <span className="truncate text-xs font-black text-blue-400">{workspaceName}</span>
+                <span className="truncate text-xs font-semibold text-blue-400">{workspaceName}</span>
               </>
             )}
           </div>
@@ -61,8 +61,8 @@ export default function WorkspaceSwitcher({ accountName, accountLabel, workspace
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-[280px] rounded-2xl border border-white/10 bg-[#0d1424] p-2 shadow-2xl shadow-black/60">
-          <p className="px-2 py-1.5 text-[11px] font-black uppercase tracking-wide text-slate-500">Мои точки</p>
+        <div className="absolute left-0 top-full z-50 mt-2 w-[280px] rounded-2xl border border-white/[0.08] bg-[#0d1424] p-2 shadow-lg shadow-black/60">
+          <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Мои точки</p>
           <div className="max-h-[320px] space-y-1 overflow-y-auto">
             {list.length === 0 && <p className="px-2 py-3 text-sm font-bold text-slate-500">Загрузка…</p>}
             {list.map((ws) => {
@@ -74,11 +74,11 @@ export default function WorkspaceSwitcher({ accountName, accountLabel, workspace
                   onClick={() => switchTo(ws)}
                   className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${active ? "bg-blue-500/15" : "hover:bg-white/5"}`}
                 >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow">
                     {ws.isMain ? <Star size={16} /> : <Store size={16} />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-black text-white">{ws.name}</p>
+                    <p className="truncate text-sm font-semibold text-white">{ws.name}</p>
                     <p className="truncate text-[11px] font-bold text-slate-400">
                       {ws.role === "owner" ? "Владелец" : ws.role === "branch_admin" ? "Администратор" : "Кассир"}{ws.isMain ? " · Основная" : ""}
                     </p>

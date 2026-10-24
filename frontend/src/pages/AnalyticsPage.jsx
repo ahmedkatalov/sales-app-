@@ -333,7 +333,7 @@ export default function AnalyticsPage() {
   ];
 
   const extraCards = [
-    { title: "Кол-во продаж", value: totals.qty, icon: Hash, tone: "bg-white/[0.04] border-white/10", text: "text-slate-300" },
+    { title: "Кол-во продаж", value: totals.qty, icon: Hash, tone: "bg-white/[0.02] border-white/[0.08]", text: "text-slate-300" },
     { title: "Сумма закупа", value: formatMoney(totals.purchaseTotal), icon: Package, tone: "bg-orange-500/[0.08] border-orange-400/20", text: "text-orange-300" },
   ];
 
@@ -341,10 +341,10 @@ export default function AnalyticsPage() {
     <div className={`relative overflow-hidden rounded-2xl border ${card.tone} p-3.5 sm:p-5 ${className}`}>
       <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase leading-tight tracking-[0.06em] text-slate-400 sm:text-[11px] sm:tracking-[0.1em]">{card.title}</p>
-          <p title={card.value} className="mt-1.5 break-words text-lg font-black leading-tight tabular-nums text-white sm:mt-3 sm:text-3xl">{card.value}</p>
+          <p className="text-[10px] font-semibold uppercase leading-tight tracking-[0.06em] text-slate-400 sm:text-[11px] sm:tracking-[0.1em]">{card.title}</p>
+          <p title={card.value} className="mt-1.5 break-words text-lg font-semibold leading-tight tabular-nums text-white sm:mt-3 sm:text-3xl">{card.value}</p>
         </div>
-        <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-base font-black sm:h-11 sm:w-11 sm:rounded-2xl sm:text-xl ${card.text}`}>
+        <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-base font-semibold sm:h-11 sm:w-11 sm:rounded-2xl sm:text-xl ${card.text}`}>
           {typeof card.icon === "string" ? card.icon : <card.icon size={20} strokeWidth={2.4} />}
         </div>
       </div>
@@ -352,9 +352,9 @@ export default function AnalyticsPage() {
   );
 
   const DarkChartCard = ({ title, subtitle, children }) => (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
       <div className="mb-4">
-        <h3 className="text-lg font-black text-white sm:text-xl">{title}</h3>
+        <h3 className="text-lg font-semibold text-white sm:text-xl">{title}</h3>
         {subtitle && <p className="mt-1 text-sm font-bold text-slate-400">{subtitle}</p>}
       </div>
       <div className="relative h-[280px] min-w-0 sm:h-[320px]">{children}</div>
@@ -370,11 +370,11 @@ export default function AnalyticsPage() {
       <div className="relative mx-auto max-w-[1500px] pb-nav sm:pb-16">
         <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-300">
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
               Сводный отчёт по точкам
             </div>
-            <h2 className="mt-3 text-2xl font-black leading-none text-white sm:mt-4 sm:text-3xl">Аналитика</h2>
+            <h2 className="mt-3 text-2xl font-semibold leading-none text-white sm:mt-4 sm:text-3xl">Аналитика</h2>
             <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-400 sm:mt-3 sm:text-base">
               Смотрите текущую точку, все филиалы или конкретный филиал. Графики, прибыль, расходы и детализация в одном месте.
             </p>
@@ -384,7 +384,7 @@ export default function AnalyticsPage() {
             onClick={loadAnalytics}
             aria-label="Обновить"
             title="Обновить"
-            className="group inline-flex items-center justify-center gap-2 self-start rounded-2xl border border-white/10 bg-white/10 px-4 py-3.5 font-black text-white transition hover:bg-white/15 sm:px-5 sm:py-4"
+            className="group inline-flex items-center justify-center gap-2 self-start rounded-2xl border border-white/[0.08] bg-white/10 px-4 py-3.5 font-semibold text-white transition hover:bg-white/15 sm:px-5 sm:py-4"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "animate-spin" : "transition group-hover:rotate-180"}><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
             <span className="hidden sm:inline">{loading ? "Обновление" : "Обновить"}</span>
@@ -397,7 +397,7 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.06] overflow-hidden">
+        <div className="mb-5 rounded-2xl border border-white/[0.08] bg-white/[0.06] overflow-hidden">
           {/* Компактная шапка — всегда видна */}
           <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
             <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -410,19 +410,19 @@ export default function AnalyticsPage() {
                 return (
                   <button key={key} type="button" onClick={action}
                     className={active
-                      ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-black text-white"
-                      : "rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-white/10"}>
+                      ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-semibold text-white"
+                      : "rounded-xl border border-white/[0.08] bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/10"}>
                     {label}
                   </button>
                 );
               })}
-              <span className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2 text-sm font-black text-blue-200">
+              <span className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2 text-sm font-semibold text-blue-200">
                 {workspaceLabel} · {periodLabel}
               </span>
             </div>
             <button type="button" onClick={() => setFilterOpen((v) => !v)}
-              className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-black transition ${
-                filterOpen ? "border-blue-400/40 bg-blue-500/15 text-blue-200" : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+              className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                filterOpen ? "border-blue-400/40 bg-blue-500/15 text-blue-200" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"
               }`}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
               Фильтр
@@ -434,13 +434,13 @@ export default function AnalyticsPage() {
 
           {/* Расширенный фильтр */}
           {filterOpen && (
-            <div className="border-t border-white/10 px-4 py-4 sm:px-5">
+            <div className="border-t border-white/[0.08] px-4 py-4 sm:px-5">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {isOwner && (
                   <label className="block">
-                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">Точка</span>
+                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Точка</span>
                     <select value={workspaceFilter} onChange={(e) => { setWorkspaceFilter(e.target.value); setFolderFilter("all"); }}
-                      className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400">
+                      className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400">
                       <option value="current">Текущая точка</option>
                       <option value="all">Все точки</option>
                       {safe_workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
@@ -448,9 +448,9 @@ export default function AnalyticsPage() {
                   </label>
                 )}
                 <label className="block">
-                  <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">Папка</span>
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Папка</span>
                   <select value={folderFilter} onChange={(e) => setFolderFilter(e.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400">
+                    className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400">
                     <option value="all">Все папки</option>
                     {safe_folders.map((f) => (
                       <option key={f.filterKey} value={f.filterKey}>
@@ -461,25 +461,25 @@ export default function AnalyticsPage() {
                 </label>
                 {periodMode !== "all" && (
                   <label className="block">
-                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">
+                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">
                       {periodMode === "month" ? "Месяц" : "От месяца"}
                     </span>
                     <input type="month" value={from} onChange={(e) => setFrom(e.target.value)}
-                      className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400"/>
+                      className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400"/>
                   </label>
                 )}
                 {periodMode === "range" && (
                   <label className="block">
-                    <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-400">До месяца</span>
+                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">До месяца</span>
                     <input type="month" value={to} onChange={(e) => setTo(e.target.value)}
-                      className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400"/>
+                      className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400"/>
                   </label>
                 )}
               </div>
               <div className="mt-3 flex justify-end">
                 <button type="button"
                   onClick={() => { const m = currentMonth(); setFolderFilter("all"); setPeriodMode("month"); setFrom(m); setTo(m); setSelectedProduct(""); setFilterOpen(false); }}
-                  className="rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-black text-slate-200 transition hover:bg-white/10">
+                  className="rounded-xl border border-white/[0.08] bg-white/5 px-5 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10">
                   Сбросить
                 </button>
               </div>
@@ -491,30 +491,30 @@ export default function AnalyticsPage() {
           <>
             <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="h-24 animate-pulse rounded-2xl border border-white/10 bg-white/[0.05]" />
+                <div key={i} className="h-24 animate-pulse rounded-2xl border border-white/[0.08] bg-white/[0.05]" />
               ))}
             </div>
             <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="h-24 animate-pulse rounded-2xl border border-white/10 bg-white/[0.05]" />
+                <div key={i} className="h-24 animate-pulse rounded-2xl border border-white/[0.08] bg-white/[0.05]" />
               ))}
             </div>
             <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
               {Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className="h-72 animate-pulse rounded-2xl border border-white/10 bg-white/[0.05]" />
+                <div key={i} className="h-72 animate-pulse rounded-2xl border border-white/[0.08] bg-white/[0.05]" />
               ))}
             </div>
           </>
         ) : (
           <>
-        <h3 className="mb-2 text-sm font-black uppercase tracking-wide text-slate-400">Главное</h3>
+        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">Главное</h3>
         <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
           {statCards.map((card, i) => (
             <StatBox key={card.title} card={card} className={i === statCards.length - 1 && statCards.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""} />
           ))}
         </div>
 
-        <h3 className="mb-2 text-sm font-black uppercase tracking-wide text-slate-400">Детали</h3>
+        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">Детали</h3>
         <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
           {extraCards.map((card, i) => (
             <StatBox key={card.title} card={card} className={i === extraCards.length - 1 && extraCards.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""} />
@@ -561,14 +561,14 @@ export default function AnalyticsPage() {
           </>
         )}
 
-        <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.06] p-4 sm:p-5">
+        <div className="mb-5 rounded-2xl border border-white/[0.08] bg-white/[0.06] p-4 sm:p-5">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h3 className="text-2xl font-black text-white">Аналитика конкретного товара</h3>
+              <h3 className="text-2xl font-semibold text-white">Аналитика конкретного товара</h3>
               <p className="mt-1 text-sm font-bold text-slate-400">Цена, себестоимость, продажи и прибыль товара</p>
             </div>
 
-            <select value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)} className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400 lg:w-80">
+            <select value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)} className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/70 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400 lg:w-80">
               <option value="">Выберите товар</option>
               {productNames.map((n) => (
                 <option key={n} value={n}>{n}</option>
@@ -607,15 +607,15 @@ export default function AnalyticsPage() {
               </DarkChartCard>
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/50 p-10 text-center font-bold text-slate-400">
+            <div className="rounded-2xl border border-dashed border-white/[0.08] bg-slate-950/50 p-10 text-center font-bold text-slate-400">
               Выберите товар для графика.
             </div>
           )}
         </div>
 
-        <div className="mb-2 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06]">
-          <div className="border-b border-white/10 px-5 py-4 sm:px-6">
-            <h3 className="text-2xl font-black text-white">Детализация по месяцам</h3>
+        <div className="mb-2 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06]">
+          <div className="border-b border-white/[0.08] px-5 py-4 sm:px-6">
+            <h3 className="text-2xl font-semibold text-white">Детализация по месяцам</h3>
             <p className="mt-1 text-sm font-bold text-slate-400">Подробная таблица отчёта</p>
           </div>
 
@@ -634,14 +634,14 @@ export default function AnalyticsPage() {
                     "Сумма закупа",
                     "Продажи по прайсу",
                   ].map((h) => (
-                    <th key={h} className="border-b border-white/10 p-4 text-center text-xs font-black uppercase tracking-wide first:text-left">{h}</th>
+                    <th key={h} className="border-b border-white/[0.08] p-4 text-center text-xs font-semibold uppercase tracking-wide first:text-left">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {safe_analytics.map((m) => (
-                  <tr key={m.month} className="border-t border-white/10 transition hover:bg-white/[0.04]">
-                    <td className="p-4 font-black text-white">{m.month}</td>
+                  <tr key={m.month} className="border-t border-white/[0.08] transition hover:bg-white/[0.02]">
+                    <td className="p-4 font-semibold text-white">{m.month}</td>
                     <td className="p-4 text-center font-bold text-slate-200">{m.qty}</td>
                     {[m.revenue, m.cleanProfit, m.totalExpenses, m.revenueAfterExpenses, m.afterExpenses, m.purchaseTotal, m.salePriceTotal].map((v, i) => (
                       <td key={i} className="p-4 text-center font-bold text-slate-200">{formatMoney(v)}</td>
@@ -663,18 +663,18 @@ export default function AnalyticsPage() {
               <div key={m.month} className="p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-lg font-black text-white">{m.label || m.month}</p>
+                    <p className="truncate text-lg font-semibold text-white">{m.label || m.month}</p>
                     <p className="text-sm font-bold text-slate-400">Кол-во: {m.qty}</p>
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-[10px] font-bold uppercase text-slate-400">Чистыми</p>
-                    <p className="text-lg font-black text-emerald-300">{formatMoney(m.afterExpenses)}</p>
+                    <p className="text-lg font-semibold text-emerald-300">{formatMoney(m.afterExpenses)}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-3"><p className="text-slate-400">Выручка</p><b className="text-white">{formatMoney(m.revenue)}</b></div>
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-3"><p className="text-slate-400">Расходы</p><b className="text-red-300">{formatMoney(m.totalExpenses)}</b></div>
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-3"><p className="text-slate-400">Закуп</p><b className="text-white">{formatMoney(m.purchaseTotal)}</b></div>
+                  <div className="rounded-2xl border border-white/[0.08] bg-slate-950/60 p-3"><p className="text-slate-400">Выручка</p><b className="text-white">{formatMoney(m.revenue)}</b></div>
+                  <div className="rounded-2xl border border-white/[0.08] bg-slate-950/60 p-3"><p className="text-slate-400">Расходы</p><b className="text-red-300">{formatMoney(m.totalExpenses)}</b></div>
+                  <div className="rounded-2xl border border-white/[0.08] bg-slate-950/60 p-3"><p className="text-slate-400">Закуп</p><b className="text-white">{formatMoney(m.purchaseTotal)}</b></div>
                   <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-3"><p className="text-slate-400">Чистая прибыль</p><b className="text-emerald-300">{formatMoney(m.cleanProfit)}</b></div>
                 </div>
               </div>
