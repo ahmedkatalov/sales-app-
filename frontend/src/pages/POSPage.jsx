@@ -987,10 +987,6 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       className="relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden p-3 text-white sm:p-4 md:overflow-hidden"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="pointer-events-none absolute left-[-120px] top-[-120px] h-[360px] w-[360px] rounded-full bg-blue-600/20 blur-3xl" />
-        <div className="pointer-events-none absolute right-[-140px] bottom-[-140px] h-[360px] w-[360px] rounded-full bg-violet-600/20 blur-3xl" />
-      </div>
       <div className="relative z-10 flex flex-col md:min-h-0 md:flex-1">
       {/* Шапка кассы (режим киоска): выход + продавец/смена */}
       <div className="mb-3 shrink-0 space-y-2">

@@ -1313,9 +1313,7 @@ export default function WorkPage() {
   const avgMarginShown = displayTotals.revenue > 0 ? (displayTotals.cleanProfit / displayTotals.revenue) * 100 : null;
 
   return (
-    <div className="relative -m-4 bg-[linear-gradient(135deg,#020617,#0f172a_45%,#111827)] px-3 pb-nav pt-4 text-slate-100 sm:-m-6 sm:p-6 sm:pb-10">
-      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
-      <div className="pointer-events-none absolute left-1/3 top-20 h-64 w-64 rounded-full bg-violet-600/10 blur-3xl" />
+    <div className="relative -m-4 px-3 pb-nav pt-4 text-slate-100 sm:-m-6 sm:p-6 sm:pb-10">
       <div className="relative">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
@@ -1535,7 +1533,7 @@ export default function WorkPage() {
       <button
         onClick={openProductModal}
         style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 10px)" }}
-        className="fixed left-4 right-4 z-30 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-2xl shadow-blue-950/50 sm:hidden"
+        className="fixed left-4 right-4 z-30 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-4 font-black text-white shadow-lg shadow-blue-950/50 sm:hidden"
       >
         + Товар
       </button>
