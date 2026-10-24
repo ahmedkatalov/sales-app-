@@ -326,20 +326,19 @@ export default function AnalyticsPage() {
   }, [analytics]);
 
   const statCards = [
-    { title: "Выручка", value: formatMoney(totals.revenue), icon: "₽", tone: "from-blue-600/25 to-blue-950/10", text: "text-blue-200" },
-    { title: "Чистая прибыль", value: formatMoney(totals.cleanProfit), icon: TrendingUp, tone: "from-emerald-500/25 to-emerald-950/10", text: "text-emerald-200" },
-    { title: "Расходы", value: formatMoney(totals.totalExpenses), icon: TrendingDown, tone: "from-red-500/25 to-red-950/10", text: "text-red-200" },
-    { title: "Чистыми на руки", value: formatMoney(totals.afterExpenses), icon: BadgeCheck, tone: "from-cyan-500/25 to-cyan-950/10", text: "text-cyan-200" },
+    { title: "Выручка", value: formatMoney(totals.revenue), icon: "₽", tone: "bg-blue-500/[0.08] border-blue-400/20", text: "text-blue-300" },
+    { title: "Чистая прибыль", value: formatMoney(totals.cleanProfit), icon: TrendingUp, tone: "bg-emerald-500/[0.08] border-emerald-400/20", text: "text-emerald-300" },
+    { title: "Расходы", value: formatMoney(totals.totalExpenses), icon: TrendingDown, tone: "bg-red-500/[0.08] border-red-400/20", text: "text-red-300" },
+    { title: "Чистыми на руки", value: formatMoney(totals.afterExpenses), icon: BadgeCheck, tone: "bg-cyan-500/[0.08] border-cyan-400/20", text: "text-cyan-300" },
   ];
 
   const extraCards = [
-    { title: "Кол-во продаж", value: totals.qty, icon: Hash, tone: "from-slate-500/20 to-slate-950/10", text: "text-slate-200" },
-    { title: "Сумма закупа", value: formatMoney(totals.purchaseTotal), icon: Package, tone: "from-orange-500/25 to-orange-950/10", text: "text-orange-200" },
+    { title: "Кол-во продаж", value: totals.qty, icon: Hash, tone: "bg-white/[0.04] border-white/10", text: "text-slate-300" },
+    { title: "Сумма закупа", value: formatMoney(totals.purchaseTotal), icon: Package, tone: "bg-orange-500/[0.08] border-orange-400/20", text: "text-orange-300" },
   ];
 
   const StatBox = ({ card, className = "" }) => (
-    <div className={`relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br sm:rounded-[1.6rem] ${card.tone} p-3.5 shadow-[0_18px_60px_rgba(0,0,0,0.22)] sm:p-5 ${className}`}>
-      <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+    <div className={`relative overflow-hidden rounded-2xl border ${card.tone} p-3.5 sm:p-5 ${className}`}>
       <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
           <p className="text-[10px] font-black uppercase leading-tight tracking-[0.06em] text-slate-400 sm:text-[11px] sm:tracking-[0.1em]">{card.title}</p>
@@ -353,9 +352,9 @@ export default function AnalyticsPage() {
   );
 
   const DarkChartCard = ({ title, subtitle, children }) => (
-    <div className="rounded-[1.7rem] border border-white/10 bg-slate-950/55 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.24)] backdrop-blur sm:p-5">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
       <div className="mb-4">
-        <h3 className="text-xl font-black text-white sm:text-2xl">{title}</h3>
+        <h3 className="text-lg font-black text-white sm:text-xl">{title}</h3>
         {subtitle && <p className="mt-1 text-sm font-bold text-slate-400">{subtitle}</p>}
       </div>
       <div className="relative h-[280px] min-w-0 sm:h-[320px]">{children}</div>
@@ -366,16 +365,13 @@ export default function AnalyticsPage() {
   const chartAxisColor = "#94a3b8";
 
   return (
-    <div className="relative -m-4 bg-[#050b1f] px-4 py-5 text-white sm:-m-6 sm:px-6 lg:px-8">
-      <div className="pointer-events-none absolute left-1/4 top-0 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
-      <div className="pointer-events-none absolute right-0 top-20 h-96 w-96 rounded-full bg-violet-700/20 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 left-1/2 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl" />
+    <div className="relative -m-4 px-4 py-5 text-white sm:-m-6 sm:px-6 lg:px-8">
 
       <div className="relative mx-auto max-w-[1500px] pb-nav sm:pb-16">
         <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.9)]" />
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
               Сводный отчёт по точкам
             </div>
             <h2 className="mt-3 text-2xl font-black leading-none text-white sm:mt-4 sm:text-3xl">Аналитика</h2>
@@ -388,7 +384,7 @@ export default function AnalyticsPage() {
             onClick={loadAnalytics}
             aria-label="Обновить"
             title="Обновить"
-            className="group inline-flex items-center justify-center gap-2 self-start rounded-2xl border border-white/10 bg-white/10 px-4 py-3.5 font-black text-white shadow-[0_16px_40px_rgba(0,0,0,0.25)] transition hover:bg-white/15 sm:px-5 sm:py-4"
+            className="group inline-flex items-center justify-center gap-2 self-start rounded-2xl border border-white/10 bg-white/10 px-4 py-3.5 font-black text-white transition hover:bg-white/15 sm:px-5 sm:py-4"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "animate-spin" : "transition group-hover:rotate-180"}><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
             <span className="hidden sm:inline">{loading ? "Обновление" : "Обновить"}</span>
@@ -401,7 +397,7 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        <div className="mb-5 rounded-[1.8rem] border border-white/10 bg-white/[0.06] shadow-[0_18px_60px_rgba(0,0,0,0.25)] backdrop-blur overflow-hidden">
+        <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.06] overflow-hidden">
           {/* Компактная шапка — всегда видна */}
           <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
             <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -414,7 +410,7 @@ export default function AnalyticsPage() {
                 return (
                   <button key={key} type="button" onClick={action}
                     className={active
-                      ? "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-lg"
+                      ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-black text-white"
                       : "rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-slate-300 transition hover:bg-white/10"}>
                     {label}
                   </button>
@@ -505,7 +501,7 @@ export default function AnalyticsPage() {
             </div>
             <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
               {Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className="h-72 animate-pulse rounded-[1.8rem] border border-white/10 bg-white/[0.05]" />
+                <div key={i} className="h-72 animate-pulse rounded-2xl border border-white/10 bg-white/[0.05]" />
               ))}
             </div>
           </>
@@ -541,7 +537,7 @@ export default function AnalyticsPage() {
               </LineChart>
             </ResponsiveContainer>
             {!loading && !analytics.length && (
-              <div className="absolute inset-0 flex items-center justify-center rounded-[1.5rem] bg-slate-950/40 text-center font-bold text-slate-400">Данных пока нет.</div>
+              <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-950/40 text-center font-bold text-slate-400">Данных пока нет.</div>
             )}
           </DarkChartCard>
 
@@ -558,14 +554,14 @@ export default function AnalyticsPage() {
               </BarChart>
             </ResponsiveContainer>
             {!loading && !topProducts.length && (
-              <div className="absolute inset-0 flex items-center justify-center rounded-[1.5rem] bg-slate-950/40 text-center font-bold text-slate-400">Данных пока нет.</div>
+              <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-950/40 text-center font-bold text-slate-400">Данных пока нет.</div>
             )}
           </DarkChartCard>
         </div>
           </>
         )}
 
-        <div className="mb-5 rounded-[1.8rem] border border-white/10 bg-white/[0.06] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.25)] backdrop-blur sm:p-5">
+        <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.06] p-4 sm:p-5">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h3 className="text-2xl font-black text-white">Аналитика конкретного товара</h3>
@@ -611,13 +607,13 @@ export default function AnalyticsPage() {
               </DarkChartCard>
             </div>
           ) : (
-            <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-slate-950/50 p-10 text-center font-bold text-slate-400">
+            <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/50 p-10 text-center font-bold text-slate-400">
               Выберите товар для графика.
             </div>
           )}
         </div>
 
-        <div className="mb-2 overflow-hidden rounded-[1.8rem] border border-white/10 bg-white/[0.06] shadow-[0_18px_60px_rgba(0,0,0,0.25)] backdrop-blur">
+        <div className="mb-2 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06]">
           <div className="border-b border-white/10 px-5 py-4 sm:px-6">
             <h3 className="text-2xl font-black text-white">Детализация по месяцам</h3>
             <p className="mt-1 text-sm font-bold text-slate-400">Подробная таблица отчёта</p>
@@ -625,7 +621,7 @@ export default function AnalyticsPage() {
 
           <div className="hidden overflow-x-auto xl:block">
             <table className="w-full min-w-[1150px] text-sm">
-              <thead className="sticky top-0 bg-slate-950/95 text-slate-300 backdrop-blur">
+              <thead className="sticky top-0 bg-slate-950/95 text-slate-300">
                 <tr>
                   {[
                     "Месяц",
