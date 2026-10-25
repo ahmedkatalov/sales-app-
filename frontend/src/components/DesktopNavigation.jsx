@@ -83,7 +83,7 @@ export default function DesktopNavigation({
                     )}
                   </span>
 
-                  <span className="hidden whitespace-nowrap md:inline">{label}</span>
+                  <span className={`whitespace-nowrap ${isActive ? "inline" : "hidden 2xl:inline"}`}>{label}</span>
                 </>
               )}
             </NavLink>
