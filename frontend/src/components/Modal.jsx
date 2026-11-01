@@ -1,16 +1,20 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
+import "./Modal.css";
 
-// legacyLight по умолчанию true: почти все модалки написаны светлыми классами
-// (bg-white/text-slate-900/…) и полагаются на этот тёмный оверрайд. Новые модалки,
-// целиком собранные на тёмных классах дизайн-системы, могут отключить его legacyLight={false}.
+// legacyLight адаптирует старые формы со светлыми utility-классами к текущей теме.
+// Новые формы на семантических токенах используют legacyLight={false}.
 // zIndex — для случая «модалка над модалкой» (напр. добавление карты поверх
 // окна оплаты). По умолчанию 50; вложенной передаём больше, чтобы она была сверху.
 export default function Modal({ title, section, children, wide, onClose, legacyLight = true, zIndex }) {
+  const overlayRef = useRef(null);
   useEffect(() => {
     if (!onClose) return;
     const onKey = (e) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      const overlays = [...document.querySelectorAll('.app-modal-overlay')].filter(el => el.getClientRects().length);
+      const topmost = overlays.reduce((top, el) => !top || Number(getComputedStyle(el).zIndex) >= Number(getComputedStyle(top).zIndex) ? el : top, null);
+      if (topmost === overlayRef.current) onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -33,7 +37,8 @@ export default function Modal({ title, section, children, wide, onClose, legacyL
 
   return (
     <div
-      className="animate-overlay fixed inset-0 z-50 overflow-y-auto bg-[#030816]/80 px-3 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:px-6 sm:py-8"
+      ref={overlayRef}
+      className="app-modal-overlay animate-overlay fixed inset-0 z-50 overflow-y-auto"
       style={zIndex ? { zIndex } : undefined}
       onClick={handleBackdrop}
     >
@@ -46,100 +51,100 @@ export default function Modal({ title, section, children, wide, onClose, legacyL
           border: 1px solid rgba(148, 163, 184, 0.16);
           box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
         }
-        .smart-modal-panel.legacy-light .bg-white,
-        .smart-modal-panel.legacy-light .bg-slate-50,
-        .smart-modal-panel.legacy-light .bg-slate-100 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .bg-white,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .bg-slate-50,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .bg-slate-100 {
           background: rgba(15, 23, 42, 0.58) !important;
         }
-        .smart-modal-panel.legacy-light .bg-blue-50 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .bg-blue-50 {
           background: rgba(37, 99, 235, 0.13) !important;
         }
-        .smart-modal-panel.legacy-light .bg-emerald-50 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .bg-emerald-50 {
           background: rgba(16, 185, 129, 0.13) !important;
         }
-        .smart-modal-panel.legacy-light .bg-red-50 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .bg-red-50 {
           background: rgba(239, 68, 68, 0.13) !important;
         }
-        .smart-modal-panel.legacy-light .bg-yellow-50 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .bg-yellow-50 {
           background: rgba(245, 158, 11, 0.14) !important;
         }
-        .smart-modal-panel.legacy-light .border,
-        .smart-modal-panel.legacy-light .border-t,
-        .smart-modal-panel.legacy-light .border-b,
-        .smart-modal-panel.legacy-light .border-y,
-        .smart-modal-panel.legacy-light .border-slate-100,
-        .smart-modal-panel.legacy-light .border-slate-200 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .border,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .border-t,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .border-b,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .border-y,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .border-slate-100,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .border-slate-200 {
           border-color: rgba(148, 163, 184, 0.16) !important;
         }
-        .smart-modal-panel.legacy-light .divide-y > :not([hidden]) ~ :not([hidden]) {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .divide-y > :not([hidden]) ~ :not([hidden]) {
           border-color: rgba(148, 163, 184, 0.14) !important;
         }
-        .smart-modal-panel.legacy-light .text-slate-950,
-        .smart-modal-panel.legacy-light .text-slate-900,
-        .smart-modal-panel.legacy-light .text-slate-800 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .text-slate-950,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .text-slate-900,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .text-slate-800 {
           color: #f8fafc !important;
         }
-        .smart-modal-panel.legacy-light .text-slate-700,
-        .smart-modal-panel.legacy-light .text-slate-600 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .text-slate-700,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .text-slate-600 {
           color: #cbd5e1 !important;
         }
-        .smart-modal-panel.legacy-light .text-slate-500,
-        .smart-modal-panel.legacy-light .text-slate-400 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .text-slate-500,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .text-slate-400 {
           color: #94a3b8 !important;
         }
-        .smart-modal-panel.legacy-light .text-blue-700,
-        .smart-modal-panel.legacy-light .text-blue-600 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .text-blue-700,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .text-blue-600 {
           color: #60a5fa !important;
         }
-        .smart-modal-panel.legacy-light .text-blue-900\\/70 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .text-blue-900\\/70 {
           color: rgba(191, 219, 254, 0.78) !important;
         }
-        .smart-modal-panel.legacy-light .text-red-800,
-        .smart-modal-panel.legacy-light .text-red-600 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .text-red-800,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .text-red-600 {
           color: #fca5a5 !important;
         }
-        .smart-modal-panel.legacy-light .text-yellow-800 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .text-yellow-800 {
           color: #fde68a !important;
         }
-        .smart-modal-panel.legacy-light table thead,
-        .smart-modal-panel.legacy-light thead.bg-slate-100 {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light table thead,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light thead.bg-slate-100 {
           background: rgba(30, 41, 59, 0.75) !important;
         }
-        .smart-modal-panel.legacy-light table tbody tr {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light table tbody tr {
           background: rgba(2, 6, 23, 0.2) !important;
         }
-        .smart-modal-panel.legacy-light .input,
-        .smart-modal-panel.legacy-light input,
-        .smart-modal-panel.legacy-light select,
-        .smart-modal-panel.legacy-light textarea {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .input,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light input,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light select,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light textarea {
           background: rgba(15, 23, 42, 0.8) !important;
           border: 1px solid rgba(148, 163, 184, 0.22) !important;
           color: #f8fafc !important;
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
         }
-        .smart-modal-panel.legacy-light .input::placeholder,
-        .smart-modal-panel.legacy-light input::placeholder,
-        .smart-modal-panel.legacy-light textarea::placeholder {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .input::placeholder,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light input::placeholder,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light textarea::placeholder {
           color: #64748b !important;
         }
-        .smart-modal-panel.legacy-light .input:focus,
-        .smart-modal-panel.legacy-light input:focus,
-        .smart-modal-panel.legacy-light select:focus,
-        .smart-modal-panel.legacy-light textarea:focus {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .input:focus,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light input:focus,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light select:focus,
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light textarea:focus {
           outline: none !important;
           border-color: rgba(96, 165, 250, 0.65) !important;
           box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14) !important;
         }
-        .smart-modal-panel.legacy-light .btn-white {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .btn-white {
           background: rgba(15, 23, 42, 0.72) !important;
           color: #e2e8f0 !important;
           border: 1px solid rgba(148, 163, 184, 0.18) !important;
           box-shadow: none !important;
         }
-        .smart-modal-panel.legacy-light .btn-white:hover {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .btn-white:hover {
           background: rgba(30, 41, 59, 0.85) !important;
         }
-        .smart-modal-panel.legacy-light .btn-blue {
+        :root:not([data-theme="light"]) .smart-modal-panel.legacy-light .btn-blue {
           background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
           color: #fff !important;
           box-shadow: 0 16px 35px rgba(37, 99, 235, 0.28) !important;
@@ -147,11 +152,11 @@ export default function Modal({ title, section, children, wide, onClose, legacyL
       `}</style>
 
       <div
-        className="flex min-h-full items-end justify-center sm:items-center"
+        className="app-modal-align"
         onClick={handleBackdrop}
       >
         <div
-          className={`animate-sheet smart-modal-panel ${legacyLight ? "legacy-light" : ""} flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-3xl ${
+          className={`animate-sheet smart-modal-panel ${legacyLight ? "legacy-light" : ""} flex w-full flex-col overflow-hidden rounded-3xl ${
             wide ? "max-w-[760px]" : "max-w-[460px]"
           }`}
         >

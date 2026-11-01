@@ -13,7 +13,7 @@ export function NavigationItem({ item, currentPath, resolvePath = identity, onNa
   return <Link to={resolvePath(to)} data-nav-path={to} className={`sh-nav-item ${compact ? 'is-compact' : ''}`} aria-current={currentPath === to ? 'page' : undefined} aria-label={label} aria-description={description} title={compact ? label : undefined} onClick={onNavigate}><span className="sh-nav-icon"><Icon size={18} /></span><span className="sh-nav-label">{label}</span><NavigationBadge kind={badge} pendingCount={pendingCount} debtCount={debtCount} /></Link>;
 }
 export function NavigationGroups({ links, query, compact, ...props }) {
-  return <>{navigationGroups(links, query).map(group => <div className="sh-nav-group" key={group.id}><p>{group.title}</p>{group.links.map(item => <NavigationItem key={item[0]} item={item} compact={compact} {...props} />)}</div>)}</>;
+  return <>{navigationGroups(links, query).map(group => <div className="sh-nav-group" data-nav-group={group.id} key={group.id}><p>{group.title}</p>{group.links.map(item => <NavigationItem key={item[0]} item={item} compact={compact} {...props} />)}</div>)}</>;
 }
 export default function DesktopNavigation({ links, currentPath, resolvePath, onOpenMenu, pendingCount, debtCount, worker }) {
   const order = worker ? ['/pos', '/pending-payments', '/expenses'] : ['/home', '/work', '/pos', '/pending-payments'];

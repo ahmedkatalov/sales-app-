@@ -200,12 +200,12 @@ html:root .expenses-page .smart-modal-panel {
   --color-indigo-300: inherit; --color-violet-300: inherit;
   --color-emerald-300: inherit; --color-emerald-400: inherit;
   --color-amber-300: inherit; --color-red-300: inherit; --color-rose-300: inherit; --color-cyan-300: inherit;
-  background: var(--surface) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-3xl); box-shadow: var(--shadow-card);
+  background: var(--surface-opaque) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-3xl); box-shadow: var(--shadow-card);
 }
 .expenses-page .smart-modal-panel > div:first-child { background: var(--surface-2); }
 .expenses-page .smart-modal-panel h2, .expenses-page .smart-modal-panel > div:last-child { color: var(--text); }
 .expenses-page .smart-modal-panel > div:first-child p { color: var(--text-muted); }
-html:root .expenses-page > .animate-overlay { background: rgb(2 6 23 / .65); }
+html:root .expenses-page > .animate-overlay { background: var(--overlay-backdrop); }
 @media (max-width: 1150px) {
   .expense-journal-layout { grid-template-columns: minmax(0, 1fr) 17rem; }
   .expense-row-toggle { grid-template-columns: 2.2rem minmax(0, 1fr) auto 1rem; gap: .65rem; }

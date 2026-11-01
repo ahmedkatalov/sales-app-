@@ -26,6 +26,7 @@
   --surface-hover: rgba(255, 255, 255, 0.10);
   /* Fixed panels need an opaque base even when a theme uses translucent cards. */
   --surface-opaque: linear-gradient(var(--surface), var(--surface)), var(--color-slate-950);
+  --overlay-backdrop: rgb(2 6 23 / .68);
   --shadow-card: 0 24px 60px -28px rgba(0, 0, 0, 0.55);
 
   /* Поля ввода — светлые в обеих темах (высокий контраст) */
@@ -43,14 +44,16 @@
 html[data-theme="light"] {
   /* ── Семантические токены — светлая тема ── */
   --text: #1e293b;
-  --text-muted: #64748b;
-  --border: rgba(15, 23, 42, 0.10);
+  --overlay-backdrop: rgb(15 23 42 / .38);
+  --text-muted: #526176;
+  --border: rgba(15, 23, 42, 0.15);
   --surface: #ffffff;
   --surface-2: #f1f5f9;
   --surface-hover: #e2e8f0;
   --shadow-card: 0 18px 44px -26px rgba(30, 41, 59, 0.30);
 
-  --page-bg: radial-gradient(120% 120% at 0% 0%, #f4f8ff 0%, #eef2fb 45%, #e9edf7 100%);
+  --page-bg: #f3f5f9;
+  --accent-ink: var(--color-blue-400);
 
   --field: #ffffff;
   --field-border: #cbd5e1;
@@ -186,28 +189,6 @@ html[data-theme="light"] :is([class*="bg-[radial-gradient"], [class*="bg-[linear
     radial-gradient(circle at top right, rgba(124, 58, 237, 0.10), transparent 38%),
     radial-gradient(circle at 18% 0%, rgba(37, 99, 235, 0.08), transparent 32%),
     linear-gradient(135deg, #f5f8ff 0%, #eef2fb 45%, #e9edf7 100%);
-}
-
-/* Модалки — всегда тёмный «лист» (smart-modal-panel). В светлой теме
-   возвращаем тёмные значения ключевых токенов ВНУТРИ модалки, чтобы текст,
-   поверхности и акценты читались на тёмной панели, а не осветлялись глобально. */
-html[data-theme="light"] .smart-modal-panel {
-  --color-white: #ffffff;
-  --color-slate-100: #f1f5f9; --color-slate-200: #e2e8f0; --color-slate-300: #cbd5e1;
-  --color-slate-400: #94a3b8; --color-slate-500: #64748b;
-  --color-slate-800: #1e293b; --color-slate-900: #0f172a; --color-slate-950: #020617;
-  --color-blue-200: #bfdbfe; --color-blue-300: #93c5fd; --color-blue-400: #60a5fa;
-  --color-indigo-300: #a5b4fc; --color-violet-300: #c4b5fd;
-  --color-emerald-300: #6ee7b7; --color-emerald-400: #34d399;
-  --color-amber-300: #fcd34d; --color-red-300: #fca5a5; --color-rose-300: #fda4af;
-  --color-cyan-300: #67e8f9;
-  --text: #f1f5f9; --text-muted: #94a3b8; --surface: rgba(255, 255, 255, 0.05);
-}
-html[data-theme="light"] .smart-modal-panel :is(
-  [class*="bg-[#0f172a]"], [class*="bg-[#111827]"], [class*="bg-[#0d1424]"],
-  [class*="bg-[#0b1020]"], [class*="bg-[#0a1122]"], [class*="bg-[#141a28]"]
-) {
-  background-color: rgba(15, 23, 42, 0.55) !important;
 }
 
 /* ─── Общие компоненты (тематические) ──────────────────────────── */

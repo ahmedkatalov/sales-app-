@@ -126,7 +126,7 @@
 .debt-success > span { flex: 1; }
 .debt-success > svg { flex-shrink: 0; }
 .debt-success button { padding: .3rem; }
-.debts-page .smart-modal-panel { background: var(--surface) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-3xl); box-shadow: var(--shadow-card); }
+.debts-page .smart-modal-panel { background: var(--surface-opaque) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-3xl); box-shadow: var(--shadow-card); }
 .debts-page .smart-modal-panel > div:first-child { background: var(--surface-2); }
 /* Older shared modals force dark tokens in light mode. This page uses the
    same appearance tokens inside the sheet as it does in the workspace. */
@@ -143,7 +143,7 @@ html:root .debts-page .smart-modal-panel {
   --color-cyan-300: inherit;
 }
 .debts-page .smart-modal-panel h2, .debts-page .smart-modal-panel > div:last-child { color: var(--text); }
-html:root .debts-page > .animate-overlay { background: rgb(2 6 23 / .65); }
+html:root .debts-page > .animate-overlay { background: var(--overlay-backdrop); }
 .debt-repayment-summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface-2); }
 .debt-repayment-summary > span { font-size: .75rem; color: var(--text-muted); }
 .debt-repayment-summary > strong { font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }

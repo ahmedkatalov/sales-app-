@@ -1,4 +1,4 @@
-.team-page { --tm-gap: calc(var(--spacing) * 5); --tm-pad: calc(var(--spacing) * 6); --tm-accent: color-mix(in srgb, var(--brand) 70%, var(--text)); color: var(--text); max-width: 1440px; margin-inline: auto; padding-bottom: 3rem; }
+.team-page { --tm-gap: calc(var(--spacing) * 5); --tm-pad: calc(var(--spacing) * 6); --tm-accent: var(--accent-ink, color-mix(in srgb, var(--brand) 70%, var(--text))); color: var(--text); max-width: 1440px; margin-inline: auto; padding-bottom: 3rem; }
 .team-page :is(button, input, select) { font: inherit; }
 .team-page button { cursor: pointer; transition: background .15s, border-color .15s; }
 .team-page button:disabled { opacity: .45; cursor: default; }

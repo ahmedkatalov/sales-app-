@@ -127,7 +127,7 @@
 .pending-empty h3, .pending-detail-placeholder h3 { color: var(--text); font-size: 1rem; font-weight: 550; }
 .pending-empty p, .pending-detail-placeholder p { font-size: .75rem; line-height: 1.7; max-width: 22rem; }
 .pending-skeleton { min-height: 10rem; border-radius: var(--radius-xl); }
-.pending-workspace .smart-modal-panel, .pending-modal-scope .smart-modal-panel { background: var(--surface) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-3xl); box-shadow: var(--shadow-card); }
+.pending-workspace .smart-modal-panel, .pending-modal-scope .smart-modal-panel { background: var(--surface-opaque) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-3xl); box-shadow: var(--shadow-card); }
 .pending-workspace .smart-modal-panel > div:first-child, .pending-modal-scope .smart-modal-panel > div:first-child { background: var(--surface-2); }
 .pending-cancel-summary { display: flex; flex-direction: column; align-items: center; gap: .6rem; padding: 1rem; }
 .pending-cancel-summary > svg { color: var(--text-muted); }

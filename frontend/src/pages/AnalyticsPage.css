@@ -1,4 +1,4 @@
-.analytics-page { --anl-gap: calc(var(--spacing) * 5); --anl-pad: calc(var(--spacing) * 6); --anl-accent: color-mix(in srgb, var(--brand) 75%, var(--text)); width: 100%; max-width: 1440px; margin-inline: auto; color: var(--text); }
+.analytics-page { --anl-gap: calc(var(--spacing) * 5); --anl-pad: calc(var(--spacing) * 6); --anl-accent: var(--accent-ink, color-mix(in srgb, var(--brand) 75%, var(--text))); width: 100%; max-width: 1440px; margin-inline: auto; color: var(--text); }
 .analytics-page :is(button, input, select) { font: inherit; }
 .analytics-page button { cursor: pointer; transition: background .15s, border-color .15s; }
 .analytics-page button:disabled { cursor: default; opacity: .45; }

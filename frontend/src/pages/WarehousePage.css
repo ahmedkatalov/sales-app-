@@ -1,4 +1,4 @@
-.warehouse-page { --wh-gap: calc(var(--spacing) * 5); --wh-padding: calc(var(--spacing) * 5); --wh-accent: color-mix(in srgb, var(--brand) 75%, var(--text)); width: 100%; max-width: 1440px; margin-inline: auto; color: var(--text); }
+.warehouse-page { --wh-gap: calc(var(--spacing) * 5); --wh-padding: calc(var(--spacing) * 5); --wh-accent: var(--accent-ink, color-mix(in srgb, var(--brand) 75%, var(--text))); width: 100%; max-width: 1440px; margin-inline: auto; color: var(--text); }
 .warehouse-page :is(button, input, select, textarea) { font: inherit; }
 .warehouse-page button { cursor: pointer; transition: background .15s, border-color .15s; }
 .warehouse-page button:disabled { cursor: default; opacity: .4; }
@@ -237,12 +237,12 @@ html:root .warehouse-page .smart-modal-panel {
   --color-indigo-300: inherit; --color-violet-300: inherit;
   --color-emerald-300: inherit; --color-emerald-400: inherit;
   --color-amber-300: inherit; --color-red-300: inherit; --color-rose-300: inherit; --color-cyan-300: inherit;
-  background: var(--surface) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-3xl); box-shadow: var(--shadow-card);
+  background: var(--surface-opaque) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-3xl); box-shadow: var(--shadow-card);
 }
 .warehouse-page .smart-modal-panel > div:first-child { background: var(--surface-2); }
 .warehouse-page .smart-modal-panel :is(h2, .text-slate-200) { color: var(--text); }
 .warehouse-page .smart-modal-panel > div:first-child p { color: var(--text-muted); }
-html:root .warehouse-page .animate-overlay { background: rgb(2 6 23 / .65); }
+html:root .warehouse-page .animate-overlay { background: var(--overlay-backdrop); }
 @media (min-width: 1400px) {
   .wh-stock-filters { flex-direction: row; align-items: center; justify-content: space-between; }
 }

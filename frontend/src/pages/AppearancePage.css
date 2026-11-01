@@ -1,4 +1,4 @@
-.appearance-page { --ap-gap: calc(var(--spacing) * 5); --ap-pad: calc(var(--spacing) * 6); --ap-accent: color-mix(in srgb, var(--brand) 70%, var(--text)); max-width: 1440px; margin: auto; color: var(--text); padding-bottom: 3rem; }
+.appearance-page { --ap-gap: calc(var(--spacing) * 5); --ap-pad: calc(var(--spacing) * 6); --ap-accent: var(--accent-ink, color-mix(in srgb, var(--brand) 70%, var(--text))); max-width: 1440px; margin: auto; color: var(--text); padding-bottom: 3rem; }
 .appearance-page :is(button, input, textarea, select) { font: inherit; }
 .appearance-page button { cursor: pointer; transition: background .16s, border-color .16s, color .16s; }
 .appearance-page button:disabled { cursor: default; opacity: .45; }

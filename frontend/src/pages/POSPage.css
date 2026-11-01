@@ -65,7 +65,7 @@
 .pos-category-card { display: flex; align-items: center; gap: .85rem; min-width: 0; min-height: 6.3rem; padding: calc(var(--spacing) * 4); border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); text-align: left; }
 .pos-category-card:hover { border-color: var(--brand); background: var(--surface-hover); }
 .pos-category-card:active { background: var(--brand-soft); }
-.pos-category-icon { display: grid; place-items: center; flex-shrink: 0; width: 2.7rem; height: 2.7rem; border-radius: var(--radius-lg); color: color-mix(in srgb,var(--brand) 65%,var(--text)); background: var(--brand-soft); }
+.pos-category-icon { display: grid; place-items: center; flex-shrink: 0; width: 2.7rem; height: 2.7rem; border-radius: var(--radius-lg); color: var(--accent-ink, color-mix(in srgb,var(--brand) 65%,var(--text))); background: var(--brand-soft); }
 .pos-category-copy { flex: 1; min-width: 0; }
 .pos-category-copy small { display: block; color: var(--text-muted); font-size: .61rem; line-height: 1.6; }
 .pos-category-copy strong { display: block; font-size: .86rem; font-weight: 550; line-height: 1.45; overflow-wrap: anywhere; margin-block: .2rem; }
@@ -80,8 +80,8 @@
 .pos-product:active { background: var(--brand-soft); }
 .pos-product.is-in-cart { border-color: color-mix(in srgb, var(--brand) 65%, var(--border)); }
 .pos-product-bottom { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: .4rem; margin-top: auto; padding-top: 1rem; }
-.pos-product-add { display: grid; place-items: center; flex-shrink: 0; width: 1.9rem; height: 1.9rem; background: var(--brand-soft); color: color-mix(in srgb,var(--brand) 65%,var(--text)); border-radius: var(--radius-lg); }
-.pos-product-quantity { padding: .3rem .4rem; font-size: .58rem; color: color-mix(in srgb,var(--brand) 65%,var(--text)); background: var(--brand-soft); border-radius: var(--radius-md); white-space: nowrap; }
+.pos-product-add { display: grid; place-items: center; flex-shrink: 0; width: 1.9rem; height: 1.9rem; background: var(--brand-soft); color: var(--accent-ink, color-mix(in srgb,var(--brand) 65%,var(--text))); border-radius: var(--radius-lg); }
+.pos-product-quantity { padding: .3rem .4rem; font-size: .58rem; color: var(--accent-ink, color-mix(in srgb,var(--brand) 65%,var(--text))); background: var(--brand-soft); border-radius: var(--radius-md); white-space: nowrap; }
 .pos-product > strong { font-size: .83rem; font-weight: 550; line-height: 1.45; overflow-wrap: anywhere; }
 .pos-product-category { display: block; font-size: .6rem; line-height: 1.6; color: var(--text-muted); margin-top: .25rem; margin-bottom: .75rem; overflow-wrap: anywhere; }
 .pos-product-price { white-space: nowrap; margin-top: auto; font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }

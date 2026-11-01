@@ -1,4 +1,4 @@
-.profile-page, .pr-modal-scope { --pr-gap: calc(var(--spacing) * 5); --pr-pad: calc(var(--spacing) * 6); --pr-accent: color-mix(in srgb, var(--brand) 70%, var(--text)); color: var(--text); }
+.profile-page, .pr-modal-scope { --pr-gap: calc(var(--spacing) * 5); --pr-pad: calc(var(--spacing) * 6); --pr-accent: var(--accent-ink, color-mix(in srgb, var(--brand) 70%, var(--text))); color: var(--text); }
 .profile-page { max-width: 1440px; margin-inline: auto; padding-bottom: 3rem; }
 :is(.profile-page, .pr-modal-scope) :is(button, input, textarea, select) { font: inherit; }
 :is(.profile-page, .pr-modal-scope) button { cursor: pointer; transition: background .15s, border-color .15s; }
@@ -151,7 +151,7 @@
 .pr-field-success { color: var(--color-emerald-400); }
 .pr-spin { animation: pr-spin 1s linear infinite; }
 @keyframes pr-spin { to { transform: rotate(360deg); } }
-.pr-modal-scope .smart-modal-panel { background: var(--surface) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-2xl); box-shadow: var(--shadow-card); }
+.pr-modal-scope .smart-modal-panel { background: var(--surface-opaque) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-2xl); box-shadow: var(--shadow-card); }
 .pr-modal-scope .smart-modal-panel > div:first-child { background: var(--surface-2); border-color: var(--border); }
 .pr-modal-scope .smart-modal-panel > div:last-child { color: var(--text); }
 .pr-modal-scope .smart-modal-panel .text-white { color: var(--text); }

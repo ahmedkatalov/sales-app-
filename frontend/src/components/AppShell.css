@@ -1,4 +1,4 @@
-.app-shell, .shell-dialog { --sh-accent: color-mix(in srgb, var(--brand) 70%, var(--text)); color: var(--text); }
+.app-shell, .shell-dialog { --sh-accent: var(--accent-ink, color-mix(in srgb, var(--brand) 70%, var(--text))); color: var(--text); }
 .app-shell { height: 100dvh; width: 100%; display: flex; overflow: hidden; background: var(--page-bg); --sh-width: 15rem; }
 .app-shell.sh-collapsed { --sh-width: 4.7rem; }
 :is(.app-shell,.shell-dialog) :is(button,input,select,a) { -webkit-tap-highlight-color: transparent; }
@@ -79,8 +79,10 @@
 .sh-search input::placeholder { color: var(--text-muted); }
 .sh-menu-groups { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .7rem 1.4rem; }
 .sh-menu-groups .sh-nav-group { min-width: 0; }
+.sh-menu-groups > [data-nav-group="work"] { grid-row: span 2; }
+.sh-menu-groups > .sh-nav-group:only-child { grid-column: 1 / -1; grid-row: auto; }
 .sh-menu-groups .sh-nav-group > p { font-size: .57rem; }
-.sh-menu-groups .sh-nav-item { background: var(--surface-2); border-color: var(--border); padding: .7rem .8rem; min-height: 2.9rem; margin-bottom: .4rem; }
+.sh-menu-groups .sh-nav-item { color: var(--text); background: var(--surface-2); border-color: var(--border); padding: .7rem .8rem; min-height: 2.9rem; margin-bottom: .4rem; }
 .sh-menu-groups .sh-nav-item[aria-current="page"] { background: var(--brand-soft); border-color: var(--brand); }
 .sh-dialog-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 1.2rem; margin-top: 1.2rem; border-top: 1px solid var(--border); }
 .sh-dialog-footer > span { min-width: 0; font-size: .73rem; overflow-wrap: anywhere; }
@@ -146,7 +148,7 @@ html:root .shell-dialog .smart-modal-panel { --text: inherit; --text-muted: inhe
   .sh-mobile-dock .sh-badge { position: absolute; top: .1rem; right: .1rem; font-size: .5rem; min-width: 1.1rem; height: 1.1rem; }
   .sh-mobile-dock.is-keyboard-visible { display: none; }
 }
-@media (max-width:600px) { .sh-header { padding-inline: .75rem; } .sh-icon-button,.sh-theme { min-width:2.4rem; min-height:2.4rem; width:2.4rem; height:2.4rem; } .sh-menu-groups { grid-template-columns: minmax(0,1fr); gap: 0; } .sh-nav-group { margin-top: 1rem; } .sh-menu-groups .sh-nav-group { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .45rem; } .sh-menu-groups .sh-nav-group > p { grid-column: 1 / -1; padding-left: .1rem; padding-bottom: .1rem; } .sh-menu-groups .sh-nav-item { padding: .65rem; gap: .45rem; margin: 0; } .sh-menu-groups .sh-nav-label { font-size: .67rem; } .sh-menu-groups .sh-nav-icon { width: 1.2rem; } .sh-menu-groups .sh-nav-icon svg { width: 16px; } .sh-menu-groups .sh-badge { font-size: .5rem; min-width: 1.1rem; height: 1.1rem; } .sh-workspace-list > button { gap: .65rem; padding: .8rem; flex-wrap: wrap; } .sh-selected { margin-left: 3.2rem; } .sh-feedback { flex-wrap: wrap; } .sh-feedback > button { width: 100%; } .sh-dialog-footer { align-items: flex-start; } }
+@media (max-width:600px) { .sh-header { padding-inline: .75rem; } .sh-icon-button,.sh-theme { min-width:2.4rem; min-height:2.4rem; width:2.4rem; height:2.4rem; } .sh-menu-groups { grid-template-columns: minmax(0,1fr); gap: 0; } .sh-nav-group { margin-top: 1rem; } .sh-menu-groups .sh-nav-group { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .45rem; } .sh-menu-groups .sh-nav-group > p { grid-column: 1 / -1; padding-left: .1rem; padding-bottom: .1rem; } .sh-menu-groups .sh-nav-item { padding: .65rem; gap: .45rem; margin: 0; } .sh-menu-groups .sh-nav-label { font-size: .67rem; } .sh-menu-groups > [data-nav-group] { grid-row: auto; } .sh-menu-groups .sh-nav-icon { width: 1.2rem; } .sh-menu-groups .sh-nav-icon svg { width: 16px; } .sh-menu-groups .sh-badge { font-size: .5rem; min-width: 1.1rem; height: 1.1rem; } .sh-workspace-list > button { gap: .65rem; padding: .8rem; flex-wrap: wrap; } .sh-selected { margin-left: 3.2rem; } .sh-feedback { flex-wrap: wrap; } .sh-feedback > button { width: 100%; } .sh-dialog-footer { align-items: flex-start; } }
 @media (prefers-reduced-motion:reduce) { .sh-spin { animation:none; } }
 .sh-profile-error { display: block; color: var(--color-rose-400); font-size: .62rem; line-height: 1.8; margin-top: .5rem; }
 .sh-profile-error > button { min-height: 2rem; padding: .25rem .5rem; margin-left: .35rem; border: 1px solid var(--border); border-radius: var(--radius-lg); }

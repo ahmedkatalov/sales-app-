@@ -1828,9 +1828,9 @@ export default function WorkPage() {
 
       {productModal && (
         <Modal title="Новый товар" wide onClose={() => { setProductModal(false); setRecipe([]); setProductForm({ name: "", cost: "", price: "", isExtra: false, hidden: false }); }}>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 [&>*]:min-w-0">
             <div className="sm:col-span-2">
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <select
                   value={selectedTypeId}
                   onChange={(e) => { setSelectedTypeId(e.target.value); setSelectedFolderId(""); setShowNewType(false); }}
@@ -1841,7 +1841,7 @@ export default function WorkPage() {
                 </select>
                 <button type="button"
                   onClick={() => { setShowNewType((v) => !v); setShowNewFolder(false); setQuickName(""); }}
-                  className="shrink-0 whitespace-nowrap rounded-2xl border border-white/[0.08] bg-white/[0.06] px-3.5 text-sm font-semibold text-blue-300 transition hover:bg-white/10">
+                  className="shrink-0 whitespace-nowrap rounded-2xl border border-white/[0.08] bg-white/[0.06] px-3.5 py-3 text-sm font-semibold text-blue-300 transition hover:bg-white/10 sm:py-0">
                   {showNewType ? "Отмена" : "+ Новый раздел"}
                 </button>
               </div>
@@ -1858,7 +1858,7 @@ export default function WorkPage() {
             </div>
 
             <div className="sm:col-span-2">
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <select
                   value={selectedFolderId}
                   onChange={(e) => { setSelectedFolderId(e.target.value); setShowNewFolder(false); }}
@@ -1869,7 +1869,7 @@ export default function WorkPage() {
                 </select>
                 <button type="button"
                   onClick={() => { if (!selectedTypeId) { setError("Сначала выберите раздел"); return; } setShowNewFolder((v) => !v); setShowNewType(false); setQuickName(""); }}
-                  className="shrink-0 whitespace-nowrap rounded-2xl border border-white/[0.08] bg-white/[0.06] px-3.5 text-sm font-semibold text-blue-300 transition hover:bg-white/10">
+                  className="shrink-0 whitespace-nowrap rounded-2xl border border-white/[0.08] bg-white/[0.06] px-3.5 py-3 text-sm font-semibold text-blue-300 transition hover:bg-white/10 sm:py-0">
                   {showNewFolder ? "Отмена" : "+ Новая категория"}
                 </button>
               </div>
@@ -2187,7 +2187,7 @@ export default function WorkPage() {
 
       {editModal && editProduct && (
         <Modal title={`Редактировать: ${editProduct.name}`} wide onClose={() => setEditModal(false)}>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 [&>*]:min-w-0">
             <input value={editProduct.name}
               onChange={e => setEditProduct(p => ({...p, name: e.target.value}))}
               placeholder="Название" className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 shadow-inner focus:border-blue-400/60 sm:col-span-2"/>

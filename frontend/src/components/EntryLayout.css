@@ -1,4 +1,4 @@
-.entry-page { --entry-accent: color-mix(in srgb,var(--brand) 65%,var(--text)); min-height: 100dvh; color: var(--text); background: var(--page-bg); display: flex; flex-direction: column; padding: 0 clamp(1rem,4vw,4rem); }
+.entry-page { --entry-accent: var(--accent-ink, color-mix(in srgb,var(--brand) 65%,var(--text))); min-height: 100dvh; color: var(--text); background: var(--page-bg); display: flex; flex-direction: column; padding: 0 clamp(1rem,4vw,4rem); }
 .entry-page :is(button,input) { font: inherit; }
 .entry-page button { cursor: pointer; }
 .entry-page button:disabled { cursor: default; opacity: .55; }

@@ -1,4 +1,4 @@
-.sales-page { --sls-gap: calc(var(--spacing) * 5); --sls-pad: calc(var(--spacing) * 6); --sls-accent: color-mix(in srgb, var(--brand) 75%, var(--text)); --sls-secondary: var(--color-emerald-400); max-width: 1440px; width: 100%; margin-inline: auto; color: var(--text); }
+.sales-page { --sls-gap: calc(var(--spacing) * 5); --sls-pad: calc(var(--spacing) * 6); --sls-accent: var(--accent-ink, color-mix(in srgb, var(--brand) 75%, var(--text))); --sls-secondary: var(--color-emerald-400); max-width: 1440px; width: 100%; margin-inline: auto; color: var(--text); }
 .sales-page :is(button, input, select) { font: inherit; }
 .sales-page button { cursor: pointer; transition: background .15s, border-color .15s; }
 .sales-page button:disabled { cursor: default; opacity: .45; }

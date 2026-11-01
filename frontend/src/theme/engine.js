@@ -125,6 +125,33 @@ function ramp(hex) {
   return out;
 }
 
+function hslHex(h, s, l) {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const channel = n => {
+    const k = (n + h / 30) % 12;
+    return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))));
+  };
+  return [channel(0), channel(8), channel(4)];
+}
+
+// Keep the selected hue, but ensure foreground shades remain readable on light
+// cards. The dark ramp and the user's actual brand color stay unchanged.
+function lightRamp(hex) {
+  const base = hexToHsl(hex);
+  if (!base || !Number.isFinite(base.h)) return null;
+  const levels = { 100: 48, 200: 44, 300: 40, 400: 36, 500: 42, 600: 36, 700: 30, 800: 92, 900: 96, 950: 98 };
+  const luminance = rgb => rgb.map(v => { const c = v / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+  return Object.fromEntries(Object.entries(levels).map(([level, lightness]) => {
+    let rgb = hslHex(base.h, clamp(base.s, 0, 90), lightness);
+    const minimum = Number(level) <= 400 ? 5.5 : 4.6;
+    if (Number(level) <= 700) {
+      while (1.05 / (luminance(rgb) + .05) < minimum) rgb = rgb.map(v => Math.max(0, v - 1));
+    }
+    return [level, `#${rgb.map(v => v.toString(16).padStart(2, '0')).join('')}`];
+  }));
+}
+
 // Соответствие «семантический цвет → семейства палитры Tailwind».
 const FAMILY_MAP = {
   accent: ["blue"],
@@ -189,6 +216,14 @@ export function buildCss(appearanceInput) {
   // порядка подключения стилей.
   const blocks = [];
   if (root.length) blocks.push(`html:root{${root.join("")}}`);
+  const lightColors = { accent: a.accent || '#2563eb', accent2: a.accent2 || '#7c3aed', success: a.success || '#059669', warning: a.warning || '#d97706', error: a.error || '#e11d48', info: a.info || '#0284c7' };
+  const lightTokens = [];
+  for (const [color, families] of Object.entries(FAMILY_MAP)) {
+    const shades = lightRamp(lightColors[color]);
+    if (!shades) continue;
+    for (const family of families) for (const [level, value] of Object.entries(shades)) lightTokens.push(`--color-${family}-${level}:${value};`);
+  }
+  blocks.push(`html:root[data-theme="light"]{${lightTokens.join('')}}`);
 
   // Tailwind v4 инлайнит ЛИТЕРАЛЬНЫЙ цвет в --tw-gradient-from/-to/-via, поэтому
   // переопределения --color-* сами по себе НЕ перекрашивают градиенты (главные

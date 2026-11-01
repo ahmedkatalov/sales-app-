@@ -1,4 +1,4 @@
-.finance-page { --fin-gap: calc(var(--spacing) * 5); --fin-pad: calc(var(--spacing) * 6); --fin-accent: color-mix(in srgb, var(--brand) 75%, var(--text)); width: 100%; max-width: 1440px; margin-inline: auto; color: var(--text); }
+.finance-page { --fin-gap: calc(var(--spacing) * 5); --fin-pad: calc(var(--spacing) * 6); --fin-accent: var(--accent-ink, color-mix(in srgb, var(--brand) 75%, var(--text))); width: 100%; max-width: 1440px; margin-inline: auto; color: var(--text); }
 .finance-page :is(button, input, select, textarea) { font: inherit; }
 .finance-page button { cursor: pointer; transition: background .15s, border-color .15s; }
 .finance-page button:disabled { cursor: default; opacity: .45; }
@@ -166,12 +166,12 @@ html:root .finance-page .smart-modal-panel {
   --color-slate-800: inherit; --color-slate-900: inherit; --color-slate-950: inherit;
   --color-blue-200: inherit; --color-blue-300: inherit; --color-blue-400: inherit; --color-indigo-300: inherit; --color-violet-300: inherit;
   --color-emerald-300: inherit; --color-emerald-400: inherit; --color-amber-300: inherit; --color-red-300: inherit; --color-rose-300: inherit; --color-cyan-300: inherit;
-  background: var(--surface) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-3xl); box-shadow: var(--shadow-card);
+  background: var(--surface-opaque) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-3xl); box-shadow: var(--shadow-card);
 }
 .finance-page .smart-modal-panel > div:first-child { background: var(--surface-2); }
 .finance-page .smart-modal-panel :is(h2, .text-slate-200) { color: var(--text); }
 .finance-page .smart-modal-panel > div:first-child p { color: var(--text-muted); }
-html:root .finance-page .animate-overlay { background: rgb(2 6 23 / .65); }
+html:root .finance-page .animate-overlay { background: var(--overlay-backdrop); }
 @media (max-width: 1100px) {
   .fin-page-heading { align-items: flex-start; }
   .fin-heading-actions { margin-top: 1.1rem; }
