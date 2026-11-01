@@ -53,7 +53,6 @@
 .sh-header-actions { display: flex; align-items: center; gap: .45rem; margin-left: auto; }
 .sh-header-workspace, .sh-header-navigation { display: none; }
 .sh-header-menu { display: inline-flex; }
-.sh-layout-sidebar .sh-header-actions > .sh-theme { display: none; }
 .sh-content { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: calc(var(--spacing) * 7); }
 .sh-mobile-dock, .sh-mobile-profile { display: none; }
 .sh-layout-header .sh-sidebar { display: none; }
@@ -116,7 +115,7 @@ html:root .shell-dialog .smart-modal-panel { --text: inherit; --text-muted: inhe
 .shell-dialog .smart-modal-panel :is(h2,.text-slate-200) { color: var(--text); }
 .shell-dialog .smart-modal-panel > div:first-child p { color: var(--text-muted); }
 @media (min-width:1024px) {
-  .sh-layout-sidebar .sh-header-actions { display: none; }
+  .sh-layout-sidebar .sh-header-actions > :not(.sh-theme) { display: none; }
   .sh-layout-sidebar .sh-content > .pb-nav { padding-bottom: 2.5rem; }
 }
 @media (max-width:1250px) and (min-width:1024px) { .sh-layout-header .sh-header-workspace { flex-basis: 13rem; } .sh-layout-header .sh-top-links .sh-nav-item[data-nav-path="/work"] { display: none; } .sh-header { gap: .7rem; padding-inline: 1rem; } }
