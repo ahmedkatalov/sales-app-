@@ -145,7 +145,7 @@ function PreviewApp() {
         ))}
         {page !== 'appearance' && <select aria-label="Проверить оформление" defaultValue="saved" style={{ background: 'var(--surface)', color: 'var(--text)', padding: '.4rem' }} onChange={(event) => {
           const preset = PRESETS.find(preset => preset.id === event.target.value);
-          document.getElementById('appearance-style').textContent = buildCss(event.target.value === 'large' ? { ...getAppearance(), fontScale:1.2, density:'comfortable', radius:1.8 } : preset ? preset.appearance : getAppearance());
+          document.getElementById('appearance-style').textContent = buildCss(event.target.value === 'large' ? { ...getAppearance(), fontScale:1.2, density:'comfortable', radius:1.8 } : preset ? { ...preset.appearance, bg: preset.appearance.bg ?? null, surface: preset.appearance.surface ?? null } : getAppearance());
         }}>
           <option value="saved">Ваше оформление</option>
           <option value="large">Крупный текст · 120%</option>

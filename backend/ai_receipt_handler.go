@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -138,14 +137,12 @@ func getReceiptPhotoJob(c *gin.Context) {
 }
 
 func callReceiptVisionParser(req receiptParseRequest) (receiptResult, error) {
-	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	aiCfg := currentAIConfig()
+	apiKey := aiCfg.APIKey
 	if apiKey == "" {
-		return receiptResult{}, errors.New("OPENAI_API_KEY не настроен")
+		return receiptResult{}, errors.New("Подключение ИИ не настроено. Укажите ключ провайдера в настройках.")
 	}
-	model := strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
-	if model == "" {
-		model = "anthropic/claude-sonnet-4-6"
-	}
+	model := aiCfg.Model
 
 	itemsJSON, _ := json.Marshal(req.Items)
 	prompt := fmt.Sprintf(`Ты распознаёшь фото НАКЛАДНОЙ или ЧЕКА для кафе/магазина. Текст часто РУКОПИСНЫЙ, на русском, с сокращениями и опечатками.
@@ -185,12 +182,9 @@ func callReceiptVisionParser(req receiptParseRequest) (receiptResult, error) {
 
 Подсказка пользователя (может быть пустой): %s`, string(itemsJSON), strings.TrimSpace(req.Hint))
 
-	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("OPENROUTER_BASE_URL")), "/")
+	baseURL := aiCfg.BaseURL
 	// Кастомный базовый URL (OpenRouter / odirouter / свой релей) = OpenAI-совместимый.
-	useOpenRouter := baseURL != "" || strings.Contains(apiKey, "sk-or-")
-	if baseURL == "" {
-		baseURL = "https://api.openai.com/v1"
-	}
+	useOpenRouter := aiProvider(baseURL) != "openai"
 	// Vision-запрос — мультимодальное сообщение (текст + картинка) в формате
 	// chat/completions (его понимают и OpenRouter, и OpenAI).
 	body := map[string]any{

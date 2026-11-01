@@ -109,13 +109,19 @@
 .sh-feedback > span { flex: 1; }
 .sh-spin { animation: sh-spin 1s linear infinite; }
 @keyframes sh-spin { to { transform: rotate(360deg); } }
-html:root .shell-dialog .smart-modal-panel { --text: inherit; --text-muted: inherit; --surface: inherit; --color-white: inherit; --color-slate-100: inherit; --color-slate-200: inherit; --color-slate-300: inherit; --color-slate-400: inherit; --color-slate-500: inherit; --color-slate-800: inherit; --color-slate-900: inherit; --color-slate-950: inherit; --color-blue-200: inherit; --color-blue-300: inherit; --color-blue-400: inherit; --color-indigo-300: inherit; --color-violet-300: inherit; --color-emerald-300: inherit; --color-emerald-400: inherit; --color-amber-300: inherit; --color-red-300: inherit; --color-rose-300: inherit; --color-cyan-300: inherit; background: var(--surface) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-2xl); box-shadow: var(--shadow-card); }
+html:root .shell-dialog .smart-modal-panel { --text: inherit; --text-muted: inherit; --surface: inherit; --color-white: inherit; --color-slate-100: inherit; --color-slate-200: inherit; --color-slate-300: inherit; --color-slate-400: inherit; --color-slate-500: inherit; --color-slate-800: inherit; --color-slate-900: inherit; --color-slate-950: inherit; --color-blue-200: inherit; --color-blue-300: inherit; --color-blue-400: inherit; --color-indigo-300: inherit; --color-violet-300: inherit; --color-emerald-300: inherit; --color-emerald-400: inherit; --color-amber-300: inherit; --color-red-300: inherit; --color-rose-300: inherit; --color-cyan-300: inherit; background: var(--surface-opaque) !important; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-2xl); box-shadow: var(--shadow-card); }
+/* Keep navigation dialogs opaque even when a saved theme uses translucent surfaces. */
+.shell-dialog > .animate-overlay, .shell-dialog .smart-modal-panel > div:first-child { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 .shell-dialog .smart-modal-panel > div:first-child { background: var(--surface-2); border-color: var(--border); }
 .shell-dialog .smart-modal-panel :is(h2,.text-slate-200) { color: var(--text); }
 .shell-dialog .smart-modal-panel > div:first-child p { color: var(--text-muted); }
-@media (min-width:1024px) { .sh-layout-sidebar .sh-content > .pb-nav { padding-bottom: 2.5rem; } }
+@media (min-width:1024px) {
+  .sh-layout-sidebar .sh-header-actions { display: none; }
+  .sh-layout-sidebar .sh-content > .pb-nav { padding-bottom: 2.5rem; }
+}
 @media (max-width:1250px) and (min-width:1024px) { .sh-layout-header .sh-header-workspace { flex-basis: 13rem; } .sh-layout-header .sh-top-links .sh-nav-item[data-nav-path="/work"] { display: none; } .sh-header { gap: .7rem; padding-inline: 1rem; } }
 @media (max-width:1023px) {
+  .sh-header, .sh-mobile-profile, .sh-mobile-dock { background: var(--surface-opaque); backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
   .sh-sidebar { display: none; }
   .sh-header { padding: .6rem 1rem; min-height: 4.5rem; gap: .7rem; }
   .sh-header-workspace, .sh-layout-header .sh-header-workspace { display: block; flex: 1; min-width: 0; }
@@ -129,11 +135,11 @@ html:root .shell-dialog .smart-modal-panel { --text: inherit; --text-muted: inhe
   .sh-header .sh-workspace-icon { width: 2.3rem; height: 2.3rem; }
   .sh-header .sh-workspace > svg { display: none; }
   .sh-content { padding: calc(var(--spacing) * 4); padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 1rem); }
-  .sh-mobile-profile { display: block; padding: .6rem 1rem; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .sh-mobile-profile { display: block; padding: .6rem 1rem; border-bottom: 1px solid var(--border); background: var(--surface-opaque); }
   .sh-mobile-profile .sh-profile-picker { display: flex; align-items: center; gap: .8rem; }
   .sh-mobile-profile .sh-profile-picker > span { flex-shrink: 0; margin: 0; font-size: .6rem; }
   .sh-mobile-profile .sh-profile-picker select { min-height: 2.2rem; padding-block: .4rem; font-size: .7rem; }
-  .sh-mobile-dock { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); position: fixed; bottom: 0; left: 0; right: 0; z-index: 35; background: var(--surface); border-top: 1px solid var(--border); padding: .4rem .6rem max(.4rem,env(safe-area-inset-bottom,0px)); min-height: var(--nav-h); }
+  .sh-mobile-dock { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); position: fixed; bottom: 0; left: 0; right: 0; z-index: 35; background: var(--surface-opaque); border-top: 1px solid var(--border); padding: .4rem .6rem max(.4rem,env(safe-area-inset-bottom,0px)); min-height: var(--nav-h); }
   .sh-mobile-dock .sh-nav-item, .sh-mobile-dock > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; min-height: 3.5rem; min-width: 0; padding: .4rem .2rem; margin: 0; border: 1px solid transparent; border-radius: var(--radius-xl); font-size: .6rem; color: var(--text-muted); }
   .sh-mobile-dock .sh-nav-label { flex: 0; font-size: .6rem; text-align: center; }
   .sh-mobile-dock .sh-nav-icon { height: 1.5rem; }

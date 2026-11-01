@@ -17,7 +17,7 @@ export function setProfilePreviewScenario(value) {
   cards = { 900101: [{ id: 31, name: 'Сбер · Основная', owner: 'Анна Миронова' }, { id: 32, name: 'Т-Банк · Закупки', owner: 'Noor Coffee' }], 900102: [], 900103: [] };
   access = [{ id: 41, userId: 11, username: 'center.admin', workspaceId: 2, workspaceName: points[1].name, role: 'branch_admin' }];
   permissions = [{ id: 51, userId: 12, workspaceId: 1, pages: JSON.stringify(['/pos', '/pending-payments', '/debts', '/expenses']) }, { id: 52, userId: 13, workspaceId: 2, pages: JSON.stringify(['/pos', '/pending-payments', '/warehouse']) }];
-  hours = { 900101: 6, 900102: 9, 900103: 8 }; key = 'demo_order_key_not_a_real_credential'; ai = { model: 'demo-model', baseUrl: 'https://provider.example/v1', hasKey: true, keyMasked: 'demo…0000' };
+  hours = { 900101: 6, 900102: 9, 900103: 8 }; key = 'demo_order_key_not_a_real_credential'; ai = { provider: 'odirouter', model: 'demo-vision-model', baseUrl: 'https://api.odirouter.ai/v1', hasKey: true, keyMasked: 'demo…0000', scope: 'server' };
   if (value === 'empty') { users = []; employees = {}; cards = {}; access = []; permissions = []; }
   if (value === 'invalid') permissions[0].pages = '{broken-demo-json';
 }
@@ -44,11 +44,12 @@ export function profilePreviewResponse(url, options = {}) {
   }
   if (scenario === 'save-error') return json({ error: 'Демо: изменения не сохранены. Повторите попытку.' }, 503);
   if (method === 'POST' && /\/employees\/\d+\/verify$/.test(path)) return json({ ok: body.password === 'demo', error: body.password === 'demo' ? '' : 'Неверный пароль' });
-  if (method === 'POST' && path === '/settings/ai/test') return json({ ok: true, model: ai.model });
+  if (method === 'POST' && path === '/settings/ai/test') return body.apiKey === 'demo-invalid-key' ? json({ok:false,error:'Демо: провайдер отклонил API-ключ.'}) : json({ ok: true, model: body.model || ai.model });
+  if (method === 'POST' && path === '/settings/ai/models') return body.apiKey === 'demo-invalid-key' ? json({error:'Демо: провайдер отклонил API-ключ.'},502) : json({models:[{id:'demo-vision-model',name:'Модель для текста и фото · демо',contextLength:200000,vision:true},{id:'demo-fast-model',name:'Быстрая текстовая модель · демо',contextLength:128000,vision:false}],total:2,page:1,hasMore:false});
   mutated = true;
   if (method === 'PUT' && path === '/account') return json({ ok: true, name: body.name });
   if (method === 'PUT' && path === '/settings/business-day') { hours[dataId] = body.dayStartHour; return json({ ok: true, dayStartHour: body.dayStartHour }); }
-  if (method === 'PUT' && path === '/settings/ai') { ai = { ...ai, model: body.model, baseUrl: body.baseUrl, hasKey: ai.hasKey || !!body.apiKey }; return json({ ok: true }); }
+  if (method === 'PUT' && path === '/settings/ai') { ai = { ...ai, provider: body.provider, model: body.model, baseUrl: body.baseUrl, hasKey: ai.hasKey || !!body.apiKey }; return json({ ok: true }); }
   if (method === 'POST' && path === '/online-orders/key/rotate') { key = 'demo_rotated_key_not_a_real_credential'; return json({ key }); }
   if (method === 'POST' && path === '/workspaces') { const point = { id: ++nextId, accountId: 900100, dataAccountId: 900000 + nextId, name: body.name, isMain: false }; points.push(point); return json(point); }
   if (method === 'POST' && path === '/workspace-users') { const point = points.find(p => p.id === body.workspaceId); const user = { id: ++nextId, workspaceId: body.workspaceId, workspaceName: point?.name, dataAccountId: point?.dataAccountId, username: body.username, role: body.role }; users.push(user); return json(user); }

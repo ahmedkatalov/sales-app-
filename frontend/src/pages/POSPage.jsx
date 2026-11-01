@@ -1,5 +1,5 @@
 import "./POSPage.css";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { del, get, getSession, post } from "../api";
 import Modal from "../components/Modal";
@@ -7,7 +7,7 @@ import PendingPaymentsModal from "../components/PendingPaymentsModal";
 import { formatMoney, money, num, businessISO, prettyName } from "../utils/format";
 import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
-import { ChevronLeft, ChevronRight, Search, LayoutGrid, Settings, ShoppingBag, ArrowRight, Sparkles, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt, ClipboardList } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, LayoutGrid, FolderOpen, Settings, ShoppingBag, ArrowRight, Sparkles, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt, ClipboardList } from "lucide-react";
 
 // Бизнес-дата на N дней назад (0 = сегодня) с учётом времени открытия точки.
 // Вне компонента — eslint (react-hooks/purity) не любит Date.now/new Date в теле.
@@ -212,6 +212,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   const [selectedSectionId, setSelectedSectionId] = useState("all");
   const [openedCategory, setOpenedCategory] = useState(null);
   const [search, setSearch] = useState("");
+  const menuScrollRef = useRef(null);
+  useLayoutEffect(() => {
+    if (menuScrollRef.current) menuScrollRef.current.scrollTop = 0;
+  }, [selectedSectionId, openedCategory?.id, search]);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [menuToolsOpen, setMenuToolsOpen] = useState(false);
   const [menuLoading, setMenuLoading] = useState(true);
@@ -621,7 +625,9 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         || String(product.typeId) === String(selectedSectionId)
         || (!product.typeId && sectionCategoryIds.has(String(product.categoryId)));
       const sameCategory = !openedCategory || String(product.categoryId) === String(openedCategory.id);
-      return sameSection && sameCategory && (!query || String(product.name || "").toLowerCase().includes(query));
+      const matchesSearch = !query || String(product.name || "").toLowerCase().includes(query);
+      // From the category overview, search the whole menu, as in the original register.
+      return matchesSearch && (query && !openedCategory || sameSection && sameCategory);
     });
   }, [availableProducts, selectedSectionId, openedCategory, search, visibleCategories]);
 
@@ -630,6 +636,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     const id = String(product.categoryId);
     categoryCounts.set(id, (categoryCounts.get(id) || 0) + 1);
   });
+  const sectionNames = new Map(safe_sections.map(section => [String(section.id), prettyName(section.name)]));
+  const showCategoryOverview = !openedCategory && !search.trim();
   const categoryNames = new Map(safe_categories.map((category) => [String(category.id), prettyName(category.name)]));
   const cartQuantities = new Map(safe_cart.map((item) => [item.productId, item.qty]));
   const cartItemCount = safe_cart.reduce((count, item) => count + num(item.qty), 0);
@@ -1044,24 +1052,21 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
             <div className="pos-menu-controls">
               <label className="pos-search bg-white/[0.02]">
                 <Search size={19} />
-                <input aria-label="Поиск товаров" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Найти товар по названию…" />
+                <input aria-label="Поиск товаров" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={openedCategory ? "Найти товар в категории…" : "Найти товар по всему меню…"} />
                 {search && <button type="button" onClick={() => setSearch("")} aria-label="Очистить поиск"><X size={17} /></button>}
               </label>
               <div className="pos-sections" role="group" aria-label="Раздел меню">
-                <button type="button" aria-pressed={selectedSectionId === "all"} onClick={() => { setSelectedSectionId("all"); setOpenedCategory(null); }}>Всё меню</button>
+                <button type="button" aria-pressed={selectedSectionId === "all"} onClick={() => { setSelectedSectionId("all"); setOpenedCategory(null); setSearch(""); }}>Всё меню</button>
                 {safe_sections.map((section) => (
-                  <button type="button" key={section.id} aria-pressed={String(selectedSectionId) === String(section.id)} onClick={() => { setSelectedSectionId(String(section.id)); setOpenedCategory(null); }}>{prettyName(section.name)}</button>
-                ))}
-              </div>
-              <div className="pos-categories" role="group" aria-label="Категория товаров">
-                <button type="button" aria-pressed={!openedCategory} onClick={() => setOpenedCategory(null)}><LayoutGrid size={15} />Все категории</button>
-                {visibleCategories.map((category) => (
-                  <button type="button" key={category.id} aria-pressed={String(openedCategory?.id) === String(category.id)} onClick={() => setOpenedCategory(category)}>{prettyName(category.name)}<span>{categoryCounts.get(String(category.id)) || 0}</span></button>
+                  <button type="button" key={section.id} aria-pressed={String(selectedSectionId) === String(section.id)} onClick={() => { setSelectedSectionId(String(section.id)); setOpenedCategory(null); setSearch(""); }}>{prettyName(section.name)}</button>
                 ))}
               </div>
             </div>
             <div className="pos-menu-heading">
-              <div><h2>{openedCategory ? prettyName(openedCategory.name) : search.trim() ? "Результаты поиска" : "Выберите товары"}</h2><span>{displayProducts.length} в меню{search.trim() ? ` · «${search.trim()}»` : " · нажмите, чтобы добавить в чек"}</span></div>
+              <div className="pos-menu-context">
+                {openedCategory && <button type="button" className="pos-back-categories" onClick={() => { setOpenedCategory(null); setSearch(""); }} aria-label="Назад к категориям"><ChevronLeft size={18} /><span>Категории</span></button>}
+                <div><h2>{openedCategory ? prettyName(openedCategory.name) : search.trim() ? "Результаты поиска" : "Категории"}</h2><span>{showCategoryOverview ? `Категорий: ${visibleCategories.length} · выберите нужную` : `Товаров: ${displayProducts.length}${search.trim() ? ` · «${search.trim()}»` : " · нажмите, чтобы добавить в чек"}`}</span></div>
+              </div>
               {!isWorkspaceUser && <button type="button" onClick={() => setMenuToolsOpen((value) => !value)} aria-expanded={menuToolsOpen} className="pos-icon-button" aria-label="Управление меню" title="Управление меню"><Settings size={18} /></button>}
             </div>
             {menuToolsOpen && !isWorkspaceUser && (
@@ -1153,27 +1158,34 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
                 </div>
               </div>
             )}
-            <div className="pos-menu-scroll">
+            <div className="pos-menu-scroll" ref={menuScrollRef}>
               {menuLoading ? (
                 <div className="pos-product-grid" role="status" aria-label="Загрузка меню">{Array.from({ length: 8 }, (_, index) => <div key={index} className="pos-product-skeleton bg-white/[0.02] animate-pulse" />)}</div>
               ) : menuLoadError ? (
                 <div className="pos-menu-empty"><AlertTriangle size={30} /><h3>Не удалось загрузить меню</h3><p>{menuLoadError}</p><button type="button" className="pos-button" onClick={() => load().catch((e) => setError(e.message))}>Попробовать снова</button></div>
+              ) : showCategoryOverview ? (
+                visibleCategories.length ? <div className="pos-category-grid" aria-label="Категории меню">
+                  {visibleCategories.map(category => <button type="button" key={category.id} className="pos-category-card bg-white/[0.02] shadow-sm" onClick={() => { setOpenedCategory(category); setSearch(""); }} aria-label={`Открыть категорию ${prettyName(category.name)}`}>
+                    <span className="pos-category-icon" aria-hidden="true"><FolderOpen size={22} /></span>
+                    <span className="pos-category-copy"><small>{sectionNames.get(String(category.typeId)) || prettyName(category.typeName || category.type) || "Раздел"}</small><strong>{prettyName(category.name)}</strong><span>Товаров · {categoryCounts.get(String(category.id)) || 0}</span></span>
+                    <ChevronRight size={17} aria-hidden="true" />
+                  </button>)}
+                </div> : <div className="pos-menu-empty"><LayoutGrid size={32} /><h3>В этом разделе пока нет категорий</h3><p>Создайте категорию в управлении меню или выберите другой раздел.</p><button type="button" className="pos-button" onClick={() => setSelectedSectionId("all")}>Все разделы</button></div>
               ) : displayProducts.length ? (
                 <div className="pos-product-grid">
                   {displayProducts.map((product) => {
                     const quantity = cartQuantities.get(product.id) || 0;
                     return (
                       <button type="button" key={product.id} onClick={() => addToCart(product)} className={`pos-product bg-white/[0.02] shadow-sm backdrop-blur-xl ${quantity ? "is-in-cart" : ""}`} aria-label={`Добавить ${prettyName(product.name)} · ${formatMoney(product.price)} ₽`}>
-                        <div className="pos-product-top"><span className="pos-product-avatar" aria-hidden="true">{prettyName(product.name).slice(0, 2).toUpperCase()}</span>{quantity > 0 ? <span className="pos-product-quantity">В чеке · {quantity}</span> : <Plus size={18} />}</div>
                         <strong>{prettyName(product.name)}</strong>
-                        <span className="pos-product-category">{categoryNames.get(String(product.categoryId)) || "Без категории"}</span>
-                        <span className="pos-product-price">{formatMoney(product.price)}<small>₽</small></span>
+                        {!openedCategory && <span className="pos-product-category">{categoryNames.get(String(product.categoryId)) || "Без категории"}</span>}
+                        <div className="pos-product-bottom"><span className="pos-product-price">{formatMoney(product.price)}<small>₽</small></span>{quantity > 0 ? <span className="pos-product-quantity">В чеке · {quantity}</span> : <span className="pos-product-add" aria-hidden="true"><Plus size={17} /></span>}</div>
                       </button>
                     );
                   })}
                 </div>
               ) : (
-                <div className="pos-menu-empty"><Package size={32} /><h3>{search.trim() ? "Товар не найден" : "В этом разделе пока пусто"}</h3><p>{search.trim() ? "Попробуйте другое название или выберите все категории." : "Добавьте товары в меню, чтобы начать продажи."}</p><button type="button" onClick={() => { setSearch(""); setOpenedCategory(null); setSelectedSectionId("all"); }} className="pos-button">Показать всё меню</button></div>
+                <div className="pos-menu-empty"><Package size={32} /><h3>{search.trim() ? "Товар не найден" : "В этой категории пока нет товаров"}</h3><p>{search.trim() ? "Попробуйте другое название или вернитесь к категориям." : "Добавьте товары в меню, чтобы начать продажи."}</p><button type="button" onClick={() => { setSearch(""); setOpenedCategory(null); }} className="pos-button">К категориям</button></div>
               )}
               {extraProducts.length > 0 && <section className="pos-extras" aria-label="Дополнения к заказу"><h3>Добавить к заказу</h3><div>{extraProducts.map((product) => <button type="button" key={product.id} onClick={() => addToCart(product)}><Plus size={14} /><span>{prettyName(product.name)}</span><strong>{formatMoney(product.price)} ₽</strong></button>)}</div></section>}
             </div>

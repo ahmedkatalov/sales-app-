@@ -33,7 +33,7 @@ func main() {
 	}
 
 	createTables()
-	applyAISettingsFromDB() // настройки ИИ из БД перекрывают переменные окружения
+	applyAISettingsFromDB() // атомарная конфигурация ИИ из БД с fallback на окружение
 	initEmailJS()
 
 	r := gin.Default()
@@ -109,6 +109,7 @@ func main() {
 	auth.GET("/settings/ai", getAISettings)
 	auth.PUT("/settings/ai", setAISettings)
 	auth.POST("/settings/ai/test", testAISettings)
+	auth.POST("/settings/ai/models", getAIModels)
 
 	// BI-аналитика по продавцам (управленческий отчёт)
 	auth.GET("/analytics/employees", getEmployeeAnalytics)

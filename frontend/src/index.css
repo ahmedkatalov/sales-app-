@@ -24,6 +24,8 @@
   --surface: rgba(255, 255, 255, 0.05);
   --surface-2: rgba(255, 255, 255, 0.05);
   --surface-hover: rgba(255, 255, 255, 0.10);
+  /* Fixed panels need an opaque base even when a theme uses translucent cards. */
+  --surface-opaque: linear-gradient(var(--surface), var(--surface)), var(--color-slate-950);
   --shadow-card: 0 24px 60px -28px rgba(0, 0, 0, 0.55);
 
   /* Поля ввода — светлые в обеих темах (высокий контраст) */

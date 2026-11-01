@@ -174,15 +174,13 @@ func parseWarehousePurchaseAI(c *gin.Context) {
 }
 
 func callOpenAIWarehouseParser(req aiWarehouseParseRequest) (aiWarehouseParseResult, error) {
-	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	aiCfg := currentAIConfig()
+	apiKey := aiCfg.APIKey
 	if apiKey == "" {
-		return aiWarehouseParseResult{}, errors.New("OPENAI_API_KEY не настроен. Это должен быть настоящий API-ключ OpenAI, иначе реальная нейронка работать не будет")
+		return aiWarehouseParseResult{}, errors.New("Подключение ИИ не настроено. Укажите ключ провайдера в настройках.")
 	}
 
-	model := strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
-	if model == "" {
-		model = "anthropic/claude-sonnet-4-6"
-	}
+	model := aiCfg.Model
 
 	itemsJSON, _ := json.Marshal(req.Items)
 	schema := `{
@@ -245,14 +243,11 @@ func callOpenAIWarehouseParser(req aiWarehouseParseRequest) (aiWarehouseParseRes
 Текст пользователя:
 %s`, schema, string(itemsJSON), req.Text)
 
-	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("OPENROUTER_BASE_URL")), "/")
+	baseURL := aiCfg.BaseURL
 	// Любой кастомный базовый URL (OpenRouter / odirouter / свой релей) — это
 	// OpenAI-СОВМЕСТИМЫЙ /chat/completions. Эндпоинт /responses оставляем ТОЛЬКО
-	// для прямого api.openai.com (когда базовый URL не задан).
-	useOpenRouter := baseURL != "" || strings.Contains(apiKey, "sk-or-")
-	if baseURL == "" {
-		baseURL = "https://api.openai.com/v1"
-	}
+	// для прямого провайдера OpenAI.
+	useOpenRouter := aiProvider(baseURL) != "openai"
 
 	var endpoint string
 	var body map[string]any
@@ -302,9 +297,9 @@ func callOpenAIWarehouseParser(req aiWarehouseParseRequest) (aiWarehouseParseRes
 		var apiResp openAIResponse
 		_ = json.Unmarshal(data, &apiResp)
 		if apiResp.Error != nil && apiResp.Error.Message != "" {
-			return aiWarehouseParseResult{}, fmt.Errorf("OpenAI error: %s", apiResp.Error.Message)
+			return aiWarehouseParseResult{}, fmt.Errorf("Ошибка провайдера ИИ: %s", apiResp.Error.Message)
 		}
-		return aiWarehouseParseResult{}, fmt.Errorf("OpenAI вернул статус %d", resp.StatusCode)
+		return aiWarehouseParseResult{}, fmt.Errorf("Провайдер ИИ вернул статус %d", resp.StatusCode)
 	}
 
 	var apiResp openAIResponse
@@ -888,13 +883,10 @@ func normalizeAIExpenseResult(result aiExpenseParseResult, text string) aiExpens
 }
 
 func callOpenAIExpenseParser(text string) (aiExpenseParseResult, error) {
-	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	aiCfg := currentAIConfig()
+	apiKey := aiCfg.APIKey
 	if apiKey == "" {
-		return aiExpenseParseResult{}, errors.New("OPENAI_API_KEY не настроен")
-	}
-	model := strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
-	if model == "" {
-		model = "anthropic/claude-sonnet-4-6"
+		return aiExpenseParseResult{}, errors.New("Подключение ИИ не настроено. Укажите ключ провайдера в настройках.")
 	}
 	prompt := fmt.Sprintf(`Ты AI-бухгалтер для кафе/магазина. Разбери ОДИН расход на русском и верни строго JSON без markdown.
 
@@ -912,19 +904,17 @@ func callOpenAIExpenseParser(text string) (aiExpenseParseResult, error) {
 - Не выдумывай сумму.
 
 Текст: %s`, text)
-	return callAIJSON[aiExpenseParseResult](prompt, model, apiKey, "Sales App Expense AI")
+	return callAIJSON[aiExpenseParseResult](prompt, aiCfg, "Sales App Expense AI")
 }
 
-func callAIJSON[T any](prompt, model, apiKey, title string) (T, error) {
+func callAIJSON[T any](prompt string, aiCfg aiConfig, title string) (T, error) {
+	model, apiKey := aiCfg.Model, aiCfg.APIKey
 	var zero T
-	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("OPENROUTER_BASE_URL")), "/")
+	baseURL := aiCfg.BaseURL
 	// Любой кастомный базовый URL (OpenRouter / odirouter / свой релей) — это
 	// OpenAI-СОВМЕСТИМЫЙ /chat/completions. Эндпоинт /responses оставляем ТОЛЬКО
-	// для прямого api.openai.com (когда базовый URL не задан).
-	useOpenRouter := baseURL != "" || strings.Contains(apiKey, "sk-or-")
-	if baseURL == "" {
-		baseURL = "https://api.openai.com/v1"
-	}
+	// для прямого провайдера OpenAI.
+	useOpenRouter := aiProvider(baseURL) != "openai"
 	var endpoint string
 	var body map[string]any
 	// Небольшой лимит вывода: ответы этих эндпоинтов — компактный JSON.
@@ -961,9 +951,9 @@ func callAIJSON[T any](prompt, model, apiKey, title string) (T, error) {
 		var apiResp openAIResponse
 		_ = json.Unmarshal(data, &apiResp)
 		if apiResp.Error != nil && apiResp.Error.Message != "" {
-			return zero, fmt.Errorf("OpenAI error: %s", apiResp.Error.Message)
+			return zero, fmt.Errorf("Ошибка провайдера ИИ: %s", apiResp.Error.Message)
 		}
-		return zero, fmt.Errorf("OpenAI вернул статус %d", resp.StatusCode)
+		return zero, fmt.Errorf("Провайдер ИИ вернул статус %d", resp.StatusCode)
 	}
 	var apiResp openAIResponse
 	if err := json.Unmarshal(data, &apiResp); err != nil {
@@ -1334,14 +1324,12 @@ func queryCards(accID int) []map[string]any {
 }
 
 func callSmartAssistant(question string, ctx map[string]any, history []aiWarehouseAskMessage, memory map[string]any) (string, error) {
-	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	aiCfg := currentAIConfig()
+	apiKey := aiCfg.APIKey
 	if apiKey == "" {
-		return "", errors.New("OPENAI_API_KEY не настроен")
+		return "", errors.New("Подключение ИИ не настроено. Укажите ключ провайдера в настройках.")
 	}
-	model := strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
-	if model == "" {
-		model = "anthropic/claude-sonnet-4-6"
-	}
+	model := aiCfg.Model
 
 	systemPrompt := `Ты — свободный умный AI-оператор бизнеса (кафе/магазин). Отвечаешь по-русски живо и по делу, как опытный управляющий.
 Ты не ограничен только складом: анализируй весь доступный контекст приложения и сам выбирай, что важно для ответа.
@@ -1395,10 +1383,7 @@ func callSmartAssistant(question string, ctx map[string]any, history []aiWarehou
 
 	userPrompt := "ДАННЫЕ БИЗНЕСА:\n" + string(ctxJSON) + "\n\nКОНТЕКСТ СЕССИИ:\n" + string(memJSON) + "\n\nВОПРОС: " + question
 
-	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("OPENROUTER_BASE_URL")), "/")
-	if baseURL == "" {
-		baseURL = "https://openrouter.ai/api/v1"
-	}
+	baseURL := aiCfg.BaseURL
 
 	allMessages := []map[string]any{{"role": "system", "content": systemPrompt}}
 	for _, h := range hist {
@@ -1522,13 +1507,10 @@ func parseMenuProductAI(c *gin.Context) {
 }
 
 func callOpenAIMenuParser(req aiMenuParseRequest) (aiMenuParseResult, error) {
-	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	aiCfg := currentAIConfig()
+	apiKey := aiCfg.APIKey
 	if apiKey == "" {
-		return aiMenuParseResult{}, errors.New("OPENAI_API_KEY не настроен")
-	}
-	model := strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
-	if model == "" {
-		model = "anthropic/claude-sonnet-4-6"
+		return aiMenuParseResult{}, errors.New("Подключение ИИ не настроено. Укажите ключ провайдера в настройках.")
 	}
 	itemsJSON, _ := json.Marshal(req.Items)
 	menuJSON, _ := json.Marshal(req.MenuProducts)
@@ -1561,7 +1543,7 @@ func callOpenAIMenuParser(req aiMenuParseRequest) (aiMenuParseResult, error) {
 
 Текст пользователя:
 %s`, string(itemsJSON), string(menuJSON), req.Text)
-	return callAIJSON[aiMenuParseResult](prompt, model, apiKey, "Sales App Menu AI")
+	return callAIJSON[aiMenuParseResult](prompt, aiCfg, "Sales App Menu AI")
 }
 
 func cleanAIMenuName(name string, original string) string {
@@ -1700,15 +1682,13 @@ func detectIntent(c *gin.Context) {
 		return
 	}
 
-	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	aiCfg := currentAIConfig()
+	apiKey := aiCfg.APIKey
 	if apiKey == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "OPENAI_API_KEY не настроен"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Подключение ИИ не настроено. Укажите ключ провайдера в настройках."})
 		return
 	}
-	model := strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
-	if model == "" {
-		model = "anthropic/claude-sonnet-4-6"
-	}
+	model := aiCfg.Model
 
 	itemsJSON, _ := json.Marshal(req.Items)
 	typesJSON, _ := json.Marshal(req.MenuTypes)
@@ -1760,10 +1740,7 @@ INTENT варианты:
 {"intent":"purchase","items":[{"name":"апельсин","purchaseQuantity":3,"purchaseUnit":"kg","unit":"g","basePerUnit":1000,"price":500,"questions":[]},{"name":"петрушка","purchaseQuantity":100,"purchaseUnit":"g","unit":"g","basePerUnit":1,"price":30,"questions":[]}]}`,
 		string(typesJSON), string(catsJSON), string(itemsJSON), req.HasPending, req.Text)
 
-	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("OPENROUTER_BASE_URL")), "/")
-	if baseURL == "" {
-		baseURL = "https://openrouter.ai/api/v1"
-	}
+	baseURL := aiCfg.BaseURL
 
 	body := map[string]any{
 		"model": model,
@@ -1954,21 +1931,19 @@ func suggestIngredient(c *gin.Context) {
 Верни ТОЛЬКО валидный JSON без markdown:
 {"suggestions":[{"name":"Мороженое Maxibon","warehouseId":12,"hint":"есть на складе"},{"name":"Мороженое пломбир","warehouseId":null,"hint":"альтернатива"}]}`, text, warehouseList)
 
-	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	aiCfg := currentAIConfig()
+	apiKey := aiCfg.APIKey
 	if apiKey == "" {
 		// Без ключа — хотя бы локальные складские совпадения.
 		c.JSON(http.StatusOK, gin.H{"suggestions": local})
 		return
 	}
-	model := strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
-	if model == "" {
-		model = "openai/gpt-4.1-mini"
-	}
+	model := aiCfg.Model
 
 	type respShape struct {
 		Suggestions []ingredientSug `json:"suggestions"`
 	}
-	result, err := callAIJSON[respShape](prompt, model, apiKey, "Ingredient Suggest")
+	result, err := callAIJSON[respShape](prompt, aiCfg, "Ingredient Suggest")
 	if err != nil {
 		fmt.Printf("[ingredient/suggest] callAIJSON err (model=%s): %v\n", model, err)
 		// Грейсфул: при таймауте/ошибке ИИ отдаём локальные складские совпадения,
@@ -1982,7 +1957,7 @@ func suggestIngredient(c *gin.Context) {
 
 func suggestMenuProduct(c *gin.Context) {
 	var req struct {
-		Name           string   `json:"name"`
+		Name           string `json:"name"`
 		WarehouseItems []struct {
 			ID   int    `json:"id"`
 			Name string `json:"name"`
@@ -2026,11 +2001,10 @@ func suggestMenuProduct(c *gin.Context) {
 - Если ингредиент есть на складе — укажи его warehouseId из списка выше
 - Количество в граммах (г) или миллилитрах (мл)`, req.Name, warehouseList)
 
-	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
-	model := strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
-	if model == "" { model = "openai/gpt-4.1-mini" }
-	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("OPENROUTER_BASE_URL")), "/")
-	if baseURL == "" { baseURL = "https://api.openai.com/v1" }
+	aiCfg := currentAIConfig()
+	apiKey := aiCfg.APIKey
+	model := aiCfg.Model
+	baseURL := aiCfg.BaseURL
 
 	type Message struct {
 		Role    string `json:"role"`
