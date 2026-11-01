@@ -1,28 +1,12 @@
 import { useEffect, useState, lazy, Suspense } from "react";
-import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import {
-  BarChart3,
-  Bot,
-  Briefcase,
-  Clock3,
-  FileText,
-  Landmark,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Package,
-  Palette,
-  ReceiptText,
-  Settings,
-  ShoppingCart,
-  Users,
-  Wallet,
-} from "lucide-react";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+
 
 import { hydrateAppearance } from "./theme/engine";
-import DesktopNavigation from "./components/DesktopNavigation";
-import ThemeToggle from "./components/ThemeToggle";
-import Modal from "./components/Modal";
+import AppShell from "./components/AppShell";
+import { OWNER_LINKS as ownerLinks, WORKER_LINKS as workerLinks, RESTRICTED_LINKS as allRestrictedLinks, navigationDebtCount } from "./utils/navigation";
+import LoginPage from "./pages/LoginPage";
+import NavigationDialog from "./components/NavigationDialog";
 import InstallPrompt from "./components/InstallPrompt";
 import WorkspaceSelectPage from "./pages/WorkspaceSelectPage";
 
@@ -57,265 +41,7 @@ import {
 } from "./api";
 import { setDayStartHour } from "./utils/format";
 
-const ownerLinks = [
-  ["/home", "Сводка", LayoutDashboard],
-  ["/work", "Товары", Briefcase],
-  ["/pos", "Касса", ShoppingCart],
-  ["/pending-payments", "К оплате", Clock3, "pending"],
-  ["/debts", "Долги", FileText, "debt"],
-  ["/expenses", "Расходы", Wallet],
-  ["/ai-warehouse", "Помощник", Bot],
-  ["/warehouse", "Склад", Package],
-  ["/sales-analytics", "Продажи", ReceiptText],
-  ["/team", "Сотрудники", Users],
-  ["/analytics", "Аналитика", BarChart3],
-  ["/finance", "Отчёт", Landmark],
-  ["/appearance", "Оформление", Palette],
-  ["/profile", "Настройки", Settings],
-];
-
 const adminLinks = ownerLinks;
-
-const workerLinks = [
-  ["/pos", "Касса", ShoppingCart],
-  ["/pending-payments", "К оплате", Clock3, "pending"],
-  ["/debts", "Долги", FileText, "debt"],
-  ["/expenses", "Расходы", Wallet],
-];
-
-// Запоминаем «код уже отправлен», чтобы уход в почту за кодом и возврат в браузер
-// (мобильный часто перезагружает страницу) НЕ сбрасывал форму. Пароль НЕ храним —
-// для подтверждения кода он не нужен (нужны только email + код).
-const OTP_PENDING_KEY = "sales_app_otp_pending";
-const OTP_PENDING_TTL = 10 * 60 * 1000; // 10 минут
-
-function readOtpPending() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(OTP_PENDING_KEY) || "null");
-    if (raw && raw.username && Date.now() - raw.sentAt < OTP_PENDING_TTL) return raw;
-  } catch { /* ignore */ }
-  return null;
-}
-function saveOtpPending(username, maskedEmail) {
-  try {
-    localStorage.setItem(OTP_PENDING_KEY, JSON.stringify({ username, maskedEmail: maskedEmail || "", sentAt: Date.now() }));
-  } catch { /* ignore */ }
-}
-function clearOtpPending() {
-  try { localStorage.removeItem(OTP_PENDING_KEY); } catch { /* ignore */ }
-}
-
-function LoginPage({ onAuth }) {
-  const [initialPending] = useState(readOtpPending); // читаем один раз при монтировании
-  const [step, setStep] = useState(initialPending ? "otp" : "credentials");
-  const [username, setUsername] = useState(initialPending?.username || "");
-  const [password, setPassword] = useState("");
-  const [otpValues, setOtpValues] = useState(Array(6).fill(""));
-  const [maskedEmail, setMaskedEmail] = useState(initialPending?.maskedEmail || "");
-  const [error, setError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(() =>
-    initialPending ? Math.max(0, 60 - Math.floor((Date.now() - initialPending.sentAt) / 1000)) : 0
-  );
-  const otpRefs = [];
-
-  useEffect(() => {
-    if (secondsLeft <= 0) return;
-    const t = setTimeout(() => setSecondsLeft(s => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [secondsLeft]);
-
-  const otpCode = otpValues.join("");
-  const isOtpComplete = otpCode.length === 6 && otpValues.every(Boolean);
-
-  const handleOtpChange = (index, rawValue) => {
-    const value = rawValue.replace(/\D/g, "");
-    if (!value) { const next = [...otpValues]; next[index] = ""; setOtpValues(next); return; }
-    if (value.length > 1) {
-      const digits = value.replace(/\D/g, "").slice(0, 6).split("");
-      const next = Array(6).fill("");
-      digits.forEach((d, i) => { next[i] = d; });
-      setOtpValues(next);
-      otpRefs[Math.min(digits.length, 5)]?.focus();
-      return;
-    }
-    const next = [...otpValues]; next[index] = value; setOtpValues(next);
-    if (index < 5) otpRefs[index + 1]?.focus();
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === "Backspace") {
-      if (otpValues[index]) { const next = [...otpValues]; next[index] = ""; setOtpValues(next); return; }
-      if (index > 0) { otpRefs[index - 1]?.focus(); const next = [...otpValues]; next[index - 1] = ""; setOtpValues(next); }
-      return;
-    }
-    if (e.key === "ArrowLeft" && index > 0) otpRefs[index - 1]?.focus();
-    if (e.key === "ArrowRight" && index < 5) otpRefs[index + 1]?.focus();
-    if (e.key === "Enter" && isOtpComplete && !loading) submitOtp();
-  };
-
-  const submitCredentials = async (event) => {
-    event?.preventDefault?.();
-    if (loading) return;
-    const cleanUsername = (username || "").trim();
-    const cleanPassword = (password || "").trim();
-    setError("");
-    const errors = {};
-    if (!cleanUsername) errors.username = "Введите логин";
-    if (!cleanPassword) errors.password = "Введите пароль";
-    if (Object.keys(errors).length) { setFieldErrors(errors); return; }
-    setFieldErrors({});
-    setLoading(true);
-    try {
-      const res = await post("/auth/login-otp/request", { username: cleanUsername, password: cleanPassword });
-      setMaskedEmail(res.maskedEmail || "");
-      setOtpValues(Array(6).fill(""));
-      setStep("otp");
-      setSecondsLeft(60);
-      saveOtpPending(cleanUsername, res.maskedEmail); // помним, что код отправлен (переживёт перезагрузку)
-      setTimeout(() => otpRefs[0]?.focus(), 100);
-    } catch (e) {
-      const msg = e?.message || "";
-      if (/неверн|unauthorized|invalid|not found|не найден|401/i.test(msg)) { setError("Неверный логин или пароль"); setFieldErrors({ username: true, password: true }); }
-      else if (/email/i.test(msg)) setError(msg);
-      else if (/слишком много|too many|429|rate/i.test(msg)) setError("Слишком много попыток. Подождите минуту и попробуйте снова.");
-      else if (/failed to fetch|networkerror|load failed|connect|ERR_CONNECTION|timeout|localhost:3000|сет|network/i.test(msg)) setError("Не удаётся подключиться к серверу. Проверьте интернет и попробуйте снова.");
-      else if (/50\d|server|внутренн/i.test(msg)) setError("Ошибка на сервере. Попробуйте чуть позже.");
-      else setError(msg || "Не удалось войти. Попробуйте снова.");
-    } finally { setLoading(false); }
-  };
-
-  const submitOtp = async () => {
-    if (!isOtpComplete || loading) return;
-    setError("");
-    setLoading(true);
-    try {
-      const user = await post("/auth/login-otp/confirm", { username: username.trim(), code: otpCode });
-      if (!user || !user.accountId) throw new Error("Сервер ответил без данных аккаунта");
-      setSession(user);
-      clearOtpPending();
-      onAuth(user);
-    } catch (e) {
-      const msg = e?.message || "";
-      if (/истёк|истек|expired/i.test(msg)) { setError("Код истёк. Запросите новый."); setOtpValues(Array(6).fill("")); setTimeout(() => otpRefs[0]?.focus(), 50); }
-      else if (/попыт|attempts/i.test(msg)) { setError(msg); setOtpValues(Array(6).fill("")); setTimeout(() => otpRefs[0]?.focus(), 50); }
-      else if (/неверн|invalid|wrong|не найден/i.test(msg)) { setError(msg || "Неверный код. Проверьте и введите снова."); setOtpValues(Array(6).fill("")); setTimeout(() => otpRefs[0]?.focus(), 50); }
-      else if (/failed to fetch|networkerror|load failed|connect|timeout|network/i.test(msg)) setError("Не удаётся подключиться к серверу. Проверьте интернет.");
-      else setError(msg || "Не удалось подтвердить код. Попробуйте снова.");
-    } finally { setLoading(false); }
-  };
-
-  const resendOtp = async () => {
-    if (secondsLeft > 0 || loading) return;
-    const cleanUsername = (username || "").trim();
-    const cleanPassword = (password || "").trim();
-    // После перезагрузки пароль не хранится — просим ввести данные заново
-    if (!cleanPassword) {
-      setStep("credentials");
-      setError("Введите пароль ещё раз, чтобы отправить новый код.");
-      return;
-    }
-    setError("");
-    setLoading(true);
-    try {
-      const res = await post("/auth/login-otp/request", { username: cleanUsername, password: cleanPassword });
-      setMaskedEmail(res.maskedEmail || maskedEmail);
-      setOtpValues(Array(6).fill(""));
-      setSecondsLeft(60);
-      saveOtpPending(cleanUsername, res.maskedEmail || maskedEmail); // обновляем метку времени
-      setTimeout(() => otpRefs[0]?.focus(), 100);
-    } catch (e) { setError(e?.message || "Ошибка при повторной отправке"); }
-    finally { setLoading(false); }
-  };
-
-  const fieldClass = (key) =>
-    `w-full rounded-2xl border-2 px-4 py-3.5 text-sm font-bold outline-none transition-all duration-200 bg-slate-950/60 text-white placeholder:text-slate-500 ${
-      fieldErrors[key] ? "border-red-500/70 focus:border-red-400" : "border-white/10 focus:border-blue-500/70 hover:border-white/20"
-    }`;
-
-  return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0a0e17] p-4">
-      <div className="absolute right-4 top-4 z-20">
-        <ThemeToggle />
-      </div>
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="pointer-events-none absolute -left-40 -top-40 h-[460px] w-[460px] rounded-full bg-blue-600/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-40 -right-40 h-[460px] w-[460px] rounded-full bg-violet-600/10 blur-3xl" />
-      </div>
-      <div className="relative z-10 w-full max-w-[400px]">
-        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7 shadow-2xl shadow-black/40 backdrop-blur-xl">
-          <div className="mb-8">
-            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-xl shadow-blue-900/40">
-              <ShoppingCart size={26} strokeWidth={2.6} className="text-white" />
-            </div>
-            <p className="mb-1 text-xs font-black uppercase tracking-widest text-blue-400">Okvion Sales</p>
-            {step === "credentials" ? (
-              <><h1 className="text-3xl font-black tracking-tight text-white">Добро пожаловать</h1><p className="mt-2 text-sm font-medium text-slate-400">Войдите, чтобы продолжить работу</p></>
-            ) : (
-              <><h1 className="text-2xl font-black tracking-tight text-white">Подтверждение входа</h1><p className="mt-2 text-sm font-medium text-slate-400">Код отправлен на <span className="font-bold text-blue-400">{maskedEmail || "ваш email"}</span></p></>
-            )}
-          </div>
-
-          {error && (
-            <div className="mb-5 flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3.5">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500 text-[11px] font-black text-white">!</span>
-              <p className="text-sm font-bold leading-5 text-red-300">{error}</p>
-            </div>
-          )}
-
-          {step === "credentials" && (
-            <div className="space-y-3" onKeyDown={(e) => e.key === "Enter" && !loading && submitCredentials(e)}>
-              <div>
-                <input value={username} onChange={(e) => { setUsername(e.target.value); setFieldErrors(p => ({ ...p, username: false })); setError(""); }}
-                  placeholder="Логин или email" className={fieldClass("username")} autoComplete="username" autoFocus />
-                {fieldErrors.username && typeof fieldErrors.username === "string" && <p className="mt-1.5 px-1 text-xs font-bold text-red-400">{fieldErrors.username}</p>}
-              </div>
-              <div className="relative">
-                <input value={password} onChange={(e) => { setPassword(e.target.value); setFieldErrors(p => ({ ...p, password: false })); setError(""); }}
-                  placeholder="Пароль" type={showPassword ? "text" : "password"} className={fieldClass("password") + " pr-12"}
-                  autoComplete="current-password" onKeyDown={(e) => e.key === "Enter" && submitCredentials(e)} />
-                <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white" tabIndex={-1}>
-                  {showPassword ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
-                </button>
-              </div>
-              <button type="button" onClick={submitCredentials} disabled={loading}
-                className="relative mt-1 w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-900/30 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
-                {loading ? <span className="flex items-center justify-center gap-2"><svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Отправляю код...</span> : "Получить код"}
-              </button>
-            </div>
-          )}
-
-          {step === "otp" && (
-            <div className="space-y-4">
-              <div className="flex justify-between gap-2">
-                {otpValues.map((value, index) => (
-                  <input key={index} ref={el => { otpRefs[index] = el; }} value={value}
-                    onChange={e => handleOtpChange(index, e.target.value)} onKeyDown={e => handleOtpKeyDown(index, e)}
-                    onPaste={e => { e.preventDefault(); handleOtpChange(0, e.clipboardData.getData("text")); }}
-                    inputMode="numeric" maxLength={1}
-                    className="h-14 w-12 rounded-2xl border-2 border-white/10 bg-slate-950/60 text-center text-2xl font-black text-white outline-none transition focus:border-blue-500/70 focus:ring-2 focus:ring-blue-500/20" />
-                ))}
-              </div>
-              <button type="button" onClick={submitOtp} disabled={!isOtpComplete || loading}
-                className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-900/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
-                {loading ? <span className="flex items-center justify-center gap-2"><svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Проверяю...</span> : "Подтвердить вход"}
-              </button>
-              <div className="flex items-center justify-between gap-3">
-                <button type="button" onClick={() => { setStep("credentials"); setError(""); setOtpValues(Array(6).fill("")); clearOtpPending(); }} className="text-sm font-bold text-slate-400 hover:text-white transition">← Изменить данные</button>
-                <button type="button" onClick={resendOtp} disabled={secondsLeft > 0 || loading} className="text-sm font-bold text-blue-400 hover:text-blue-300 disabled:cursor-not-allowed disabled:text-slate-500 transition">
-                  {secondsLeft > 0 ? `Повторно через ${secondsLeft} сек` : "Отправить снова"}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-        <p className="mt-5 text-center text-xs font-medium text-slate-600">Okvion Sales · управление бизнесом</p>
-      </div>
-    </div>
-  );
-}
 
 // ── Уведомления (тосты) ──────────────────────────────────────────────
 // Тип определяется по тексту, чтобы старые вызовы alert() автоматически
@@ -349,16 +75,18 @@ export default function App() {
   const [workspaceSelected, setWorkspaceSelected] = useState(!!getCurrentWorkspace());
   const [profile, setProfile] = useState(getCurrentProfile());
   const [employees, setEmployees] = useState([]);
+  const [employeeState, setEmployeeState] = useState({ loading: false, error: "" });
+  const [employeeRevision, setEmployeeRevision] = useState(0);
   // Запрос пароля при выборе продавца за кассой (на общем устройстве)
   const [pwPrompt, setPwPrompt] = useState(null); // выбранный employee
   const [pwInput, setPwInput] = useState("");
   const [pwError, setPwError] = useState("");
-  const [pendingCount, setPendingCount] = useState(0);
-  const [debtCount, setDebtCount] = useState(0);
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pendingCount, setPendingCount] = useState(null);
+  const [debtCount, setDebtCount] = useState(null);
   const [userPages, setUserPages] = useState(null); // null = not loaded yet
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [toasts, setToasts] = useState([]);
-  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [desktopNavMode, setDesktopNavMode] = useState(() => localStorage.getItem("sales_app_desktop_nav_mode") || "sidebar");
   const location = useLocation();
@@ -368,8 +96,6 @@ export default function App() {
   // Полноэкранные («иммерсивные») экраны без общей навигации — как чат с ИИ.
   // Касса работает в режиме киоска: своя шапка с выходом, вся навигация скрыта.
   const isImmersive = isAIWarehouseRoute || isPosRoute;
-  const isProfileRoute = location.pathname === "/profile";
-  const useHeaderNav = desktopNavMode === "header";
 
   const toggleDesktopNavMode = () => {
     setDesktopNavMode((current) => {
@@ -432,9 +158,20 @@ export default function App() {
   const isWorker = session?.role === "worker" || session?.role === "workspace";
 
   useEffect(() => {
-    if (!session || !isWorker) return;
-    get("/employees").then((list) => setEmployees(list || [])).catch(() => setEmployees([]));
-  }, [session, workspace, isWorker]);
+    if (!session || !isWorker) { setEmployees([]); setEmployeeState({ loading: false, error: "" }); return; }
+    let alive = true;
+    const dataAccountId = workspace?.dataAccountId || session.dataAccountId || session.accountId;
+    setEmployees([]); setEmployeeState({ loading: true, error: "" });
+    get("/employees", { dataAccountId }).then(list => {
+      if (!Array.isArray(list)) throw new Error("Получен неполный список продавцов.");
+      if (alive) { setEmployees(list); setEmployeeState({ loading: false, error: "" }); }
+    }).catch(e => { if (alive) setEmployeeState({ loading: false, error: e.message || "Не удалось загрузить продавцов." }); });
+    return () => { alive = false; };
+  }, [session, workspace, isWorker, employeeRevision]);
+
+  useEffect(() => {
+    setPwPrompt(null); setPwInput(""); setPwError("");
+  }, [session?.accountId, session?.token, workspace?.dataAccountId]);
 
   // Общее оформление аккаунта: владелец задаёт — применяется у всех.
   // Тянем с сервера при входе; применяем только если владелец что-то задал
@@ -459,26 +196,36 @@ export default function App() {
   useEffect(() => {
     if (!session) return;
     if (isOwner) { setUserPages(["*"]); return; }
-    // Для admin и worker грузим права с сервера
-    get("/user-permissions/my")
-      .then((res) => {
-        if (res?.full) { setUserPages(["*"]); return; }
-        const pages = Array.isArray(res?.pages) ? res.pages
-          : (typeof res?.pages === "string" ? JSON.parse(res.pages) : null);
-        if (pages) { setUserPages(pages); }
-        else { setUserPages(isAdmin ? ["*"] : ["/pos", "/pending-payments"]); }
-      })
-      .catch(() => setUserPages(isAdmin ? ["*"] : ["/pos", "/pending-payments"]));
+    let alive = true;
+    const dataAccountId = workspace?.dataAccountId || session.dataAccountId || session.accountId;
+    setUserPages(null);
+    const fallback = isAdmin ? ["*"] : ["/pos", "/pending-payments"];
+    get("/user-permissions/my", { dataAccountId }).then(res => {
+      if (!alive) return;
+      if (res?.full) { setUserPages(["*"]); return; }
+      const pages = typeof res?.pages === "string" ? JSON.parse(res.pages) : res?.pages;
+      setUserPages(Array.isArray(pages) && pages.every(p => typeof p === "string") ? pages : fallback);
+    }).catch(() => { if (alive) setUserPages(fallback); });
+    return () => { alive = false; };
   }, [session, workspace, isOwner, isAdmin]);
 
   useEffect(() => {
     if (!session) return;
-    const loadPendingCount = () => get("/pending-sales").then((list) => setPendingCount(Array.isArray(list) ? list.length : 0)).catch(() => setPendingCount(0));
-    const loadDebtCount = () => get("/debts").then((list) => { const active = Array.isArray(list) ? list.filter((d) => !d.paid && !d.isPaid && !d.is_paid) : []; setDebtCount(active.length); }).catch(() => setDebtCount(0));
+    let alive = true, pendingSequence = 0, debtSequence = 0;
+    const dataAccountId = workspace?.dataAccountId || session.dataAccountId || session.accountId;
+    setPendingCount(null); setDebtCount(null);
+    const loadPendingCount = () => {
+      const seq = ++pendingSequence;
+      get("/pending-sales", { dataAccountId }).then(list => { if (alive && seq === pendingSequence) setPendingCount(Array.isArray(list) ? list.length : null); }).catch(() => { if (alive && seq === pendingSequence) setPendingCount(null); });
+    };
+    const loadDebtCount = () => {
+      const seq = ++debtSequence;
+      get("/debt-customers", { dataAccountId }).then(list => { const count = navigationDebtCount(list); if (alive && seq === debtSequence) setDebtCount(count); }).catch(() => { if (alive && seq === debtSequence) setDebtCount(null); });
+    };
     loadPendingCount(); loadDebtCount();
-    const interval = setInterval(() => { loadPendingCount(); loadDebtCount(); }, 30000);
+    const interval = setInterval(() => { if (!document.hidden) { loadPendingCount(); loadDebtCount(); } }, 30000);
     window.addEventListener("sales-pending-change", loadPendingCount);
-    return () => { clearInterval(interval); window.removeEventListener("sales-pending-change", loadPendingCount); };
+    return () => { alive = false; clearInterval(interval); window.removeEventListener("sales-pending-change", loadPendingCount); };
   }, [session, workspace]);
 
   useEffect(() => {
@@ -504,7 +251,7 @@ export default function App() {
   }, []);
 
   if (!session) {
-    return <LoginPage onAuth={(u) => { setSessionState(u); setWorkspaceSelected(false); }} />;
+    return <LoginPage onAuth={(u) => { setSession(u); setSessionState(u); setWorkspaceSelected(false); }} />;
   }
 
   const needsWorkspaceSelect = !workspaceSelected && (
@@ -513,7 +260,7 @@ export default function App() {
 
   if (needsWorkspaceSelect) {
     return (
-      <WorkspaceSelectPage session={session} onSelect={(ws) => {
+      <WorkspaceSelectPage session={session} onLogout={() => { clearSession(); setSessionState(null); setWorkspaceState(null); setProfile(null); setWorkspaceSelected(false); }} onSelect={(ws) => {
         setWorkspaceState(ws);
         setWorkspaceSelected(true);
         setSessionState(prev => ({ ...prev, dataAccountId: ws.dataAccountId, workspaceId: ws.id, workspaceName: ws.name }));
@@ -521,31 +268,14 @@ export default function App() {
     );
   }
 
-  const allRestrictedLinks = [
-    ["/pos", "Касса", ShoppingCart],
-    ["/pending-payments", "К оплате", Clock3, "pending"],
-    ["/debts", "Долги", FileText, "debt"],
-    ["/expenses", "Расходы", Wallet],
-    ["/work", "Товары", Briefcase],
-    ["/ai-warehouse", "Помощник", Bot],
-    ["/warehouse", "Склад", Package],
-    ["/sales-analytics", "Продажи", ReceiptText],
-    ["/analytics", "Аналитика", BarChart3],
-  ];
-
   const filteredLinks = (isWorker || isAdmin) && userPages && !userPages.includes("*")
     ? allRestrictedLinks.filter(([to]) => userPages.includes(to))
     : null;
 
-  const links = isOwner ? ownerLinks
+  const links = !isOwner && userPages === null ? [] : isOwner ? ownerLinks
     : filteredLinks ? filteredLinks
     : isAdmin ? adminLinks
     : workerLinks;
-  const mobileMainPaths = isWorker ? ["/pos", "/pending-payments", "/expenses"] : ["/home", "/pos", "/pending-payments"];
-  const mobileMainLinks = links.filter(([to]) => mobileMainPaths.includes(to));
-  const mobileMoreLinks = links.filter(([to]) => !mobileMainPaths.includes(to));
-  const moreActive = mobileMoreLinks.some(([to]) => to === location.pathname);
-
   const currentWorkspace = workspace || session.workspace || {
     id: session.defaultWorkspaceId || session.workspaceId,
     accountId: session.ownerAccountId || session.accountId,
@@ -563,8 +293,10 @@ export default function App() {
     clearSession(); setSessionState(null); setWorkspaceState(null); setProfile(null);
   };
 
-  const workerName = profile?.name || (isOwner ? session.ownerName || session.username : "выберите сотрудника");
-  const forbidden = <Navigate to={isWorker ? "/pos" : "/work"} replace />;
+  const allowedFallback = links.find(([path]) => path !== location.pathname)?.[0] || (isWorker ? "/pos" : "/home");
+  const forbidden = !isOwner && userPages === null
+    ? <div className="sh-access-loading" role="status"><span />Загружаю доступы…</div>
+    : <Navigate to={allowedFallback} replace />;
 
   // Проверка доступа к странице (для worker и admin если ограничен)
   const canAccess = (path) => {
@@ -587,171 +319,27 @@ export default function App() {
   };
 
   const confirmProfilePw = async () => {
-    if (!pwPrompt) return;
-    let res;
+    if (!pwPrompt || pwBusy) return;
+    setPwBusy(true); setPwError("");
+    const selected = pwPrompt, dataAccountId = currentWorkspace?.dataAccountId || session.dataAccountId, token = session.token;
     try {
-      res = await post(`/employees/${pwPrompt.id}/verify`, { password: pwInput.trim() });
-    } catch {
-      return setPwError("Не удалось проверить пароль");
-    }
-    if (!res?.ok) return setPwError("Неверный пароль");
-    setCurrentProfile(pwPrompt);
-    setProfile(pwPrompt);
-    setPwPrompt(null);
-    setPwInput("");
-    setPwError("");
+      const res = await post(`/employees/${selected.id}/verify`, { password: pwInput.trim() }, { dataAccountId });
+      if (String(getCurrentWorkspace()?.dataAccountId) !== String(dataAccountId) || getSession()?.token !== token) return;
+      if (!res?.ok) { setPwError("Неверный пароль"); return; }
+      setCurrentProfile(selected); setProfile(selected); setPwPrompt(null); setPwInput("");
+    } catch (e) { setPwError(e.message || "Не удалось проверить пароль"); }
+    finally { setPwBusy(false); }
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0a0e17] text-slate-100">
-      {!useHeaderNav && !isImmersive && (
-        <aside className={`hidden h-screen shrink-0 flex-col border-r border-white/10 bg-[#0c111d] text-white transition-all duration-300 lg:flex ${sidebarOpen ? "w-[260px]" : "w-[76px]"}`}>
-          {/* Бренд / точка + сворачивание */}
-          {sidebarOpen ? (
-            <div className="flex items-center gap-2.5 border-b border-white/10 px-3 py-3.5">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-lg shadow-blue-900/30"><ShoppingCart size={20} strokeWidth={2.6} /></span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-black leading-tight text-white">{currentWorkspace?.name || "Okvion Sales"}</p>
-                <p className="truncate text-[11px] font-bold text-slate-400">{isOwner ? "Главный аккаунт" : isAdmin ? "Админ точки" : "Рабочий аккаунт"}</p>
-              </div>
-              <button type="button" onClick={() => setSidebarOpen(false)} aria-label="Свернуть меню"
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-white/5 hover:text-white"><Menu size={18} strokeWidth={2.4} /></button>
-            </div>
-          ) : (
-            <button type="button" onClick={() => setSidebarOpen(true)} aria-label="Развернуть меню"
-              className="flex justify-center border-b border-white/10 py-3.5 transition hover:bg-white/[0.03]">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-lg shadow-blue-900/30"><ShoppingCart size={20} strokeWidth={2.6} /></span>
-            </button>
-          )}
-
-          {/* Профиль смены (кассир) */}
-          {sidebarOpen && isWorker && (
-            <div className="border-b border-white/10 px-3 py-3">
-              <label className="block">
-                <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-400">Профиль смены</span>
-                <select value={profile?.id || ""} onChange={(e) => handleProfileChange(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-black text-blue-300 outline-none transition [color-scheme:dark] focus:border-blue-400/60">
-                  <option value="">Выберите сотрудника</option>
-                  {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-                </select>
-              </label>
-            </div>
-          )}
-
-          {/* Меню */}
-          <nav className="flex-1 space-y-1 overflow-y-auto px-2.5 py-3" aria-label="Главное меню">
-            {sidebarOpen && <p className="px-2 pb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500">Меню</p>}
-            {links.map(([to, label, Icon, badge]) => {
-              const hasBadge = (badge === "pending" && pendingCount > 0) || (badge === "debt" && debtCount > 0);
-              const badgeN = badge === "debt" ? debtCount : pendingCount;
-              return (
-                <NavLink key={to} to={to} title={!sidebarOpen ? label : undefined}
-                  className={({ isActive }) => `group relative flex items-center rounded-xl font-black transition focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${sidebarOpen ? "gap-3 px-2.5 py-2.5" : "justify-center px-2 py-2.5"} ${isActive ? "bg-gradient-to-r from-blue-600/20 to-violet-600/15 text-white" : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-100"}`}>
-                  {({ isActive }) => (
-                    <>
-                      {isActive && sidebarOpen && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-full bg-gradient-to-b from-blue-400 to-violet-400" />}
-                      <span className={`relative grid h-9 w-9 shrink-0 place-items-center rounded-lg transition ${isActive ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-900/40" : "bg-white/5 text-slate-400 group-hover:text-slate-200"}`}>
-                        <Icon size={18} strokeWidth={2.4} />
-                        {!sidebarOpen && hasBadge && <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-[#0c111d] ${badge === "debt" ? "bg-red-500" : "bg-blue-500"}`} />}
-                      </span>
-                      {sidebarOpen && <span className="min-w-0 flex-1 truncate text-sm">{label}</span>}
-                      {sidebarOpen && hasBadge && <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-black text-white ${badge === "debt" ? "bg-red-600" : "bg-blue-500"}`}>{badgeN > 99 ? "99+" : badgeN}</span>}
-                    </>
-                  )}
-                </NavLink>
-              );
-            })}
-          </nav>
-
-          {/* Низ: тема + выход */}
-          <div className="border-t border-white/10 p-2.5">
-            {sidebarOpen ? (
-              <div className="space-y-2">
-                <ThemeToggle variant="full" className="w-full" />
-                <button onClick={logout} className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2.5 text-sm font-black text-red-300 transition hover:bg-red-500/20">
-                  <LogOut size={16} strokeWidth={2.4} /> Выйти
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2">
-                <ThemeToggle variant="icon" />
-                <button onClick={logout} title="Выйти" aria-label="Выйти" className="grid h-10 w-10 place-items-center rounded-xl border border-red-500/25 bg-red-500/10 text-red-300 transition hover:bg-red-500/20">
-                  <LogOut size={18} strokeWidth={2.4} />
-                </button>
-              </div>
-            )}
-          </div>
-        </aside>
-      )}
-
-      <main className={`flex-1 overflow-x-hidden ${isImmersive ? "flex flex-col overflow-hidden p-0" : "p-4 pb-nav sm:p-5 lg:pb-5 min-h-screen overflow-y-auto"}`}
-        style={isImmersive ? { height: "100dvh" } : {}}>
-
-        {useHeaderNav && !isImmersive && (
-          <DesktopNavigation
-            links={links} session={session} isOwner={isOwner} isAdmin={isAdmin} isWorker={isWorker}
-            workerName={workerName} pendingCount={pendingCount} debtCount={debtCount}
-            workspaceName={currentWorkspace?.name || ""}
-            isProfileRoute={isProfileRoute} onToggleMode={toggleDesktopNavMode} onLogout={logout}
-          />
-        )}
-
-        {!useHeaderNav && isProfileRoute && (
-          <div className="mb-5 hidden justify-end lg:flex">
-            <button type="button" onClick={toggleDesktopNavMode}
-              className="rounded-2xl border border-blue-400/20 bg-blue-500/10 px-5 py-3 font-black text-blue-200 shadow-xl transition hover:bg-blue-500/20">
-              Перенести меню наверх
-            </button>
-          </div>
-        )}
-
-        {/* Мобильная шапка — компактная: аватар + название слева, ряд одинаковых кнопок справа */}
-        <div className={`mb-3 flex items-center justify-between gap-2.5 rounded-2xl border border-white/8 bg-slate-950/85 px-3 py-1.5 text-white backdrop-blur-md ${useHeaderNav ? "md:hidden" : "lg:hidden"}${isImmersive ? " hidden" : ""}`}>
-          <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-blue-700 text-sm font-black text-white shadow-lg shadow-blue-600/25">
-              {(isWorker ? workerName : (currentWorkspace?.name || "Б"))?.[0]?.toUpperCase() || "Б"}
-            </div>
-            {isWorker ? (
-              <select value={profile?.id || ""} onChange={(e) => handleProfileChange(e.target.value)}
-                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-transparent py-1 pl-1.5 pr-6 text-sm font-black text-blue-300 outline-none">
-                <option value="">Сотрудник...</option>
-                {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-              </select>
-            ) : (
-              <div className="min-w-0">
-                <span className="block truncate text-sm font-black leading-tight text-white">{currentWorkspace?.name || "Мой бизнес"}</span>
-                <span className="flex items-center gap-1 truncate text-[11px] font-bold text-slate-400">
-                  <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
-                  {isOwner ? "Главный аккаунт" : isAdmin ? "Админ точки" : "Аккаунт"}
-                </span>
-              </div>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <ThemeToggle compact />
-            {pendingCount > 0 && (
-              <NavLink to="/pending-payments" aria-label="К оплате"
-                className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-blue-500/25 bg-blue-500/12 text-blue-400 transition active:scale-95">
-                <Clock3 size={16} strokeWidth={2.6} />
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border-[1.5px] border-slate-950 bg-blue-500 px-0.5 text-[9px] font-black leading-none text-white">{pendingCount > 9 ? "9+" : pendingCount}</span>
-              </NavLink>
-            )}
-            {debtCount > 0 && (
-              <NavLink to="/debts" aria-label="Долги"
-                className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/25 bg-red-500/12 text-red-400 transition active:scale-95">
-                <FileText size={16} strokeWidth={2.6} />
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full border-[1.5px] border-slate-950 bg-red-500 px-0.5 text-[9px] font-black leading-none text-white">{debtCount > 9 ? "9+" : debtCount}</span>
-              </NavLink>
-            )}
-            {!isWorker && (
-              <NavLink to="/profile" aria-label="Настройки"
-                className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-slate-400 transition active:scale-95 active:bg-white/15 hover:text-white">
-                <Settings size={16} strokeWidth={2.5} />
-              </NavLink>
-            )}
-          </div>
-        </div>
-
+    <>
+      <AppShell links={links} session={session} workspace={currentWorkspace} profile={profile}
+        employees={employees} employeeLoading={employeeState.loading} employeeError={employeeState.error}
+        onRetryEmployees={() => setEmployeeRevision(v => v + 1)} onProfileChange={handleProfileChange} onLogout={logout}
+        mode={desktopNavMode} onToggleMode={toggleDesktopNavMode} sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen(v => !v)} immersive={isImmersive}
+        keyboardVisible={keyboardVisible} pendingCount={pendingCount} debtCount={debtCount}
+        accessLoading={!isOwner && !userPages}>
         <Suspense fallback={
           <div className="grid min-h-[60vh] place-items-center">
             <div className="flex items-center gap-3 text-slate-400">
@@ -782,96 +370,24 @@ export default function App() {
           <Route path="*" element={<Navigate to={isWorker ? "/pos" : "/home"} replace />} />
         </Routes>
         </Suspense>
-      </main>
-
-      {mobileMoreOpen && mobileMoreLinks.length > 0 && (
-        <button type="button" aria-label="Закрыть меню" onClick={() => setMobileMoreOpen(false)}
-          className={`animate-overlay fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm ${useHeaderNav ? "md:hidden" : "lg:hidden"}`} />
-      )}
-
-      {mobileMoreOpen && mobileMoreLinks.length > 0 && (
-        <div className={`animate-sheet fixed inset-x-0 bottom-0 z-50 ${useHeaderNav ? "md:hidden" : "lg:hidden"}`}
-          style={{ paddingBottom: "calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px)" }}>
-          <div className="mx-3 overflow-hidden rounded-[1.7rem] border border-white/12 bg-slate-900/98 text-white shadow-2xl backdrop-blur-xl">
-            <div className="flex justify-center pb-1 pt-3">
-              <div className="h-1 w-10 rounded-full bg-white/20" />
-            </div>
-            <div className="flex items-center justify-between px-4 pb-2 pt-1.5">
-              <p className="text-sm font-black text-white">Разделы</p>
-              <button type="button" onClick={() => setMobileMoreOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/8 text-slate-400 transition active:scale-95 active:bg-white/15">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2 p-3">
-              {mobileMoreLinks.map(([to, label, Icon, badge]) => (
-                <NavLink key={to} to={to} onClick={() => setMobileMoreOpen(false)}
-                  className={({ isActive }) => `relative flex items-center gap-3 rounded-2xl px-3.5 py-3.5 transition active:scale-[0.97] ${isActive ? "bg-blue-500/18 text-blue-300" : "bg-white/6 text-slate-300 hover:bg-white/10 hover:text-white"}`}>
-                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/8">
-                    <Icon size={19} strokeWidth={2.4} />
-                    {badge === "pending" && pendingCount > 0 && <span className="absolute -right-1.5 -top-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-blue-500 px-0.5 text-[9px] font-black leading-none text-white ring-2 ring-slate-900">{pendingCount > 9 ? "9+" : pendingCount}</span>}
-                    {badge === "debt" && debtCount > 0 && <span className="absolute -right-1.5 -top-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-black leading-none text-white ring-2 ring-slate-900">{debtCount > 9 ? "9+" : debtCount}</span>}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-black">{label}</span>
-                </NavLink>
-              ))}
-            </div>
-            <div className="px-3 pb-3">
-              <button type="button" onClick={() => { setMobileMoreOpen(false); logout(); }}
-                className="flex w-full items-center gap-3 rounded-2xl border border-red-500/12 bg-red-500/8 px-4 py-3.5 text-sm font-black text-red-400 transition active:bg-red-500/18 hover:text-red-300">
-                <LogOut size={17} strokeWidth={2.4} />
-                <span>Выйти из системы</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <nav className={`hide-on-modal fixed inset-x-0 bottom-0 z-40 grid grid-flow-col auto-cols-fr rounded-t-2xl border-t border-white/10 bg-slate-950/96 px-1.5 pt-1.5 text-white shadow-[0_-10px_30px_-14px_rgba(2,6,23,0.6)] backdrop-blur-xl ${useHeaderNav ? "md:hidden" : "lg:hidden"} transition-transform duration-300 ease-out ${keyboardVisible || isImmersive ? "translate-y-full pointer-events-none" : "translate-y-0"}`}
-        style={{ paddingBottom: "max(6px, env(safe-area-inset-bottom, 0px))" }}
-        aria-label="Нижняя навигация">
-        {mobileMainLinks.map(([to, label, Icon, badge]) => (
-          <NavLink key={to} to={to} onClick={() => setMobileMoreOpen(false)}
-            className="relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-[1.2rem] px-1 py-2">
-            {({ isActive }) => (
-              <>
-                <span className={`relative flex h-10 w-full items-center justify-center rounded-2xl transition-all duration-200 ${isActive ? "bg-blue-500/16 text-blue-400" : "text-slate-500"}`}>
-                  <Icon size={22} strokeWidth={isActive ? 2.6 : 2} />
-                  {badge === "pending" && pendingCount > 0 && <span className="absolute right-1 top-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-blue-500 px-0.5 text-[9px] font-black leading-none text-white ring-2 ring-slate-950">{pendingCount > 9 ? "9+" : pendingCount}</span>}
-                  {badge === "debt" && debtCount > 0 && <span className="absolute right-1 top-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-black leading-none text-white ring-2 ring-slate-950">{debtCount > 9 ? "9+" : debtCount}</span>}
-                </span>
-                <span className={`w-full truncate text-center text-[10px] font-black leading-none tracking-tight transition-colors ${isActive ? "text-blue-400" : "text-slate-500"}`}>{label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
-        {mobileMoreLinks.length > 0 && (
-          <button type="button" onClick={() => setMobileMoreOpen((open) => !open)}
-            className="relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-[1.2rem] px-1 py-2">
-            <span className={`flex h-10 w-full items-center justify-center rounded-2xl transition-all duration-200 ${mobileMoreOpen || moreActive ? "bg-blue-500/16 text-blue-400" : "text-slate-500"}`}>
-              <Menu size={22} strokeWidth={mobileMoreOpen || moreActive ? 2.6 : 2} />
-            </span>
-            <span className={`w-full truncate text-center text-[10px] font-black leading-none tracking-tight transition-colors ${mobileMoreOpen || moreActive ? "text-blue-400" : "text-slate-500"}`}>Ещё</span>
-          </button>
-        )}
-      </nav>
+      </AppShell>
 
       {pwPrompt && (
-        <Modal title="Пароль продавца" onClose={() => { setPwPrompt(null); setPwInput(""); setPwError(""); }}>
+        <NavigationDialog title="Пароль продавца" busy={pwBusy} onClose={() => { setPwPrompt(null); setPwInput(""); setPwError(""); }}>
           <p className="mb-4 text-sm text-slate-400">
             Введите пароль продавца <b className="text-white">{pwPrompt.name}</b>, чтобы встать за кассу.
           </p>
-          <input value={pwInput} type="password" autoFocus
+          <input value={pwInput} type="password" aria-label="Пароль продавца" disabled={pwBusy}
             onChange={(e) => { setPwInput(e.target.value); setPwError(""); }}
             onKeyDown={(e) => e.key === "Enter" && confirmProfilePw()}
             placeholder="Пароль"
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500" />
-          {pwError && <p className="mt-2 text-sm font-bold text-red-400">{pwError}</p>}
-          <div className="mt-6 flex gap-3">
-            <button type="button" onClick={() => { setPwPrompt(null); setPwInput(""); setPwError(""); }} className="btn-white flex-1">Отмена</button>
-            <button type="button" onClick={confirmProfilePw} className="btn-blue flex-1">Войти</button>
+            className="sh-password-input" />
+          {pwError && <p role="alert" className="sh-profile-error">{pwError}</p>}
+          <div className="sh-dialog-actions">
+            <button type="button" disabled={pwBusy} onClick={() => { setPwPrompt(null); setPwInput(""); setPwError(""); }} className="sh-button">Отмена</button>
+            <button type="button" disabled={pwBusy} onClick={confirmProfilePw} className="sh-button">{pwBusy ? "Проверяю…" : "Выбрать продавца"}</button>
           </div>
-        </Modal>
+        </NavigationDialog>
       )}
 
       {/* Тосты на мобиле — над навигацией */}
@@ -905,6 +421,6 @@ export default function App() {
 
       {/* Плашка «Установить приложение» (Android/десктоп — системная установка, iOS — подсказка) */}
       <InstallPrompt />
-    </div>
+    </>
   );
 }

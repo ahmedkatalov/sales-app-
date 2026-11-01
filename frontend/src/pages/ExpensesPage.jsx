@@ -1,1172 +1,423 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDownWideNarrow, Banknote, CalendarDays, CreditCard, Crown, Flame, Hash, Settings, Trash2, TrendingDown, Paperclip, Camera, User, X } from "lucide-react";
-import { del, get, post, put, fetchBlobUrl } from "../api";
-import { compressImageToDataURL } from "../utils/image";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  AlertTriangle, ArrowDownLeft, ArrowRight, Banknote, CalendarDays, CheckCircle2,
+  ChevronDown, CreditCard, FileText, Loader2, Paperclip, Plus, ReceiptText,
+  RefreshCw, Search, Settings2, SlidersHorizontal, Trash2, User, Wallet, X,
+} from "lucide-react";
+import { del, get, post, put } from "../api";
 import Modal from "../components/Modal";
-import DatePicker from "../components/DatePicker";
-import { TrendSparkline, HeroStat } from "../components/Metrics";
-import { formatMoney, localISO, money, num } from "../utils/format";
+import { ExpenseError, ExpenseForm, ExpensePhotoViewer, OpeningBalancesForm, OwnerEntryForm } from "../components/ExpenseDialogs";
+import { formatMoney, num } from "../utils/format";
+import {
+  BASE_PRODUCT_TYPE, expenseDay, expensePeriod, expenseSource, filterExpenses,
+  HOUSEHOLD_TYPES, OWNER_KINDS, SOURCE_LABELS, summarizeExpenses,
+} from "../utils/expenses";
+import "./ExpensesPage.css";
 
-const today = () => localISO();
-const monthStart = () => {
-  const d = new Date();
-  return localISO(new Date(d.getFullYear(), d.getMonth(), 1));
+const SOURCE_ICONS = { cash: Banknote, card: CreditCard, owner: User };
+const categoryLabel = (category) => category === "products" ? "Продукты" : category === "household" || !category ? "Бытовые" : "Другое";
+const dateLabel = (value, short = false) => {
+  if (!value) return "Дата не указана";
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value);
+  return Number.isFinite(date.getTime()) ? date.toLocaleDateString("ru-RU", { day: "numeric", month: short ? "short" : "long", year: "numeric" }) : "Дата не указана";
 };
-const monthEnd = () => {
-  const d = new Date();
-  return localISO(new Date(d.getFullYear(), d.getMonth() + 1, 0));
-};
-const formatDateRu = (dateStr) => {
-  if (!dateStr) return "";
-  const [y, m, d] = dateStr.split("-");
-  return `${d}.${m}.${y}`;
+const periodLabel = ({ from, to }) => from && to ? `${dateLabel(from, true)} — ${dateLabel(to, true)}` : from ? `С ${dateLabel(from)}` : to ? `По ${dateLabel(to)}` : "За всё время";
+const recordCount = (count) => {
+  const last = count % 10, lastTwo = count % 100;
+  const unit = last === 1 && lastTwo !== 11 ? "запись" : last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14) ? "записи" : "записей";
+  return `${count} ${unit}`;
 };
 
-const HOUSEHOLD_TYPES = [
-  "Уборка",
-  "Коммуналка",
-  "Зарплата",
-  "Аренда",
-  "Доставка",
-  "Прочее",
-];
-
-const BASE_PRODUCT_TYPES = ["Общий продуктовый расход"];
-
-// Цвет источника оплаты (касса/карта/личные владельца) — единый сигнал.
-const SRC_RAIL = { cash: "border-l-emerald-400/70", card: "border-l-blue-400/70", owner: "border-l-amber-400/70" };
-const catDot = (c) => (c === "products" ? "bg-emerald-400" : "bg-blue-400");
-
-function MetricTile({ icon: Icon, label, value, sub, tone = "slate" }) {
-  const tones = {
-    red: "border-red-400/25 bg-red-500/[0.08] text-red-300",
-    blue: "border-blue-400/25 bg-blue-500/[0.08] text-blue-300",
-    violet: "border-violet-400/25 bg-violet-500/[0.08] text-violet-300",
-    slate: "border-white/[0.08] bg-white/[0.05] text-slate-300",
-  };
+function ExpensePeriodPicker({ period, customDates, busy, onChange, onCustomDates }) {
+  const changeDate = (key, value) => onChange({ ...period, [key]: value });
   return (
-    <div className={`min-w-0 rounded-2xl border p-3 sm:p-3.5 ${tones[tone]}`}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-[10px] font-semibold uppercase tracking-wide opacity-90">{label}</p>
-        <Icon size={16} className="shrink-0 opacity-70" />
+    <section className="expense-period" aria-label="Период расходов">
+      <div className="expense-period-presets">
+        {[["month", "Этот месяц"], ["today", "Сегодня"], ["previous", "Прошлый месяц"], ["all", "Всё время"]].map(([key, label]) => {
+          const dates = expensePeriod(key);
+          return (
+            <button
+              type="button" key={key} disabled={busy}
+              aria-pressed={period.from === dates.from && period.to === dates.to}
+              onClick={() => { onChange(dates); onCustomDates(false); }}
+            >{label}</button>
+          );
+        })}
       </div>
-      <p className="mt-2 truncate text-xl font-semibold tabular-nums text-white sm:text-2xl">{value}</p>
-      {sub && <p className="truncate text-[11px] font-semibold text-slate-500">{sub}</p>}
+      <button type="button" className="expense-button expense-period-custom" disabled={busy} aria-expanded={customDates} onClick={() => onCustomDates(!customDates)}>
+        <CalendarDays size={16} />{periodLabel(period)}<ChevronDown size={14} />
+      </button>
+      {customDates && (
+        <div className="expense-date-range">
+          {[["from", "С даты"], ["to", "По дату"]].map(([key, label]) => (
+            <label key={key}>{label}
+              <input
+                type="date" value={period[key]} disabled={busy}
+                onInput={(event) => changeDate(key, event.currentTarget.value)}
+                onChange={(event) => changeDate(key, event.target.value)}
+                aria-label={label}
+              />
+            </label>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ExpenseOverview({ summary, available, source, busy, onSource }) {
+  return (
+    <section className="expense-overview" aria-label="Расходы за период">
+      <div className="expense-total expense-panel bg-white/[0.02] shadow-sm">
+        <span className="expense-eyebrow">Потрачено за период</span>
+        <strong>{available ? formatMoney(summary.total) : "—"}<small>₽</small></strong>
+        <p>{available ? `${recordCount(summary.count)} · все категории и источники` : "Данные за период недоступны"}</p>
+      </div>
+      {Object.entries(SOURCE_LABELS).map(([key, label]) => {
+        const Icon = SOURCE_ICONS[key];
+        const share = summary.total > 0 ? summary.sources[key] / summary.total * 100 : 0;
+        return (
+          <button
+            type="button" key={key} className={`expense-source-card expense-panel bg-white/[0.02] is-${key}`}
+            aria-pressed={source === key} disabled={busy}
+            onClick={() => onSource(source === key ? "all" : key)}
+          >
+            <span><Icon size={18} />{label}</span>
+            <strong>{available ? formatMoney(summary.sources[key]) : "—"}<small>₽</small></strong>
+            <span className="expense-source-track"><i style={{ width: `${available ? share : 0}%` }} /></span>
+            <small>{available ? `${Math.round(share)}% от расходов за период` : "Нет данных"}</small>
+          </button>
+        );
+      })}
+    </section>
+  );
+}
+
+function ExpenseRow({ expense, workerMode, blocked, onPhoto, onDelete }) {
+  const [expanded, setExpanded] = useState(false);
+  const source = expenseSource(expense);
+  const Icon = SOURCE_ICONS[source];
+  return (
+    <article className={`expense-row ${expanded ? "is-expanded" : ""}`}>
+      <button className="expense-row-toggle" type="button" aria-label={`Подробнее: ${expense.name || "Расход"}`} aria-expanded={expanded} aria-controls={`expense-detail-${expense.id}`} onClick={() => setExpanded((old) => !old)}>
+        <span className="expense-row-icon" aria-hidden="true">{expense.category === "products" ? <ReceiptText size={19} /> : <Wallet size={19} />}</span>
+        <span className="expense-row-name"><strong>{expense.name || "Расход"}</strong><span>{categoryLabel(expense.category)}<i />{expense.type || "Без статьи"}{expense.hasPhoto && <Paperclip size={12} aria-label="Есть фото чека" />}</span></span>
+        <span className={`expense-source is-${source}`}><Icon size={13} /><span>{SOURCE_LABELS[source]}</span></span>
+        <strong className="expense-row-amount">{formatMoney(expense.amount)}<small>₽</small></strong>
+        <ChevronDown className="expense-row-chevron" size={16} aria-hidden="true" />
+      </button>
+      {expanded && (
+        <div className="expense-row-detail" id={`expense-detail-${expense.id}`}>
+          <dl><div><dt>Источник оплаты</dt><dd>{SOURCE_LABELS[source]}</dd></div><div><dt>Кто добавил</dt><dd>{expense.employeeName || "Не указан"}</dd></div><div><dt>Дата</dt><dd>{dateLabel(expenseDay(expense))}</dd></div></dl>
+          {expense.comment && <p>{expense.comment}</p>}
+          <div className="expense-row-actions">
+            {expense.hasPhoto ? <button type="button" className="expense-button" onClick={() => onPhoto(expense)}><Paperclip size={15} />Посмотреть чек</button> : <span className="expense-help">Чек не прикреплён</span>}
+            {!workerMode && <button type="button" className="expense-text-button expense-danger" disabled={blocked} onClick={() => onDelete(expense)}><Trash2 size={14} />Удалить расход</button>}
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function ExpenseBreakdown({ summary, onType, onPhotos, onOwner, owner, financeError }) {
+  const [showAll, setShowAll] = useState(false);
+  return (
+    <aside className="expense-sidebar">
+      <section className="expense-panel bg-white/[0.02] shadow-sm">
+        <p className="expense-eyebrow">За выбранный период</p><h2>Структура расходов</h2>
+        {summary.types.length ? (
+          <div className="expense-breakdown">
+            {(showAll ? summary.types : summary.types.slice(0, 5)).map((row) => (
+              <button type="button" key={row.key} onClick={() => onType(row)} aria-label={`Показать статью ${row.type}: ${categoryLabel(row.category)}`}>
+                <span><strong>{row.type}</strong><b>{formatMoney(row.amount)} ₽</b></span>
+                <span className="expense-breakdown-track"><i style={{ width: `${summary.total > 0 ? row.amount / summary.total * 100 : 0}%` }} /></span>
+                <small>{categoryLabel(row.category)} · {row.count} зап.<em>{Math.round(summary.total > 0 ? row.amount / summary.total * 100 : 0)}%</em></small>
+              </button>
+            ))}
+            {summary.types.length > 5 && <button type="button" className="expense-text-button" onClick={() => setShowAll((old) => !old)}>{showAll ? "Свернуть" : `Все статьи · ${summary.types.length}`}</button>}
+          </div>
+        ) : <p className="expense-help">Добавьте расходы, чтобы увидеть распределение по статьям.</p>}
+      </section>
+      <section className="expense-panel expense-receipts bg-white/[0.02]">
+        <span className="expense-sidebar-icon"><FileText size={20} /></span>
+        <h2>Чеки и накладные</h2>
+        <p>{summary.photos} из {summary.count} записей за период с фото. Чек можно открыть в деталях расхода.</p>
+        <button type="button" className="expense-text-button" disabled={!summary.photos} onClick={onPhotos}>Показать с фото<ArrowRight size={15} /></button>
+      </section>
+      <button type="button" className="expense-panel expense-owner-shortcut bg-white/[0.02]" onClick={onOwner}>
+        <span className="expense-eyebrow">Расчёты с владельцем</span>
+        <strong>{owner ? `${formatMoney(Math.abs(num(owner.owed)))} ₽` : "—"}</strong>
+        <span>{financeError ? "Расчёты временно недоступны" : owner && owner.owed < 0 ? "Переплата владельцу · за всё время" : "Долг бизнеса · за всё время"}<ArrowRight size={16} /></span>
+      </button>
+    </aside>
+  );
+}
+
+function OwnerWorkspace({ owner, opening, loading, error, blocked, onEntry, onOpening, onDelete, onRefresh }) {
+  const [showAll, setShowAll] = useState(false);
+  if (error || !owner) return (
+    <div className="expense-empty expense-panel bg-white/[0.02]">
+      {loading ? <Loader2 size={30} className="animate-spin" /> : <AlertTriangle size={30} />}
+      <h2>{loading ? "Загружаем расчёты" : "Расчёты пока недоступны"}</h2>
+      <p>{error || "Дождитесь загрузки данных."}</p>
+      {!loading && <button className="expense-button" onClick={onRefresh}>Попробовать снова</button>}
+    </div>
+  );
+  const entries = Array.isArray(owner.entries) ? owner.entries : [];
+  return (
+    <div className="expense-owner-workspace">
+      <section className="expense-panel expense-owner-balance bg-white/[0.02] shadow-sm">
+        <div><p className="expense-eyebrow">За всё время · независимо от периода журнала</p><h2>{owner.owed < 0 ? "Переплата владельцу" : "Бизнес должен владельцу"}</h2><strong>{formatMoney(Math.abs(num(owner.owed)))}<small>₽</small></strong><p>На старте: {formatMoney(owner.openingOwed)} ₽ · расходы из личных денег + вклады − возвраты.</p></div>
+        <div className="expense-owner-controls">
+          {Object.entries(OWNER_KINDS).map(([kind, meta]) => <button type="button" className="expense-button" key={kind} disabled={blocked || kind === "reimbursement" && owner.owed <= 0} onClick={() => onEntry(kind)}>{kind === "contribution" ? <Plus size={16} /> : <ArrowDownLeft size={16} />}{meta.action}</button>)}
+          <button type="button" className="expense-text-button" disabled={blocked} onClick={onOpening}><Settings2 size={15} />Остатки на начало учёта</button>
+        </div>
+      </section>
+      <div className="expense-owner-metrics">
+        {[["Из личных на расходы", owner.fromExpenses], ["Внесено в кассу", owner.contributions], ["Возвращено владельцу", owner.reimbursements], ["Изъято прибыли", owner.withdrawals]].map(([label, amount]) => <div key={label} className="expense-panel bg-white/[0.02]"><span>{label}</span><strong>{formatMoney(amount)} ₽</strong></div>)}
+      </div>
+      <section className="expense-panel expense-owner-history bg-white/[0.02]">
+        <div className="expense-section-heading"><div><h2>История расчётов</h2><p>Последние 100 операций. Личные расходы учитываются в журнале расходов.</p></div><span>{entries.length}</span></div>
+        {entries.length ? (showAll ? entries : entries.slice(0, 6)).map((entry) => {
+          const meta = OWNER_KINDS[entry.kind] || { label: entry.kind, sign: "" };
+          return <article key={entry.id} className="expense-owner-entry"><span className="expense-row-icon"><User size={17} /></span><div><h3>{meta.label}</h3><p>{dateLabel(entry.createdAt, true)}{entry.employeeName ? ` · ${entry.employeeName}` : ""}</p>{entry.note && <p>{entry.note}</p>}</div><strong>{meta.sign}{formatMoney(entry.amount)} ₽</strong><button type="button" className="expense-icon-button expense-danger" disabled={blocked} aria-label={`Удалить операцию владельца №${entry.id}`} onClick={() => onDelete(entry)}><Trash2 size={16} /></button></article>;
+        }) : <p className="expense-help">Вкладов, возвратов и изъятий пока нет.</p>}
+        {entries.length > 6 && <button type="button" className="expense-button expense-full" onClick={() => setShowAll((old) => !old)}>{showAll ? "Свернуть историю" : `Показать все · ${entries.length}`}</button>}
+      </section>
+      <p className="expense-help">{opening?.isSet ? `Начало учёта · ${dateLabel(opening.asOfDate)}` : "Начальные остатки ещё не заданы."} Изъятие прибыли не уменьшает долг перед владельцем.</p>
     </div>
   );
 }
 
-export default function ExpensesPage({ currentProfile, workerMode }) {
-  const [types, setTypes] = useState([]);
-  const [expenses, setExpenses] = useState([]);
-  const [filterCategory, setFilterCategory] = useState("all");
-  const [filterType, setFilterType] = useState("all");
-  const [fromDate, setFromDate] = useState(monthStart());
-  const [toDate, setToDate] = useState(monthEnd());
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [sortBy, setSortBy] = useState("date"); // date | amount
-  const [showAllTypes, setShowAllTypes] = useState(false);
-  const [todayStr] = useState(() => today());
-  const [expenseModal, setExpenseModal] = useState(false);
-  const [expenseToDelete, setExpenseToDelete] = useState(null);
-  const [error, setError] = useState("");
+export default function ExpensesPage({ currentProfile, workerMode = false }) {
+  const [data, setData] = useState({ types: [], expenses: [], owner: null, opening: null });
+  const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [financeError, setFinanceError] = useState("");
+  const [tab, setTab] = useState("journal");
+  const [period, setPeriod] = useState(() => expensePeriod("month"));
+  const [customDates, setCustomDates] = useState(false);
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("all");
+  const [type, setType] = useState("all");
+  const [source, setSource] = useState("all");
+  const [withPhoto, setWithPhoto] = useState(false);
+  const [sort, setSort] = useState("date");
+  const [limit, setLimit] = useState(25);
+  const [dialog, setDialog] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [operationError, setOperationError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [pendingPhoto, setPendingPhoto] = useState(null);
+  const [photoWarning, setPhotoWarning] = useState("");
+  const operationRef = useRef(false);
+  const requestSeq = useRef(0);
+  const dialogOpen = useRef(false);
+  const journalRef = useRef(null);
+  useEffect(() => { dialogOpen.current = !!dialog; }, [dialog]);
 
-  const [form, setForm] = useState({
-    category: "household",
-    type: "Уборка",
-    name: "",
-    amount: "",
-    comment: "",
-    paymentSource: "cash", // cash | card | owner
-    photo: null, // data URL фото накладной/чека (готовим к загрузке после создания расхода)
-  });
-  const [photoBusy, setPhotoBusy] = useState(false); // идёт сжатие выбранного фото
-
-  // Просмотр фото накладной по расходу
-  const [photoView, setPhotoView] = useState(null); // { id, name }
-  const [photoViewUrl, setPhotoViewUrl] = useState("");
-  const [photoViewLoading, setPhotoViewLoading] = useState(false);
-
-  // Расчёты с владельцем (леджер)
-  const [ownerFin, setOwnerFin] = useState(null);
-  const [ownerModal, setOwnerModal] = useState(null); // 'contribution' | 'reimbursement' | 'withdrawal'
-  const [ownerForm, setOwnerForm] = useState({ amount: "", note: "", date: "" });
-
-  // Стартовые балансы (миграция с другой системы)
-  const [opening, setOpening] = useState(null);
-  const [openingModal, setOpeningModal] = useState(false);
-  const [openingForm, setOpeningForm] = useState({
-    asOfDate: "", cash: "", bank: "", owedToOwner: "", inventoryValue: "",
-    customerDebts: "", supplierDebts: "", note: "",
-  });
-
-  // Safe array guards
-
-  const load = async () => {
-    const [typeList, expenseList, owner, openingBal] = await Promise.all([
-      get("/product-types"),
-      get("/global-expenses"),
-      // Финансы — только для владельца/админа; у сотрудника 403, тихо игнорируем.
-      get("/finance/owner").catch(() => null),
-      get("/finance/opening").catch(() => null),
-    ]);
-
-    setTypes(typeList || []);
-    setExpenses(expenseList || []);
-    if (owner) setOwnerFin(owner);
-    if (openingBal) setOpening(openingBal);
-  };
-
-  const openOpeningModal = () => {
-    const o = opening || {};
-    const s = (v) => (v ? String(v) : "");
-    setOpeningForm({
-      asOfDate: o.asOfDate || "",
-      cash: s(o.cash), bank: s(o.bank), owedToOwner: s(o.owedToOwner),
-      inventoryValue: s(o.inventoryValue), customerDebts: s(o.customerDebts),
-      supplierDebts: s(o.supplierDebts), note: o.note || "",
-    });
-    setError("");
-    setOpeningModal(true);
-  };
-
-  const saveOpening = async () => {
-    const asOf = (openingForm.asOfDate || "").trim();
-    if (!asOf) return setError("Укажите дату старта учёта");
-    const keys = ["cash", "bank", "owedToOwner", "inventoryValue", "customerDebts", "supplierDebts"];
-    if (keys.some((k) => num(openingForm[k]) < 0))
-      return setError("Суммы не могут быть отрицательными");
-    await guarded(async () => {
-      const res = await put("/finance/opening", {
-        asOfDate: asOf,
-        cash: num(openingForm.cash), bank: num(openingForm.bank),
-        owedToOwner: num(openingForm.owedToOwner), inventoryValue: num(openingForm.inventoryValue),
-        customerDebts: num(openingForm.customerDebts), supplierDebts: num(openingForm.supplierDebts),
-        note: openingForm.note.trim(),
-      });
-      if (res) setOpening(res);
-      setOpeningModal(false);
-      await load(); // долг перед владельцем зависит от стартового баланса
-    });
-  };
-
-  // Записать движение по расчётам с владельцем (вклад/возврат/изъятие).
-  const submitOwnerEntry = async () => {
-    if (!ownerModal) return;
-    const amt = num(ownerForm.amount);
-    if (amt <= 0) return setError("Укажите сумму");
-    if (ownerModal === "reimbursement" && amt > owedOwner)
-      return setError(`Возврат больше долга перед владельцем (${formatMoney(owedOwner)})`);
-    await guarded(async () => {
-      const res = await post("/finance/owner", {
-        kind: ownerModal,
-        amount: num(ownerForm.amount),
-        note: ownerForm.note.trim(),
-        date: ownerForm.date || "",
-        employeeId: currentProfile?.id || 0,
-      });
-      if (res) setOwnerFin(res); // эндпоинт возвращает свежий баланс
-      setOwnerModal(null);
-      setOwnerForm({ amount: "", note: "", date: "" });
-      await load();
-    });
-  };
-
-  const deleteOwnerEntry = async (id) => {
-    await guarded(async () => {
-      const res = await del(`/finance/owner/${id}`);
-      if (res) setOwnerFin(res);
-      await load();
-    });
-  };
-
-  useEffect(() => {
-    load().catch((e) => setError(e.message));
-  }, []);
-
-  const productTypes = useMemo(() => {
-    const tps = Array.isArray(types) ? types : [];
-    const menuTypes = tps.map((t) => String(t.name || "").trim()).filter(Boolean);
-    return [...new Set([...BASE_PRODUCT_TYPES, ...menuTypes])];
-  }, [types]);
-
-  const currentTypeOptions =
-    form.category === "household" ? HOUSEHOLD_TYPES : productTypes;
-
-  const categoryLabel = (category) => {
-    if (category === "household") return "Бытовой расход";
-    if (category === "products") return "Продукты";
-    return "Расход";
-  };
-
-  const visibleExpenses = useMemo(() => {
-    const exps = Array.isArray(expenses) ? expenses : [];
-    return exps.filter((e) => {
-      const category = e.category || "household";
-      const okCategory = filterCategory === "all" || category === filterCategory;
-      const okType = filterType === "all" || String(e.type) === String(filterType);
-      const date = String(e.createdAt || "").slice(0, 10);
-      const okFrom = !fromDate || date >= fromDate;
-      const okTo = !toDate || date <= toDate;
-      return okCategory && okType && okFrom && okTo;
-    });
-  }, [expenses, filterCategory, filterType, fromDate, toDate]);
-
-  const total = visibleExpenses.reduce((s, e) => s + money(e.amount), 0);
-
-  // Разбивка по источнику оплаты за выбранный период.
-  const bySource = useMemo(() => {
-    const acc = { cash: 0, card: 0, owner: 0 };
-    for (const e of visibleExpenses) {
-      const k = ["cash", "card", "owner"].includes(e.paymentSource) ? e.paymentSource : "cash";
-      acc[k] += num(e.amount);
-    }
-    return acc;
-  }, [visibleExpenses]);
-
-  // ── «Куда уходят деньги»: производные (без бэкенда) ──
-  const periodDays = useMemo(() => {
-    if (fromDate && toDate) {
-      const end = toDate > todayStr ? todayStr : toDate;
-      return Math.max(1, Math.round((new Date(end) - new Date(fromDate)) / 864e5) + 1);
-    }
-    const ds = visibleExpenses.map((e) => String(e.createdAt || "").slice(0, 10)).filter(Boolean).sort();
-    return ds.length ? Math.max(1, Math.round((new Date(ds[ds.length - 1]) - new Date(ds[0])) / 864e5) + 1) : 1;
-  }, [fromDate, toDate, visibleExpenses, todayStr]);
-  const avgPerDay = periodDays > 0 ? total / periodDays : 0;
-  const largest = useMemo(() => visibleExpenses.reduce((m, e) => (num(e.amount) > num(m?.amount || 0) ? e : m), null), [visibleExpenses]);
-  const withPhoto = useMemo(() => visibleExpenses.filter((e) => e.hasPhoto).length, [visibleExpenses]);
-
-  // Расход по дням периода — для спарклайна в герое.
-  const dailyExpense = useMemo(() => {
-    const byDay = new Map();
-    for (const e of visibleExpenses) {
-      const day = String(e.createdAt || "").slice(0, 10);
-      if (!day) continue;
-      byDay.set(day, (byDay.get(day) || 0) + num(e.amount));
-    }
-    return [...byDay.keys()].sort().map((d) => byDay.get(d));
-  }, [visibleExpenses]);
-
-  const byType = useMemo(() => {
-    const m = new Map();
-    for (const e of visibleExpenses) {
-      const k = e.type || "Прочее";
-      const c = m.get(k) || { type: k, category: e.category, amount: 0, count: 0 };
-      c.amount += num(e.amount);
-      c.count += 1;
-      m.set(k, c);
-    }
-    const arr = [...m.values()].sort((a, b) => b.amount - a.amount);
-    const max = arr[0]?.amount || 1;
-    return arr.map((r) => ({ ...r, share: total > 0 ? (r.amount / total) * 100 : 0, barPct: (r.amount / max) * 100 }));
-  }, [visibleExpenses, total]);
-
-  const sortedExpenses = useMemo(() => {
-    const arr = [...visibleExpenses];
-    if (sortBy === "amount") return arr.sort((a, b) => num(b.amount) - num(a.amount));
-    return arr.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
-  }, [visibleExpenses, sortBy]);
-
-  const pct = (x) => (total > 0 ? (x / total) * 100 : 0);
-  const drillType = (row) => {
-    setFilterCategory(row.category || "all");
-    setFilterType(row.type);
-    if (typeof document !== "undefined") document.getElementById("expenses-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  // «Бизнес должен владельцу» — накопительно по всем расходам из личных денег владельца
-  // (возвраты владельцу появятся в следующей фазе и будут уменьшать эту сумму).
-  const owedToOwner = useMemo(
-    () => (Array.isArray(expenses) ? expenses : [])
-      .filter((e) => e.paymentSource === "owner")
-      .reduce((s, e) => s + num(e.amount), 0),
-    [expenses]
-  );
-
-  const SRC_META = {
-    cash: { label: "Из кассы", cls: "border-emerald-400/20 bg-emerald-500/15 text-emerald-300" },
-    card: { label: "С карты", cls: "border-blue-400/20 bg-blue-500/15 text-blue-300" },
-    owner: { label: "Владелец", cls: "border-amber-400/20 bg-amber-500/15 text-amber-300" },
-  };
-  const srcMeta = (e) => SRC_META[e?.paymentSource] || SRC_META.cash;
-
-  const OWNER_KIND = {
-    contribution: { label: "Вклад в кассу", prefix: "+", sign: "text-emerald-300", cta: "Внести в кассу",
-      hint: "Владелец кладёт личные деньги в кассу. Касса вырастет, и бизнес будет должен владельцу эту сумму." },
-    reimbursement: { label: "Возврат владельцу", prefix: "−", sign: "text-blue-300", cta: "Вернуть владельцу",
-      hint: "Бизнес возвращает владельцу из кассы. Касса уменьшится, и долг перед владельцем уменьшится." },
-    withdrawal: { label: "Изъятие прибыли", prefix: "−", sign: "text-slate-300", cta: "Изъять прибыль",
-      hint: "Владелец забирает прибыль из кассы для себя. Касса уменьшится, долг перед владельцем НЕ меняется." },
-  };
-  const owedOwner = ownerFin ? ownerFin.owed : owedToOwner;
-  const fieldCls = "w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-3.5 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10";
-
-  const setCategory = (category) => {
-    setFilterCategory(category);
-    setFilterType("all");
-  };
-
-  const changeFormCategory = (category) => {
-    setForm((p) => ({
-      ...p,
-      category,
-      type: category === "household" ? HOUSEHOLD_TYPES[0] : productTypes[0],
-    }));
-  };
-
-  const resetForm = () => {
-    setForm({
-      category: "household",
-      type: "Уборка",
-      name: "",
-      amount: "",
-      comment: "",
-      paymentSource: "cash",
-      photo: null,
-    });
-  };
-
-  // Выбор фото накладной/чека в форме: сжимаем и держим data URL до создания расхода.
-  const pickExpensePhoto = async (file) => {
-    if (!file) return;
-    setPhotoBusy(true);
+  const load = useCallback(async ({ allowBusy = false } = {}) => {
+    if (operationRef.current && !allowBusy) return;
+    const seq = ++requestSeq.current;
+    setLoading(true);
+    setLoadError("");
     try {
-      const dataUrl = await compressImageToDataURL(file);
-      setForm((p) => ({ ...p, photo: dataUrl }));
-    } catch (e) {
-      window.notify?.(e?.message || "Не удалось обработать фото", "error");
-    } finally {
-      setPhotoBusy(false);
-    }
-  };
-
-  // Просмотр прикреплённого фото: тянем как blob (с авторизацией) → object URL.
-  const openPhotoView = async (expense) => {
-    setPhotoView({ id: expense.id, name: expense.name });
-    setPhotoViewLoading(true);
-    setPhotoViewUrl("");
-    try {
-      const url = await fetchBlobUrl(`/global-expenses/${expense.id}/photo`);
-      setPhotoViewUrl(url);
-    } catch {
-      window.notify?.("Не удалось загрузить фото", "error");
-    } finally {
-      setPhotoViewLoading(false);
-    }
-  };
-  const closePhotoView = () => {
-    if (photoViewUrl) URL.revokeObjectURL(photoViewUrl);
-    setPhotoViewUrl("");
-    setPhotoView(null);
-  };
-
-  // Защита от двойного запроса + показ ошибки (тост поверх модалки).
-  const [submitting, setSubmitting] = useState(false);
-  const submittingRef = useRef(false);
-  const guarded = async (fn) => {
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-    setSubmitting(true);
-    try {
-      await fn();
-    } catch (e) {
-      const msg = e?.message || "Операция не выполнена. Попробуйте снова.";
-      setError(msg);
-      window.notify?.(msg, "error");
-    } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
-    }
-  };
-
-  const createExpense = async () => {
-    setError("");
-    if (!form.category) return window.notify?.("Выберите категорию расхода", "error");
-    if (!form.type) return window.notify?.("Выберите тип расхода", "error");
-    if (!form.name.trim()) return window.notify?.("Напишите, за что заплатили", "error");
-    if (num(form.amount) <= 0) return window.notify?.("Укажите сумму расхода", "error");
-    await guarded(async () => {
-      const created = await post("/global-expenses", {
-        employeeId: currentProfile?.id || 0,
-        category: form.category,
-        type: form.type,
-        name: form.name.trim(),
-        amount: num(form.amount),
-        comment: form.comment.trim(),
-        paymentSource: form.paymentSource || "cash",
-      });
-      // Фото накладной/чека — грузим уже к созданному расходу (по его id).
-      if (form.photo && created?.id) {
-        try {
-          await post(`/global-expenses/${created.id}/photo`, { photo: form.photo });
-        } catch (e) {
-          window.notify?.("Расход сохранён, но фото не загрузилось: " + (e?.message || ""), "error");
-        }
+      const results = await Promise.allSettled([
+        get("/product-types"), get("/global-expenses"),
+        ...(workerMode ? [] : [get("/finance/owner"), get("/finance/opening")]),
+      ]);
+      if (seq !== requestSeq.current) return;
+      for (const result of results.slice(0, 2)) {
+        if (result.status === "rejected") throw result.reason;
+        if (!Array.isArray(result.value)) throw new Error("Сервер вернул неполный журнал. Обновите данные.");
       }
-      resetForm();
-      setExpenseModal(false);
-      await load();
-    });
-  };
-
-  const openDeleteExpense = (expense) => {
-    if (workerMode) {
-      setError("Удалять расходы может только админ или владелец");
-      return;
+      let owner = null, opening = null, finError = "";
+      if (!workerMode) {
+        const ownerResult = results[2], openingResult = results[3];
+        if (ownerResult.status === "fulfilled" && ownerResult.value && Number.isFinite(ownerResult.value.owed) && Array.isArray(ownerResult.value.entries)) owner = ownerResult.value;
+        else finError = ownerResult.reason?.message || "Не удалось загрузить расчёты с владельцем.";
+        if (openingResult.status === "fulfilled" && typeof openingResult.value?.isSet === "boolean") opening = openingResult.value;
+        else finError ||= openingResult.reason?.message || "Не удалось загрузить начальные остатки.";
+      }
+      setData((old) => ({ types: results[0].value, expenses: results[1].value, owner: owner || old.owner, opening: opening || old.opening }));
+      setFinanceError(finError);
+      setLoaded(true);
+    } catch (failure) {
+      if (seq === requestSeq.current) setLoadError(failure.message || "Не удалось загрузить расходы");
+    } finally {
+      if (seq === requestSeq.current) setLoading(false);
     }
+  }, [workerMode]);
+  useEffect(() => {
+    load();
+    const onVisible = () => { if (!document.hidden && !dialogOpen.current) load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      // Invalidate the latest request, including reads started after mounting.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      requestSeq.current++;
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [load]);
 
-    setExpenseToDelete(expense);
+  const productTypes = useMemo(() => [...new Set([BASE_PRODUCT_TYPE, ...data.types.map((item) => item.name).filter(Boolean)])], [data.types]);
+  const periodRows = useMemo(() => filterExpenses(data.expenses, period), [data.expenses, period]);
+  const summary = useMemo(() => summarizeExpenses(periodRows), [periodRows]);
+  const visible = useMemo(() => {
+    const rows = filterExpenses(periodRows, { query, category, type, source, withPhoto });
+    return rows.sort((a, b) => sort === "amount" ? num(b.amount) - num(a.amount) || num(b.id) - num(a.id) : String(b.createdAt || "").localeCompare(String(a.createdAt || "")) || num(b.id) - num(a.id));
+  }, [periodRows, query, category, type, source, withPhoto, sort]);
+  const filterTypes = [...new Set([
+    ...(category === "products" ? productTypes : category === "household" ? HOUSEHOLD_TYPES : [...HOUSEHOLD_TYPES, ...productTypes]),
+    ...data.expenses.filter((expense) => category === "all" || (expense.category || "household") === category).map((expense) => expense.type).filter(Boolean),
+  ])];
+  const rangeInvalid = !!(period.from && period.to && period.from > period.to);
+  const blocked = busy || loading || !!loadError;
+  const financeBlocked = blocked || !!financeError;
+  const hasFilters = !!query || category !== "all" || type !== "all" || source !== "all" || withPhoto;
+  const shownTotal = visible.reduce((sum, expense) => sum + num(expense.amount), 0);
+  const resetFilters = () => { setQuery(""); setCategory("all"); setType("all"); setSource("all"); setWithPhoto(false); };
+  const open = (next) => { if (!operationRef.current) { setOperationError(""); setDialog(next); } };
+  const close = () => { if (!operationRef.current) { setDialog(null); setOperationError(""); } };
+  const perform = async (request, message) => {
+    if (operationRef.current) return;
+    operationRef.current = true;
+    requestSeq.current++;
+    setLoading(false);
+    setBusy(true);
+    setOperationError("");
+    setSuccess("");
+    try {
+      await request();
+      setSuccess(message);
+      setDialog(null);
+      await load({ allowBusy: true });
+    } catch (failure) {
+      setOperationError(failure.message || "Операция не выполнена. Проверьте журнал перед повтором.");
+    } finally {
+      operationRef.current = false;
+      setBusy(false);
+    }
   };
-
-  const deleteExpense = async () => {
-    if (!expenseToDelete?.id) return;
-    setError("");
-    await guarded(async () => {
-      await del(`/global-expenses/${expenseToDelete.id}`);
-      setExpenseToDelete(null);
-      await load();
-    });
+  const createExpense = (expense, photo) => perform(async () => {
+    const created = await post("/global-expenses", { ...expense, employeeId: currentProfile?.id || 0 });
+    if (!created?.id) throw new Error("Сервер не подтвердил сохранение. Проверьте журнал перед повтором.");
+    if (photo) {
+      try { await post(`/global-expenses/${created.id}/photo`, { photo }); }
+      catch (failure) {
+        setPendingPhoto({ id: created.id, name: expense.name, photo });
+        setPhotoWarning(`Расход «${expense.name}» сохранён, но фото не прикреплено: ${failure.message}`);
+      }
+    }
+  }, `Расход добавлен · ${expense.name} · ${formatMoney(expense.amount)} ₽`);
+  const retryPhoto = () => perform(async () => {
+    await post(`/global-expenses/${pendingPhoto.id}/photo`, { photo: pendingPhoto.photo });
+    setPendingPhoto(null);
+    setPhotoWarning("");
+  }, "Фото прикреплено к сохранённому расходу");
+  const deleteRecord = () => {
+    if (workerMode || !dialog) return;
+    if (dialog.kind === "delete-expense") perform(() => del(`/global-expenses/${dialog.expense.id}`), "Расход удалён. Остатки пересчитаны.");
+    else if (dialog.kind === "delete-owner") perform(() => del(`/finance/owner/${dialog.entry.id}`), "Операция владельца удалена. Остатки пересчитаны.");
   };
+  const focusJournal = () => journalRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
 
   return (
-    <div className="pb-nav text-slate-100 sm:pb-10">
-      <div className="mb-4 max-w-3xl">
-        <p className="text-xs font-bold text-blue-400">Расходы</p>
-        <h2 className="text-2xl font-semibold leading-none text-white sm:text-3xl">
-          Расходы точки
-        </h2>
-        <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-400">
-          Бытовые расходы отдельно, продукты отдельно. Типы продуктов берутся из меню.
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 font-bold text-red-200">
-          {error}
+    <div className="expenses-page pb-nav sm:pb-10">
+      <header className="expense-page-heading">
+        <div><p className="expense-eyebrow">Финансы / ежедневный учёт</p><h1>Расходы точки</h1><p>Каждая трата на своём месте. Понятно, за что заплатили и откуда взяли деньги.</p></div>
+        <div className="expense-heading-actions">
+          <button type="button" className="expense-button" onClick={() => load()} disabled={busy || loading} aria-label="Обновить расходы"><RefreshCw size={17} className={loading ? "animate-spin" : ""} /><span>Обновить</span></button>
+          <button type="button" className="expense-primary" disabled={blocked} onClick={() => open({ kind: "create" })}><Plus size={18} />Новый расход</button>
         </div>
-      )}
-
-      <div className="mb-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
-        {/* Компактная шапка фильтра — всегда видна */}
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
-          <div className="flex flex-1 flex-wrap items-center gap-2">
-            {/* Быстрые пресеты периода */}
-            {[
-              ["month", "Этот месяц", () => { setFromDate(monthStart()); setToDate(monthEnd()); }],
-              ["today", "Сегодня",    () => { const d = today(); setFromDate(d); setToDate(d); }],
-              ["all",   "За всё время",  () => { setFromDate(""); setToDate(""); }],
-            ].map(([key, label, action]) => {
-              const isMonth = key === "month" && fromDate === monthStart() && toDate === monthEnd();
-              const isToday = key === "today" && fromDate === today() && toDate === today();
-              const isAll   = key === "all"   && !fromDate && !toDate;
-              const active  = isMonth || isToday || isAll;
-              return (
-                <button
-                  key={key}
-                  onClick={action}
-                  className={active
-                    ? "min-h-10 rounded-xl border border-blue-400/50 bg-blue-500/15 px-3 py-2 text-xs font-semibold text-white sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm"
-                    : "min-h-10 rounded-xl border border-white/[0.08] bg-white/5 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:bg-white/10 sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm"}
-                >
-                  {label}
-                </button>
-              );
-            })}
-
-            {/* Показываем активный диапазон если не стандартный пресет */}
-            {fromDate && toDate && fromDate !== monthStart() && toDate !== monthEnd() && fromDate !== today() && (
-              <span className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2 text-sm font-semibold text-blue-200">
-                {formatDateRu(fromDate)} — {formatDateRu(toDate)}
-              </span>
-            )}
-          </div>
-
-          {/* Кнопка открытия расширенного фильтра */}
-          <button
-            onClick={() => setFilterOpen((v) => !v)}
-            className={`flex min-h-10 shrink-0 basis-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition sm:basis-auto sm:justify-start ${
-              filterOpen
-                ? "border-blue-400/40 bg-blue-500/15 text-blue-200"
-                : "border-white/[0.08] bg-white/8 text-slate-300 hover:bg-white/15"
-            }`}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-            </svg>
-            Фильтр
-            {(filterCategory !== "all" || filterType !== "all" || (fromDate && fromDate !== monthStart())) && (
-              <span className="h-2 w-2 rounded-full bg-blue-400" />
-            )}
-          </button>
-        </div>
-
-        {/* Расширенный фильтр — скрыт по умолчанию */}
-        {filterOpen && (
-          <div className="border-t border-white/[0.08] px-4 py-4 sm:px-5">
-            {/* Даты от/до */}
-            <div className="mb-4 grid gap-3 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">От даты</span>
-                <DatePicker value={fromDate} onChange={(v) => setFromDate(v)} placeholder="Дата с" />
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">До даты</span>
-                <DatePicker value={toDate} onChange={(v) => setToDate(v)} placeholder="Дата по" align="right" />
-              </label>
-            </div>
-
-            {/* Категория */}
-            <div className="mb-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Категория</p>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  ["all", "Все"],
-                  ["household", "Бытовой расход"],
-                  ["products", "Продукты"],
-                ].map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => setCategory(key)}
-                    className={
-                      filterCategory === key
-                        ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-semibold text-white"
-                        : "rounded-xl border border-white/[0.08] bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
-                    }
-                  >
-                    {label}
-                  </button>
-                ))}
+      </header>
+      <ExpenseError>{loadError && `${loadError}${loaded ? " Показаны последние загруженные данные." : ""}`}</ExpenseError>
+      {success && <div className="expense-success" role="status"><CheckCircle2 size={18} /><span>{success}</span><button type="button" aria-label="Скрыть сообщение" onClick={() => setSuccess("")}><X size={16} /></button></div>}
+      {photoWarning && <div className="expense-warning" role="alert"><Paperclip size={18} /><span>{photoWarning}</span><button type="button" className="expense-button" disabled={busy} onClick={retryPhoto}>Повторить загрузку фото</button></div>}
+      {!dialog && <ExpenseError>{operationError}</ExpenseError>}
+      <nav className="expense-view-tabs" aria-label="Раздел расходов">
+        <button type="button" aria-pressed={tab === "journal" || workerMode} onClick={() => setTab("journal")}><ReceiptText size={17} />Журнал расходов</button>
+        {!workerMode && <button type="button" aria-pressed={tab === "owner"} onClick={() => setTab("owner")}><User size={17} />Расчёты с владельцем</button>}
+      </nav>
+      {tab === "owner" && !workerMode ? (
+        <OwnerWorkspace owner={data.owner} opening={data.opening} loading={loading} error={financeError || loadError} blocked={financeBlocked} onEntry={(kind) => open({ kind: "owner", entryKind: kind })} onOpening={() => open({ kind: "opening" })} onDelete={(entry) => open({ kind: "delete-owner", entry })} onRefresh={() => load()} />
+      ) : (
+        <>
+          <ExpensePeriodPicker period={period} customDates={customDates} busy={busy} onChange={setPeriod} onCustomDates={setCustomDates} />
+          <ExpenseError>{rangeInvalid && "Дата начала позже даты окончания. Исправьте диапазон."}</ExpenseError>
+          <ExpenseOverview summary={summary} available={loaded && !rangeInvalid} source={source} busy={busy} onSource={setSource} />
+          <div className={`expense-journal-layout ${workerMode ? "is-worker" : ""}`}>
+            <section className="expense-journal expense-panel bg-white/[0.02] shadow-sm" ref={journalRef} aria-label="Журнал расходов">
+              <div className="expense-section-heading">
+                <div>
+                  <h2>Все записи {loaded && !rangeInvalid && <span>{visible.length}</span>}</h2>
+                  <p>{hasFilters ? "Результаты поиска и выбранных фильтров" : "Расходы за выбранный период"}</p>
+                </div>
+                <strong>{loaded && !rangeInvalid ? formatMoney(shownTotal) : "—"} ₽</strong>
               </div>
-            </div>
-
-            {/* Тип внутри категории */}
-            {filterCategory !== "all" && (
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Тип</p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setFilterType("all")}
-                    className={
-                      filterType === "all"
-                        ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-semibold text-white"
-                        : "rounded-xl border border-white/[0.08] bg-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/15"
-                    }
-                  >
-                    Все типы
-                  </button>
-                  {(filterCategory === "household" ? HOUSEHOLD_TYPES : productTypes).map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setFilterType(type)}
-                      className={
-                        filterType === type
-                          ? "rounded-xl border border-blue-400/50 bg-blue-500/15 px-4 py-2.5 text-sm font-semibold text-white"
-                          : "rounded-xl border border-white/[0.08] bg-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/15"
-                      }
-                    >
-                      {type}
-                    </button>
+              <div className="expense-search-toolbar">
+                <label className="expense-search"><Search size={17} /><input aria-label="Найти расход" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Название, статья, комментарий…" disabled={busy} />{query && <button type="button" aria-label="Очистить поиск расходов" onClick={() => setQuery("")}><X size={15} /></button>}</label>
+                <select aria-label="Сортировка расходов" value={sort} disabled={busy} onChange={(event) => setSort(event.target.value)}><option value="date">Сначала новые</option><option value="amount">По сумме</option></select>
+              </div>
+              <div className="expense-journal-filters">
+                <div className="expense-segments" role="group" aria-label="Категории расходов">{[["all", "Все"], ["household", "Бытовые"], ["products", "Продукты"]].map(([key, label]) => <button type="button" key={key} aria-pressed={category === key} disabled={busy} onClick={() => { setCategory(key); setType("all"); }}>{label}</button>)}</div>
+                <select aria-label="Статья расхода в журнале" value={type} disabled={busy} onChange={(event) => setType(event.target.value)}><option value="all">Все статьи</option>{filterTypes.map((value) => <option key={value}>{value}</option>)}</select>
+                <button type="button" className="expense-photo-filter" aria-pressed={withPhoto} disabled={busy} onClick={() => setWithPhoto((old) => !old)}><Paperclip size={14} />С фото</button>
+              </div>
+              {hasFilters && <div className="expense-active-filters"><SlidersHorizontal size={13} /><span>{source !== "all" ? `Источник: ${SOURCE_LABELS[source]}` : "Фильтры включены"}</span><button type="button" disabled={busy} onClick={resetFilters}>Сбросить всё<X size={12} /></button></div>}
+              {loading && !loaded ? <div className="expense-empty" role="status"><Loader2 size={28} className="animate-spin" /><p>Загружаем журнал расходов…</p></div> : visible.length ? (
+                <div className="expense-records">
+                  {visible.slice(0, limit).map((expense, index) => (
+                    <div key={expense.id}>
+                      {sort === "date" && (index === 0 || expenseDay(visible[index - 1]) !== expenseDay(expense)) && <h3 className="expense-day-heading">{dateLabel(expenseDay(expense))}</h3>}
+                      <ExpenseRow expense={expense} workerMode={workerMode} blocked={blocked} onPhoto={(record) => open({ kind: "photo", expense: record })} onDelete={(record) => open({ kind: "delete-expense", expense: record })} />
+                    </div>
                   ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Премиум-герой: итого + темп трат + спарклайн по дням + факты */}
-      <div className="mb-5 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          {/* Главное число + темп */}
-          <div className="min-w-0 shrink-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Итого расходов · период</p>
-            <p className="mt-1 whitespace-nowrap text-4xl font-semibold leading-none tabular-nums text-white xl:text-5xl">{formatMoney(total)}</p>
-            <p className="mt-2.5 inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-semibold text-rose-400">
-              <TrendingDown size={15} />
-              <span className="tabular-nums">{formatMoney(Math.round(avgPerDay))}</span>
-              <span className="font-medium text-slate-500">в среднем в день</span>
-            </p>
-          </div>
-
-          {/* Спарклайн трат по дням — инлайн на широком экране */}
-          <div className="hidden min-w-0 flex-1 xl:block">
-            <TrendSparkline values={dailyExpense} color="#fb7185" className="h-[76px] w-full" />
-          </div>
-
-          {/* Факты: иконки + значения с разделителями */}
-          <div className="hidden min-w-0 lg:flex lg:divide-x lg:divide-white/10 lg:border-l lg:border-white/10 lg:pl-4 xl:pl-5">
-            <HeroStat icon={CalendarDays} label="Средний/день" value={formatMoney(Math.round(avgPerDay))} sub={`${periodDays} дн.`} />
-            <HeroStat icon={Flame} label="Крупнейший" tone="text-amber-300" value={largest ? formatMoney(largest.amount) : "—"} />
-            <HeroStat icon={Hash} label="Записей" value={visibleExpenses.length} sub={withPhoto ? `${withPhoto} с фото` : null} />
-          </div>
-        </div>
-
-        {/* Спарклайн во всю ширину — планшет/ноут */}
-        <div className="mt-4 hidden lg:block xl:hidden">
-          <TrendSparkline values={dailyExpense} color="#fb7185" className="h-16 w-full" />
-        </div>
-
-        {/* Мобайл: спарклайн + 2×2 факты */}
-        <div className="mt-4 lg:hidden">
-          <TrendSparkline values={dailyExpense} color="#fb7185" className="mb-3 h-14 w-full" />
-          <div className="grid grid-cols-2 gap-2.5">
-            <MetricTile icon={TrendingDown} label="Итого" value={formatMoney(total)} sub="за период" tone="red" />
-            <MetricTile icon={CalendarDays} label="Средний/день" value={formatMoney(Math.round(avgPerDay))} sub={`${periodDays} дн.`} tone="blue" />
-            <MetricTile icon={Flame} label="Крупнейший" value={largest ? formatMoney(largest.amount) : "—"} sub={largest ? largest.name : "—"} tone="violet" />
-            <MetricTile icon={Hash} label="Записей" value={visibleExpenses.length} sub={withPhoto ? `${withPhoto} с фото` : "за период"} tone="slate" />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Куда уходят деньги ── */}
-      {visibleExpenses.length > 0 && (
-        <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold text-white sm:text-xl">Куда уходят деньги</h3>
-              <p className="text-xs font-semibold text-slate-400">Крупнейшие статьи за период</p>
-            </div>
-          </div>
-
-          {/* топ статей по типу */}
-          <div className="space-y-3">
-            {(showAllTypes ? byType : byType.slice(0, 6)).map((r, i) => (
-              <button key={r.type} type="button" onClick={() => drillType(r)} className="block w-full text-left">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${catDot(r.category)}`} />
-                    <span className="truncate font-semibold text-white">{r.type}</span>
-                    {i === 0 && <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300"><Crown size={11} /><span className="hidden sm:inline">Крупнейшая</span></span>}
-                    <span className="hidden shrink-0 text-xs text-slate-500 sm:inline">{r.count} {r.count === 1 ? "запись" : r.count < 5 ? "записи" : "записей"}</span>
-                  </span>
-                  <span className="shrink-0 tabular-nums font-semibold text-white">{formatMoney(r.amount)} <span className="font-bold text-slate-500">· {Math.round(r.share)}%</span></span>
-                </div>
-                <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-white/10">
-                  <div className={`h-full rounded-full transition-[width] duration-500 ${i === 0 ? "bg-amber-400" : "bg-indigo-400"}`} style={{ width: `${Math.max(4, r.barPct)}%` }} />
-                </div>
-              </button>
-            ))}
-            {byType.length > 6 && (
-              <button type="button" onClick={() => setShowAllTypes((v) => !v)} className="text-xs font-semibold text-blue-300 hover:text-blue-200">
-                {showAllTypes ? "Свернуть" : `+${byType.length - 6} других статей · показать`}
-              </button>
-            )}
-          </div>
-
-          {/* сплит-бар источников */}
-          <div className="mt-5 border-t border-white/[0.08] pt-4">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Из какого кармана</p>
-            <div className="flex h-3 w-full overflow-hidden rounded-full bg-white/10">
-              <div className="bg-emerald-400/85" style={{ width: `${pct(bySource.cash)}%` }} />
-              <div className="bg-blue-400/85" style={{ width: `${pct(bySource.card)}%` }} />
-              <div className="bg-amber-400/85" style={{ width: `${pct(bySource.owner)}%` }} />
-            </div>
-            <div className="mt-2.5 grid grid-cols-3 gap-2 text-xs">
-              <div className="min-w-0"><p className="flex items-center gap-1.5 font-semibold text-emerald-300"><Banknote size={14} /> Из кассы</p><p className="truncate tabular-nums text-white">{formatMoney(bySource.cash)} <span className="text-slate-500">· {Math.round(pct(bySource.cash))}%</span></p></div>
-              <div className="min-w-0"><p className="flex items-center gap-1.5 font-semibold text-blue-300"><CreditCard size={14} /> С карты</p><p className="truncate tabular-nums text-white">{formatMoney(bySource.card)} <span className="text-slate-500">· {Math.round(pct(bySource.card))}%</span></p></div>
-              <div className="min-w-0"><p className="flex items-center gap-1.5 font-semibold text-amber-300"><User size={14} /> Личные</p><p className="truncate tabular-nums text-white">{formatMoney(bySource.owner)} <span className="text-slate-500">· {Math.round(pct(bySource.owner))}%</span></p></div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Расчёты с владельцем — отдельная карточка, только владельцу/админу (эндпоинт вернул данные) */}
-      {ownerFin && (
-        <div className="mb-3 rounded-2xl border border-amber-400/20 bg-white/[0.02] p-4 sm:p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-amber-300">Расчёты с владельцем</p>
-              <p className="mt-0.5 text-xs font-bold text-slate-400">Личные деньги владельца в бизнесе</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-200/70">Бизнес должен владельцу</p>
-              <p className="text-2xl font-semibold text-amber-100 sm:text-3xl">{formatMoney(owedOwner)}</p>
-              {ownerFin.openingOwed > 0 && (
-                <p className="text-[11px] font-bold text-amber-200/50">в т.ч. на старте {formatMoney(ownerFin.openingOwed)}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-            <div className="rounded-xl bg-white/[0.02] px-3 py-2"><span className="text-slate-400">Расходы владельца</span><br /><b className="text-white">{formatMoney(ownerFin.fromExpenses)}</b></div>
-            <div className="rounded-xl bg-white/[0.02] px-3 py-2"><span className="text-slate-400">Вклады в кассу</span><br /><b className="text-emerald-300">+{formatMoney(ownerFin.contributions)}</b></div>
-            <div className="rounded-xl bg-white/[0.02] px-3 py-2"><span className="text-slate-400">Возвраты владельцу</span><br /><b className="text-blue-300">−{formatMoney(ownerFin.reimbursements)}</b></div>
-            <div className="rounded-xl bg-white/[0.02] px-3 py-2" title="Изъятие прибыли не уменьшает долг перед владельцем."><span className="text-slate-400">Изъятия прибыли</span><br /><b className="text-slate-200">{formatMoney(ownerFin.withdrawals)}</b></div>
-          </div>
-
-          {!workerMode && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {Object.entries(OWNER_KIND).map(([kind, m]) => (
-                <button key={kind} onClick={() => { setOwnerForm({ amount: "", note: "", date: "" }); setError(""); setOwnerModal(kind); }}
-                  className="rounded-xl border border-white/[0.08] bg-white/[0.06] px-3.5 py-2.5 text-xs font-semibold text-white transition hover:bg-white/10">
-                  {m.cta}
-                </button>
-              ))}
-              <button onClick={openOpeningModal}
-                className="ml-auto flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2.5 text-xs font-semibold text-slate-300 transition hover:bg-white/10"
-                title="Начальное финансовое состояние при переходе с другой системы">
-                <Settings size={14} strokeWidth={2.2} /> Остатки на начало учёта
-              </button>
-            </div>
-          )}
-
-          {ownerFin.entries?.length > 0 && (
-            <div className="mt-3 divide-y divide-white/5 border-t border-white/5 pt-1">
-              {ownerFin.entries.slice(0, 6).map((en) => {
-                const m = OWNER_KIND[en.kind] || { label: en.kind, prefix: "", sign: "text-white" };
-                return (
-                  <div key={en.id} className="flex items-center justify-between gap-2 py-2 text-xs">
-                    <div className="min-w-0">
-                      <span className="font-semibold text-white">{m.label}</span>
-                      <span className="text-slate-500"> {en.note ? `· ${en.note} ` : ""}· {String(en.createdAt || "").slice(0, 10)}{en.employeeName ? ` · ${en.employeeName}` : ""}</span>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <b className={m.sign}>{m.prefix}{formatMoney(en.amount)}</b>
-                      {!workerMode && (
-                        <button onClick={() => deleteOwnerEntry(en.id)} aria-label="Удалить" title="Удалить" className="flex h-10 w-10 items-center justify-center rounded-md text-slate-500 transition hover:bg-white/10 hover:text-red-300"><Trash2 size={16} /></button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div id="expenses-list" className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
-        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-blue-400">
-              {filterCategory === "all" ? "Все расходы" : categoryLabel(filterCategory)}
-              {filterType !== "all" ? ` · ${filterType}` : ""}
-            </p>
-            <h3 className="text-lg font-semibold text-white sm:text-xl">Список расходов</h3>
-            <p className="mt-1 text-sm text-slate-400">
-              {workerMode
-                ? "Работник может добавить расход, но не видит общую аналитику."
-                : "Расходы текущей точки по выбранному периоду."}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="relative">
-              <ArrowDownWideNarrow size={16} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-11 rounded-xl border border-white/[0.08] bg-white/5 pl-8 pr-3 text-sm font-bold text-white outline-none">
-                <option value="date" className="bg-slate-900">Сначала новые</option>
-                <option value="amount" className="bg-slate-900">По сумме</option>
-              </select>
-            </div>
-            <button
-              onClick={() => setExpenseModal(true)}
-              className="hidden rounded-xl bg-indigo-600 px-5 py-2.5 font-semibold text-white shadow-lg transition hover:scale-[1.01] sm:block"
-            >
-              + Добавить расход
-            </button>
-          </div>
-        </div>
-
-        <div className="hidden overflow-x-auto xl:block">
-          <table className="w-full min-w-[1050px] text-left text-sm">
-            <thead className="border-y border-white/[0.08] bg-slate-950/50 text-xs uppercase tracking-wide text-slate-400">
-              <tr>
-                <th className="p-4">Дата</th>
-                <th className="p-4">Категория</th>
-                <th className="p-4">Тип расхода</th>
-                <th className="p-4">За что заплатили</th>
-                <th className="p-4">Комментарий</th>
-                <th className="p-4">Сумма</th>
-                <th className="p-4">Кто добавил</th>
-                {!workerMode && <th className="p-4"></th>}
-              </tr>
-            </thead>
-
-            <tbody>
-              {sortedExpenses.map((e) => (
-                <tr key={e.id} className={`border-b border-l-4 border-white/[0.08] bg-slate-950/20 transition hover:bg-white/[0.05] ${SRC_RAIL[e.paymentSource] || SRC_RAIL.cash}`}>
-                  <td className="p-4 font-bold text-slate-400">{String(e.createdAt || "").slice(0, 10) || "—"}</td>
-                  <td className="p-4 font-semibold text-white">{categoryLabel(e.category)}</td>
-                  <td className="p-4 text-slate-300">{e.type || "—"}</td>
-                  <td className="p-4 font-bold text-white">
-                    {e.name}
-                    <span className={`ml-2 inline-block rounded-md border px-1.5 py-0.5 align-middle text-[10px] font-semibold ${srcMeta(e).cls}`}>{srcMeta(e).label}</span>
-                    {e.hasPhoto && (
-                      <button onClick={() => openPhotoView(e)} title="Открыть фото накладной"
-                        className="ml-2 inline-flex min-h-[32px] items-center gap-1 rounded-md border border-blue-400/25 bg-blue-500/10 px-2 py-1.5 align-middle text-xs font-semibold text-blue-200 transition hover:bg-blue-500/20">
-                        <Paperclip size={11} strokeWidth={2.6} /> накладная
-                      </button>
-                    )}
-                  </td>
-                  <td className="p-4 text-slate-400">{e.comment || "—"}</td>
-                  <td className="p-4 font-semibold text-red-300">{formatMoney(e.amount)}</td>
-                  <td className="p-4 text-slate-300">{e.employeeName || "—"}</td>
-
-                  {!workerMode && (
-                    <td className="p-4 text-right">
-                      <button
-                        onClick={() => openDeleteExpense(e)}
-                        aria-label="Удалить расход"
-                        title="Удалить расход"
-                        className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 font-semibold text-red-200 transition hover:bg-red-500/20"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-
-              {!visibleExpenses.length && (
-                <tr>
-                  <td colSpan={workerMode ? 7 : 8} className="p-10 text-center font-bold text-slate-400">
-                    Расходов пока нет
-                  </td>
-                </tr>
-              )}
-            </tbody>
-
-            <tfoot className="bg-slate-950/70 font-semibold text-white">
-              <tr>
-                <td className="p-4" colSpan="5">ИТОГО</td>
-                <td className="p-4 text-red-200">{formatMoney(total)}</td>
-                <td></td>
-                {!workerMode && <td></td>}
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <div className="divide-y divide-white/10 xl:hidden">
-          {sortedExpenses.map((e) => (
-            <div key={e.id} className={`flex items-start justify-between gap-3 border-l-4 p-3.5 ${SRC_RAIL[e.paymentSource] || SRC_RAIL.cash}`}>
-              <div className="min-w-0">
-                <p className="truncate text-base font-semibold text-white">{e.name}</p>
-                <p className="truncate text-xs text-slate-400">{categoryLabel(e.category)} · {e.type || "—"}</p>
-                <span className={`mt-1 inline-block rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${srcMeta(e).cls}`}>{srcMeta(e).label}</span>
-                {e.hasPhoto && (
-                  <button onClick={() => openPhotoView(e)}
-                    className="ml-1.5 mt-1 inline-flex min-h-[32px] items-center gap-1 rounded-md border border-blue-400/25 bg-blue-500/10 px-2 py-1.5 align-top text-xs font-semibold text-blue-200 transition hover:bg-blue-500/20">
-                    <Paperclip size={11} strokeWidth={2.6} /> накладная
-                  </button>
-                )}
-                <p className="mt-0.5 truncate text-xs text-slate-500">
-                  {String(e.createdAt || "").slice(0, 10) || "—"}{e.employeeName ? ` · ${e.employeeName}` : ""}
-                </p>
-                {e.comment && <p className="mt-1 truncate text-xs text-slate-400">{e.comment}</p>}
-              </div>
-
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="whitespace-nowrap text-base font-semibold tabular-nums text-red-400">−{formatMoney(e.amount)}</span>
-                {!workerMode && (
-                  <button
-                    onClick={() => openDeleteExpense(e)}
-                    aria-label="Удалить расход"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-300 transition hover:bg-red-500/20"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {!visibleExpenses.length && <div className="p-10 text-center font-bold text-slate-400">Расходов пока нет</div>}
-
-          <div className="flex justify-between bg-slate-950/60 p-4 font-semibold text-white">
-            <span>Итого</span>
-            <span className="tabular-nums text-red-400">{formatMoney(total)}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="h-24 sm:hidden" aria-hidden="true" />
-
-      <button
-        onClick={() => setExpenseModal(true)}
-        className="fixed left-4 right-4 z-30 rounded-2xl bg-indigo-600 px-5 py-4 font-semibold text-white  transition active:scale-[0.98] sm:hidden"
-        style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px)" }}
-      >
-        + Добавить расход
-      </button>
-
-      {expenseModal && (
-        <Modal title="Новый расход" wide onClose={() => setExpenseModal(false)}>
-          <div className="grid gap-3">
-            <label>
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Категория расхода</span>
-              <select
-                value={form.category}
-                onChange={(e) => changeFormCategory(e.target.value)}
-                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
-              >
-                <option value="household">Бытовой расход</option>
-                <option value="products">Продукты</option>
-              </select>
-            </label>
-
-            <label>
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Тип расхода</span>
-              <select
-                value={form.type}
-                onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
-                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
-              >
-                {currentTypeOptions.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span className="mb-2 block text-sm font-semibold text-slate-300">За что заплатили</span>
-              <input
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                placeholder={form.category === "household" ? "Например: уборка, свет, зарплата..." : "Например: молоко, стаканчики, продукты..."}
-                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
-                autoFocus
-              />
-            </label>
-
-            <label>
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Сумма</span>
-              <input
-                value={form.amount}
-                onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
-                placeholder="Например: 1500"
-                type="text"
-                inputMode="decimal"
-                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
-              />
-            </label>
-
-            <label>
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Чем оплатили</span>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  ["cash", "Из кассы", Banknote],
-                  ["card", "С карты", CreditCard],
-                  ["owner", "Личные владельца", User],
-                ].map(([val, label, Icon]) => (
-                  <button key={val} type="button"
-                    onClick={() => setForm((p) => ({ ...p, paymentSource: val }))}
-                    className={`flex flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 text-center text-xs font-semibold leading-tight transition ${
-                      form.paymentSource === val
-                        ? "border-blue-400/70 bg-blue-500/15 text-white"
-                        : "border-white/[0.08] bg-slate-950/60 text-slate-300 hover:bg-white/5"
-                    }`}>
-                    <Icon size={20} strokeWidth={2.2} />{label}
-                  </button>
-                ))}
-              </div>
-              {form.paymentSource === "owner" && (
-                <p className="mt-2 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-200">
-                  Касса не уменьшится. Бизнес будет <b>должен владельцу</b> эту сумму.
-                </p>
-              )}
-              {form.paymentSource === "cash" && (
-                <p className="mt-2 px-1 text-xs font-bold text-slate-500">Уменьшит наличные в кассе.</p>
-              )}
-              {form.paymentSource === "card" && (
-                <p className="mt-2 px-1 text-xs font-bold text-slate-500">Оплата с карты/переводом — кассу не трогает.</p>
-              )}
-            </label>
-
-            <label>
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Комментарий</span>
-              <textarea
-                value={form.comment}
-                onChange={(e) => setForm((p) => ({ ...p, comment: e.target.value }))}
-                placeholder="Дополнительно, если нужно"
-                className="min-h-28 w-full resize-none rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10"
-              />
-            </label>
-
-            <div>
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Фото накладной / чека <span className="font-bold text-slate-500">— необязательно</span></span>
-              {form.photo ? (
-                <div className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-slate-950/60 p-3">
-                  <img src={form.photo} alt="Накладная" className="h-16 w-16 shrink-0 rounded-xl object-cover" />
-                  <span className="flex-1 text-sm font-semibold text-emerald-300">Фото готово к загрузке</span>
-                  <button type="button" onClick={() => setForm((p) => ({ ...p, photo: null }))}
-                    aria-label="Убрать фото"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-red-300">
-                    <X size={16} />
-                  </button>
+                  {visible.length > limit && <button type="button" className="expense-button expense-load-more" onClick={() => setLimit((old) => old + 25)}>Показать ещё · {visible.length - limit}</button>}
                 </div>
               ) : (
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-slate-950/40 px-4 py-4 font-semibold text-slate-300 transition hover:bg-white/5">
-                  <Camera size={18} strokeWidth={2.2} /> {photoBusy ? "Обрабатываю…" : "Прикрепить фото"}
-                  <input type="file" accept="image/*" hidden disabled={photoBusy}
-                    onChange={(e) => { pickExpensePhoto(e.target.files?.[0]); e.target.value = ""; }} />
-                </label>
+                <div className="expense-empty">
+                  {loadError && !loaded ? (
+                    <>
+                      <AlertTriangle size={30} /><h3>Журнал пока недоступен</h3>
+                      <p>Обновите данные после восстановления соединения.</p>
+                      <button className="expense-button" onClick={() => load()}>Попробовать снова</button>
+                    </>
+                  ) : rangeInvalid ? (
+                    <>
+                      <CalendarDays size={30} /><h3>Проверьте период</h3>
+                      <p>Дата начала должна быть раньше даты окончания.</p>
+                    </>
+                  ) : (
+                    <>
+                      <Search size={30} />
+                      <h3>{hasFilters ? "Подходящих расходов нет" : "За этот период расходов нет"}</h3>
+                      <p>{hasFilters ? "Измените запрос или сбросьте фильтры." : "Добавьте расход или выберите другой период."}</p>
+                      {hasFilters && <button className="expense-button" onClick={resetFilters}>Сбросить фильтры</button>}
+                    </>
+                  )}
+                </div>
               )}
-            </div>
+              <footer className="expense-journal-footer">
+                {loaded ? `Показано ${Math.min(limit, visible.length)} из ${visible.length} записей` : "Журнал ещё не загружен"}
+                {workerMode && <span>Удаление доступно владельцу и администратору.</span>}
+              </footer>
+            </section>
+            {!workerMode && loaded && !rangeInvalid && <ExpenseBreakdown summary={summary} onType={(row) => { setCategory(row.category); setType(row.type); setQuery(""); setSource("all"); setWithPhoto(false); focusJournal(); }} onPhotos={() => { resetFilters(); setWithPhoto(true); focusJournal(); }} onOwner={() => setTab("owner")} owner={data.owner} financeError={financeError} />}
           </div>
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <button
-              onClick={() => setExpenseModal(false)}
-              className="flex-1 rounded-2xl border border-white/[0.08] bg-white/10 px-5 py-4 font-semibold text-white transition hover:bg-white/15"
-            >
-              Отмена
-            </button>
-            <button
-              onClick={createExpense}
-              disabled={submitting}
-              className="flex-1 rounded-2xl bg-indigo-600 px-5 py-4 font-semibold text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? "Сохраняю…" : "Добавить расход"}
-            </button>
-          </div>
-        </Modal>
+        </>
       )}
-
-      {expenseToDelete && (
-        <Modal title="Удаление расхода" onClose={() => setExpenseToDelete(null)}>
-          <div className="space-y-5">
-            <div className="rounded-3xl border border-red-400/20 bg-red-500/10 p-4">
-              <p className="text-sm font-bold text-red-200">
-                Вы действительно хотите удалить этот расход?
-              </p>
-
-              <p className="mt-3 text-lg font-semibold text-white">
-                {expenseToDelete.name || "Расход"}
-              </p>
-
-              <p className="mt-1 text-sm font-bold text-red-200">
-                {formatMoney(expenseToDelete.amount)}
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                onClick={() => setExpenseToDelete(null)}
-                className="flex-1 rounded-2xl border border-white/[0.08] bg-white/10 px-5 py-4 font-semibold text-white transition hover:bg-white/15"
-              >
-                Отмена
-              </button>
-
-              <button
-                onClick={deleteExpense}
-                disabled={submitting}
-                className="flex-1 rounded-2xl bg-red-600 px-5 py-4 font-semibold text-white shadow-[0_18px_45px_rgba(239,68,68,.25)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {submitting ? "Удаляю…" : "Удалить"}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {ownerModal && (
-        <Modal title={OWNER_KIND[ownerModal]?.cta || "Расчёт с владельцем"} onClose={() => setOwnerModal(null)}>
-          <div className="grid gap-3">
-            <p className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm font-bold leading-snug text-slate-300">
-              {OWNER_KIND[ownerModal]?.hint}
-            </p>
-            <label>
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Сумма</span>
-              <input
-                value={ownerForm.amount}
-                onChange={(e) => setOwnerForm((p) => ({ ...p, amount: e.target.value }))}
-                placeholder="Например: 5000"
-                type="text"
-                inputMode="decimal"
-                autoFocus
-                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-amber-400/70 focus:ring-4 focus:ring-amber-500/10"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Дата <span className="font-bold text-slate-500">— необязательно, по умолчанию сегодня</span></span>
-              <DatePicker value={ownerForm.date} onChange={(v) => setOwnerForm((p) => ({ ...p, date: v }))} placeholder="Сегодня" />
-            </label>
-            <label>
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Примечание</span>
-              <input
-                value={ownerForm.note}
-                onChange={(e) => setOwnerForm((p) => ({ ...p, note: e.target.value }))}
-                placeholder="За что / комментарий (необязательно)"
-                className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-amber-400/70 focus:ring-4 focus:ring-amber-500/10"
-              />
-            </label>
-            <div className="mt-1 flex flex-col gap-3 sm:flex-row">
-              <button onClick={() => setOwnerModal(null)}
-                className="flex-1 rounded-2xl border border-white/[0.08] bg-white/10 px-5 py-4 font-semibold text-white transition hover:bg-white/15">
-                Отмена
-              </button>
-              <button onClick={submitOwnerEntry} disabled={submitting}
-                className="flex-1 rounded-2xl bg-amber-500 px-5 py-4 font-semibold text-white shadow-[0_18px_45px_rgba(245,158,11,.25)] disabled:cursor-not-allowed disabled:opacity-60">
-                {submitting ? "Сохраняю…" : "Сохранить"}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {openingModal && (
-        <Modal title="Остатки на начало учёта" wide onClose={() => setOpeningModal(false)}>
-          <div className="grid gap-3">
-            <p className="rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-bold leading-snug text-blue-100">
-              Начальное состояние при переходе с другой системы. Это <b>не</b> транзакции — это точка отсчёта. Заполните то, что знаете на дату старта; остальное можно оставить нулём и уточнить позже.
-            </p>
-            <label>
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Дата старта учёта</span>
-              <input type="date" value={openingForm.asOfDate}
-                onChange={(e) => setOpeningForm((p) => ({ ...p, asOfDate: e.target.value }))} className={fieldCls} />
-            </label>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {[
-                ["cash", "Наличные в кассе", "нал на старте"],
-                ["bank", "На карте / счёте", "безнал на старте"],
-                ["owedToOwner", "Долг перед владельцем", "бизнес уже должен владельцу"],
-                ["inventoryValue", "Стоимость склада", "остатки товара по себестоимости"],
-                ["customerDebts", "Клиенты должны нам", "долги клиентов на старте"],
-                ["supplierDebts", "Мы должны поставщикам", "долги перед поставщиками"],
-              ].map(([key, label, hint]) => (
-                <label key={key}>
-                  <span className="mb-2 block text-sm font-semibold text-slate-300">{label}</span>
-                  <input type="text" inputMode="decimal" min="0" value={openingForm[key]} placeholder="0"
-                    onChange={(e) => setOpeningForm((p) => ({ ...p, [key]: e.target.value }))} className={fieldCls} />
-                  <span className="mt-1 block px-1 text-[11px] font-bold text-slate-500">{hint}</span>
-                </label>
-              ))}
-            </div>
-            <label>
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Примечание</span>
-              <input value={openingForm.note} placeholder="Необязательно"
-                onChange={(e) => setOpeningForm((p) => ({ ...p, note: e.target.value }))} className={fieldCls} />
-            </label>
-            <div className="mt-1 flex flex-col gap-3 sm:flex-row">
-              <button onClick={() => setOpeningModal(false)}
-                className="flex-1 rounded-2xl border border-white/[0.08] bg-white/10 px-5 py-4 font-semibold text-white transition hover:bg-white/15">
-                Отмена
-              </button>
-              <button onClick={saveOpening} disabled={submitting}
-                className="flex-1 rounded-2xl bg-indigo-600 px-5 py-4 font-semibold text-white shadow-[0_18px_45px_rgba(37,99,235,.35)] disabled:cursor-not-allowed disabled:opacity-60">
-                {submitting ? "Сохраняю…" : "Сохранить"}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {photoView && (
-        <Modal title="Фото накладной" section={photoView.name} onClose={closePhotoView} legacyLight={false}>
-          <div className="flex min-h-[200px] items-center justify-center">
-            {photoViewLoading ? (
-              <span className="text-sm font-bold text-slate-400">Загружаю…</span>
-            ) : photoViewUrl ? (
-              <img src={photoViewUrl} alt="Накладная" className="max-h-[70vh] w-full rounded-2xl object-contain" />
-            ) : (
-              <span className="text-sm font-bold text-slate-400">Фото недоступно</span>
-            )}
-          </div>
-          <button type="button" onClick={closePhotoView}
-            className="mt-4 w-full rounded-2xl border border-white/[0.08] bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
-            Закрыть
-          </button>
+      {dialog?.kind === "create" && <ExpenseForm productTypes={productTypes} busy={busy} error={operationError} onSave={createExpense} onClose={close} />}
+      {dialog?.kind === "owner" && !workerMode && <OwnerEntryForm kind={dialog.entryKind} owed={num(data.owner?.owed)} busy={busy} error={operationError} onSave={(body) => perform(() => post("/finance/owner", { ...body, employeeId: currentProfile?.id || 0 }), "Операция владельца сохранена")} onClose={close} />}
+      {dialog?.kind === "opening" && !workerMode && <OpeningBalancesForm opening={data.opening} busy={busy} error={operationError} onSave={(body) => perform(() => put("/finance/opening", body), "Начальные остатки сохранены")} onClose={close} />}
+      {dialog?.kind === "photo" && <ExpensePhotoViewer expense={dialog.expense} onClose={close} />}
+      {["delete-expense", "delete-owner"].includes(dialog?.kind) && !workerMode && (
+        <Modal title={dialog.kind === "delete-expense" ? "Удалить расход?" : "Удалить операцию владельца?"} section="Проверка операции" legacyLight={false} onClose={close}>
+          <div className="expense-delete-summary"><Trash2 size={28} /><h3>{dialog.expense?.name || OWNER_KINDS[dialog.entry?.kind]?.label || "Операция"}</h3><strong>{formatMoney(dialog.expense?.amount ?? dialog.entry?.amount)} ₽</strong><p>Запись будет удалена, связанные финансовые остатки пересчитаются. Восстановить запись из корзины нельзя.</p></div>
+          <ExpenseError>{operationError}</ExpenseError>
+          <div className="expense-form-actions"><button className="expense-button" disabled={busy} onClick={close}>Назад</button><button className="expense-button expense-danger" disabled={busy} onClick={deleteRecord}>{busy ? "Удаляем…" : "Удалить запись"}</button></div>
         </Modal>
       )}
     </div>

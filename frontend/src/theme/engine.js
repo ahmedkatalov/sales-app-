@@ -219,8 +219,10 @@ export function buildCss(appearanceInput) {
 
   // Тени
   if (a.shadow === "none") {
+    blocks.push(`html:root{--shadow-card:none;}`);
     blocks.push(`[class*="shadow-"]{box-shadow:none!important;}`);
   } else if (a.shadow === "strong" && a.accent) {
+    blocks.push(`html:root{--shadow-card:0 10px 40px -12px ${a.accent}55,0 4px 14px -6px ${a.accent}33;}`);
     blocks.push(`[class*="shadow-"]{box-shadow:0 10px 40px -12px ${a.accent}55,0 4px 14px -6px ${a.accent}33!important;}`);
   }
 
@@ -245,6 +247,7 @@ export function buildCss(appearanceInput) {
   // (bg-[#0a0e17] — корневой фон под контентом) и гасим страничные
   // градиент-подложки героев.
   if (a.bg) {
+    blocks.push(`${DARK}{--page-bg:${a.bg};}`);
     blocks.push(`${DARK} body{background-color:${a.bg}!important;}`);
     blocks.push(`${DARK} [class*="bg-[#0a0e17]"]{background-color:${a.bg}!important;}`);
     blocks.push(`${DARK} [class*="bg-[linear-gradient"],${DARK} [class*="bg-[radial-gradient"]{background-image:none!important;background-color:${a.bg}!important;}`);
@@ -253,6 +256,7 @@ export function buildCss(appearanceInput) {
   // Цвет блоков/карточек: переопределяем «карточные» полупрозрачные поверхности
   // (bg-white/[0.0X] — именно карточки; bg-white/5 и /10 — это кнопки/чипы, их не трогаем).
   if (a.surface) {
+    blocks.push(`${DARK}{--surface:${a.surface};--surface-2:${a.surface};}`);
     const base = ["0.02", "0.03", "0.04", "0.045", "0.05", "0.06", "0.07", "0.08"]
       .map((o) => `[class*="bg-white/[${o}]"]`);
     // Кастомный «Цвет блоков» распространяем шире — на сплошные тёмные панели,
@@ -345,9 +349,9 @@ function writeThemes(arr) {
 }
 const rid = () => `t_${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`;
 
-export function saveTheme(name, appearance) {
+export function saveTheme(name, appearance, mode) {
   const arr = listThemes();
-  const item = { id: rid(), name: (name || "Моя тема").trim(), appearance: { ...appearance } };
+  const item = { id: rid(), name: (name || "Моя тема").trim(), appearance: { ...appearance }, ...(["dark", "light"].includes(mode) ? { mode } : {}) };
   writeThemes([item, ...arr]);
   return item;
 }
@@ -357,24 +361,37 @@ export function renameTheme(id, name) {
 export function duplicateTheme(id) {
   const src = listThemes().find((t) => t.id === id);
   if (!src) return;
-  const copy = { id: rid(), name: `${src.name} (копия)`, appearance: { ...src.appearance } };
+  const copy = { ...src, id: rid(), name: `${src.name} (копия)`, appearance: { ...src.appearance } };
   writeThemes([copy, ...listThemes()]);
   return copy;
 }
 export function deleteTheme(id) {
   writeThemes(listThemes().filter((t) => t.id !== id));
 }
-export function exportTheme(appearance, name) {
-  return JSON.stringify({ app: "sales-app", kind: "appearance", name: name || "theme", appearance }, null, 2);
+export function exportTheme(appearance, name, mode) {
+  return JSON.stringify({ app: "sales-app", kind: "appearance", name: name || "theme", appearance, ...(["dark", "light"].includes(mode) ? { mode } : {}) }, null, 2);
 }
 export function importTheme(text) {
+  if (typeof text !== "string" || text.length > 16000) throw new Error("Тема слишком большая");
   const data = JSON.parse(text);
   const ap = data?.appearance && typeof data.appearance === "object" ? data.appearance : data;
-  if (!ap || typeof ap !== "object") throw new Error("Некорректный формат темы");
-  // берём только известные ключи
+  if (!ap || typeof ap !== "object" || Array.isArray(ap)) throw new Error("Некорректный формат темы");
+  const colors = ["accent", "accent2", "success", "warning", "error", "info", "bg", "surface"];
+  const ranges = { radius: [0, 1.8], blur: [0.2, 1.8], fontScale: [0.85, 1.2] };
+  const enums = { font: Object.keys(FONT_LABELS), shadow: Object.keys(SHADOW_LABELS), density: Object.keys(DENSITY_LABELS) };
   const clean = {};
-  for (const k of Object.keys(DEFAULT_APPEARANCE)) if (k in ap) clean[k] = ap[k];
-  return { name: data?.name || "Импортированная тема", appearance: { ...DEFAULT_APPEARANCE, ...clean } };
+  for (const k of Object.keys(DEFAULT_APPEARANCE)) {
+    if (!(k in ap)) continue;
+    const v = ap[k];
+    const valid = colors.includes(k) ? v === null || (typeof v === "string" && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(v))
+      : ranges[k] ? typeof v === "number" && Number.isFinite(v) && v >= ranges[k][0] && v <= ranges[k][1]
+      : enums[k] ? enums[k].includes(v) : typeof v === "boolean";
+    if (!valid) throw new Error(`Некорректный параметр: ${k}`);
+    clean[k] = typeof v === "string" && /^#[0-9a-f]{3}$/i.test(v) ? `#${v.slice(1).split("").map(c => c + c).join("")}` : v;
+  }
+  if (!Object.keys(clean).length) throw new Error("В JSON нет настроек оформления");
+  if (data.mode !== undefined && !["dark", "light"].includes(data.mode)) throw new Error("Неизвестный режим темы");
+  return { name: typeof data.name === "string" && data.name.trim() ? data.name.trim().slice(0, 80) : "Импортированная тема", appearance: { ...DEFAULT_APPEARANCE, ...clean }, ...(["dark", "light"].includes(data.mode) ? { mode: data.mode } : {}) };
 }
 
 // ── Скрытые готовые темы (чтобы убрать из галереи ненужные) ──────────

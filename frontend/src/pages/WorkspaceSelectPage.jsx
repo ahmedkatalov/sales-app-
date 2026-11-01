@@ -1,76 +1,69 @@
-import { useEffect, useState } from "react";
-import { ArrowRight, Star, Store } from "lucide-react";
-import { get, setCurrentWorkspace } from "../api";
+import { useEffect, useRef, useState } from 'react';
+import { ArrowRight, Info, LoaderCircle, LogOut, RefreshCw, Search, ShieldCheck, Star, Store, UserRound } from 'lucide-react';
+import { get, setCurrentWorkspace } from '../api';
+import EntryLayout from '../components/EntryLayout';
+import { navigationRole, validateNavigationWorkspaces } from '../utils/navigation';
 
-export default function WorkspaceSelectPage({ session, onSelect }) {
+const loadDefault = () => get('/my-workspaces');
+const persistDefault = ws => setCurrentWorkspace(ws);
+
+export default function WorkspaceSelectPage({ session, onSelect, onLogout, loadWorkspaces = loadDefault, persistWorkspace = persistDefault, autoSelectSingle = true, themeControl }) {
   const [workspaces, setWorkspaces] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true), [error, setError] = useState('');
+  const [query, setQuery] = useState(''), [revision, setRevision] = useState(0);
+  const [selecting, setSelecting] = useState(null);
+  const callbacks = useRef({ onSelect, persistWorkspace });
+  const selectingRef = useRef(false);
+  useEffect(() => { callbacks.current = { onSelect, persistWorkspace }; }, [onSelect, persistWorkspace]);
 
   useEffect(() => {
-    get("/my-workspaces")
-      .then((list) => {
-        const safe = Array.isArray(list) ? list : [];
-        setWorkspaces(safe);
-        // Если только одна точка — сразу выбираем
-        if (safe.length === 1) onSelect(safe[0]);
-      })
-      .catch(() => setWorkspaces([]))
-      .finally(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    let alive = true;
+    selectingRef.current = false; setSelecting(null); setError(''); setLoading(true); setWorkspaces([]); setQuery('');
+    const open = async () => {
+      try {
+        const list = validateNavigationWorkspaces(await loadWorkspaces());
+        if (!alive) return;
+        setWorkspaces(list);
+        if (autoSelectSingle && list.length === 1) {
+          selectingRef.current = true; setSelecting(`${list[0].id}:${list[0].dataAccountId}`);
+          await callbacks.current.persistWorkspace(list[0]);
+          if (alive) await callbacks.current.onSelect(list[0]);
+        }
+      } catch (e) { if (alive) { selectingRef.current = false; setSelecting(null); setError(e?.message || 'Не удалось загрузить рабочие точки. Попробуйте ещё раз.'); } }
+      finally { if (alive) setLoading(false); }
+    };
+    open();
+    return () => { alive = false; };
+  }, [loadWorkspaces, autoSelectSingle, revision, session?.accountId, session?.username]);
 
-  const handleSelect = (ws) => {
-    setCurrentWorkspace(ws);
-    onSelect(ws);
+  const handleSelect = async ws => {
+    if (selectingRef.current || loading || error) return;
+    selectingRef.current = true; setSelecting(`${ws.id}:${ws.dataAccountId}`);
+    try { await persistWorkspace(ws); await onSelect(ws); }
+    catch (e) { selectingRef.current = false; setSelecting(null); setError(e?.message || 'Не удалось открыть точку. Попробуйте ещё раз.'); }
   };
+  const filtered = workspaces.filter(ws => ws.name.toLocaleLowerCase('ru').includes(query.trim().toLocaleLowerCase('ru')));
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-4">
-      <div className="w-full max-w-lg">
-        {/* Шапка */}
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-600 text-white ">
-            <Store size={30} strokeWidth={2} />
-          </div>
-          <h1 className="text-3xl font-semibold text-white">Выберите точку</h1>
-          <p className="mt-2 text-slate-400">
-            Здравствуйте, <span className="font-semibold text-white">{session?.username}</span>! Выберите точку для работы.
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <span className="h-8 w-8 animate-spin rounded-full border-4 border-blue-400/30 border-t-blue-400" />
-          </div>
-        ) : workspaces.length === 0 ? (
-          <div className="rounded-3xl border border-red-400/20 bg-red-500/10 p-6 text-center text-red-300">
-            У вас нет доступа ни к одной точке. Обратитесь к владельцу.
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            {workspaces.map((ws) => (
-              <button
-                key={ws.id}
-                type="button"
-                onClick={() => handleSelect(ws)}
-                className="group flex items-center gap-4 rounded-3xl border border-white/[0.08] bg-white/[0.06] p-5 text-left shadow-xl transition hover:border-blue-400/40 hover:bg-blue-500/10"
-              >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg">
-                  {ws.isMain ? <Star size={22} strokeWidth={2} /> : <Store size={22} strokeWidth={2} />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-lg font-semibold text-white">{ws.name}</p>
-                  <p className="text-sm text-slate-400">
-                    {ws.role === "owner" ? "Владелец" : ws.role === "branch_admin" ? "Администратор" : "Кассир"}
-                    {ws.isMain ? " · Основная" : ""}
-                  </p>
-                </div>
-                <span className="shrink-0 text-slate-500 transition group-hover:translate-x-1 group-hover:text-white"><ArrowRight size={20} strokeWidth={2.4} /></span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+  return <EntryLayout stage={3} workspace themeControl={themeControl}>
+    <div className="entry-workspace-heading">
+      <div><p className="entry-eyebrow">ШАГ 03 / 03 · РАБОЧЕЕ ПРОСТРАНСТВО</p><h1>Где работаем сегодня?</h1><p className="entry-copy">Выберите точку. Её товары, склад и продажи откроются вместе.</p></div>
+      <div className="entry-account"><UserRound size={20} /><div><small>ВЫ ВОШЛИ КАК</small>{session?.username || 'Пользователь'}</div></div>
     </div>
-  );
+    {!loading && !error && workspaces.length > 0 && <div className="entry-workspace-tools"><span>Доступные точки · {workspaces.length}</span><label className="entry-search"><Search size={18} /><input aria-label="Найти рабочую точку" placeholder="Найти точку по названию" value={query} onChange={e => setQuery(e.target.value)} /></label></div>}
+    {loading ? <div className="entry-empty" role="status" aria-live="polite"><LoaderCircle size={28} className="entry-spin" /><h2>Загружаем ваши точки</h2><p>Проверяем доступ к рабочим пространствам.</p></div>
+    : error ? <div className="entry-empty" role="alert"><RefreshCw size={28} /><h2>Не удалось открыть точки</h2><p>{error}</p><button type="button" className="entry-secondary" onClick={() => setRevision(v => v + 1)}><RefreshCw size={16} />Попробовать снова</button></div>
+    : !workspaces.length ? <div className="entry-empty"><Store size={30} /><h2>Пока нет доступных точек</h2><p>Попросите владельца предоставить вашему логину доступ к рабочей точке. После этого обновите список.</p><button type="button" className="entry-secondary" onClick={() => setRevision(v => v + 1)}><RefreshCw size={16} />Обновить список</button></div>
+    : !filtered.length ? <div className="entry-empty"><Search size={28} /><h2>Точка не найдена</h2><p>Проверьте название или посмотрите все доступные точки.</p><button className="entry-secondary" type="button" onClick={() => setQuery('')}>Сбросить поиск</button></div>
+    : <div className="entry-workspace-grid" aria-label="Доступные рабочие точки" aria-busy={!!selecting}>
+      {filtered.map(ws => {
+        const key = `${ws.id}:${ws.dataAccountId}`, active = selecting === key;
+        return <button type="button" key={key} className="entry-workspace-card" disabled={!!selecting} onClick={() => handleSelect(ws)} aria-label={`Открыть точку ${ws.name}`}>
+          <div><span className="entry-workspace-icon">{ws.isMain ? <Star size={23} /> : <Store size={23} />}</span>{ws.isMain && <span className="entry-main-badge">ОСНОВНАЯ</span>}</div>
+          <strong>{ws.name}</strong><small>{navigationRole(ws.role || session?.role)}</small>
+          <span className="entry-workspace-open">{active ? 'Открываем точку…' : 'Начать работу'}{active ? <LoaderCircle size={18} className="entry-spin" /> : <ArrowRight size={18} />}</span>
+        </button>;
+      })}
+    </div>}
+    <div className="entry-workspace-bottom"><p className="entry-workspace-note">{error || !workspaces.length ? <Info size={17} /> : <ShieldCheck size={17} />}Доступные разделы зависят от ваших прав в выбранной точке.</p>{onLogout && <button className="entry-text-button" type="button" onClick={onLogout} disabled={!!selecting}><LogOut size={16} />Другой аккаунт</button>}</div>
+  </EntryLayout>;
 }

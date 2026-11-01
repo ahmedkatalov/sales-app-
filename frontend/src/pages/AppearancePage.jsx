@@ -1,524 +1,191 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  Check, Copy, Download, Eye, EyeOff, Moon, Palette, Plus, RotateCcw, Shuffle, Sparkles, Sun, Trash2, Upload, Users, X,
-} from "lucide-react";
-import {
-  DEFAULT_APPEARANCE, DENSITY_LABELS, FONT_LABELS, PRESETS, RADIUS_LABELS, RADIUS_PRESETS, SHADOW_LABELS,
-  clearHiddenPresets, deleteTheme, duplicateTheme, exportTheme, getAppearance, importTheme, listHiddenPresets,
-  listThemes, randomAppearance, renameTheme, resetAppearance, saveTheme, setAppearance, setPresetHidden,
-} from "../theme/engine";
-import { getTheme, setTheme } from "../theme";
-import { getSession, put } from "../api";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronRight, Copy, Download, Eye, EyeOff, Laptop, Monitor, Moon, Palette, Plus, RotateCcw, Search, Settings2, Shuffle, Smartphone, Sparkles, Sun, Trash2, Undo2, Upload, Users, X } from 'lucide-react';
+import { DEFAULT_APPEARANCE, DENSITY_LABELS, FONT_LABELS, PRESETS, SHADOW_LABELS, applyAppearance, clearHiddenPresets, deleteTheme, duplicateTheme, exportTheme, getAppearance, importTheme, listHiddenPresets, listThemes, randomAppearance, renameTheme, resetAppearance, saveTheme, setAppearance, setPresetHidden } from '../theme/engine';
+import { applyTheme, getTheme, setTheme } from '../theme';
+import { getSession, put } from '../api';
+import AppearancePreview from '../components/AppearancePreview';
+import { AppearanceChoices as Choices, AppearanceColor as Color, AppearanceRow as Row, AppearanceSection as Section, AppearanceSlider as Slider, AppearanceThemeCard as ThemeCard, AppearanceToggle as Toggle } from '../components/AppearanceControls';
+import './AppearancePage.css';
 
-const ACCENTS = ["#3b82f6", "#6366f1", "#8b5cf6", "#d946ef", "#ec4899", "#f43f5e", "#ef4444", "#f97316", "#f59e0b", "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9", "#d4af37", "#64748b"];
-const notify = (m, t) => window.notify?.(m, t);
+const ACCENTS = [['Синий', '#3b82f6'], ['Индиго', '#6366f1'], ['Фиолетовый', '#8b5cf6'], ['Пурпурный', '#d946ef'], ['Розовый', '#ec4899'], ['Красный', '#ef4444'], ['Оранжевый', '#f97316'], ['Золотой', '#d4af37'], ['Зелёный', '#10b981'], ['Бирюзовый', '#14b8a6'], ['Голубой', '#06b6d4'], ['Графитовый', '#64748b']];
+const TABS = [['themes', 'Готовые темы', Sparkles], ['colors', 'Цвета', Palette], ['interface', 'Интерфейс', Settings2], ['library', 'Мои темы', Copy]];
+const normalized = a => ({ ...DEFAULT_APPEARANCE, bg: null, surface: null, ...a });
+const sameAppearance = (a, b) => Object.keys(DEFAULT_APPEARANCE).every(k => a[k] === b[k]);
+const options = labels => Object.entries(labels).map(([value, label]) => ({ value, label }));
 
-// ── маленькие переиспользуемые контролы ──────────────────────────────
-function Segmented({ value, onChange, options, size = "md" }) {
-  return (
-    <div className="flex flex-wrap gap-1.5 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-1">
-      {options.map((o) => (
-        <button key={o.value} type="button" onClick={() => onChange(o.value)}
-          className={`shrink-0 rounded-xl font-semibold transition ${size === "sm" ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm"} ${
-            value === o.value ? "bg-indigo-600 text-white shadow-lg" : "text-slate-300 hover:bg-white/10 hover:text-white"
-          }`}>
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Toggle({ checked, onChange }) {
-  return (
-    <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
-      className={`relative h-7 w-12 shrink-0 rounded-full transition ${checked ? "bg-blue-600" : "bg-white/15"}`}>
-      <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${checked ? "left-6" : "left-1"}`} />
-    </button>
-  );
-}
-
-function Slider({ value, min, max, step, onChange, format, disabled }) {
-  return (
-    <div className={`flex items-center gap-3 ${disabled ? "pointer-events-none opacity-40" : ""}`}>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))}
-        className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-white/15 accent-blue-500" />
-      <span className="w-16 shrink-0 text-right text-sm font-semibold tabular-nums text-slate-300">{format ? format(value) : value}</span>
-    </div>
-  );
-}
-
-function Section({ icon: Icon, title, desc, children, right }) {
-  return (
-    <section className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          {Icon && <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-500/15 text-blue-300"><Icon size={16} strokeWidth={2.6} /></span>}
-          <div>
-            <h3 className="text-base font-semibold text-white">{title}</h3>
-            {desc && <p className="mt-0.5 text-[13px] text-slate-400">{desc}</p>}
-          </div>
-        </div>
-        {right}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function ColorField({ label, value, fallback, onChange }) {
-  const val = value || fallback;
-  return (
-    <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-3 py-2.5">
-      <span className="text-sm font-bold text-slate-300">{label}</span>
-      <span className="flex items-center gap-2">
-        <span className="font-mono text-xs text-slate-500">{val}</span>
-        <input type="color" value={val} onChange={(e) => onChange(e.target.value)}
-          aria-label={label} className="h-8 w-10 cursor-pointer rounded-lg border border-white/[0.08] bg-transparent p-0" />
-      </span>
-    </label>
-  );
-}
-
-// Переопределение цвета с возможностью сброса к значению по умолчанию (null).
-function ColorOverride({ label, hint, value, defaultHex, onChange }) {
-  const active = value != null && value !== "";
-  return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-3 py-2.5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-bold text-slate-200">{label}</p>
-          {hint && <p className="text-xs text-slate-500">{hint}</p>}
-        </div>
-        {active ? (
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="hidden font-mono text-xs text-slate-500 sm:inline">{value}</span>
-            <input type="color" value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}
-              className="h-8 w-10 cursor-pointer rounded-lg border border-white/[0.08] bg-transparent p-0" />
-            <button type="button" onClick={() => onChange(null)} title="Сбросить"
-              className="rounded-lg border border-white/[0.08] bg-white/5 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/10">Сброс</button>
-          </div>
-        ) : (
-          <button type="button" onClick={() => onChange(defaultHex)}
-            className="shrink-0 rounded-xl border border-white/[0.08] bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/10">Задать цвет</button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Row({ label, hint, children }) {
-  return (
-    <div className="flex flex-col gap-2 border-b border-white/[0.06] py-3 last:border-0 last:pb-0 first:pt-0 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-      <div className="min-w-0">
-        <p className="text-sm font-bold text-slate-200">{label}</p>
-        {hint && <p className="text-xs text-slate-500">{hint}</p>}
-      </div>
-      <div className="w-full sm:max-w-[62%]">{children}</div>
-    </div>
-  );
-}
-
-// ── страница ─────────────────────────────────────────────────────────
-export default function AppearancePage() {
-  const [ap, setAp] = useState(getAppearance());
-  const [mode, setMode] = useState(getTheme());
-  const [themes, setThemes] = useState(listThemes());
-  const [hidden, setHidden] = useState(listHiddenPresets());
-  const [presetFilter, setPresetFilter] = useState("all"); // all | dark | light
+export default function AppearancePage({ preview = false, roleOverride }) {
+  const [ap, setAp] = useState(getAppearance);
+  const [mode, setMode] = useState(getTheme);
+  const [initial] = useState(() => ({ appearance: getAppearance(), mode: getTheme() }));
+  const [themes, setThemes] = useState(listThemes);
+  const [hidden, setHidden] = useState(listHiddenPresets);
+  const [history, setHistory] = useState([]);
+  const [tab, setTab] = useState('themes');
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
   const [showHidden, setShowHidden] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
-  const [importText, setImportText] = useState("");
-  const [newName, setNewName] = useState("");
+  const [device, setDevice] = useState('desktop');
+  const [mobilePreview, setMobilePreview] = useState(false);
+  const [message, setMessage] = useState(null);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [deleting, setDeleting] = useState(null);
+  const [newName, setNewName] = useState('');
+  const [transfer, setTransfer] = useState(null);
+  const [transferText, setTransferText] = useState('');
+  const [transferError, setTransferError] = useState('');
   const [savingAll, setSavingAll] = useState(false);
-  const isOwner = getSession()?.role === "owner";
+  const [teamVersion, setTeamVersion] = useState(null);
+  const savingRef = useRef(false);
+  const mounted = useRef(true);
+  const fileRef = useRef(null);
+  const isOwner = (roleOverride || getSession()?.role) === 'owner';
+  const signature = JSON.stringify(ap);
 
   useEffect(() => {
-    const onAp = (e) => setAp(e.detail || getAppearance());
-    const onTheme = () => setMode(getTheme());
+    mounted.current = true;
+    const onAp = e => setAp(e.detail || getAppearance());
+    const onMode = () => setMode(getTheme());
     const onThemes = () => setThemes(listThemes());
     const onHidden = () => setHidden(listHiddenPresets());
-    window.addEventListener("sales-appearance-change", onAp);
-    window.addEventListener("sales-theme-change", onTheme);
-    window.addEventListener("sales-themes-change", onThemes);
-    window.addEventListener("sales-hidden-presets-change", onHidden);
+    window.addEventListener('sales-appearance-change', onAp);
+    window.addEventListener('sales-theme-change', onMode);
+    if (!preview) {
+      window.addEventListener('sales-themes-change', onThemes);
+      window.addEventListener('sales-hidden-presets-change', onHidden);
+    }
     return () => {
-      window.removeEventListener("sales-appearance-change", onAp);
-      window.removeEventListener("sales-theme-change", onTheme);
-      window.removeEventListener("sales-themes-change", onThemes);
-      window.removeEventListener("sales-hidden-presets-change", onHidden);
+      mounted.current = false;
+      window.removeEventListener('sales-appearance-change', onAp);
+      window.removeEventListener('sales-theme-change', onMode);
+      window.removeEventListener('sales-themes-change', onThemes);
+      window.removeEventListener('sales-hidden-presets-change', onHidden);
+      if (preview) { applyAppearance(getAppearance()); applyTheme(getTheme()); }
     };
-  }, []);
+  }, [preview]);
 
   const hiddenSet = useMemo(() => new Set(hidden), [hidden]);
-  const byFilter = useMemo(
-    () => PRESETS.filter((p) => presetFilter === "all" || (p.mode || "dark") === presetFilter),
-    [presetFilter],
-  );
-  const visiblePresets = useMemo(() => byFilter.filter((p) => !hiddenSet.has(p.id)), [byFilter, hiddenSet]);
-  const hiddenPresets = useMemo(() => PRESETS.filter((p) => hiddenSet.has(p.id)), [hiddenSet]);
-
-  const update = (partial) => setAp(setAppearance(partial));
-
-  const applyPreset = (p) => {
-    // Сбрасываем свой цвет фона/блоков к прозрачному — чтобы «стеклянные»
-    // пресеты оставались стеклянными. «Стандарт» вернёт сплошной цвет сам.
-    setAp(setAppearance({ ...DEFAULT_APPEARANCE, bg: null, surface: null, ...p.appearance }));
-    if (p.mode) { setTheme(p.mode); }
-    notify(`Тема «${p.name}» применена`, "success");
+  const matching = PRESETS.filter(p => (filter === 'all' || p.mode === filter) && p.name.toLocaleLowerCase('ru').includes(search.trim().toLocaleLowerCase('ru')));
+  const visible = matching.filter(p => !hiddenSet.has(p.id));
+  const hiddenPresets = matching.filter(p => hiddenSet.has(p.id));
+  const activePreset = PRESETS.find(p => mode === p.mode && sameAppearance(ap, normalized(p.appearance)));
+  const changed = mode !== initial.mode || !sameAppearance(ap, initial.appearance);
+  const status = (text, error = false) => setMessage({ text, error });
+  const apply = (appearance, nextMode) => {
+    setAp(appearance);
+    setMode(nextMode);
+    if (preview) { applyAppearance(appearance); applyTheme(nextMode); }
+    else { setAppearance(appearance); setTheme(nextMode); }
   };
-
-  const applyCustom = (t) => { setAp(setAppearance({ ...DEFAULT_APPEARANCE, bg: null, surface: null, ...t.appearance })); notify(`Тема «${t.name}» применена`, "success"); };
-
-  const onSurprise = () => { setAp(setAppearance(randomAppearance())); notify("Случайная тема применена", "success"); };
-
-  const onSave = () => {
-    const name = newName.trim() || "Моя тема";
-    saveTheme(name, ap);
-    setNewName("");
-    notify(`Тема «${name}» сохранена`, "success");
+  const commit = (appearance, nextMode = mode) => {
+    if (nextMode === mode && sameAppearance(appearance, ap)) return;
+    setHistory(h => [...h.slice(-39), { appearance: { ...ap }, mode }]);
+    apply(appearance, nextMode);
+    setMessage(null);
   };
-
-  const onExport = async () => {
-    const text = exportTheme(ap, "Моя тема");
-    try { await navigator.clipboard.writeText(text); notify("Тема скопирована в буфер обмена", "success"); }
-    catch { setImportOpen(true); setImportText(text); }
+  const update = partial => commit({ ...ap, ...partial });
+  const applyThemeItem = item => { commit(normalized(item.appearance), item.mode || mode); status(`Тема «${item.name}» применена${preview ? ' в предпросмотре' : ''}.`); };
+  const undo = () => {
+    const previous = history.at(-1);
+    if (!previous) return;
+    apply(previous.appearance, previous.mode);
+    setHistory(h => h.slice(0, -1));
+    status('Последнее изменение отменено.');
   };
-
-  const onImport = () => {
+  const hidePreset = (id, hide) => {
+    if (preview) setHidden(cur => hide ? [...new Set([...cur, id])] : cur.filter(x => x !== id));
+    else setPresetHidden(id, hide);
+  };
+  const saveLocal = (name, appearance, nextMode) => {
+    if (preview) { const theme = { id: `demo-${Date.now()}-${Math.random()}`, name, appearance: { ...appearance }, mode: nextMode }; setThemes(cur => [theme, ...cur]); }
+    else saveTheme(name, appearance, nextMode);
+  };
+  const saveCurrent = e => {
+    e.preventDefault();
+    const name = newName.trim() || 'Моя тема';
+    saveLocal(name, ap, mode);
+    setNewName('');
+    status(`Тема «${name}» сохранена${preview ? ' только в демо' : ' на этом устройстве'}.`);
+  };
+  const openTransfer = kind => {
+    setTab('library'); setTransfer(kind); setTransferError('');
+    setTransferText(kind === 'export' ? exportTheme(ap, newName.trim() || activePreset?.name || 'Моя тема', mode) : '');
+  };
+  const importCurrent = () => {
     try {
-      const { name, appearance } = importTheme(importText);
-      setAp(setAppearance(appearance));
-      saveTheme(name, appearance);
-      setImportOpen(false); setImportText("");
-      notify(`Тема «${name}» импортирована`, "success");
-    } catch { notify("Не удалось прочитать тему. Проверьте формат.", "error"); }
+      const item = importTheme(transferText);
+      commit(item.appearance, item.mode || mode);
+      saveLocal(item.name, item.appearance, item.mode || mode);
+      setTransfer(null); setTransferText(''); setTransferError('');
+      status(`Тема «${item.name}» импортирована и применена.`);
+    } catch (e) { setTransferError(e.message || 'Не удалось прочитать тему. Проверьте JSON.'); }
   };
-
-  const onReset = () => { setAp(resetAppearance()); notify("Оформление сброшено", "success"); };
-
-  // Применить текущее оформление на весь аккаунт — у всех сотрудников.
-  // Тему (светлую/тёмную) не трогаем: она у каждого своя.
-  const onApplyForAll = async () => {
-    setSavingAll(true);
+  const readFile = async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     try {
-      await put("/settings/appearance", { appearance: ap });
-      notify("Оформление применено для всех сотрудников", "success");
-    } catch (e) {
-      notify(e?.message || "Не удалось сохранить оформление", "error");
-    } finally {
-      setSavingAll(false);
-    }
+      if (file.size > 16000) throw new Error('Файл темы должен быть не больше 16 КБ.');
+      setTransferText(await file.text()); setTransferError('');
+    } catch (err) { setTransferError(err.message || 'Не удалось открыть файл.'); }
+    e.target.value = '';
+  };
+  const download = () => {
+    const url = URL.createObjectURL(new Blob([transferText], { type: 'application/json;charset=utf-8' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'okvion-theme.json'; link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    status('JSON темы подготовлен для скачивания.');
+  };
+  const applyForAll = async () => {
+    if (!isOwner || savingRef.current) return;
+    savingRef.current = true; setSavingAll(true); setMessage(null);
+    const version = signature;
+    try {
+      const response = await put('/settings/appearance', { appearance: { ...ap } });
+      if (!response?.ok) throw new Error('Сервер не подтвердил сохранение. Попробуйте ещё раз.');
+      if (mounted.current) { setTeamVersion(version); status(preview ? 'Демо: оформление команды обновлено. Настоящие настройки не менялись.' : 'Оформление команды сохранено. Сотрудники получат его при следующем входе.'); }
+    } catch (e) { if (mounted.current) status(e.message || 'Не удалось сохранить оформление команды.', true); }
+    finally { savingRef.current = false; if (mounted.current) setSavingAll(false); }
   };
 
-  return (
-    <div className="relative pb-nav text-white sm:pb-10">
-      <div className="pointer-events-none absolute -top-24 right-1/4 h-72 w-72 rounded-full bg-violet-600/20 hidden" />
-
-      <div className="relative mx-auto w-full max-w-[1100px]">
-        {/* Заголовок */}
-        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-blue-400">Оформление</p>
-            <h1 className="text-3xl font-semibold leading-tight tracking-[-0.02em] text-white sm:text-4xl">Тема</h1>
-            <p className="mt-1.5 text-sm text-slate-400">Настройте вид приложения под себя. Изменения применяются сразу.</p>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <button type="button" onClick={onExport} className="flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10">
-              <Download size={16} /> Экспорт
-            </button>
-            <button type="button" onClick={() => setImportOpen((v) => !v)} className="flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10">
-              <Upload size={16} /> Импорт
-            </button>
-            <button type="button" onClick={onReset} aria-label="Сбросить оформление" className="flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10" title="Сбросить оформление">
-              <RotateCcw size={16} /> <span className="hidden sm:inline">Сбросить</span>
-            </button>
-          </div>
-        </header>
-
-        {/* Оформление — общее для команды */}
-        {isOwner ? (
-          <div className="mb-6 flex flex-col gap-3 rounded-3xl border border-blue-400/25 bg-blue-500/[0.07] p-4 shadow-lg sm:flex-row sm:items-center sm:justify-between sm:p-5">
-            <div className="flex items-start gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-blue-500/20 text-blue-300"><Users size={18} strokeWidth={2.4} /></span>
-              <div>
-                <p className="text-sm font-semibold text-white">Оформление для всей команды</p>
-                <p className="mt-0.5 text-[13px] text-slate-400">Настройте вид ниже и примените его на устройствах всех сотрудников. Светлую/тёмную тему каждый выбирает сам.</p>
-              </div>
-            </div>
-            <button type="button" onClick={onApplyForAll} disabled={savingAll}
-              className="flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white shadow-lg transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60">
-              <Check size={16} strokeWidth={2.6} /> {savingAll ? "Применяю…" : "Применить для всех"}
-            </button>
-          </div>
-        ) : (
-          <div className="mb-6 flex items-start gap-3 rounded-3xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/8 text-slate-400"><Palette size={16} /></span>
-            <p className="text-[13px] text-slate-400">Общее оформление задаёт владелец. Изменения здесь останутся только на этом устройстве.</p>
-          </div>
-        )}
-
-        {importOpen && (
-          <div className="mb-6 rounded-3xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
-            <p className="mb-2 text-sm font-semibold text-white">Импорт темы</p>
-            <textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={5} placeholder="Вставьте JSON темы сюда…"
-              className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 p-3 font-mono text-xs text-white outline-none focus:border-blue-400/60" />
-            <div className="mt-3 flex justify-end gap-2">
-              <button type="button" onClick={() => setImportOpen(false)} className="rounded-xl border border-white/[0.08] bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-white/10">Отмена</button>
-              <button type="button" onClick={onImport} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">Применить</button>
-            </div>
-          </div>
-        )}
-
-        {/* Живой предпросмотр */}
-        <div className="relative mb-6 overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5">
-          <div className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-blue-500/15 hidden" />
-          <p className="relative mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Предпросмотр</p>
-          <div className="relative flex flex-wrap items-center gap-3">
-            <button className="rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg">Основная кнопка</button>
-            <button className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-2.5 text-sm font-semibold text-slate-200">Вторичная</button>
-            <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300">Успех</span>
-            <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-300">Внимание</span>
-            <span className="rounded-full border border-red-400/25 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300">Ошибка</span>
-            <span className="rounded-full border border-blue-400/25 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-300">Инфо</span>
-            <div className="grid h-11 min-w-[120px] flex-1 place-items-center rounded-2xl border border-white/[0.08] bg-white/[0.02] text-sm font-bold text-slate-400">Поле ввода</div>
-          </div>
-          {/* Пример карточки — показывает скругление, стекло, тени и шрифт */}
-          <div className="relative mt-3 grid gap-3 sm:grid-cols-2">
-            <div className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.05] p-3.5">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-indigo-600 text-base font-semibold text-white">А</span>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">Пример карточки</p>
-                <p className="truncate text-xs font-semibold text-slate-400">Так выглядят поверхности приложения</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.05] p-3.5">
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Выручка</p>
-                <p className="truncate text-xl font-semibold tabular-nums text-white">64 306 ₽</p>
-              </div>
-              <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-300">+12%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Готовые темы */}
-        <Section icon={Sparkles} title="Готовые темы" desc="Начните с профессиональной темы — потом настройте детали"
-          right={
-            <button type="button" onClick={onSurprise}
-              className="flex shrink-0 items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
-              title="Случайная тема">
-              <Shuffle size={16} /> <span className="hidden sm:inline">Удиви меня</span>
-            </button>
-          }>
-          {/* Фильтр по типу */}
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <Segmented value={presetFilter} onChange={setPresetFilter} size="sm" options={[
-              { value: "all", label: `Все (${PRESETS.length})` },
-              { value: "dark", label: (<span className="flex items-center gap-1.5"><Moon size={12} /> Тёмные</span>) },
-              { value: "light", label: (<span className="flex items-center gap-1.5"><Sun size={12} /> Светлые</span>) },
-            ]} />
-            {hidden.length > 0 && (
-              <button type="button" onClick={() => setShowHidden((v) => !v)}
-                className="ml-auto flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/10">
-                {showHidden ? <Eye size={13} /> : <EyeOff size={13} />} Скрытые ({hidden.length})
-              </button>
-            )}
-          </div>
-
-          {visiblePresets.length ? (
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
-              {visiblePresets.map((p) => {
-                const a = p.appearance;
-                const dots = [a.accent || "#3b82f6", a.accent2 || "#8b5cf6", a.success || "#10b981", a.error || "#ef4444"];
-                return (
-                  <div key={p.id} role="button" tabIndex={0} onClick={() => applyPreset(p)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); applyPreset(p); } }}
-                    className="group relative flex cursor-pointer flex-col gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 pr-9 text-left transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.06] focus:outline-none focus-visible:border-blue-400/60 sm:flex-row sm:items-center sm:gap-3 sm:pr-3">
-                    <span className="flex -space-x-1.5">
-                      {dots.map((c, i) => <span key={i} className="h-6 w-6 rounded-full border-2 border-slate-900" style={{ background: c }} />)}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-white">{p.name}</span>
-                      <span className="block text-[11px] font-semibold text-slate-500">{p.mode === "light" ? "Светлая" : "Тёмная"}</span>
-                    </span>
-                    <button type="button" aria-label={`Скрыть тему «${p.name}»`} title="Скрыть из галереи"
-                      onClick={(e) => { e.stopPropagation(); setPresetHidden(p.id, true); notify(`Тема «${p.name}» скрыта`, "success"); }}
-                      className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-lg bg-slate-900/70 text-slate-400 transition hover:bg-red-500/20 hover:text-red-300 focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
-                      <X size={14} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-white/[0.08] py-8 text-center text-sm font-bold text-slate-500">
-              Нет тем в этой категории{hidden.length ? " (часть скрыта)" : ""}
-            </div>
-          )}
-
-          {/* Скрытые темы — восстановление */}
-          {showHidden && hiddenPresets.length > 0 && (
-            <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Скрытые темы</p>
-                <button type="button" onClick={() => { clearHiddenPresets(); notify("Все темы возвращены", "success"); }}
-                  className="rounded-lg bg-white/5 px-2.5 py-1 text-xs font-semibold text-slate-300 transition hover:bg-white/10">Вернуть все</button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {hiddenPresets.map((p) => {
-                  const a = p.appearance;
-                  const dots = [a.accent || "#3b82f6", a.accent2 || "#8b5cf6"];
-                  return (
-                    <button key={p.id} type="button" onClick={() => { setPresetHidden(p.id, false); notify(`Тема «${p.name}» возвращена`, "success"); }}
-                      className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white">
-                      <span className="flex -space-x-1">{dots.map((c, i) => <span key={i} className="h-3.5 w-3.5 rounded-full border border-slate-900" style={{ background: c }} />)}</span>
-                      {p.name}
-                      <Plus size={13} className="text-emerald-300" />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </Section>
-
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          {/* Базовая тема + акценты */}
-          <Section icon={Palette} title="Цвета" desc="Главный цвет и цвета успеха/ошибки меняют вид всего приложения">
-            <Row label="Базовая тема">
-              <Segmented value={mode} onChange={(v) => setTheme(v)} options={[
-                { value: "dark", label: (<span className="flex items-center gap-1.5"><Moon size={13} /> Тёмная</span>) },
-                { value: "light", label: (<span className="flex items-center gap-1.5"><Sun size={13} /> Светлая</span>) },
-              ]} />
-            </Row>
-            <Row label="Основной цвет" hint="Кнопки, ссылки, выделение">
-              <div className="flex flex-col items-end gap-2">
-                <div className="flex flex-wrap justify-end gap-1.5">
-                  {ACCENTS.map((c) => (
-                    <button key={c} type="button" onClick={() => update({ accent: c })} title={c}
-                      className={`h-10 w-10 rounded-full border-2 transition ${(ap.accent || "").toLowerCase() === c ? "scale-110 border-white" : "border-white/20 hover:scale-105"}`}
-                      style={{ background: c }} />
-                  ))}
-                </div>
-                <input type="color" value={ap.accent || "#3b82f6"} onChange={(e) => update({ accent: e.target.value })} aria-label="Основной цвет"
-                  className="h-8 w-full cursor-pointer rounded-lg border border-white/[0.08] bg-transparent p-0" />
-              </div>
-            </Row>
-            <Row label="Дополнительный цвет" hint="Второй цвет в градиенте кнопок">
-              <input type="color" value={ap.accent2 || "#8b5cf6"} onChange={(e) => update({ accent2: e.target.value })} aria-label="Дополнительный цвет"
-                className="h-9 w-full cursor-pointer rounded-lg border border-white/[0.08] bg-transparent p-0" />
-            </Row>
-            <div className="mt-3 grid gap-2">
-              <ColorField label="Успех" value={ap.success} fallback="#10b981" onChange={(v) => update({ success: v })} />
-              <ColorField label="Внимание" value={ap.warning} fallback="#f59e0b" onChange={(v) => update({ warning: v })} />
-              <ColorField label="Ошибка" value={ap.error} fallback="#ef4444" onChange={(v) => update({ error: v })} />
-              <ColorField label="Информация"value={ap.info} fallback="#0ea5e9" onChange={(v) => update({ info: v })} />
-            </div>
-          </Section>
-
-          {/* Форма и материал */}
-          <div className="grid gap-4">
-            <Section title="Скругление" desc="Форма кнопок, карточек и полей">
-              <Segmented value={pickRadiusPreset(ap.radius)} onChange={(k) => update({ radius: RADIUS_PRESETS[k] })} size="sm"
-                options={Object.keys(RADIUS_PRESETS).map((k) => ({ value: k, label: RADIUS_LABELS[k] }))} />
-              <div className="mt-3">
-                <Slider value={ap.radius} min={0} max={1.8} step={0.05} onChange={(v) => update({ radius: v })} format={(v) => `${Math.round(v * 100)}%`} />
-              </div>
+  return <main className={`appearance-page ${mobilePreview ? 'is-mobile-preview-open' : ''}`}>
+    <header className="ap-heading"><div><p className="ap-eyebrow">НАСТРОЙКИ / ВАШЕ ПРОСТРАНСТВО</p><h1>Оформление</h1><p>Интерфейс, в котором удобно работать каждый день.</p></div><div className="ap-heading-actions"><button type="button" className="ap-button" onClick={undo} disabled={!history.length}><Undo2 size={16} />Отменить</button><button type="button" className="ap-icon-button" aria-label="Экспорт темы" title="Экспорт темы" onClick={() => openTransfer('export')}><Download size={17} /></button><button type="button" className="ap-icon-button" aria-label="Импорт темы" title="Импорт темы" onClick={() => openTransfer('import')}><Upload size={17} /></button><button type="button" className="ap-icon-button" aria-label="Сбросить оформление" title="Сбросить оформление" onClick={() => setResetOpen(v => !v)} aria-expanded={resetOpen}><RotateCcw size={17} /></button></div></header>
+    {resetOpen && <div className="ap-confirm"><div><strong>Вернуть стандартное оформление?</strong><p>Сохранённые темы останутся. Светлый или тёмный режим сохранится.</p></div><button type="button" className="ap-button" onClick={() => setResetOpen(false)}>Отмена</button><button type="button" className="ap-primary" onClick={() => { commit({ ...DEFAULT_APPEARANCE }); if (!preview) resetAppearance(); setResetOpen(false); status('Стандартное оформление восстановлено.'); }}>Вернуть стандарт</button></div>}
+    {message && <div className={`ap-feedback ${message.error ? 'is-error' : ''}`} role={message.error ? 'alert' : 'status'}><span>{message.error ? <X size={16} /> : <Check size={16} />}{message.text}</span><button type="button" aria-label="Закрыть сообщение" onClick={() => setMessage(null)}><X size={15} /></button></div>}
+    <div className="ap-studio">
+      <div className="ap-editor"><nav className="ap-tabs" aria-label="Разделы оформления">{TABS.map(([key, label, Icon]) => <button key={key} type="button" aria-pressed={tab === key} onClick={() => setTab(key)}><Icon size={15} />{label}{key === 'library' && !!themes.length && <small>{themes.length}</small>}</button>)}</nav>
+        <div className="ap-editor-content">
+          {tab === 'themes' && <Section number="01 / КОЛЛЕКЦИЯ" title="Начните с настроения" desc="Выберите готовую тему, затем подстройте детали под себя." right={<button type="button" className="ap-icon-button" aria-label="Случайная тема" title="Случайная тема" onClick={() => { commit(randomAppearance()); status('Случайное оформление применено. Его можно отменить.'); }}><Shuffle size={17} /></button>}>
+            <div className="ap-gallery-toolbar"><Choices label="Фильтр готовых тем" value={filter} onChange={setFilter} options={[{ value: 'all', label: 'Все' }, { value: 'dark', label: 'Тёмные', icon: Moon }, { value: 'light', label: 'Светлые', icon: Sun }]} /><label className="ap-search"><Search size={15} /><input aria-label="Найти тему" placeholder="Найти тему" value={search} onChange={e => setSearch(e.target.value)} /></label></div>
+            <div className="ap-themes-grid">{visible.map(p => <ThemeCard key={p.id} theme={p} active={activePreset?.id === p.id} onApply={() => applyThemeItem(p)} action={<button type="button" className="ap-theme-hide" aria-label={`Скрыть тему «${p.name}»`} title="Скрыть тему" onClick={() => hidePreset(p.id, true)}><EyeOff size={13} /></button>} />)}</div>
+            {!visible.length && <div className="ap-empty"><Search size={23} /><strong>Темы не найдены</strong><p>Попробуйте другое название или верните скрытые темы.</p><button type="button" className="ap-button" onClick={() => { setSearch(''); setFilter('all'); }}>Сбросить поиск</button></div>}
+            {!!hidden.length && <div className="ap-hidden"><button type="button" className="ap-text-button" onClick={() => setShowHidden(v => !v)} aria-expanded={showHidden}><EyeOff size={14} />Скрытые темы · {hidden.length}<ChevronRight size={14} /></button>{showHidden && <><div>{hiddenPresets.map(p => <button key={p.id} type="button" className="ap-button" onClick={() => hidePreset(p.id, false)}><Eye size={13} />{p.name}</button>)}</div><button type="button" className="ap-text-button" onClick={() => preview ? setHidden([]) : clearHiddenPresets()}>Вернуть все скрытые темы</button></>}</div>}
+          </Section>}
+          {tab === 'colors' && <>
+            <Section number="02 / ПАЛИТРА" title="Ваши цвета" desc="Кнопки, выделение и графики используют одну палитру.">
+              <Row label="Режим интерфейса" hint="Выбор светлой или тёмной темы хранится на устройстве."><Choices label="Режим интерфейса" value={mode} onChange={next => commit({ ...ap }, next)} options={[{ value: 'dark', label: 'Тёмный', icon: Moon }, { value: 'light', label: 'Светлый', icon: Sun }]} /></Row>
+              <div className="ap-accent-options" role="group" aria-label="Готовые основные цвета">{ACCENTS.map(([name, hex]) => <button key={hex} type="button" title={name} aria-label={`Основной цвет: ${name}`} aria-pressed={ap.accent?.toLowerCase() === hex} style={{ background: hex }} onClick={() => update({ accent: hex })}>{ap.accent?.toLowerCase() === hex && <Check size={16} />}</button>)}</div>
+              <Color label="Основной цвет" hint="Кнопки, активные элементы и графики" value={ap.accent} fallback="#3b82f6" onChange={v => update({ accent: v })} /><Color label="Дополнительный цвет" hint="Второй акцент и градиенты" value={ap.accent2} fallback="#8b5cf6" onChange={v => update({ accent2: v })} />
             </Section>
-
-            <Section title="Стекло, тени и фон" desc="Матовое стекло, глубина и фоновое свечение">
-              <Row label="Матовое стекло" hint="Полупрозрачные размытые поверхности">
-                <div className="flex justify-end"><Toggle checked={ap.glass} onChange={(v) => update({ glass: v })} /></div>
-              </Row>
-              <Row label="Сила размытия">
-                <Slider value={ap.blur} min={0.2} max={1.8} step={0.05} onChange={(v) => update({ blur: v })} format={(v) => `${Math.round(v * 100)}%`} disabled={!ap.glass} />
-              </Row>
-              <Row label="Тени">
-                <Segmented value={ap.shadow} onChange={(v) => update({ shadow: v })} size="sm"
-                  options={Object.keys(SHADOW_LABELS).map((k) => ({ value: k, label: SHADOW_LABELS[k] }))} />
-              </Row>
-              <Row label="Фоновое свечение" hint="Цветные размытые пятна на фоне страниц">
-                <div className="flex justify-end"><Toggle checked={ap.glow !== false} onChange={(v) => update({ glow: v })} /></div>
-              </Row>
+            <Section number="СИГНАЛЫ И СОСТОЯНИЯ" title="Цвета статусов" desc="Отдельная палитра для результата и важных уведомлений.">{[['success', 'Успех', '#10b981'], ['warning', 'Внимание', '#f59e0b'], ['error', 'Ошибка', '#ef4444'], ['info', 'Информация', '#0ea5e9']].map(([key, label, fallback]) => <Color key={key} label={label} value={ap[key]} fallback={fallback} onChange={v => update({ [key]: v })} />)}</Section>
+            <Section number="ПОВЕРХНОСТИ" title="Фон и карточки" desc="Свои цвета фона применяются в тёмном режиме. В светлом используется светлая палитра.">{mode === 'light' && <p className="ap-note">Чтобы увидеть эти два цвета, переключитесь на тёмный режим выше.</p>}<Color label="Фон приложения" value={ap.bg} fallback="#0a0e17" onChange={v => update({ bg: v })} /><Color label="Цвет карточек" value={ap.surface} fallback="#141a28" hint="Сплошной цвет перекрывает прозрачность стекла" onChange={v => update({ surface: v })} /></Section>
+          </>}
+          {tab === 'interface' && <>
+            <Section number="03 / ФОРМА И РИТМ" title="Под ваш стиль работы" desc="От плотной рабочей панели до спокойного просторного экрана.">
+              <Row label="Шрифт"><Choices label="Шрифт" value={ap.font} onChange={v => update({ font: v })} options={options(FONT_LABELS)} /></Row><Row label="Размер текста"><Slider label="Размер текста" value={ap.fontScale} min={.85} max={1.2} step={.01} onChange={v => update({ fontScale: v })} /></Row><Row label="Плотность интерфейса" hint="Меняет расстояния между элементами."><Choices label="Плотность интерфейса" value={ap.density} onChange={v => update({ density: v })} options={options(DENSITY_LABELS)} /></Row><Row label="Скругление" hint="Форма карточек, кнопок и полей."><Choices label="Быстрое скругление" value={ap.radius} onChange={v => update({ radius: v })} options={[{ value: 0, label: 'Острые' }, { value: .5, label: 'Строгие' }, { value: 1, label: 'Обычные' }, { value: 1.8, label: 'Мягкие' }]} /><Slider label="Скругление" value={ap.radius} min={0} max={1.8} step={.05} onChange={v => update({ radius: v })} /></Row>
             </Section>
-          </div>
-
-          {/* Типографика */}
-          <Section title="Шрифт" desc="Гарнитура и размер текста">
-            <Row label="Вид шрифта">
-              <Segmented value={ap.font} onChange={(v) => update({ font: v })} size="sm"
-                options={Object.keys(FONT_LABELS).map((k) => ({ value: k, label: FONT_LABELS[k] }))} />
-            </Row>
-            <Row label="Размер текста">
-              <Slider value={ap.fontScale} min={0.85} max={1.2} step={0.01} onChange={(v) => update({ fontScale: v })} format={(v) => `${Math.round(v * 100)}%`} />
-            </Row>
-          </Section>
-
-          {/* Пространство и движение */}
-          <Section title="Пространство и движение" desc="Плотность интерфейса и анимации">
-            <Row label="Плотность">
-              <Segmented value={ap.density} onChange={(v) => update({ density: v })} size="sm"
-                options={Object.keys(DENSITY_LABELS).map((k) => ({ value: k, label: DENSITY_LABELS[k] }))} />
-            </Row>
-            <Row label="Анимации" hint="Плавные переходы и эффекты">
-              <div className="flex justify-end"><Toggle checked={ap.motion} onChange={(v) => update({ motion: v })} /></div>
-            </Row>
-          </Section>
-
-          {/* Фон и блоки — свои цвета */}
-          <Section icon={Palette} title="Фон и блоки" desc="Свой цвет фона и карточек. Чтобы убрать стекло полностью — задайте цвет блоков и выключите «Матовое стекло».">
-            <div className="grid gap-2">
-              <ColorOverride label="Фон приложения" hint="Задний фон страниц" value={ap.bg} defaultHex="#0b1120" onChange={(v) => update({ bg: v })} />
-              <ColorOverride label="Цвет блоков" hint="Фон карточек и панелей (сплошной = без стекла)" value={ap.surface} defaultHex="#131a2c" onChange={(v) => update({ surface: v })} />
-            </div>
-          </Section>
+            <Section number="МАТЕРИАЛ И ГЛУБИНА" title="Детали, которые чувствуются"><Row label="Матовое стекло" hint="Полупрозрачные поверхности с размытием фона."><Toggle label="Матовое стекло" checked={ap.glass} onChange={v => update({ glass: v })} /></Row><Row label="Сила размытия"><Slider label="Сила размытия" value={ap.blur} min={.2} max={1.8} step={.05} disabled={!ap.glass} onChange={v => update({ blur: v })} /></Row><Row label="Тени"><Choices label="Тени" value={ap.shadow} onChange={v => update({ shadow: v })} options={options(SHADOW_LABELS)} /></Row><Row label="Фоновое свечение" hint="Декоративные цветные градиенты на фоне."><Toggle label="Фоновое свечение" checked={ap.glow !== false} onChange={v => update({ glow: v })} /></Row><Row label="Анимации" hint="Плавные переходы между состояниями."><Toggle label="Анимации" checked={ap.motion} onChange={v => update({ motion: v })} /></Row></Section>
+          </>}
+          {tab === 'library' && <>
+            <Section number="04 / ВАША КОЛЛЕКЦИЯ" title="Сохраните удачное сочетание" desc="Сохраняются цвета, параметры интерфейса и выбранный режим."><form className="ap-save-form" onSubmit={saveCurrent}><label><span className="sr-only">Название новой темы</span><input aria-label="Название новой темы" value={newName} maxLength={80} onChange={e => setNewName(e.target.value)} placeholder="Например, Вечерняя смена" /></label><button type="submit" className="ap-primary"><Plus size={16} />Сохранить тему</button></form>
+              {themes.length ? <div className="ap-saved-list">{themes.map(t => <div className="ap-saved-item" key={t.id}><ThemeCard theme={t} active={(!t.mode || t.mode === mode) && sameAppearance(ap, normalized(t.appearance))} onApply={() => applyThemeItem(t)} /><div className="ap-saved-actions"><label><span>Название темы</span><input key={t.name} aria-label={`Название темы «${t.name}»`} defaultValue={t.name} maxLength={80} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} onBlur={e => { const name = e.target.value.trim(); if (!name) { e.target.value = t.name; return; } if (preview) setThemes(cur => cur.map(x => x.id === t.id ? { ...x, name } : x)); else renameTheme(t.id, name); }} /></label><div><button type="button" className="ap-icon-button" aria-label={`Дублировать тему «${t.name}»`} onClick={() => preview ? saveLocal(`${t.name} (копия)`, t.appearance, t.mode) : duplicateTheme(t.id)}><Copy size={15} /></button><button type="button" className="ap-icon-button" aria-label={`Удалить тему «${t.name}»`} onClick={() => setDeleting(t.id)}><Trash2 size={15} /></button></div>{deleting === t.id && <div className="ap-delete-confirm"><span>Удалить «{t.name}»?</span><button type="button" onClick={() => setDeleting(null)}>Отмена</button><button type="button" onClick={() => { if (preview) setThemes(cur => cur.filter(x => x.id !== t.id)); else deleteTheme(t.id); setDeleting(null); status('Тема удалена из коллекции.'); }}>Удалить</button></div>}</div></div>)}</div> : <div className="ap-empty"><Palette size={26} /><strong>Здесь будут ваши темы</strong><p>Настройте оформление и сохраните его с удобным названием.</p></div>}
+            </Section>
+            <Section number="ПЕРЕНОС НАСТРОЕК" title="Возьмите тему с собой" desc="Передайте JSON на другое устройство или поделитесь своей палитрой."><div className="ap-transfer-actions"><button type="button" className="ap-button" onClick={() => openTransfer('export')}><Download size={16} />Экспорт JSON</button><button type="button" className="ap-button" onClick={() => openTransfer('import')}><Upload size={16} />Импорт JSON</button></div>{transfer && <div className="ap-transfer"><header><h3>{transfer === 'import' ? 'Импорт темы' : 'Экспорт текущей темы'}</h3><button type="button" className="ap-icon-button" aria-label="Закрыть перенос темы" onClick={() => setTransfer(null)}><X size={16} /></button></header><label><span>{transfer === 'import' ? 'Вставьте JSON или откройте файл' : 'Настройки в формате JSON'}</span><textarea aria-label={transfer === 'import' ? 'JSON для импорта' : 'JSON для экспорта'} value={transferText} readOnly={transfer === 'export'} onChange={e => { setTransferText(e.target.value); setTransferError(''); }} rows={8} spellCheck={false} /></label>{transferError && <p className="ap-error" role="alert">{transferError}</p>}<div className="ap-transfer-actions">{transfer === 'import' ? <><input ref={fileRef} className="sr-only" tabIndex={-1} type="file" accept=".json,application/json" aria-label="Файл темы" onChange={readFile} /><button type="button" className="ap-button" onClick={() => fileRef.current?.click()}><Upload size={15} />Открыть файл</button><button type="button" className="ap-primary" disabled={!transferText.trim()} onClick={importCurrent}><Check size={15} />Импортировать</button></> : <><button type="button" className="ap-button" onClick={async () => { try { await navigator.clipboard.writeText(transferText); status('JSON темы скопирован.'); } catch { setTransferError('Не удалось скопировать. Выделите текст вручную или скачайте файл.'); } }}><Copy size={15} />Копировать</button><button type="button" className="ap-primary" onClick={download}><Download size={15} />Скачать JSON</button></>}</div></div>}</Section>
+          </>}
         </div>
-
-        {/* Мои темы */}
-        <Section icon={Plus} title="Мои темы" desc="Сохраните текущие настройки как свою тему">
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row">
-            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Название темы…" onKeyDown={(e) => e.key === "Enter" && onSave()}
-              className="min-w-0 flex-1 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-2.5 font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60" />
-            <button type="button" onClick={onSave} className="flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 font-semibold text-white shadow-lg transition hover:brightness-110">
-              <Plus size={16} /> Сохранить
-            </button>
-          </div>
-          {themes.length ? (
-            <div className="grid gap-2">
-              {themes.map((t) => {
-                const a = t.appearance || {};
-                const dots = [a.accent || "#3b82f6", a.accent2 || "#8b5cf6", a.success || "#10b981"];
-                return (
-                  <div key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-2.5">
-                    <span className="flex -space-x-1.5">
-                      {dots.map((c, i) => <span key={i} className="h-6 w-6 rounded-full border-2 border-slate-900" style={{ background: c }} />)}
-                    </span>
-                    <input defaultValue={t.name} onBlur={(e) => e.target.value.trim() && e.target.value !== t.name && renameTheme(t.id, e.target.value)}
-                      className="min-w-0 w-full basis-full rounded-lg bg-transparent px-1 py-1 text-sm font-semibold text-white outline-none focus:bg-white/5 sm:w-auto sm:flex-1 sm:basis-auto" />
-                    <button type="button" onClick={() => applyCustom(t)} className="rounded-xl bg-blue-500/15 px-3 py-1.5 text-xs font-semibold text-blue-300 transition hover:bg-blue-500/25">
-                      <Check size={14} className="inline" /> Применить
-                    </button>
-                    <button type="button" onClick={() => duplicateTheme(t.id)} aria-label="Дублировать тему" title="Дублировать" className="grid h-10 w-10 place-items-center rounded-xl bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"><Copy size={14} /></button>
-                    <button type="button" onClick={() => { if (confirm(`Удалить тему «${t.name}»?`)) deleteTheme(t.id); }} aria-label="Удалить тему" title="Удалить" className="grid h-10 w-10 place-items-center rounded-xl bg-red-500/10 text-red-300 transition hover:bg-red-500/20"><Trash2 size={14} /></button>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-white/[0.08] py-8 text-center text-sm font-bold text-slate-500">Сохранённых тем пока нет</div>
-          )}
-        </Section>
       </div>
+      <aside className="ap-preview-column"><div className="ap-preview-sticky"><div className="ap-preview-heading"><div><span className="ap-eyebrow">ЖИВОЙ ПРЕДПРОСМОТР</span><h2>Так будет выглядеть приложение</h2></div><button type="button" className="ap-button ap-mobile-preview-toggle" aria-expanded={mobilePreview} onClick={() => setMobilePreview(v => !v)}><Eye size={15} />{mobilePreview ? 'Скрыть' : 'Показать'}</button><Choices label="Размер предпросмотра" value={device} onChange={setDevice} options={[{ value: 'desktop', label: <span className="sr-only">Компьютер</span>, icon: Monitor }, { value: 'phone', label: <span className="sr-only">Телефон</span>, icon: Smartphone }]} /></div><AppearancePreview device={device} /><p className="ap-preview-caption"><span><i />{preview ? 'Изменения только в демо' : 'Изменения применяются сразу'}</span><span>{activePreset?.name || 'Своё оформление'} · {mode === 'light' ? 'Светлый' : 'Тёмный'}</span></p>
+        <div className="ap-device-note"><Laptop size={17} /><div><strong>{preview ? 'Безопасный предпросмотр' : 'На этом устройстве'}</strong><p>{preview ? 'Настоящие настройки и сохранённые темы не меняются.' : 'Настройки сохраняются автоматически. Свои темы хранятся в этом браузере.'}</p>{changed && <button type="button" className="ap-text-button" onClick={() => { commit({ ...initial.appearance }, initial.mode); status('Вернул оформление, с которым вы открыли страницу.'); }}>Вернуть вид при открытии<Undo2 size={12} /></button>}</div></div>
+        <section className="ap-team"><span className="ap-team-icon"><Users size={19} /></span><div><h2>{isOwner ? 'Единый стиль команды' : 'Оформление команды'}</h2><p>{isOwner ? 'Отправьте цвета и параметры сотрудникам. Светлый или тёмный режим каждый выбирает сам.' : 'Общий стиль задаёт владелец. Ваши изменения здесь действуют на этом устройстве.'}</p>{isOwner && <><button type="button" className="ap-primary" onClick={applyForAll} disabled={savingAll || teamVersion === signature}><Check size={15} />{savingAll ? 'Сохраняю…' : teamVersion === signature ? 'Применено для команды' : 'Применить для команды'}</button><small>{teamVersion && teamVersion !== signature ? 'Есть новые изменения — примените их повторно.' : 'Сотрудники получат оформление при следующем входе.'}</small></>}</div></section>
+      </div></aside>
     </div>
-  );
-}
-
-function pickRadiusPreset(value) {
-  let best = "modern", diff = Infinity;
-  for (const [k, v] of Object.entries(RADIUS_PRESETS)) {
-    const d = Math.abs(v - value);
-    if (d < diff) { diff = d; best = k; }
-  }
-  return diff <= 0.08 ? best : "modern";
+  </main>;
 }

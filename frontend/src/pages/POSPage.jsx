@@ -1,3 +1,4 @@
+import "./POSPage.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { del, get, getSession, post } from "../api";
@@ -6,7 +7,7 @@ import PendingPaymentsModal from "../components/PendingPaymentsModal";
 import { formatMoney, money, num, businessISO, prettyName } from "../utils/format";
 import { UNIT_LABELS, getWarehouseUnitCost } from "../utils/menu";
 import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
-import { FolderOpen, ChevronLeft, ChevronRight, LogOut, Sparkles, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt, ClipboardList } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, LayoutGrid, Settings, ShoppingBag, ArrowRight, Sparkles, Plus, Minus, Package, AlertTriangle, Check, X, Lightbulb, Clock, Wallet, CreditCard, Trash2, Receipt, ClipboardList } from "lucide-react";
 
 // Бизнес-дата на N дней назад (0 = сегодня) с учётом времени открытия точки.
 // Вне компонента — eslint (react-hooks/purity) не любит Date.now/new Date в теле.
@@ -211,6 +212,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   const [selectedSectionId, setSelectedSectionId] = useState("all");
   const [openedCategory, setOpenedCategory] = useState(null);
   const [search, setSearch] = useState("");
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
+  const [menuToolsOpen, setMenuToolsOpen] = useState(false);
+  const [menuLoading, setMenuLoading] = useState(true);
+  const [menuLoadError, setMenuLoadError] = useState("");
 
   const [cart, setCart] = useState([]);
   const [discount, setDiscount] = useState("");
@@ -570,21 +575,29 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     "Владелец";
 
   const load = async () => {
-    const [sectionList, categoryList, productList, crds, warehouseList, debtCustomerList] = await Promise.all([
-      get("/product-types"),
-      get("/product-categories"),
-      get("/menu-products"),
-      get("/cards"),
-      get("/warehouse/items").catch(() => []),
-      get("/debt-customers").catch(() => []),
-    ]);
-
-    setSections(sectionList || []);
-    setCategories(categoryList || []);
-    setProducts(productList || []);
-    setCards(crds || []);
-    setWarehouseItems(warehouseList || []);
-    setDebtCustomers(debtCustomerList || []);
+    setMenuLoading(true);
+    setMenuLoadError("");
+    try {
+      const [sectionList, categoryList, productList, crds, warehouseList, debtCustomerList] = await Promise.all([
+        get("/product-types"),
+        get("/product-categories"),
+        get("/menu-products"),
+        get("/cards"),
+        get("/warehouse/items").catch(() => []),
+        get("/debt-customers").catch(() => []),
+      ]);
+      setSections(sectionList || []);
+      setCategories(categoryList || []);
+      setProducts(productList || []);
+      setCards(crds || []);
+      setWarehouseItems(warehouseList || []);
+      setDebtCustomers(debtCustomerList || []);
+    } catch (error) {
+      setMenuLoadError(error.message);
+      throw error;
+    } finally {
+      setMenuLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -592,42 +605,36 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   }, []);
 
   const visibleCategories = useMemo(() => {
-    const cats = Array.isArray(categories) ? categories : [];
-    if (selectedSectionId === "all") return cats;
-    return cats.filter((c) => String(c.typeId) === String(selectedSectionId));
+    const list = Array.isArray(categories) ? categories : [];
+    return selectedSectionId === "all" ? list : list.filter((category) => String(category.typeId) === String(selectedSectionId));
   }, [categories, selectedSectionId]);
 
-  const productsInsideCategory = useMemo(() => {
-    if (!openedCategory) return [];
-    const prods = Array.isArray(products) ? products : [];
-    const q = search.trim().toLowerCase();
-    return prods.filter((p) => {
-      if (p.isExtra) return false; // доп. товары — в отдельной секции
-      if (p.hidden) return false; // стоп-лист — не показываем в кассе
-      const okCategory = String(p.categoryId) === String(openedCategory.id);
-      const okSearch = !q || String(p.name || "").toLowerCase().includes(q);
-      return okCategory && okSearch;
+  const availableProducts = useMemo(
+    () => (Array.isArray(products) ? products : []).filter((product) => !product.hidden && !product.isExtra),
+    [products]
+  );
+  const displayProducts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const sectionCategoryIds = new Set(visibleCategories.map((category) => String(category.id)));
+    return availableProducts.filter((product) => {
+      const sameSection = selectedSectionId === "all"
+        || String(product.typeId) === String(selectedSectionId)
+        || (!product.typeId && sectionCategoryIds.has(String(product.categoryId)));
+      const sameCategory = !openedCategory || String(product.categoryId) === String(openedCategory.id);
+      return sameSection && sameCategory && (!query || String(product.name || "").toLowerCase().includes(query));
     });
-  }, [products, openedCategory, search]);
+  }, [availableProducts, selectedSectionId, openedCategory, search, visibleCategories]);
 
-  // Глобальный поиск по всему меню — работает с экрана категорий (без открытой категории).
-  const globalSearchResults = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (openedCategory || !q) return [];
-    const prods = Array.isArray(products) ? products : [];
-    const cats = Array.isArray(categories) ? categories : [];
-    return prods
-      .filter((p) => !p.isExtra && !p.hidden && String(p.name || "").toLowerCase().includes(q))
-      .slice(0, 40) // не рендерим сотни тяжёлых карточек — кассир уточнит запрос
-      .map((p) => ({
-        ...p,
-        _catName: (cats.find((c) => String(c.id) === String(p.categoryId)) || {}).name || "",
-      }));
-  }, [products, categories, openedCategory, search]);
-
-  // Доп. товары (стаканчик, лёд и т.п.) — быстрая отдельная секция
+  const categoryCounts = new Map();
+  availableProducts.forEach((product) => {
+    const id = String(product.categoryId);
+    categoryCounts.set(id, (categoryCounts.get(id) || 0) + 1);
+  });
+  const categoryNames = new Map(safe_categories.map((category) => [String(category.id), prettyName(category.name)]));
+  const cartQuantities = new Map(safe_cart.map((item) => [item.productId, item.qty]));
+  const cartItemCount = safe_cart.reduce((count, item) => count + num(item.qty), 0);
   const extraProducts = useMemo(
-    () => (Array.isArray(products) ? products : []).filter((p) => p.isExtra && !p.hidden),
+    () => (Array.isArray(products) ? products : []).filter((product) => product.isExtra && !product.hidden),
     [products]
   );
 
@@ -779,6 +786,14 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
     );
   };
 
+  const clearCart = () => {
+    if (!window.confirm(`Очистить чек (${safe_cart.length} поз.)?`)) return;
+    setCart([]);
+    setDiscount("");
+    setPaidAmount("");
+    setCardId("");
+  };
+
   const createSection = async () => {
     setError("");
 
@@ -902,6 +917,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   });
 
   const resetSale = async () => {
+    setMobileCartOpen(false);
     setCart([]);
     setDiscount("");
     setPaidAmount("");
@@ -940,6 +956,10 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   const submitSale = async (mode) => {
     setError("");
 
+    if (!safe_cart.length) return setError("Добавьте товары в чек");
+    if (mode === "cash" && paidAmount !== "" && (!Number.isFinite(num(paidAmount)) || num(paidAmount) < total - 0.005)) {
+      return setError("Полученная сумма меньше суммы чека");
+    }
     if (mode === "transfer" && !cardId) return setError("Выберите карту");
     if (mode === "debt" && !debtName.trim()) return setError("Введите имя клиента");
 
@@ -960,7 +980,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       await post("/sales", salePayload({
         cardId: mode === "transfer" ? Number(cardId) : 0,
         paymentType: mode,
-        cashGiven: mode === "cash" ? num(paidAmount) : 0,
+        cashGiven: mode === "cash" ? (paidAmount === "" ? total : num(paidAmount)) : 0,
         customerName: mode === "debt" ? debtName.trim() : "",
         clientRef: saleClientRef.current,
       }));
@@ -983,106 +1003,281 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
   };
 
   return (
-    <div
-      className="relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden p-3 text-white sm:p-4 md:overflow-hidden"
-      style={{ WebkitTapHighlightColor: "transparent" }}
-    >
-      <div className="relative z-10 flex flex-col md:min-h-0 md:flex-1">
-      {/* Шапка кассы (режим киоска): выход + продавец/смена */}
-      <div className="mb-3 shrink-0 space-y-2">
-        {/* Ряд 1: выход + заголовок + продавец */}
-        <div className="flex items-center justify-between gap-2 sm:gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-            <button type="button" onClick={onExit} aria-label="Выйти из кассы" title="Выйти из кассы"
-              className="flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.05] px-3 font-semibold text-slate-200 transition hover:bg-white/10 active:scale-95 sm:px-3.5">
-              <LogOut size={18} strokeWidth={2.4} />
-              <span>Выход</span>
+    <div className={`pos-shell ${mobileCartOpen ? "pos-cart-open" : ""}`}>
+      <div className="pos-inner">
+        <header className="pos-header">
+          <div className="pos-brand">
+            <button type="button" onClick={onExit} className="pos-icon-button" aria-label="Выйти из кассы" title="Выйти из кассы"><ChevronLeft size={21} /></button>
+            <div><p className="pos-eyebrow">Продажи</p><h1>Касса</h1></div>
+            <button type="button" onClick={openCashCheck} className={`pos-shift-status ${cashShift ? "is-open" : ""}`}>
+              <span />{cashShift ? "Смена открыта" : "Смена не открыта"}
             </button>
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold text-blue-400 sm:text-sm">Касса</p>
-              <h2 className="hidden truncate text-base font-semibold leading-none text-white sm:block sm:text-xl">Магазин</h2>
+          </div>
+          <div className="pos-header-tools">
+            <button type="button" onClick={openCashCheck} className="pos-header-cash"><Wallet size={17} /><span>Наличные<strong>{cashShift ? `${formatMoney(cashShift.expectedCash)} ₽` : "Открыть смену"}</strong></span></button>
+            <div className="pos-seller bg-white/[0.02]">
+              <span className="pos-avatar" aria-hidden="true">{String(activeWorkerName).slice(0, 1).toUpperCase()}</span>
+              <div>
+                <span>Продавец</span>
+                {isWorker ? (
+                  <select aria-label="Сотрудник смены" value={currentProfile?.id || ""} onChange={(e) => onProfileChange?.(e.target.value)}>
+                    <option value="">Выберите сотрудника</option>
+                    {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}
+                  </select>
+                ) : <strong>{activeWorkerName}</strong>}
+              </div>
             </div>
           </div>
+        </header>
 
-          {isWorker ? (
-            <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-2 py-1.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-xs font-semibold text-white">
-                {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
+        <nav className="pos-operations" aria-label="Операции кассы">
+          <button type="button" onClick={() => setPendingModal(true)}><Clock size={17} />Отложенные{pendingCount > 0 && <b>{pendingCount}</b>}</button>
+          <button type="button" onClick={openOrders}><ClipboardList size={17} />Заказы с сайта{ordersCount > 0 && <b>{ordersCount}</b>}</button>
+          <button type="button" onClick={openReceipts}><Receipt size={17} />Чеки</button>
+          <button type="button" onClick={openCardModal}><CreditCard size={17} />Счета для перевода</button>
+          <button type="button" onClick={openCashCheck} className="pos-operation-shift"><Wallet size={17} />Управление сменой</button>
+        </nav>
+        {error && !paymentModal && <div className="pos-error" role="alert"><AlertTriangle size={17} /><span>{error}</span><button type="button" onClick={() => setError("")} aria-label="Скрыть ошибку"><X size={16} /></button></div>}
+
+        <div className="pos-workspace">
+          <section className="pos-menu" aria-label="Меню товаров">
+            <div className="pos-menu-controls">
+              <label className="pos-search bg-white/[0.02]">
+                <Search size={19} />
+                <input aria-label="Поиск товаров" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Найти товар по названию…" />
+                {search && <button type="button" onClick={() => setSearch("")} aria-label="Очистить поиск"><X size={17} /></button>}
+              </label>
+              <div className="pos-sections" role="group" aria-label="Раздел меню">
+                <button type="button" aria-pressed={selectedSectionId === "all"} onClick={() => { setSelectedSectionId("all"); setOpenedCategory(null); }}>Всё меню</button>
+                {safe_sections.map((section) => (
+                  <button type="button" key={section.id} aria-pressed={String(selectedSectionId) === String(section.id)} onClick={() => { setSelectedSectionId(String(section.id)); setOpenedCategory(null); }}>{prettyName(section.name)}</button>
+                ))}
               </div>
-              <select value={currentProfile?.id || ""} onChange={(e) => onProfileChange?.(e.target.value)}
-                className="max-w-[38vw] rounded-lg bg-transparent py-1 pr-6 text-sm font-semibold text-blue-300 outline-none [color-scheme:dark] sm:max-w-none">
-                <option value="">Сотрудник…</option>
-                {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-              </select>
+              <div className="pos-categories" role="group" aria-label="Категория товаров">
+                <button type="button" aria-pressed={!openedCategory} onClick={() => setOpenedCategory(null)}><LayoutGrid size={15} />Все категории</button>
+                {visibleCategories.map((category) => (
+                  <button type="button" key={category.id} aria-pressed={String(openedCategory?.id) === String(category.id)} onClick={() => setOpenedCategory(category)}>{prettyName(category.name)}<span>{categoryCounts.get(String(category.id)) || 0}</span></button>
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-2.5 py-2 sm:px-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-sm font-semibold text-white">
-                {String(activeWorkerName || "A").slice(0, 1).toUpperCase()}
+            <div className="pos-menu-heading">
+              <div><h2>{openedCategory ? prettyName(openedCategory.name) : search.trim() ? "Результаты поиска" : "Выберите товары"}</h2><span>{displayProducts.length} в меню{search.trim() ? ` · «${search.trim()}»` : " · нажмите, чтобы добавить в чек"}</span></div>
+              {!isWorkspaceUser && <button type="button" onClick={() => setMenuToolsOpen((value) => !value)} aria-expanded={menuToolsOpen} className="pos-icon-button" aria-label="Управление меню" title="Управление меню"><Settings size={18} /></button>}
+            </div>
+            {menuToolsOpen && !isWorkspaceUser && (
+              <div className="pos-menu-admin">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {/* ── Создать раздел inline ── */}
+                  {inlineSection ? (
+                    <div className="flex flex-1 items-center gap-2 rounded-2xl border border-blue-400/30 bg-blue-500/10 px-3 py-2">
+                      <span className="text-sm font-semibold text-blue-300 shrink-0">Раздел:</span>
+                      <input
+                        value={newSectionName}
+                        onChange={(e) => setNewSectionName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { createSection(); setInlineSection(false); } if (e.key === "Escape") setInlineSection(false); }}
+                        placeholder="Например: Бар, Кухня…"
+                        autoFocus
+                        className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-blue-400/50"
+                      />
+                      <button onClick={() => { createSection(); setInlineSection(false); }} className="shrink-0 rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-semibold text-white hover:bg-blue-500">Добавить</button>
+                      <button onClick={() => setInlineSection(false)} aria-label="Закрыть" title="Закрыть" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setInlineSection(true)} title="Большая группа меню — Бар, Кухня"
+                      className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/5 px-3 py-2 text-left transition hover:border-blue-400/40 hover:bg-blue-500/10">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                      </span>
+                      <span className="leading-tight">
+                        <span className="block text-sm font-semibold text-white">Раздел</span>
+                        <span className="block text-[10px] font-bold text-slate-400">напр. Бар, Кухня</span>
+                      </span>
+                    </button>
+                  )}
+
+                  {/* ── Создать категорию inline ── */}
+                  {inlineCategory ? (
+                    <div className="flex flex-1 flex-wrap items-center gap-2 rounded-2xl border border-violet-400/30 bg-violet-500/10 px-3 py-2">
+                      <span className="text-sm font-semibold text-violet-300 shrink-0">Категория:</span>
+                      {safe_sections.length > 0 && (
+                        <select
+                          value={newCategory.sectionId}
+                          onChange={(e) => setNewCategory(p => ({ ...p, sectionId: e.target.value }))}
+                          className="rounded-xl border border-white/[0.08] bg-slate-900 px-2 py-1 text-xs font-bold text-white outline-none shrink-0">
+                          <option value="">Выберите раздел…</option>
+                          {safe_sections.map(s => <option key={s.id} value={s.id}>{prettyName(s.name)}</option>)}
+                        </select>
+                      )}
+                      <input
+                        value={newCategory.name}
+                        onChange={(e) => setNewCategory(p => ({ ...p, name: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === "Enter") { createCategory(); setInlineCategory(false); } if (e.key === "Escape") setInlineCategory(false); }}
+                        placeholder="Например: Коктейли, Чаи…"
+                        autoFocus
+                        className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-violet-400/50"
+                      />
+                      <button onClick={() => { createCategory(); setInlineCategory(false); }} className="shrink-0 rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-semibold text-white hover:bg-violet-500">Добавить</button>
+                      <button onClick={() => setInlineCategory(false)} aria-label="Закрыть" title="Закрыть" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setNewCategory(p => ({ ...p, sectionId: selectedSectionId !== "all" ? selectedSectionId : "" })); setInlineCategory(true); }} title="Группа товаров внутри раздела — Коктейли, Чаи"
+                      className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/5 px-3 py-2 text-left transition hover:border-violet-400/40 hover:bg-violet-500/10">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                      </span>
+                      <span className="leading-tight">
+                        <span className="block text-sm font-semibold text-white">Категория</span>
+                        <span className="block text-[10px] font-bold text-slate-400">напр. Коктейли, Чаи</span>
+                      </span>
+                    </button>
+                  )}
+
+                  {/* ── Добавить товар ── */}
+                  <button onClick={openProductModal} disabled={!openedCategory}
+                    title={openedCategory ? `Добавить товар в «${prettyName(openedCategory.name)}»` : "Сначала откройте категорию"}
+                    className={`flex items-center gap-2.5 rounded-2xl px-3 py-2 text-left transition ${
+                      openedCategory
+                        ? "bg-indigo-600 text-white  hover:brightness-110"
+                        : "border border-dashed border-white/12 bg-white/[0.02] text-slate-400 cursor-not-allowed"
+                    }`}>
+                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${openedCategory ? "bg-white/20 text-white" : "bg-white/8 text-slate-400"}`}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                    </span>
+                    <span className="leading-tight">
+                      <span className="block text-sm font-semibold">Товар</span>
+                      <span className={`block text-[10px] font-bold ${openedCategory ? "text-white/75" : "text-slate-500"}`}>
+                        {openedCategory ? `в «${prettyName(openedCategory.name)}»` : "откройте категорию"}
+                      </span>
+                    </span>
+                  </button>
+                </div>
               </div>
-              <div className="hidden min-w-0 pr-1 sm:block">
-                <p className="text-[11px] font-semibold uppercase leading-none text-slate-400">Сейчас работает</p>
-                <p className="truncate text-sm font-semibold leading-tight text-white">{activeWorkerName}</p>
+            )}
+            <div className="pos-menu-scroll">
+              {menuLoading ? (
+                <div className="pos-product-grid" role="status" aria-label="Загрузка меню">{Array.from({ length: 8 }, (_, index) => <div key={index} className="pos-product-skeleton bg-white/[0.02] animate-pulse" />)}</div>
+              ) : menuLoadError ? (
+                <div className="pos-menu-empty"><AlertTriangle size={30} /><h3>Не удалось загрузить меню</h3><p>{menuLoadError}</p><button type="button" className="pos-button" onClick={() => load().catch((e) => setError(e.message))}>Попробовать снова</button></div>
+              ) : displayProducts.length ? (
+                <div className="pos-product-grid">
+                  {displayProducts.map((product) => {
+                    const quantity = cartQuantities.get(product.id) || 0;
+                    return (
+                      <button type="button" key={product.id} onClick={() => addToCart(product)} className={`pos-product bg-white/[0.02] shadow-sm backdrop-blur-xl ${quantity ? "is-in-cart" : ""}`} aria-label={`Добавить ${prettyName(product.name)} · ${formatMoney(product.price)} ₽`}>
+                        <div className="pos-product-top"><span className="pos-product-avatar" aria-hidden="true">{prettyName(product.name).slice(0, 2).toUpperCase()}</span>{quantity > 0 ? <span className="pos-product-quantity">В чеке · {quantity}</span> : <Plus size={18} />}</div>
+                        <strong>{prettyName(product.name)}</strong>
+                        <span className="pos-product-category">{categoryNames.get(String(product.categoryId)) || "Без категории"}</span>
+                        <span className="pos-product-price">{formatMoney(product.price)}<small>₽</small></span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="pos-menu-empty"><Package size={32} /><h3>{search.trim() ? "Товар не найден" : "В этом разделе пока пусто"}</h3><p>{search.trim() ? "Попробуйте другое название или выберите все категории." : "Добавьте товары в меню, чтобы начать продажи."}</p><button type="button" onClick={() => { setSearch(""); setOpenedCategory(null); setSelectedSectionId("all"); }} className="pos-button">Показать всё меню</button></div>
+              )}
+              {extraProducts.length > 0 && <section className="pos-extras" aria-label="Дополнения к заказу"><h3>Добавить к заказу</h3><div>{extraProducts.map((product) => <button type="button" key={product.id} onClick={() => addToCart(product)}><Plus size={14} /><span>{prettyName(product.name)}</span><strong>{formatMoney(product.price)} ₽</strong></button>)}</div></section>}
+            </div>
+          </section>
+
+          <aside className="pos-receipt bg-white/[0.02] shadow-sm backdrop-blur-xl" aria-label="Текущий чек">
+            <div className="pos-receipt-heading">
+              <div>
+                <span className="pos-eyebrow">Текущий заказ</span>
+                <h2>Новый чек<span>{cartItemCount}</span></h2>
+              </div>
+              <div>
+                {safe_cart.length > 0 && (
+                  <button type="button" className="pos-icon-button pos-clear" aria-label="Очистить чек" title="Очистить чек" onClick={clearCart}>
+                    <Trash2 size={17} />
+                  </button>
+                )}
+                <button type="button" className="pos-icon-button pos-close-cart" onClick={() => setMobileCartOpen(false)} aria-label="Вернуться к меню">
+                  <X size={21} />
+                </button>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Ряд 2: действия — горизонтальная прокрутка на телефоне, с подписями */}
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-none" style={{ scrollbarWidth: "none" }}>
-          <button type="button" onClick={() => setPendingModal(true)}
-            aria-label="К оплате — отложенные чеки" title="К оплате — отложенные чеки"
-            className="relative flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-amber-400/25 bg-amber-500/10 px-3.5 font-semibold text-amber-200 transition hover:bg-amber-500/20 active:scale-95">
-            <Clock size={18} strokeWidth={2.4} />
-            Отложенные
-            {pendingCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-semibold leading-none text-white">
-                {pendingCount > 99 ? "99+" : pendingCount}
-              </span>
+            {activeOnlineOrderId && (
+              <div className="pos-online-order"><ClipboardList size={15} />Заказ с сайта №{activeOnlineOrderId}</div>
             )}
-          </button>
-          <button type="button" onClick={openOrders}
-            aria-label="Заказы с сайта" title="Заказы с сайта"
-            className={`relative flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border px-3.5 font-semibold transition active:scale-95 ${ordersCount > 0 ? "border-pink-400/40 bg-pink-500/15 text-pink-200 hover:bg-pink-500/25" : "border-indigo-400/25 bg-indigo-500/10 text-indigo-200 hover:bg-indigo-500/20"}`}>
-            <ClipboardList size={18} strokeWidth={2.4} />
-            Заказы
-            {ordersCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-semibold leading-none text-white">
-                {ordersCount > 99 ? "99+" : ordersCount}
-              </span>
-            )}
-          </button>
-          <button type="button" onClick={openCashCheck}
-            aria-label="Проверить кассу — сколько наличных должно быть сейчас"
-            title="Проверить кассу — сколько наличных должно быть сейчас"
-            className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-3.5 font-semibold text-emerald-200 transition hover:bg-emerald-500/20 active:scale-95">
-            <Wallet size={18} strokeWidth={2.4} />
-            Касса
-          </button>
-          <button type="button" onClick={openCardModal}
-            aria-label="Счета для оплаты переводом — добавить или удалить"
-            title="Счета для оплаты переводом — добавить или удалить"
-            className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3.5 font-semibold text-sky-200 transition hover:bg-sky-500/20 active:scale-95">
-            <CreditCard size={18} strokeWidth={2.4} />
-            Счета
-          </button>
-          <button type="button" onClick={openReceipts}
-            aria-label="Чеки за сегодня — что пробили"
-            title="Чеки за сегодня — что пробили"
-            className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3.5 font-semibold text-violet-200 transition hover:bg-violet-500/20 active:scale-95">
-            <Receipt size={18} strokeWidth={2.4} />
-            Чеки
-          </button>
+            <div className="pos-cart-lines">
+              {safe_cart.length ? safe_cart.map((item, index) => (
+                <div className="pos-cart-line" key={item.productId}>
+                  <div className="pos-cart-line-title">
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <strong>{prettyName(item.name)}</strong>
+                    <button
+                      type="button"
+                      onClick={() => setCart((items) => items.filter((entry) => entry.productId !== item.productId))}
+                      aria-label={`Убрать ${prettyName(item.name)} из чека`}
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                  <div className="pos-cart-line-controls">
+                    <span>{formatMoney(item.price)} ₽ / шт.</span>
+                    <div className="pos-quantity-control">
+                      <button type="button" onClick={() => decreaseCartItem(item.productId)} aria-label={`Уменьшить количество ${prettyName(item.name)}`}>
+                        <Minus size={15} />
+                      </button>
+                      <strong>{item.qty}</strong>
+                      <button type="button" onClick={() => increaseCartItem(item.productId)} aria-label={`Увеличить количество ${prettyName(item.name)}`}>
+                        <Plus size={15} />
+                      </button>
+                    </div>
+                    <b>{formatMoney(money(item.price) * money(item.qty))} ₽</b>
+                  </div>
+                </div>
+              )) : (
+                <div className="pos-cart-empty">
+                  <ShoppingBag size={36} strokeWidth={1.3} />
+                  <h3>Начните новый заказ</h3>
+                  <p>Нажмите на товар в меню.<br />Здесь появятся позиции вашего чека.</p>
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              className="pos-custom-item"
+              onClick={() => {
+                setCustomForm({ name: "", price: "", qty: "1" });
+                setError("");
+                setCustomModal(true);
+              }}
+            >
+              <Plus size={16} />Произвольная позиция<span>Название и цена</span>
+            </button>
+            <div className="pos-checkout">
+              <div className="pos-discount">
+                <label htmlFor="pos-discount">Скидка на чек</label>
+                <div>
+                  <input
+                    id="pos-discount"
+                    aria-label="Скидка на чек в процентах"
+                    value={discount}
+                    onChange={(e) => setDiscount(e.target.value)}
+                    onBlur={() => { if (discount !== "") setDiscount(String(discountPct)); }}
+                    inputMode="decimal"
+                    placeholder="0"
+                    disabled={!safe_cart.length}
+                  />
+                  <span>%</span>
+                </div>
+              </div>
+              <dl className="pos-checkout-breakdown">
+                <div><dt>Сумма товаров</dt><dd>{formatMoney(subtotal)} ₽</dd></div>
+                {discountAmount > 0 && <div><dt>Скидка {discountPct}%</dt><dd>−{formatMoney(discountAmount)} ₽</dd></div>}
+              </dl>
+              <div className="pos-checkout-total">
+                <span>К оплате</span><strong>{formatMoney(total)}<small>₽</small></strong>
+              </div>
+              <button type="button" className="pos-pay-button" onClick={confirmSale} disabled={!safe_cart.length || submitting}>
+                <span>Перейти к оплате</span><ArrowRight size={20} />
+              </button>
+              <p className="pos-checkout-hint">Наличные · перевод · в долг · отложить</p>
+            </div>
+          </aside>
         </div>
-      </div>
-
-      {error && (
-        <div className="mb-3 shrink-0 rounded-2xl bg-red-500/10 px-4 py-3 font-bold text-red-300">
-          {error}
-        </div>
-      )}
-
-      {pendingModal && <PendingPaymentsModal onClose={() => { setPendingModal(false); refreshPendingCount(); }} />}
+        <div className="pos-mobile-checkout"><button type="button" className="pos-pay-button" onClick={() => setMobileCartOpen(true)}><ShoppingBag size={18} /><span>Чек{cartItemCount > 0 ? ` · ${cartItemCount} шт.` : " пока пуст"}</span><strong>{formatMoney(total)} ₽</strong><ChevronRight size={19} /></button></div>
 
       {ordersModal && (
         <Modal title="Заказы с сайта" section={ordersCount > 0 ? `${ordersCount} новых` : "Заказы"} onClose={() => setOrdersModal(false)} legacyLight={false}>
@@ -1158,380 +1353,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
         </Modal>
       )}
 
-      <div className="flex flex-col gap-4 md:min-h-0 md:flex-1 md:flex-row">
-        <div className="flex flex-col gap-3 md:min-h-0 md:flex-1">
-          <div className="shrink-0 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 sm:p-4">
-            <div className="flex items-center gap-3">
-              {openedCategory && (
-                <button
-                  type="button"
-                  onClick={() => { setOpenedCategory(null); setSearch(""); }}
-                  aria-label="Назад к категориям"
-                  title="Назад к категориям"
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
-                ><ChevronLeft size={20} strokeWidth={2.4} /></button>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                  {openedCategory ? prettyName(openedCategory.typeName || openedCategory.type || "Категория") : "Меню"}
-                </p>
-                <h3 className="truncate text-base font-semibold sm:text-lg">
-                  {openedCategory ? prettyName(openedCategory.name) : "Категории"}
-                </h3>
-              </div>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={openedCategory ? "Найти позицию" : "Найти товар по всему меню"}
-                className="hidden rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 lg:block lg:w-72"
-              />
-            </div>
-
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={openedCategory ? "Найти позицию" : "Найти товар по всему меню"}
-              className="mt-3 w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 lg:hidden"
-            />
-
-            {!openedCategory && (
-              <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-0.5">
-                <button
-                  onClick={() => { setSelectedSectionId("all"); setOpenedCategory(null); }}
-                  className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${selectedSectionId === "all" ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"}`}
-                >
-                  Все
-                </button>
-                {safe_sections.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => { setSelectedSectionId(String(s.id)); setOpenedCategory(null); }}
-                    className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${String(selectedSectionId) === String(s.id) ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"}`}
-                  >
-                    {prettyName(s.name)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {!isWorkspaceUser && (
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              {/* ── Создать раздел inline ── */}
-              {inlineSection ? (
-                <div className="flex flex-1 items-center gap-2 rounded-2xl border border-blue-400/30 bg-blue-500/10 px-3 py-2">
-                  <span className="text-sm font-semibold text-blue-300 shrink-0">Раздел:</span>
-                  <input
-                    value={newSectionName}
-                    onChange={(e) => setNewSectionName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { createSection(); setInlineSection(false); } if (e.key === "Escape") setInlineSection(false); }}
-                    placeholder="Например: Бар, Кухня…"
-                    autoFocus
-                    className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-blue-400/50"
-                  />
-                  <button onClick={() => { createSection(); setInlineSection(false); }} className="shrink-0 rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-semibold text-white hover:bg-blue-500">Добавить</button>
-                  <button onClick={() => setInlineSection(false)} aria-label="Закрыть" title="Закрыть" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
-                </div>
-              ) : (
-                <button onClick={() => setInlineSection(true)} title="Большая группа меню — Бар, Кухня"
-                  className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/5 px-3 py-2 text-left transition hover:border-blue-400/40 hover:bg-blue-500/10">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-                  </span>
-                  <span className="leading-tight">
-                    <span className="block text-sm font-semibold text-white">Раздел</span>
-                    <span className="block text-[10px] font-bold text-slate-400">напр. Бар, Кухня</span>
-                  </span>
-                </button>
-              )}
-
-              {/* ── Создать категорию inline ── */}
-              {inlineCategory ? (
-                <div className="flex flex-1 flex-wrap items-center gap-2 rounded-2xl border border-violet-400/30 bg-violet-500/10 px-3 py-2">
-                  <span className="text-sm font-semibold text-violet-300 shrink-0">Категория:</span>
-                  {safe_sections.length > 0 && (
-                    <select
-                      value={newCategory.sectionId}
-                      onChange={(e) => setNewCategory(p => ({ ...p, sectionId: e.target.value }))}
-                      className="rounded-xl border border-white/[0.08] bg-slate-900 px-2 py-1 text-xs font-bold text-white outline-none shrink-0">
-                      <option value="">Выберите раздел…</option>
-                      {safe_sections.map(s => <option key={s.id} value={s.id}>{prettyName(s.name)}</option>)}
-                    </select>
-                  )}
-                  <input
-                    value={newCategory.name}
-                    onChange={(e) => setNewCategory(p => ({ ...p, name: e.target.value }))}
-                    onKeyDown={(e) => { if (e.key === "Enter") { createCategory(); setInlineCategory(false); } if (e.key === "Escape") setInlineCategory(false); }}
-                    placeholder="Например: Коктейли, Чаи…"
-                    autoFocus
-                    className="flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-violet-400/50"
-                  />
-                  <button onClick={() => { createCategory(); setInlineCategory(false); }} className="shrink-0 rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-semibold text-white hover:bg-violet-500">Добавить</button>
-                  <button onClick={() => setInlineCategory(false)} aria-label="Закрыть" title="Закрыть" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/10 hover:text-white"><X size={16}/></button>
-                </div>
-              ) : (
-                <button onClick={() => { setNewCategory(p => ({ ...p, sectionId: selectedSectionId !== "all" ? selectedSectionId : "" })); setInlineCategory(true); }} title="Группа товаров внутри раздела — Коктейли, Чаи"
-                  className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/5 px-3 py-2 text-left transition hover:border-violet-400/40 hover:bg-violet-500/10">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-                  </span>
-                  <span className="leading-tight">
-                    <span className="block text-sm font-semibold text-white">Категория</span>
-                    <span className="block text-[10px] font-bold text-slate-400">напр. Коктейли, Чаи</span>
-                  </span>
-                </button>
-              )}
-
-              {/* ── Добавить товар ── */}
-              <button onClick={openProductModal} disabled={!openedCategory}
-                title={openedCategory ? `Добавить товар в «${prettyName(openedCategory.name)}»` : "Сначала откройте категорию"}
-                className={`flex items-center gap-2.5 rounded-2xl px-3 py-2 text-left transition ${
-                  openedCategory
-                    ? "bg-indigo-600 text-white  hover:brightness-110"
-                    : "border border-dashed border-white/12 bg-white/[0.02] text-slate-400 cursor-not-allowed"
-                }`}>
-                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${openedCategory ? "bg-white/20 text-white" : "bg-white/8 text-slate-400"}`}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-                </span>
-                <span className="leading-tight">
-                  <span className="block text-sm font-semibold">Товар</span>
-                  <span className={`block text-[10px] font-bold ${openedCategory ? "text-white/75" : "text-slate-500"}`}>
-                    {openedCategory ? `в «${prettyName(openedCategory.name)}»` : "откройте категорию"}
-                  </span>
-                </span>
-              </button>
-            </div>
-          )}
-
-          <div className="no-scrollbar md:-mr-1 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1 md:pb-1 md:pt-1">
-          {!openedCategory ? (
-            search.trim() ? (
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {globalSearchResults.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => addToCart(p)}
-                  className="group relative flex min-h-[108px] flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 text-left transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:bg-white/[0.07] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:p-4"
-                >
-                  <div className="min-w-0">
-                    <div className="line-clamp-2 text-sm font-semibold leading-tight text-white sm:text-[15px]">{prettyName(p.name)}</div>
-                    <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">{p._catName}</p>
-                  </div>
-                  <div className="mt-3 flex items-end justify-between gap-2">
-                    <span className="text-lg font-semibold tabular-nums text-white sm:text-xl">{formatMoney(p.price)}<span className="ml-0.5 text-xs font-bold text-slate-500">₽</span></span>
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-blue-500/15 text-blue-300 transition group-hover:bg-blue-500 group-hover:text-white"><Plus size={16} strokeWidth={2.8} /></span>
-                  </div>
-                </button>
-              ))}
-
-              {!globalSearchResults.length && (
-                <div className="col-span-full rounded-2xl border border-white/[0.08] bg-white/[0.02] p-10 text-center">
-                  <p className="text-xl font-semibold text-white">Ничего не найдено</p>
-                  <p className="mt-2 text-slate-400">Попробуйте другое название товара.</p>
-                </div>
-              )}
-            </div>
-            ) : (
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {visibleCategories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    setOpenedCategory(cat);
-                    setSearch("");
-                  }}
-                  className="group flex items-center gap-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 text-left transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:bg-white/[0.07] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-blue-600/25 to-violet-600/20 text-blue-200"><FolderOpen className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-bold text-blue-400">{prettyName(cat.typeName || cat.type || "Раздел")}</p>
-                    <h3 className="truncate text-sm font-semibold text-white sm:text-base">{prettyName(cat.name)}</h3>
-                  </div>
-                  <ChevronRight size={16} className="shrink-0 text-slate-600 transition group-hover:text-blue-300" />
-                </button>
-              ))}
-
-              {!visibleCategories.length && (
-                <div className="col-span-full rounded-2xl border border-white/[0.08] bg-white/[0.02] p-10 text-center">
-                  <p className="text-xl font-semibold text-white">
-                    Категорий пока нет
-                  </p>
-                  <p className="mt-2 text-slate-400">
-                    Создайте категорию, например “Холодные напитки”.
-                  </p>
-                </div>
-              )}
-            </div>
-            )
-          ) : (
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {productsInsideCategory.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => addToCart(p)}
-                  className="group relative flex min-h-[108px] flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 text-left transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:bg-white/[0.07] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:p-4"
-                >
-                  <div className="line-clamp-2 text-sm font-semibold leading-tight text-white sm:text-[15px]">
-                    {prettyName(p.name)}
-                  </div>
-                  <div className="mt-3 flex items-end justify-between gap-2">
-                    <span className="text-lg font-semibold tabular-nums text-white sm:text-xl">{formatMoney(p.price)}<span className="ml-0.5 text-xs font-bold text-slate-500">₽</span></span>
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-blue-500/15 text-blue-300 transition group-hover:bg-blue-500 group-hover:text-white"><Plus size={16} strokeWidth={2.8} /></span>
-                  </div>
-                </button>
-              ))}
-
-              {!productsInsideCategory.length && (
-                <div className="col-span-full rounded-2xl border border-white/[0.08] bg-white/[0.02] p-10 text-center">
-                  <p className="text-xl font-semibold text-white">
-                    В этой категории пока нет товаров
-                  </p>
-                  <p className="mt-2 text-slate-400">
-                    Добавьте позицию внутрь категории “{prettyName(openedCategory.name)}”.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3 md:min-h-0 md:w-[270px] md:shrink-0 lg:w-[340px] xl:w-[400px]">
-        {/* Панель смены больше не занимает место в кассе: касса, внесения/изъятия и
-            закрытие смены живут в окне «Наличные» (кнопка в шапке кассы). */}
-
-        {extraProducts.length > 0 && (
-          <div className="rounded-2xl border border-amber-400/25 bg-amber-500/[0.06] p-4 sm:p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300"><Plus size={15} strokeWidth={3} /></span>
-              <div>
-                <p className="text-sm font-semibold text-white leading-tight">Быстрые допы</p>
-                <p className="text-[11px] text-slate-400 leading-tight">Стаканчик, лёд и т.п. — в доходах отдельно</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {extraProducts.map((p) => (
-                <button key={p.id} type="button" onClick={() => addToCart(p)}
-                  className="flex min-w-0 items-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-500/20 active:scale-95">
-                  <span className="truncate">{prettyName(p.name)}</span>
-                  <span className="shrink-0 text-amber-300">{formatMoney(p.price)}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-col rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 sm:p-4 md:min-h-0 md:flex-1">
-          <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
-            <h3 className="text-base font-semibold sm:text-lg">Корзина</h3>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => { setCustomForm({ name: "", price: "", qty: "1" }); setError(""); setCustomModal(true); }}
-                title="Произвольная продажа: название и цена"
-                className="inline-flex min-h-10 items-center gap-1 whitespace-nowrap rounded-2xl bg-blue-500/15 px-3 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/25 active:scale-95"
-              >
-                <Plus size={16} strokeWidth={2.6} /> Произвольная продажа
-              </button>
-            {safe_cart.length > 0 && (
-              <button
-                onClick={() => { if (!window.confirm(`Очистить всю корзину (${safe_cart.length} поз.)?`)) return; setCart([]); setDiscount(""); setPaidAmount(""); setCardId(""); }}
-                className="min-h-10 rounded-2xl bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-300"
-              >
-                Очистить
-              </button>
-            )}
-            </div>
-          </div>
-
-          <div className="no-scrollbar max-h-72 space-y-2 overflow-auto lg:max-h-none lg:min-h-[96px] lg:flex-1">
-            {safe_cart.map((i) => (
-              <div
-                key={i.productId}
-                className="flex items-center justify-between gap-3 rounded-3xl border border-white/[0.08] bg-white/[0.02] p-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="font-bold truncate">{prettyName(i.name)}</div>
-                  <div className="text-sm text-slate-400">
-                    {formatMoney(i.price)} × {i.qty}
-                  </div>
-                </div>
-
-                <div className="flex gap-1.5 shrink-0">
-                  <button
-                    onClick={() => decreaseCartItem(i.productId)}
-                    aria-label="Уменьшить количество"
-                    title="Уменьшить количество"
-                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/8 font-semibold text-white transition active:scale-95 hover:bg-white/15"
-                  >
-                    <Minus size={18} strokeWidth={3}/>
-                  </button>
-                  <button
-                    onClick={() => increaseCartItem(i.productId)}
-                    aria-label="Увеличить количество"
-                    title="Увеличить количество"
-                    className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/12 font-semibold text-blue-300 transition active:scale-95 hover:bg-blue-500/20"
-                  >
-                    <Plus size={18} strokeWidth={3}/>
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {!safe_cart.length && (
-              <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-white/[0.08] bg-white/[0.02] px-5 py-10 text-center">
-                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-slate-500">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-                </div>
-                <p className="text-sm font-semibold text-slate-300">Корзина пустая</p>
-                <p className="mt-1 text-xs font-bold text-slate-500">Нажимайте товары в меню, чтобы добавить в чек</p>
-              </div>
-            )}
-          </div>
-
-          {safe_cart.length > 0 && (
-            <>
-              <div className="mt-2 shrink-0">
-                <input
-                  value={discount}
-                  onChange={(e) => setDiscount(e.target.value)}
-                  inputMode="decimal"
-                  placeholder="Скидка %"
-                  className="w-full rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-2.5 font-bold text-white outline-none placeholder:text-slate-500"
-                />
-              </div>
-
-              <div className="mt-2 shrink-0 rounded-2xl border border-white/[0.08] bg-linear-to-br from-blue-600/10 to-violet-600/10 p-3">
-                {discountAmount > 0 && (
-                  <>
-                    <div className="flex justify-between text-sm text-slate-300">
-                      <span>Сумма</span>
-                      <b className="text-white">{formatMoney(subtotal)}</b>
-                    </div>
-                    <div className="mt-1 flex justify-between text-sm text-red-300">
-                      <span>Скидка</span>
-                      <b>−{formatMoney(discountAmount)}</b>
-                    </div>
-                  </>
-                )}
-                <div className={`flex items-baseline justify-between ${discountAmount > 0 ? "mt-2 border-t border-white/[0.08] pt-2" : ""}`}>
-                  <span className="text-base font-semibold">Итого</span>
-                  <b className="text-xl font-semibold">{formatMoney(total)}</b>
-                </div>
-              </div>
-            </>
-          )}
-
-          <button
-            onClick={confirmSale}
-            disabled={!safe_cart.length}
-            className="mt-2 w-full shrink-0 rounded-2xl bg-indigo-600 px-5 py-3 text-base font-semibold text-white  transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:scale-100 sm:py-3.5 sm:text-lg"
-          >
-            {safe_cart.length ? `Подтвердить покупку · ${formatMoney(total)}` : "Подтвердить покупку"}
-          </button>
-        </div>
-        </div>
-      </div>
+      {pendingModal && <PendingPaymentsModal onClose={() => { setPendingModal(false); refreshPendingCount(); }} />}
 
       {cashCheckModal && (
         <Modal title="Проверить кассу" section="Наличные" onClose={() => setCashCheckModal(false)} legacyLight={false}>
@@ -1657,6 +1479,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
 
       {shiftModal === "open" && (
         <Modal title="Открыть смену" section="Касса" onClose={() => setShiftModal(null)} legacyLight={false}>
+          {error && <div className="pos-error" role="alert"><AlertTriangle size={17} /><span>{error}</span></div>}
           <p className="mb-4 text-sm text-slate-400">
             Введите размен — наличные, которые уже лежат в кассе на начало смены. Дальше система прибавит продажи налом и внесения.
           </p>
@@ -1831,7 +1654,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       )}
 
       {(shiftModal === "in" || shiftModal === "out") && (
-        <Modal title={shiftModal === "in" ? "Внести в кассу" : "Изъять из кассы"} onClose={() => setShiftModal(null)}>
+        <Modal legacyLight={false} title={shiftModal === "in" ? "Внести в кассу" : "Изъять из кассы"} onClose={() => setShiftModal(null)}>
+          {error && <div className="pos-error" role="alert"><AlertTriangle size={17} /><span>{error}</span></div>}
           <p className="mb-4 text-sm text-slate-400">
             {shiftModal === "in" ? "Деньги, которые вы кладёте в кассу (не продажа)." : "Деньги, которые вы забираете из кассы (выплата, инкассация, такси и т.п.)."}
           </p>
@@ -1847,7 +1671,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       )}
 
       {shiftModal === "close" && cashShift && (
-        <Modal title="Закрыть смену" onClose={() => setShiftModal(null)}>
+        <Modal legacyLight={false} title="Закрыть смену" onClose={() => setShiftModal(null)}>
+          {error && <div className="pos-error" role="alert"><AlertTriangle size={17} /><span>{error}</span></div>}
           <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-3.5">
             <AlertTriangle size={18} strokeWidth={2.4} className="mt-0.5 shrink-0 text-amber-300" />
             <p className="text-[13px] font-bold leading-5 text-amber-100">
@@ -1877,7 +1702,7 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       )}
 
       {shiftResult && (
-        <Modal title="Смена закрыта" onClose={() => setShiftResult(null)}>
+        <Modal legacyLight={false} title="Смена закрыта" onClose={() => setShiftResult(null)}>
           <div className="space-y-2">
             <div className="flex justify-between text-slate-300"><span>Размен</span><b className="text-white">{formatMoney(shiftResult.openingCash)}</b></div>
             <div className="flex justify-between text-slate-300"><span>Продажи налом</span><b className="text-white">{formatMoney(shiftResult.cashSales)}</b></div>
@@ -1897,7 +1722,8 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       )}
 
       {customModal && (
-        <Modal title="Произвольная продажа" section="Касса" onClose={() => setCustomModal(false)}>
+        <Modal legacyLight={false} title="Произвольная продажа" section="Касса" onClose={() => setCustomModal(false)}>
+          {error && <div className="pos-error" role="alert"><AlertTriangle size={17} /><span>{error}</span></div>}
           <div className="space-y-3">
             <p className="text-sm font-bold text-slate-400">Произвольная продажа — впишите название и цену. Позиция не привязана к меню и не списывает склад.</p>
             <label className="block">
@@ -1935,162 +1761,147 @@ export default function POSPage({ currentProfile, ownerName, openProfile, isWork
       )}
 
       {paymentModal && (
-        <Modal title="Способ оплаты" wide onClose={() => setPaymentModal(false)}>
-          <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <div className="flex justify-between text-lg">
-              <span>К оплате</span>
-              <b>{formatMoney(total)}</b>
-            </div>
-          </div>
-
-          {error && (
-            <div className="mt-3 rounded-2xl bg-red-500/10 px-4 py-3 font-bold text-red-300">
-              {error}
-            </div>
-          )}
-
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <button
-              onClick={() => setPaymentType("cash")}
-              className={paymentType === "cash" ? "btn-blue" : "btn-white"}
-            >
-              Наличные
-            </button>
-            <button
-              onClick={() => setPaymentType("transfer")}
-              className={paymentType === "transfer" ? "btn-blue" : "btn-white"}
-            >
-              Перевод
-            </button>
-            <button
-              onClick={() => setPaymentType("debt")}
-              className={`col-span-2 ${paymentType === "debt" ? "btn-blue" : "btn-white"}`}
-            >
-              В долг
-            </button>
-          </div>
-
-          {paymentType === "cash" && (
-            <div className="mt-4 space-y-3">
-              <input
-                value={paidAmount}
-                onChange={(e) => setPaidAmount(e.target.value)}
-                inputMode="decimal"
-                placeholder="Сколько дал клиент, необязательно"
-                className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
-              />
-              {paidAmount !== "" && (
-                change < 0 ? (
-                  <div className="rounded-2xl bg-red-500/10 px-4 py-3 font-semibold text-red-300">
-                    Не хватает {formatMoney(-change)} ₽
+        <Modal
+          title="Оплата заказа"
+          section="Завершение продажи"
+          wide
+          legacyLight={false}
+          onClose={() => { if (!submittingRef.current) setPaymentModal(false); }}
+        >
+          <div className="pos-payment-layout">
+            <div className="pos-payment-summary bg-white/[0.02]">
+              <span className="pos-eyebrow">К оплате</span>
+              <strong>{formatMoney(total)}<small>₽</small></strong>
+              <p>{cartItemCount} шт. · {activeWorkerName}</p>
+              {discountAmount > 0 && <p>Скидка {discountPct}% · −{formatMoney(discountAmount)} ₽</p>}
+              <div className="pos-payment-items">
+                {safe_cart.map((item) => (
+                  <div key={item.productId}>
+                    <span>{prettyName(item.name)}<small> × {item.qty}</small></span>
+                    <b>{formatMoney(money(item.price) * money(item.qty))}</b>
                   </div>
-                ) : (
-                  <div className="rounded-2xl bg-blue-500/10 px-4 py-3 font-semibold text-blue-300">
-                    Сдача: {formatMoney(change)} ₽
-                  </div>
-                )
-              )}
+                ))}
+              </div>
             </div>
-          )}
-
-          {paymentType === "transfer" && (
-            <div className="mt-4">
-              {safe_cards.length > 0 ? (
-                <div className="flex gap-2">
-                  <select
-                    value={cardId}
-                    onChange={(e) => setCardId(e.target.value)}
-                    className="w-full flex-1 rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500"
-                  >
-                    <option value="">Выберите карту</option>
-                    {safe_cards.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                        {c.owner ? ` · ${c.owner}` : ""}
-                      </option>
-                    ))}
-                  </select>
+            <div className="pos-payment-form">
+              <div className="pos-payment-methods" role="group" aria-label="Способ оплаты">
+                {[
+                  { key: "cash", label: "Наличные", icon: Wallet },
+                  { key: "transfer", label: "Перевод", icon: CreditCard },
+                  { key: "debt", label: "В долг", icon: Receipt },
+                ].map(({ key, label, icon: Icon }) => (
                   <button
                     type="button"
-                    onClick={openCardModal}
-                    title="Добавить новую карту"
-                    className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3.5 font-semibold text-sky-200 transition hover:bg-sky-500/20 active:scale-95"
+                    key={key}
+                    aria-pressed={paymentType === key}
+                    disabled={submitting}
+                    onClick={() => { setPaymentType(key); setError(""); }}
                   >
-                    <Plus size={18} strokeWidth={2.6} /> Карта
+                    <Icon size={20} /><span>{label}</span>
                   </button>
+                ))}
+              </div>
+              {error && <div className="pos-error" role="alert"><AlertTriangle size={17} /><span>{error}</span></div>}
+              {paymentType === "cash" && (
+                <div className="pos-payment-fields">
+                  <label htmlFor="pos-cash-given">Получено от клиента</label>
+                  <div className="pos-cash-input">
+                    <input
+                      id="pos-cash-given"
+                      value={paidAmount}
+                      onChange={(e) => { setPaidAmount(e.target.value); setError(""); }}
+                      inputMode="decimal"
+                      placeholder={formatMoney(total)}
+                      disabled={submitting}
+                    />
+                    <span>₽</span>
+                  </div>
+                  <div className="pos-cash-presets">
+                    <button type="button" disabled={submitting} onClick={() => setPaidAmount(String(total))}>Без сдачи</button>
+                    {[500, 1000, 2000, 5000].filter((amount) => amount > total).slice(0, 3).map((amount) => (
+                      <button type="button" key={amount} disabled={submitting} onClick={() => setPaidAmount(String(amount))}>{formatMoney(amount)} ₽</button>
+                    ))}
+                  </div>
+                  {paidAmount === "" ? (
+                    <p className="pos-payment-help">Пустое поле означает оплату без сдачи.</p>
+                  ) : (
+                    <div className={`pos-change ${change < 0 ? "is-short" : ""}`} aria-live="polite">
+                      <span>{change < 0 ? "Не хватает" : "Сдача клиенту"}</span>
+                      <strong>{formatMoney(Math.abs(change))} ₽</strong>
+                    </div>
+                  )}
                 </div>
-              ) : (
+              )}
+              {paymentType === "transfer" && (
+                <div className="pos-payment-fields">
+                  <label htmlFor="pos-transfer-card">Счёт для перевода</label>
+                  <select
+                    id="pos-transfer-card"
+                    value={cardId}
+                    onChange={(e) => { setCardId(e.target.value); setError(""); }}
+                    disabled={submitting}
+                  >
+                    <option value="">Выберите карту или счёт</option>
+                    {safe_cards.map((card) => <option key={card.id} value={card.id}>{card.name}{card.owner ? ` · ${card.owner}` : ""}</option>)}
+                  </select>
+                  <button type="button" className="pos-add-card" onClick={openCardModal} disabled={submitting}><Plus size={16} />Добавить счёт</button>
+                  <p className="pos-payment-help">Проверьте поступление перевода перед подтверждением.</p>
+                </div>
+              )}
+              {paymentType === "debt" && (
+                <div className="pos-payment-fields">
+                  <label htmlFor="pos-debt-name">На кого записать долг</label>
+                  <input
+                    id="pos-debt-name"
+                    value={debtName}
+                    onChange={(e) => { setDebtName(e.target.value); setError(""); }}
+                    placeholder="Имя клиента"
+                    list="debt-customers"
+                    disabled={submitting}
+                  />
+                  <datalist id="debt-customers">{safe_debtCustomers.map((customer) => <option key={customer.id} value={customer.name} />)}</datalist>
+                  <div className="pos-debt-suggestions">
+                    {debtSuggestions.map((customer) => (
+                      <button type="button" key={customer.id} onClick={() => { setDebtName(customer.name); setError(""); }} disabled={submitting}>
+                        <span>{customer.name}</span><small>Долг {formatMoney(customer.debtTotal || 0)} ₽</small>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button
+                type="button"
+                className="pos-pending-choice"
+                aria-pressed={paymentType === "pending"}
+                disabled={submitting}
+                onClick={() => { setPaymentType("pending"); setError(""); }}
+              >
+                <Clock size={18} />
+                <span>Отложить чек<small>Сохранить заказ для оплаты позже</small></span>
+                {paymentType === "pending" && <Check size={17} />}
+              </button>
+              <div className="pos-payment-actions">
+                <button type="button" className="pos-button" disabled={submitting} onClick={() => setPaymentModal(false)}>К заказу</button>
                 <button
                   type="button"
-                  onClick={openCardModal}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-sky-400/30 bg-sky-500/10 px-4 py-3.5 font-semibold text-sky-200 transition hover:bg-sky-500/20 active:scale-95"
+                  className="pos-pay-button"
+                  disabled={submitting || !safe_cart.length || (paymentType === "cash" && paidAmount !== "" && change < -0.005)}
+                  onClick={() => submitSale(paymentType)}
                 >
-                  <Plus size={18} strokeWidth={2.6} /> Добавить карту для перевода
+                  {submitting ? "Сохраняем…"
+                    : paymentType === "pending" ? "Отложить чек"
+                    : paymentType === "debt" ? "Записать долг"
+                    : `Принять ${formatMoney(total)} ₽`}
                 </button>
-              )}
+              </div>
             </div>
-          )}
-
-          {paymentType === "debt" && (
-            <div className="mt-4 space-y-3">
-              <input
-                value={debtName}
-                onChange={(e) => setDebtName(e.target.value)}
-                placeholder="Имя клиента"
-                className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 w-full"
-                list="debt-customers"
-              />
-              <datalist id="debt-customers">
-                {safe_debtCustomers.map((c) => (
-                  <option key={c.id} value={c.name} />
-                ))}
-              </datalist>
-              {!!debtSuggestions.length && (
-                <div className="flex flex-wrap gap-2">
-                  {debtSuggestions.map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => setDebtName(c.name)}
-                      className="rounded-2xl bg-white/[0.07] px-3 py-2 text-sm font-semibold text-slate-200"
-                    >
-                      {c.name} · {formatMoney(c.debtTotal || 0)}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* «Отложить чек» — не способ оплаты, а отложенный чек: отделено от способов */}
-          <div className="mt-5 border-t border-white/[0.08] pt-4">
-            <button
-              type="button"
-              onClick={() => setPaymentType("pending")}
-              className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border px-4 py-2.5 font-semibold transition active:scale-95 ${
-                paymentType === "pending"
-                  ? "border-amber-400/60 bg-amber-500/25 text-amber-100"
-                  : "border-amber-400/25 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
-              }`}
-            >
-              <Clock size={18} strokeWidth={2.4} /> Отложить чек
-            </button>
-            <p className="mt-1.5 text-center text-[11px] font-bold text-slate-500">Оплатят позже — чек появится в «Отложенные»</p>
-          </div>
-
-          <div className="mt-6 flex gap-3">
-            <button onClick={() => setPaymentModal(false)} className="flex-1 rounded-2xl border border-white/[0.08] bg-white/5 px-5 py-3 font-semibold text-slate-200 transition hover:bg-white/10">
-              Назад
-            </button>
-            <button onClick={() => submitSale(paymentType)} disabled={submitting}
-              className="flex-1 rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white  transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60">
-              {submitting ? "Проводим…" : paymentType === "pending" ? "Отложить чек" : "Подтвердить"}
-            </button>
           </div>
         </Modal>
       )}
 
       {productModal && (
-        <Modal title="Новая позиция меню" wide onClose={() => { setProductModal(false); setRecipe([]); }}>
+        <Modal legacyLight={false} title="Новая позиция меню" wide onClose={() => { setProductModal(false); setRecipe([]); }}>
+          {error && <div className="pos-error" role="alert"><AlertTriangle size={17} /><span>{error}</span></div>}
           <div className="grid gap-3 sm:grid-cols-2">
             <select
               value={newProduct.categoryId}

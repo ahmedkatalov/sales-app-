@@ -1,11 +1,14 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus, Trash2, Warehouse, Pencil, Check, Camera, Images, Bot, MapPin, ArrowLeft, Clock, Boxes, Sparkles } from "lucide-react";
+import { RefreshCw, X, Send, FileDown, Paperclip, ImagePlus, Trash2, Warehouse, Pencil, Check, Camera, Images, Bot, MapPin, ArrowLeft, PanelLeft, AlertTriangle, Loader2 } from "lucide-react";
 import { del, get, getCurrentWorkspace, getSession, post } from "../api";
 import { formatMoney, num } from "../utils/format";
 import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
 import { escHtml, printHtmlDocument } from "../utils/print";
 import { compressImageToDataURL, shrinkDataURL } from "../utils/image";
+import { AssistantContext, AssistantWelcome } from "../components/AssistantPanels";
+import "./AIWarehousePage.css";
+import useDialogFocus from "../utils/useDialogFocus";
 
 
 const normalizeText = (text) => String(text || "").replace(/ё/g, "е").replace(/,/g, ".").replace(/\s+/g, " ").trim();
@@ -286,8 +289,7 @@ const getAIChatStorageKey = () => {
   return `sales_app_ai_operator_chat_${accountId}`;
 };
 
-const loadAIChatState = (storageKey) => {
-  const empty = {
+const emptyAIChatState = () => ({
     messages: [AI_WELCOME_MESSAGE],
     pendingItems: [],
     lastEntity: null,
@@ -296,7 +298,10 @@ const loadAIChatState = (storageKey) => {
     pendingPurchaseConfirmation: null,
     sidePanels: DEFAULT_SIDE_PANELS,
     lastUIPanel: "",
-  };
+  });
+
+const loadAIChatState = (storageKey) => {
+  const empty = emptyAIChatState();
   if (typeof window === "undefined") return empty;
   const saved = safeJsonParse(localStorage.getItem(storageKey), null);
   if (!saved || typeof saved !== "object") return empty;
@@ -781,7 +786,7 @@ const RichText = memo(function RichText({ text }) {
   flush();
 
   return (
-    <div className="space-y-1.5">
+    <div className="assistant-richtext">
       {blocks.map((blk, bi) => {
         if (blk.type === "h") {
           const cls = blk.level === 1 ? "text-[15px]" : blk.level === 2 ? "text-sm" : "text-[13px]";
@@ -877,79 +882,38 @@ function exportTextToPdf(text) {
 
 const Message = memo(function Message({ msg, idx, onCancelCard, onAttachPhoto, onDismissPhoto, onOpenImage }) {
   const isUser = msg.role === "user";
-  const showPdf = msg.role === "bot" && msg.text && msg.text !== AI_WELCOME_MESSAGE.text && msg.text.length > 120;
-  // Сообщение с фото накладной: маркер-эмодзи из старых сохранённых чатов заменяем иконкой.
+  const showPdf = !isUser && msg.text && msg.text !== AI_WELCOME_MESSAGE.text && msg.text.length > 120 && !msg.error;
   const isPhotoMsg = isUser && (Boolean(msg.image) || /^📷/.test(msg.text || ""));
   const userText = isUser ? String(msg.text || "").replace(/^📷\s*/, "") : "";
   return (
-    <div className={`flex gap-2 sm:gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
-      {!isUser && <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white sm:flex"><Bot size={18} strokeWidth={2.2} /></div>}
-      <div className={`max-w-[90%] rounded-3xl px-4 py-3 text-[13px] font-bold leading-6 sm:max-w-[78%] ${isUser ? "bg-indigo-600 text-white" : "border border-white/[0.08] bg-white/[0.06] text-slate-100"}`}>
-        {msg.image && (
-          <button type="button" onClick={() => onOpenImage?.(msg.image)} title="Открыть фото"
-            className="mb-2 block w-full overflow-hidden rounded-2xl border border-white/20 transition active:scale-[0.98]">
-            <img src={msg.image} alt="Отправленное фото" className="max-h-56 w-full object-cover" />
-          </button>
-        )}
-        {isUser
-          ? <p className="whitespace-pre-line">{isPhotoMsg && <Camera size={14} strokeWidth={2.4} className="mr-1.5 -mt-0.5 inline-block align-middle" />}{userText}</p>
-          : <RichText text={msg.text} />}
+    <article className={`assistant-message ${isUser ? "is-user" : "is-bot"} ${msg.error ? "is-error" : ""}`} aria-label={isUser ? "Ваше сообщение" : "Ответ помощника"}>
+      {!isUser && <span className="assistant-message-avatar" aria-hidden="true">{msg.error ? <AlertTriangle size={17} /> : <Bot size={18} />}</span>}
+      <div className="assistant-message-body">
+        {!isUser && <p className="assistant-message-author">{msg.error ? "Не удалось получить ответ" : "Помощник"}</p>}
+        {msg.image && <button type="button" className="assistant-message-image" onClick={() => onOpenImage?.(msg.image)} aria-label="Открыть отправленное фото"><img src={msg.image} alt="Отправленное фото" /></button>}
+        {isUser ? <p className="assistant-user-text">{isPhotoMsg && <Camera size={14} />}{userText}</p> : <div role={msg.error ? "alert" : undefined}><RichText text={msg.text} /></div>}
         {msg.cards?.length > 0 && (
-          <div className="mt-3 space-y-2">
-            {msg.cards.map((card, i) => (
-              card.kind === "photoPrompt" ? (
-                <div key={i} className="rounded-2xl border border-white/[0.08] bg-slate-950/40 p-3">
-                  {card.done ? (
-                    <p className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-emerald-300"><Paperclip size={12} strokeWidth={2.6} /> Фото накладной прикреплено</p>
-                  ) : card.dismissed ? (
-                    <p className="text-[12px] font-bold text-slate-400">Без фото</p>
-                  ) : (
-                    <>
-                      <p className="mb-2 text-[12px] font-bold text-slate-300">Есть фото накладной или чека?</p>
-                      <div className="flex gap-2">
-                        <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-500/15 px-3 py-1.5 text-[11px] font-semibold text-blue-200 transition hover:bg-blue-500/25 active:scale-95 ${card.uploading ? "pointer-events-none opacity-60" : ""}`}>
-                          <Paperclip size={12} strokeWidth={2.6} /> {card.uploading ? "Загружаю…" : "Прикрепить фото"}
-                          <input type="file" accept="image/*" hidden
-                            onChange={(e) => { onAttachPhoto?.(idx, i, card, e.target.files?.[0]); e.target.value = ""; }} />
-                        </label>
-                        <button type="button" onClick={() => onDismissPhoto?.(idx, i)}
-                          className="rounded-lg bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-slate-300 transition hover:bg-white/10 active:scale-95">Без фото</button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-              <div key={i} className={`rounded-2xl border border-white/[0.08] bg-slate-950/40 p-3 text-slate-100 ${card.cancelled ? "opacity-50" : ""}`}>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className={`truncate font-semibold ${card.cancelled ? "line-through text-slate-400" : ""}`}>{card.name}</p>
-                    <p className="text-xs font-bold text-slate-400">{card.detail}</p>
-                  </div>
-                  <span className="shrink-0 rounded-2xl bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-300">+{card.qty}</span>
-                </div>
-                {card.cancelled ? (
-                  <p className="mt-2 text-[11px] font-semibold text-red-300">✕ Отменено</p>
-                ) : (onCancelCard && card.itemId && card.batchId) ? (
-                  <button type="button" onClick={() => onCancelCard(idx, i, card)}
-                    className="mt-2 inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-red-300 transition hover:bg-red-500/20 active:scale-95">
-                    <X size={12} strokeWidth={2.6} /> Отменить
-                  </button>
-                ) : null}
+          <div className="assistant-result-cards">
+            {msg.cards.map((card, i) => card.kind === "photoPrompt" ? (
+              <div key={i} className="assistant-result-card">
+                {card.done ? <p className="assistant-success"><Paperclip size={14} />Фото накладной прикреплено</p> : card.dismissed ? <p className="assistant-muted">Без фото</p> : (
+                  <><p>Можно прикрепить чек или накладную к расходу.</p><div className="assistant-result-actions">
+                    <label className={`assistant-file-option assistant-button ${card.uploading ? "is-disabled" : ""}`}><Paperclip size={14} />{card.uploading ? "Загружаем…" : "Прикрепить фото"}<input type="file" accept="image/*" aria-label="Фото к сохранённому расходу" disabled={card.uploading} onChange={(event) => { onAttachPhoto?.(idx, i, card, event.target.files?.[0]); event.target.value = ""; }} /></label>
+                    <button type="button" className="assistant-text-button" disabled={card.uploading} onClick={() => onDismissPhoto?.(idx, i)}>Без фото</button>
+                  </div></>
+                )}
               </div>
-              )
+            ) : (
+              <div key={i} className={`assistant-result-card ${card.cancelled ? "is-cancelled" : ""}`}>
+                <div className="assistant-result-heading"><div><strong>{card.name}</strong><p>{card.detail}</p></div><span>+{card.qty}</span></div>
+                {card.cancelled ? <p className="assistant-muted">Позиция отменена</p> : onCancelCard && card.itemId && card.batchId ? <button type="button" className="assistant-text-button assistant-danger" onClick={() => onCancelCard(idx, i, card)}><X size={13} />Отменить приход</button> : null}
+              </div>
             ))}
           </div>
         )}
-        {showPdf && (
-          <div className="mt-2.5 flex justify-start border-t border-white/[0.08] pt-2">
-            <button type="button" onClick={() => exportTextToPdf(msg.text)} aria-label="Скачать отчёт в PDF" title="Скачать в PDF"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 transition hover:bg-white/15 active:scale-[0.97]">
-              <FileDown size={13} strokeWidth={2.4} /> Скачать PDF
-            </button>
-          </div>
-        )}
+        {showPdf && <button type="button" className="assistant-export" onClick={() => exportTextToPdf(msg.text)} aria-label="Скачать отчёт в PDF"><FileDown size={14} />Скачать PDF</button>}
       </div>
-    </div>
+    </article>
   );
 });
 
@@ -962,16 +926,25 @@ function newPurchaseRef() {
     : `p-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export default function AIWarehousePage() {
+export default function AIWarehousePage({ initialWorkspace, initialChat, persistHistory = true, roleOverride }) {
   const [items, setItems] = useState([]);
   const [movements, setMovements] = useState([]);
   const [productTypes, setProductTypes] = useState([]);
   const [productCategories, setProductCategories] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const wsName = getCurrentWorkspace?.()?.name || "";
-  const storageKey = useMemo(() => getAIChatStorageKey(), []);
-  const restoredChat = useMemo(() => loadAIChatState(storageKey), [storageKey]);
+  const wsName = initialWorkspace?.name || getCurrentWorkspace?.()?.name || "";
+  const storageKey = useMemo(() => persistHistory ? getAIChatStorageKey() : "", [persistHistory]);
+  const restoredChat = useMemo(() => ({ ...(persistHistory ? loadAIChatState(storageKey) : emptyAIChatState()), ...initialChat }), [storageKey, initialChat, persistHistory]);
+  const [contextLoading, setContextLoading] = useState(true);
+  const [contextReady, setContextReady] = useState(false);
+  const [contextError, setContextError] = useState("");
+  const [contextOpen, setContextOpen] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [historyWarning, setHistoryWarning] = useState("");
+  const contextRequest = useRef(0);
+  const inputRef = useRef(null);
+  const pageRef = useRef(null);
   const [pendingItems, setPendingItems] = useState(restoredChat.pendingItems);
   const [lastEntity, setLastEntity] = useState(restoredChat.lastEntity);
   const [pendingVisibility, setPendingVisibility] = useState(restoredChat.pendingVisibility);
@@ -1016,12 +989,13 @@ export default function AIWarehousePage() {
   const [pendingPhoto, setPendingPhoto] = useState(null);
   // Просмотр отправленного фото на весь экран (клик по превью в сообщении).
   const [zoomImage, setZoomImage] = useState(null);
+  useDialogFocus(pageRef, !!(zoomImage || clearConfirmOpen || clarifyModalOpen), zoomImage ? '[aria-label="Просмотр фото"]' : clearConfirmOpen ? '[aria-labelledby="assistant-clear-title"]' : '[aria-label="Уточнения по закупке"]');
 
   // ── Выбор точки (Нур / Меренда / …) прямо в чате ──────────────────────────
   // Обе точки равнозначны — «главной» нет. По умолчанию берём текущую активную,
   // но пользователь (или сам текст запроса) может переключить, и тогда И чтение
   // контекста, и все записи ИИ уходят именно в выбранную точку.
-  const activeWs = useMemo(() => getCurrentWorkspace?.() || {}, []);
+  const activeWs = useMemo(() => initialWorkspace || getCurrentWorkspace?.() || {}, [initialWorkspace]);
   const [points, setPoints] = useState([]);
   const [targetWs, setTargetWs] = useState(() => activeWs || {});
   const targetName = targetWs?.name || wsName;
@@ -1045,7 +1019,7 @@ export default function AIWarehousePage() {
   // Переключать точку может только владелец/админ владельца: у работника бэкенд
   // (accountID) жёстко привязывает данные к его точке и игнорирует override —
   // селектор был бы для него бутафорией, поэтому не показываем.
-  const myRole = String(getSession?.()?.role || "").toLowerCase();
+  const myRole = String(roleOverride || getSession?.()?.role || "").toLowerCase();
   const canSwitchPoints = !["worker", "branch_admin", "workspace"].includes(myRole);
   const hasMultiPoints = canSwitchPoints && points.length > 1;
 
@@ -1075,6 +1049,14 @@ export default function AIWarehousePage() {
     targetIdRef.current = ws.dataAccountId || ws.id || null;
     setTargetWs(ws);
     if (!sameId) {
+      contextRequest.current++;
+      setContextReady(false);
+      setContextLoading(true);
+      setContextError("");
+      setItems([]);
+      setMovements([]);
+      setProductTypes([]);
+      setProductCategories([]);
       // Сбрасываем незакрытые операции — иначе подтверждение/уточнение, начатое на
       // прошлой точке (с её товарами/ценами), записалось бы в новую точку не туда.
       clearPendingAssistantState({ setPendingItems, setPendingVisibility, setPendingMenuTypeCreation, setPendingPurchaseConfirmation });
@@ -1083,37 +1065,44 @@ export default function AIWarehousePage() {
     }
   }, []);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     // Фиксируем точку на весь заход: все 4 запроса идут в неё, и если за время
     // загрузки точку переключили — результат этого захода отбрасываем (иначе
     // получили бы товары из одной точки, а движения/типы из другой).
     const acc = targetIdRef.current;
+    const requestId = ++contextRequest.current;
     const opts = acc ? { dataAccountId: acc } : undefined;
-    const safeGet = async (url) => {
-      try {
-        const result = await get(url, opts);
-        return Array.isArray(result) ? result : [];
-      } catch {
-        return [];
-      }
-    };
-
-    const warehouseList = await safeGet("/warehouse/items");
-    const movementList = await safeGet("/warehouse/movements");
-    const types = await safeGet("/product-types");
-    const categories = await safeGet("/product-categories");
-
-    if (acc !== targetIdRef.current) return; // точку успели переключить — заход устарел
-
-    setItems(warehouseList);
-    setMovements(movementList);
-    setProductTypes(types);
-    setProductCategories(categories);
-  };
+    setContextLoading(true);
+    setContextError("");
+    try {
+      const [warehouseList, movementList, types, categories] = await Promise.all([
+        get("/warehouse/items", opts), get("/warehouse/movements", opts),
+        get("/product-types", opts), get("/product-categories", opts),
+      ]);
+      if (acc !== targetIdRef.current || requestId !== contextRequest.current) return;
+      if (![warehouseList, movementList, types, categories].every(Array.isArray)) throw new Error("Не удалось получить полные данные точки. Обновите их перед отправкой запроса.");
+      setItems(warehouseList);
+      setMovements(movementList);
+      setProductTypes(types);
+      setProductCategories(categories);
+      setContextReady(true);
+    } catch (error) {
+      if (acc === targetIdRef.current && requestId === contextRequest.current) setContextError(error.message || "Не удалось загрузить данные точки");
+    } finally {
+      if (acc === targetIdRef.current && requestId === contextRequest.current) setContextLoading(false);
+    }
+  }, []);
 
   // Перечитываем контекст (склад/движения/типы) при смене выбранной точки —
   // сопоставление товаров и все записи ИИ идут по данным именно этой точки.
-  useEffect(() => { load(); }, [targetWs]);
+  useEffect(() => {
+    load();
+    return () => {
+      // Invalidate the most recent read, including manual refreshes.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      contextRequest.current++;
+    };
+  }, [targetWs, load]);
 
   // Выход из полноэкранного помощника: назад / на главную / по Esc — чтобы не «застрять».
   const navigate = useNavigate();
@@ -1121,15 +1110,35 @@ export default function AIWarehousePage() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== "Escape") return;
+      if (zoomImage) { setZoomImage(null); return; }
+      if (clearConfirmOpen) { setClearConfirmOpen(false); return; }
+      if (clarifyModalOpen) { setClarifyModalOpen(false); return; }
+      if (photoMenuOpen) { setPhotoMenuOpen(false); return; }
+      if (contextOpen) { setContextOpen(false); return; }
       const tag = document.activeElement?.tagName;
       if (tag === "TEXTAREA" || tag === "INPUT") return; // не мешаем вводу в чат
       navigate("/home");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [navigate]);
+  }, [navigate, zoomImage, clearConfirmOpen, clarifyModalOpen, photoMenuOpen, contextOpen]);
 
   useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 140)}px`;
+  }, [input]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1051px)");
+    const onChange = () => setContextOpen(false);
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!persistHistory) return;
     const kept = messages.slice(-80);
     const base = {
       pendingItems,
@@ -1145,6 +1154,7 @@ export default function AIWarehousePage() {
     const write = (msgs) => localStorage.setItem(storageKey, JSON.stringify({ ...base, messages: msgs }));
     try {
       write(kept);
+      setHistoryWarning("");
     } catch {
       // Скорее всего превышена квота из-за фото накладных. Стираем картинки из
       // всех сообщений кроме последних четырёх и пробуем снова — так чат
@@ -1152,16 +1162,18 @@ export default function AIWarehousePage() {
       try {
         const trimmed = kept.map((m, i, arr) => (m?.image && i < arr.length - 4 ? { ...m, image: undefined } : m));
         write(trimmed);
+        setHistoryWarning("Часть старых фото не сохранена в истории на этом устройстве.");
       } catch {
         // localStorage недоступен (приватный режим) — чат работает в памяти страницы.
+        setHistoryWarning("История доступна до закрытия страницы: сохранить её на устройстве не удалось.");
       }
     }
-  }, [storageKey, messages, pendingItems, lastEntity, pendingVisibility, pendingMenuTypeCreation, pendingPurchaseConfirmation, sidePanels, lastUIPanel, aiBrain]);
+  }, [storageKey, messages, pendingItems, lastEntity, pendingVisibility, pendingMenuTypeCreation, pendingPurchaseConfirmation, sidePanels, lastUIPanel, aiBrain, persistHistory]);
 
   useEffect(() => {
     const box = messagesRef.current;
-    if (!box) return;
-    box.scrollTo({ top: box.scrollHeight, behavior: "smooth" });
+    if (!box || !messages.some((message) => message.text !== AI_WELCOME_MESSAGE.text)) return;
+    box.scrollTo({ top: box.scrollHeight, behavior: "auto" });
   }, [messages, loading]);
 
   // Когда уточнений не осталось — закрываем окно уточнений и его временные состояния.
@@ -1174,7 +1186,6 @@ export default function AIWarehousePage() {
 
   const recentAdded = useMemo(() => (Array.isArray(movements) ? movements : []).filter((m) => String(m.movementType || m.movement_type) === "in").slice(0, 5), [movements]);
   const topItems = useMemo(() => [...items].filter((x) => !(x.hidden || x.isHidden || x.is_hidden)).sort((a, b) => num(b.quantity) - num(a.quantity)).slice(0, 7), [items]);
-  const activeRightPanels = useMemo(() => Object.values(sidePanels).filter(Boolean).length, [sidePanels]);
 
   const itemRefs = (list = items) => list.map((item) => ({
     id: item.id,
@@ -1250,8 +1261,8 @@ export default function AIWarehousePage() {
       savedItem,
       card: {
         name: normalizeProductEntityName(safeMatched?.name || safePayload.name),
-        detail: `${parsed.computed.detail}${num(safePayload.price) > 0 ? ` · ${formatMoney(safePayload.price)}` : ""}`,
-        qty: `${parsed.computed.quantity} ${unitLabel(parsed.computed.unit)}`,
+        detail: `${parsed.computed.detail}${num(safePayload.price) > 0 ? ` · ${formatMoney(safePayload.price)} ₽` : ""}`,
+        qty: `${formatMoney(parsed.computed.quantity)} ${unitLabel(parsed.computed.unit)}`,
         itemId: savedItem?.id || safeMatched?.id || 0,
         batchId,
       },
@@ -1581,9 +1592,11 @@ export default function AIWarehousePage() {
     setAttachedPhoto(null);
     purchasePhotoRef.current = null;
     setZoomImage(null);
-    setMessages([AI_WELCOME_MESSAGE, { role: "bot", text: "Готово — очистила чат. Начнём заново." }]);
-    try { localStorage.removeItem(storageKey); } catch { /* приватный режим */ }
-  }, [storageKey]);
+    setMessages([AI_WELCOME_MESSAGE]);
+    if (persistHistory) {
+      try { localStorage.removeItem(storageKey); } catch { /* приватный режим */ }
+    }
+  }, [storageKey, persistHistory]);
 
   // Уточнить вес одной позиции (занесённой «по среднему») перед записью: пересчитываем
   // её объём/вес по введённому значению за штуку и снимаем метку «среднее».
@@ -1808,7 +1821,7 @@ export default function AIWarehousePage() {
   // send() — Claude определяет намерение, фронт выполняет действие
   // ─────────────────────────────────────────────────────────────────────────
   const send = async (overrideText) => {
-    if (loading) return;
+    if (loading || photoParsing || contextLoading || !contextReady || contextError) return;
     const rawText = (typeof overrideText === "string" ? overrideText : input).trim();
     // «Очисти чат» — стираем переписку сразу, локально (даже если было прикреплено фото).
     if (rawText && isClearChatCommand(rawText)) {
@@ -1985,119 +1998,61 @@ export default function AIWarehousePage() {
           : cause === "TypeError" || e instanceof TypeError
           ? "Пропала связь. Проверьте интернет и попробуйте ещё раз."
           : (e?.message || "Не получилось получить ответ. Попробуйте ещё раз через минуту.");
-      setMessages((p) => [...p, { role: "bot", text: friendly }]);
+      setMessages((p) => [...p, { role: "bot", text: friendly, error: true }]);
     } finally {
       setLoading(false);
     }
   };
 
-    return (
-    <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden text-white">
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1500px] flex-col overflow-hidden">
-        <div
-          className={`grid min-h-0 flex-1 w-full min-w-0 ${
-            activeRightPanels ? "xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-4 xl:px-4 xl:py-4" : "xl:grid-cols-1"
-          }`}
-        >
-          <section className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden bg-white/[0.02] xl:rounded-2xl xl:border xl:border-white/[0.08]">
-            <div className="flex shrink-0 items-center justify-between gap-1.5 border-b border-white/[0.08] px-2.5 py-2 sm:gap-2 sm:px-3 sm:py-2.5">
-              <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
-                <button onClick={goBack} aria-label="Назад" title="Назад"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-                </button>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white ">
-                  <Bot size={18} strokeWidth={2.2} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold leading-tight">AI-ассистент</p>
-                  {targetName && (
-                    <div className="flex min-w-0 items-center gap-1">
-                      <MapPin size={11} strokeWidth={2.4} className="shrink-0 text-slate-400" />
-                      <span className="min-w-0 truncate text-[11px] font-bold text-slate-400">{targetName}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-                {lastUIPanel && !sidePanels[lastUIPanel] && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // Вернули панель — если остались другие скрытые, предлагаем вернуть и их следующей.
-                      const next = { ...sidePanels, [lastUIPanel]: true };
-                      setSidePanels(next);
-                      setLastUIPanel(Object.keys(DEFAULT_SIDE_PANELS).find((k) => !next[k]) || "");
-                    }}
-                    title="Вернуть скрытую панель"
-                    className="hidden shrink-0 items-center rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/15 xl:inline-flex"
-                  >
-                    {lastUIPanel === "stocks" ? "Вернуть остатки" : lastUIPanel === "recent" ? "Вернуть последние" : lastUIPanel === "suggestions" ? "Вернуть подсказки" : "Вернуть панель"}
-                  </button>
-                )}
-                <span className="hidden rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-300 sm:inline">
-                  Автосохранение
-                </span>
-                <button onClick={load} aria-label="Обновить" title="Обновить" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/15"><RefreshCw size={16} strokeWidth={2.4} /></button>
-                <button onClick={() => { if (window.confirm("Очистить весь чат? История переписки удалится.")) clearChat(); }}
-                  aria-label="Очистить чат" title="Очистить чат"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition hover:bg-red-500/20 hover:text-red-300"><Trash2 size={16} strokeWidth={2.4} /></button>
-                <Link to="/warehouse" aria-label="Склад" title="Склад"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-xs font-semibold text-white transition hover:bg-white/15 sm:w-auto sm:px-3">
-                  <Warehouse size={16} strokeWidth={2.4} className="sm:hidden" />
-                  <span className="hidden sm:inline">Склад →</span>
-                </Link>
-              </div>
-            </div>
+  const interactionBlocked = loading || photoParsing || contextLoading || !contextReady || !!contextError;
+  const conversation = messages.map((message, index) => ({ message, index })).filter(({ message }) => message.text !== AI_WELCOME_MESSAGE.text);
+  const draftMessage = (text) => {
+    setInput(text);
+    setContextOpen(false);
+    inputRef.current?.focus();
+  };
+  const togglePanel = (key) => {
+    setSidePanels((previous) => ({ ...previous, [key]: !previous[key] }));
+    setLastUIPanel(key);
+  };
 
-            {hasMultiPoints && (
-              <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.08] bg-slate-950/40 px-3 py-2">
-                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Точка</span>
-                <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto scrollbar-none" style={{ scrollbarWidth: "none" }}>
-                  {points.map((p) => {
-                    const pid = p.dataAccountId || p.id;
-                    const active = Number(pid) === Number(targetWs?.dataAccountId || targetWs?.id);
-                    return (
-                      <button
-                        key={pid}
-                        type="button"
-                        onClick={() => switchTargetPoint(p)}
-                        aria-pressed={active}
-                        disabled={loading}
-                        title={`Записывать в точку «${p.name}»`}
-                        className={`flex min-h-[40px] shrink-0 items-center gap-1 rounded-full px-3.5 py-2 text-xs font-semibold transition active:scale-95 disabled:opacity-50 ${
-                          active
-                            ? "bg-indigo-600 text-white "
-                            : "border border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"
-                        }`}
-                      >
-                        <MapPin size={13} strokeWidth={2.4} className="shrink-0" /> {p.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div
-              ref={messagesRef}
-              className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3 sm:p-4"
-            >
-              {messages.map((msg, i) => (
-                <Message key={i} idx={i} msg={msg} onCancelCard={cancelPurchaseCard} onAttachPhoto={onAttachPhoto} onDismissPhoto={onDismissPhoto} onOpenImage={setZoomImage} />
-              ))}
-              {loading && <Message msg={{ role: "bot", text: "Думаю и проверяю данные..." }} />}
+  return (
+    <div className="assistant-page" ref={pageRef}>
+      <header className="assistant-header">
+        <div className="assistant-brand">
+          <button type="button" className="assistant-icon-button" onClick={goBack} aria-label="Назад"><ArrowLeft size={19} /></button>
+          <span className="assistant-brand-icon"><Bot size={23} strokeWidth={1.8} /></span>
+          <div><h1>Помощник</h1><p>Склад · меню · финансы</p></div>
+        </div>
+        <div className="assistant-header-actions">
+          {hasMultiPoints ? (
+            <label className="assistant-workspace-selector"><MapPin size={14} /><select aria-label="Точка помощника" value={targetWs?.dataAccountId || targetWs?.id || ""} disabled={loading || photoParsing || contextLoading} onChange={(event) => { const point = points.find((point) => String(point.dataAccountId || point.id) === event.target.value); if (point) switchTargetPoint(point); }}>
+              {points.map((point) => <option key={point.dataAccountId || point.id} value={point.dataAccountId || point.id}>{point.name}</option>)}
+            </select></label>
+          ) : <span className="assistant-workspace-name"><MapPin size={14} />{targetName || "Текущая точка"}</span>}
+          <button type="button" className="assistant-icon-button assistant-context-toggle" aria-label="Данные точки" aria-expanded={contextOpen} onClick={() => setContextOpen((previous) => !previous)}><PanelLeft size={18} /></button>
+          <button type="button" className="assistant-icon-button" aria-label="Обновить данные точки" disabled={loading || photoParsing || contextLoading} onClick={load}><RefreshCw size={17} className={contextLoading ? "animate-spin" : ""} /></button>
+          <button type="button" className="assistant-icon-button" aria-label="Очистить чат" disabled={loading || photoParsing} onClick={() => setClearConfirmOpen(true)}><Trash2 size={17} /></button>
+          <Link to="/warehouse" className="assistant-button assistant-header-warehouse"><Warehouse size={16} />Склад<ArrowLeft size={14} className="assistant-arrow-forward" /></Link>
+        </div>
+      </header>
+      {contextError && <div className="assistant-context-error" role="alert"><AlertTriangle size={17} /><span>{contextError}{contextReady ? " Показаны последние загруженные данные." : ""}</span><button type="button" disabled={contextLoading || loading || photoParsing} onClick={load}>Обновить</button></div>}
+      <div className="assistant-layout">
+        <AssistantContext targetName={targetName} contextOpen={contextOpen} onClose={() => setContextOpen(false)} sidePanels={sidePanels} onToggle={togglePanel} items={topItems} recent={recentAdded} loading={contextLoading} error={contextError} ready={contextReady} onDraft={draftMessage} />
+        <main className="assistant-conversation" aria-label="Диалог с помощником">
+          <div className="assistant-conversation-heading"><span><span className={`assistant-status-dot ${contextError ? "is-error" : ""}`} />{contextLoading ? "Обновляем данные точки" : contextError ? "Данные требуют обновления" : "Готов к работе"}</span><span>{persistHistory ? "История на этом устройстве" : "Демонстрационный диалог"}</span></div>
+          <div className={`assistant-thread ${conversation.length ? "has-messages" : ""}`} ref={messagesRef} role="log" aria-label="Переписка" aria-relevant="additions text" aria-busy={loading}>
+            <div className="assistant-thread-content">
+              {conversation.length ? conversation.map(({ message, index }) => <Message key={index} idx={index} msg={message} onCancelCard={cancelPurchaseCard} onAttachPhoto={onAttachPhoto} onDismissPhoto={onDismissPhoto} onOpenImage={setZoomImage} />) : <AssistantWelcome targetName={targetName} onDraft={draftMessage} />}
+              {loading && <div className="assistant-thinking" role="status"><Loader2 size={17} className="animate-spin" /><span>Проверяю данные и готовлю ответ…</span></div>}
               <div ref={bottomRef} />
             </div>
-
-            <div className="shrink-0 border-t border-white/[0.08] bg-slate-950/50 px-3 py-2">
-              <div className="mb-1 flex justify-end lg:hidden">
-                <Link to="/work" className="flex min-h-[40px] items-center gap-1 px-2 text-xs font-bold text-slate-500 hover:text-slate-300 transition">
-                  <ArrowLeft size={13} strokeWidth={2.4} /> К кассе
-                </Link>
-              </div>
+          </div>
+          <div className="assistant-compose-shell">
+            <div className="assistant-compose-content">
+              <div className="assistant-pending-area">
               {pendingPurchaseConfirmation?.items?.length > 0 && (
-                <div className="mb-2 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-3">
+                <div className="assistant-purchase-review">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <p className="min-w-0 text-xs font-semibold text-blue-200">
                       Проверьте закупку{pendingPurchaseConfirmation.wsName || wsName ? ` — запишу на точку «${pendingPurchaseConfirmation.wsName || wsName}»` : ""}
@@ -2109,14 +2064,14 @@ export default function AIWarehousePage() {
                       </button>
                     )}
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="assistant-purchase-list">
                     {pendingPurchaseConfirmation.items.map((x, i) => {
                       const nm = normalizeProductEntityName(x.form?.name || x.payload?.name || x.result?.name || "товар");
                       const tgt = x.matched ? `прибавить к «${normalizeProductEntityName(x.matched.name)}»` : "создать новый";
                       return (
                         <div key={i} className="rounded-xl bg-white/5 px-3 py-2">
-                          <p className="text-[13px] font-semibold text-white">{nm} — {x.computed.quantity} {unitLabel(x.computed.unit)}</p>
-                          <p className="text-[11px] font-bold text-slate-400">{num(x.payload?.price) > 0 ? `${formatMoney(x.payload.price)} · ` : ""}{tgt}</p>
+                          <p className="text-[13px] font-semibold text-white">{nm} — {formatMoney(x.computed.quantity)} {unitLabel(x.computed.unit)}</p>
+                          <p className="text-[11px] font-bold text-slate-400">{num(x.payload?.price) > 0 ? `${formatMoney(x.payload.price)} ₽ · ` : ""}{tgt}</p>
                           {x.result?.assumedWeight && (
                             <p className="mt-1 inline-flex items-center rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300/90">≈ вес по среднему{x.result?.assumedNote && x.result.assumedNote !== "уточнено" ? ` · ${x.result.assumedNote}` : ""}</p>
                           )}
@@ -2150,10 +2105,10 @@ export default function AIWarehousePage() {
                       );
                     })}
                   </div>
-                  <div className="mt-3 flex gap-2">
+                  <div className="assistant-purchase-actions mt-3 flex gap-2">
                     <button
                       onClick={confirmPendingPurchase}
-                      disabled={loading}
+                      disabled={interactionBlocked}
                       className="flex-1 min-h-[44px] rounded-xl bg-indigo-600 px-3 py-3 text-sm font-semibold text-white shadow-lg transition active:scale-95 disabled:opacity-50"
                     >
                       Да, записать
@@ -2169,7 +2124,7 @@ export default function AIWarehousePage() {
                 </div>
               )}
               {pendingItems.length > 0 && (
-                <div className="mb-2 flex items-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2">
+                <div className="assistant-clarification-banner">
                   <span className="min-w-0 flex-1 text-xs font-semibold leading-snug text-amber-200">
                     Нужно уточнить {pendingItems.filter((x) => !x.resolved).length} {pluralPositions(pendingItems.filter((x) => !x.resolved).length, ["позицию", "позиции", "позиций"])}
                   </span>
@@ -2187,210 +2142,35 @@ export default function AIWarehousePage() {
                   </button>
                 </div>
               )}
-              <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none" style={{scrollbarWidth:"none"}}>
-                {[
-                  "что заканчивается?",
-                  "продажи сегодня",
-                  "молоко 4 пачки по 1л за 420",
-                  "расход такси 1200",
-                  "какие типы меню?",
-                  "кто должен деньги?",
-                ].map((x) => (
-                  <button
-                    key={x}
-                    onClick={() => send(x)}
-                    className="flex min-h-[40px] shrink-0 items-center rounded-full border border-white/[0.08] bg-white/5 px-3.5 py-2.5 text-xs font-bold text-slate-300 transition active:scale-95 active:bg-white/15 hover:bg-white/10"
-                  >
-                    {x}
-                  </button>
-                ))}
+
               </div>
-              {attachedPhoto && (
-                <div className="mb-2 flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2">
-                  <img src={attachedPhoto} alt="Накладная" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
-                  <span className="min-w-0 flex-1 text-[11px] font-semibold text-blue-200">Фото накладной готово — нажмите «Отправить», чтобы распознать</span>
-                  <button type="button" onClick={() => setAttachedPhoto(null)} aria-label="Убрать фото"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-red-300"><X size={14} /></button>
+              {conversation.length > 0 && !pendingPurchaseConfirmation && !pendingItems.length && <div className="assistant-quick-prompts" aria-label="Примеры запросов">{["Что заканчивается?", "Продажи сегодня", "Помоги с меню"].map((prompt) => <button type="button" key={prompt} onClick={() => draftMessage(prompt)}>{prompt}</button>)}</div>}
+              {attachedPhoto && <div className="assistant-attachment"><button type="button" onClick={() => setZoomImage(attachedPhoto)} aria-label="Посмотреть прикреплённую накладную"><img src={attachedPhoto} alt="Прикреплённая накладная" /></button><span><strong>Накладная прикреплена</strong><small>Добавьте комментарий или отправьте фото для распознавания</small></span><button type="button" className="assistant-icon-button" disabled={loading || photoParsing} onClick={() => setAttachedPhoto(null)} aria-label="Убрать фото"><X size={16} /></button></div>}
+              <div className="assistant-composer bg-white/[0.02] shadow-sm">
+                <textarea ref={inputRef} aria-label="Сообщение помощнику" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); send(); } }} placeholder={attachedPhoto ? "Комментарий к накладной…" : "Опишите задачу или задайте вопрос…"} rows={2} disabled={loading || photoParsing} />
+                <div className="assistant-composer-toolbar">
+                  <div className="assistant-photo-control">
+                    <button type="button" className="assistant-attach-button" aria-label="Прикрепить фото" aria-expanded={photoMenuOpen} aria-controls="assistant-photo-menu" disabled={interactionBlocked} onClick={() => setPhotoMenuOpen((previous) => !previous)}>{photoParsing ? <Loader2 size={18} className="animate-spin" /> : <ImagePlus size={18} />}<span>Фото накладной</span></button>
+                    {photoMenuOpen && <><button type="button" className="assistant-photo-menu-backdrop" aria-label="Закрыть меню фото" onClick={() => setPhotoMenuOpen(false)} /><div className="assistant-photo-menu" id="assistant-photo-menu" role="group" aria-label="Выбор фото"><label className="assistant-file-option"><Camera size={17} />Сфотографировать<input type="file" accept="image/*" capture="environment" aria-label="Сфотографировать накладную" onChange={(event) => handlePhotoFile(event.target.files?.[0], event)} /></label><label className="assistant-file-option"><Images size={17} />Выбрать из галереи<input type="file" accept="image/*" aria-label="Выбрать фото накладной" onChange={(event) => handlePhotoFile(event.target.files?.[0], event)} /></label></div></>}
+                  </div>
+                  <button type="button" className="assistant-send" onClick={() => send()} disabled={interactionBlocked || (!input.trim() && !attachedPhoto)} aria-label="Отправить сообщение">{loading ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}<span>Отправить</span></button>
                 </div>
-              )}
-              <div className="flex items-end gap-1.5 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-2.5 py-2">
-                <div className="relative shrink-0">
-                  <button type="button" title="Фото накладной" aria-label="Прикрепить фото"
-                    disabled={loading || photoParsing}
-                    onClick={() => setPhotoMenuOpen((v) => !v)}
-                    className={`flex h-10 w-10 items-center justify-center rounded-full text-slate-400 outline-none transition hover:bg-white/10 hover:text-blue-300 focus:outline-none focus-visible:outline-none ${(loading || photoParsing) ? "pointer-events-none opacity-50" : ""}`}>
-                    {photoParsing ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <ImagePlus size={20} strokeWidth={2.2} />}
-                  </button>
-                  {photoMenuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setPhotoMenuOpen(false)} />
-                      <div className="absolute bottom-full left-0 z-20 mb-2 w-52 overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-900 p-1.5 shadow-lg shadow-black/50">
-                        <label className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-slate-200 transition hover:bg-white/10 active:scale-[0.98]">
-                          <Camera size={18} strokeWidth={2.2} className="shrink-0 text-blue-300" /> Сфотографировать
-                          <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => handlePhotoFile(e.target.files?.[0], e)} />
-                        </label>
-                        <label className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-slate-200 transition hover:bg-white/10 active:scale-[0.98]">
-                          <Images size={18} strokeWidth={2.2} className="shrink-0 text-violet-300" /> Выбрать из галереи
-                          <input type="file" accept="image/*" hidden onChange={(e) => handlePhotoFile(e.target.files?.[0], e)} />
-                        </label>
-                      </div>
-                    </>
-                  )}
-                </div>
-                <textarea
-                  value={input}
-                  onChange={(e) => {
-                    setInput(e.target.value);
-                    e.target.style.height = "auto";
-                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      send();
-                    }
-                  }}
-                  placeholder={attachedPhoto ? "Комментарий к накладной (необязательно)…" : "Напишите или прикрепите фото накладной…"}
-                  rows={1}
-                  className="flex-1 resize-none bg-transparent text-sm font-medium leading-5 text-white outline-none placeholder:text-slate-500 focus:outline-none focus-visible:outline-none"
-                  style={{minHeight: "24px", maxHeight: "120px"}}
-                />
-                <button
-                  onClick={send}
-                  disabled={loading}
-                  aria-label="Отправить"
-                  title="Отправить"
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 font-semibold text-white  outline-none transition hover:brightness-110 focus:outline-none focus-visible:outline-none active:scale-95 disabled:opacity-50"
-                >
-                  {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Send size={18} />}
-                </button>
               </div>
+              <div className="assistant-compose-note"><span><MapPin size={11} />{targetName || "Текущая точка"}</span><span>Enter — отправить · Shift + Enter — новая строка</span></div>
+              {historyWarning && <p className="assistant-history-warning" role="status">{historyWarning}</p>}
             </div>
-          </section>
-
-          {activeRightPanels > 0 && (
-            <aside
-              className="hidden min-w-0 flex-col gap-4 overflow-y-auto xl:flex xl:self-start"
-              style={{ maxHeight: "calc(100dvh - 245px)" }}
-            >
-              {sidePanels.recent && (
-                <div className="flex min-h-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06] p-4">
-                  <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
-                    <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Clock size={16} strokeWidth={2.4} className="text-emerald-300" /> Последние добавления</h3>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSidePanels((prev) => ({ ...prev, recent: false }));
-                        setLastUIPanel("recent");
-                      }}
-                      className="rounded-full bg-white/5 px-2 py-1 text-[11px] font-semibold text-slate-400 hover:bg-white/10 hover:text-white"
-                    >
-                      убрать
-                    </button>
-                  </div>
-                  <div className="max-h-[240px] space-y-3 overflow-y-auto overscroll-contain pr-1">
-                    {recentAdded.map((m, i) => (
-                      <div key={i} className="rounded-2xl bg-white/[0.02] p-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold">
-                              {m.itemName || m.item_name || "Сырьё"}
-                            </p>
-                            <p className="text-[11px] font-bold text-slate-500">
-                              {String(m.createdAt || m.created_at || "").slice(0, 16) || "сейчас"}
-                            </p>
-                          </div>
-                          <p className="shrink-0 text-sm font-semibold text-emerald-300">
-                            +{num(m.quantity)} {unitLabel(m.unit)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    {!recentAdded.length && (
-                      <div className="rounded-2xl border border-dashed border-white/[0.08] p-5 text-center text-sm font-bold text-slate-500">
-                        Пока нет приходов
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {sidePanels.stocks && (
-                <div className="shrink-0 rounded-2xl border border-white/[0.08] bg-white/[0.06] p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Boxes size={16} strokeWidth={2.4} className="text-blue-300" /> Остатки</h3>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSidePanels((prev) => ({ ...prev, stocks: false }));
-                        setLastUIPanel("stocks");
-                      }}
-                      className="rounded-full bg-white/5 px-2 py-1 text-[11px] font-semibold text-slate-400 hover:bg-white/10 hover:text-white"
-                    >
-                      убрать
-                    </button>
-                  </div>
-                  <div className="max-h-[240px] space-y-2 overflow-y-auto">
-                    {topItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between rounded-2xl bg-white/[0.02] px-3 py-2"
-                      >
-                        <span className="truncate text-sm font-bold text-slate-200">{item.name}</span>
-                        <span className="ml-3 shrink-0 text-sm font-semibold text-blue-200">
-                          {num(item.quantity)} {unitLabel(item.unit)}
-                        </span>
-                      </div>
-                    ))}
-                    {!topItems.length && <p className="text-sm font-bold text-slate-500">Склад пустой</p>}
-                  </div>
-                </div>
-              )}
-
-              {sidePanels.suggestions && (
-                <div className="shrink-0 rounded-2xl border border-white/[0.08] bg-white/[0.06] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><Sparkles size={16} strokeWidth={2.4} className="text-amber-300" /> Можно спросить</h3>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSidePanels((prev) => ({ ...prev, suggestions: false }));
-                        setLastUIPanel("suggestions");
-                      }}
-                      className="rounded-full bg-white/5 px-2 py-1 text-[11px] font-semibold text-slate-400 hover:bg-white/10 hover:text-white"
-                    >
-                      убрать
-                    </button>
-                  </div>
-                  <div className="mt-3 flex flex-col gap-1.5">
-                    {["что заканчивается?", "продажи сегодня", "себестоимость меню", "кто должен деньги?", "сколько калорий в эспрессо", "дай совет по меню"].map((q) => (
-                      <button
-                        key={q}
-                        type="button"
-                        onClick={() => send(q)}
-                        disabled={loading}
-                        className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-left text-sm font-bold text-slate-300 transition hover:bg-white/[0.07] hover:text-white disabled:opacity-50"
-                      >
-                        <span className="text-amber-300/70">•</span> {q}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </aside>
-          )}
-        </div>
+          </div>
+        </main>
       </div>
-
       {clarifyModalOpen && pendingItems.length > 0 && (
         <div
-          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-4"
+          className="assistant-dialog-overlay backdrop-blur-sm"
           onClick={() => setClarifyModalOpen(false)}
           role="dialog"
           aria-label="Уточнения по закупке"
         >
           <div
-            className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-white/[0.08] bg-slate-900 shadow-lg sm:rounded-3xl"
+            className="assistant-dialog-panel shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/[0.08] px-4 py-3">
@@ -2448,11 +2228,11 @@ export default function AIWarehousePage() {
                             if (e.key === "Escape") { setClarifyOpen((p) => { const n = { ...p }; delete n[i]; return n; }); }
                           }}
                           placeholder="Ваш ответ… напр. «пекинская капуста» или «250г»"
-                          disabled={loading}
+                          disabled={interactionBlocked}
                           className="w-full rounded-xl border border-white/[0.08] bg-slate-950/70 px-3 py-2.5 text-[13px] font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-amber-400/60 focus:outline-none focus-visible:outline-none disabled:opacity-50"
                         />
                         <div className="flex gap-2">
-                          <button type="button" onClick={() => applyClarification(i)} disabled={loading}
+                          <button type="button" onClick={() => applyClarification(i)} disabled={interactionBlocked}
                             className="flex-1 rounded-xl bg-amber-500 px-4 py-2.5 text-[12px] font-semibold text-white shadow-lg outline-none transition active:scale-95 focus:outline-none focus-visible:outline-none disabled:opacity-50">
                             {loading ? "Обрабатываю…" : "Готово"}
                           </button>
@@ -2497,7 +2277,8 @@ export default function AIWarehousePage() {
           </button>
         </div>
       )}
+
+      {clearConfirmOpen && <div className="assistant-dialog-overlay backdrop-blur-sm" onClick={() => setClearConfirmOpen(false)}><section className="assistant-dialog-panel assistant-clear-dialog shadow-lg" role="dialog" aria-modal="true" aria-labelledby="assistant-clear-title" onClick={(event) => event.stopPropagation()}><Trash2 size={28} /><h2 id="assistant-clear-title">Очистить переписку?</h2><p>Сообщения и незавершённые уточнения будут удалены из этого чата. Записанные закупки и расходы сохранятся.</p><div><button type="button" className="assistant-button" onClick={() => setClearConfirmOpen(false)}>Назад</button><button type="button" className="assistant-button assistant-danger" disabled={loading || photoParsing} onClick={() => { clearChat(); setClearConfirmOpen(false); }}>Очистить чат</button></div></section></div>}
     </div>
   );
 }
-

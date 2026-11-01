@@ -1,98 +1,38 @@
-import { useEffect, useRef, useState } from "react";
-import { ShoppingCart, Store, Star, Check, ChevronDown } from "lucide-react";
-import { get, getCurrentWorkspace, setCurrentWorkspace } from "../api";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { AlertCircle, Check, ChevronDown, Loader2, Search, Star, Store } from 'lucide-react';
+import { get, getCurrentWorkspace, setCurrentProfile, setCurrentWorkspace } from '../api';
+import { navigationRole, sameWorkspace, validateNavigationWorkspaces } from '../utils/navigation';
+import NavigationDialog from './NavigationDialog';
 
-// Быстрое переключение между точками прямо из шапки: клик по названию точки →
-// список всех доступных точек → выбор мгновенно переключает (перезагрузка с новыми данными).
-export default function WorkspaceSwitcher({ accountName, accountLabel, workspaceName, showWorkspaceChip }) {
+const readWorkspaces = () => get('/my-workspaces');
+const applyWorkspace = ws => { setCurrentProfile(null); setCurrentWorkspace(ws); window.location.assign('/'); };
+export default function WorkspaceSwitcher({ workspace, accountName, accountLabel, compact = false, loadWorkspaces = readWorkspaces, onSwitch = applyWorkspace }) {
+  const current = workspace || getCurrentWorkspace();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
-  const [list, setList] = useState([]);
-  const wrapRef = useRef(null);
-  const current = getCurrentWorkspace() || {};
-
-  useEffect(() => {
-    if (!open || list.length) return;
-    get("/my-workspaces").then((l) => setList(Array.isArray(l) ? l : [])).catch(() => {});
-  }, [open, list.length]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e) => { if (!wrapRef.current?.contains(e.target)) setOpen(false); };
-    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
-    document.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  const switchTo = (ws) => {
-    if (String(ws.id) === String(current.id)) { setOpen(false); return; }
-    setCurrentWorkspace(ws);
-    window.location.assign("/"); // перезагрузка → все данные перечитаются под новую точку
+  useEffect(() => { setOpen(false); }, [location.pathname, location.search]);
+  return <><button type="button" className={`sh-workspace ${compact ? 'is-compact' : ''}`} title="Переключить точку" aria-label={`Выбрать точку: ${current?.name || accountName || 'Мой бизнес'}`} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}><span className="sh-workspace-icon"><Store size={21} /></span><span><strong>{current?.name || accountName || 'Мой бизнес'}</strong><small>{accountLabel || 'Рабочая точка'}</small></span><ChevronDown size={14} /></button>{open && <WorkspacePicker key={`${current?.id}-${current?.dataAccountId}`} current={current} loadWorkspaces={loadWorkspaces} onSwitch={onSwitch} onClose={() => setOpen(false)} />}</>;
+}
+function WorkspacePicker({ current, loadWorkspaces, onSwitch, onClose }) {
+  const [list, setList] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useState(''), [search, setSearch] = useState(''), [switching, setSwitching] = useState(null);
+  const sequence = useRef(0), mounted = useRef(true), switchingRef = useRef(false);
+  const load = useCallback(async () => {
+    const seq = ++sequence.current; setLoading(true); setError('');
+    try { const response = validateNavigationWorkspaces(await loadWorkspaces()); if (seq === sequence.current) setList(response); }
+    catch (e) { if (seq === sequence.current) setError(e.message || 'Не удалось загрузить точки.'); }
+    finally { if (seq === sequence.current) setLoading(false); }
+  }, [loadWorkspaces]);
+  const cancel = useCallback(() => { mounted.current = false; sequence.current++; }, []);
+  useEffect(() => { mounted.current = true; load(); return cancel; }, [load, cancel]);
+  const select = async ws => {
+    if (switchingRef.current || loading || error) return;
+    if (sameWorkspace(ws, current)) { onClose(); return; }
+    switchingRef.current = true; setSwitching(ws.id); setError('');
+    try { await onSwitch(ws); if (mounted.current) onClose(); }
+    catch (e) { if (mounted.current) setError(e.message || 'Не удалось переключить точку.'); }
+    finally { switchingRef.current = false; if (mounted.current) setSwitching(null); }
   };
-
-  return (
-    <div ref={wrapRef} className="relative min-w-0">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        title="Переключить точку"
-        className="flex w-full min-w-[208px] items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2 py-1.5 text-left transition hover:bg-white/[0.07]"
-      >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-950/40">
-          <ShoppingCart size={22} strokeWidth={2.6} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-white">{accountName}</p>
-          <div className="mt-0.5 flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
-            <p className="truncate text-xs font-bold text-slate-400">{accountLabel}</p>
-            {showWorkspaceChip && (
-              <>
-                <span className="text-slate-600">·</span>
-                <span className="truncate text-xs font-semibold text-blue-400">{workspaceName}</span>
-              </>
-            )}
-          </div>
-        </div>
-        <ChevronDown size={16} className={`shrink-0 text-slate-500 transition ${open ? "rotate-180" : ""}`} />
-      </button>
-
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-[280px] rounded-2xl border border-white/[0.08] bg-[#0d1424] p-2 shadow-lg shadow-black/60">
-          <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Мои точки</p>
-          <div className="max-h-[320px] space-y-1 overflow-y-auto">
-            {list.length === 0 && <p className="px-2 py-3 text-sm font-bold text-slate-500">Загрузка…</p>}
-            {list.map((ws) => {
-              const active = String(ws.id) === String(current.id);
-              return (
-                <button
-                  key={ws.id}
-                  type="button"
-                  onClick={() => switchTo(ws)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${active ? "bg-blue-500/15" : "hover:bg-white/5"}`}
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow">
-                    {ws.isMain ? <Star size={16} /> : <Store size={16} />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-white">{ws.name}</p>
-                    <p className="truncate text-[11px] font-bold text-slate-400">
-                      {ws.role === "owner" ? "Владелец" : ws.role === "branch_admin" ? "Администратор" : "Кассир"}{ws.isMain ? " · Основная" : ""}
-                    </p>
-                  </div>
-                  {active && <Check size={16} className="shrink-0 text-blue-300" />}
-                </button>
-              );
-            })}
-          </div>
-          {list.length === 1 && (
-            <p className="px-2 pb-1 pt-2 text-[11px] font-bold text-slate-500">У вас одна точка. Новые точки создаются в настройках.</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  const rows = (list || []).filter(w => w.name.toLocaleLowerCase('ru').includes(search.trim().toLocaleLowerCase('ru')));
+  return <NavigationDialog title="Выберите рабочую точку" busy={switching !== null} onClose={onClose}><p className="sh-note">Товары, склад, продавцы и отчёты откроются для выбранной точки.</p><label className="sh-search"><Search size={17} /><input aria-label="Найти точку" placeholder="Найти точку" value={search} onChange={e => setSearch(e.target.value)} disabled={switching !== null} /></label>{error && <div className="sh-feedback" role="alert"><AlertCircle size={18} /><span>{error}</span><button type="button" className="sh-button" onClick={load} disabled={loading || switching !== null}>Повторить</button></div>}{loading && <div className="sh-loading" role="status"><Loader2 size={23} className="sh-spin" />Загружаю доступные точки…</div>}{!loading && list !== null && <div className="sh-workspace-list">{rows.map(ws => <button key={`${ws.id}:${ws.dataAccountId}`} type="button" aria-pressed={sameWorkspace(ws, current)} disabled={!!error || switching !== null} onClick={() => select(ws)}><span className="sh-workspace-icon">{ws.isMain ? <Star size={20} /> : <Store size={20} />}</span><span><strong>{ws.name}</strong><small>{navigationRole(ws.role)}{ws.isMain ? ' · Основная точка' : ''}</small></span>{switching === ws.id ? <Loader2 size={18} className="sh-spin" /> : sameWorkspace(ws, current) && <span className="sh-selected"><Check size={15} />Выбрана</span>}</button>)}</div>}{!loading && !error && !rows.length && <div className="sh-empty"><Store size={28} /><strong>{list?.length ? 'Точка не найдена' : 'Нет доступных точек'}</strong><p>{list?.length ? 'Попробуйте другое название.' : 'Обратитесь к владельцу аккаунта, чтобы получить доступ.'}</p></div>}{!loading && !error && list?.length === 1 && <p className="sh-note">Вам доступна одна рабочая точка.</p>}</NavigationDialog>;
 }

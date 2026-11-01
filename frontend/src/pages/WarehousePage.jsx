@@ -1,1800 +1,227 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Package, Eye, EyeOff, AlertTriangle, ArrowDownWideNarrow, ChevronDown, MoreHorizontal, RefreshCw, RotateCcw, Trash2, Ban, History, Wallet, Plus, MapPin, Sparkles } from "lucide-react";
-import { del, get, post, getCurrentWorkspace } from "../api";
-import { useMediaQuery } from "../hooks/useMediaQuery";
-import Modal from "../components/Modal";
-import EmptyState from "../components/EmptyState";
-import { formatMoney, money, num } from "../utils/format";
-import { useIngredientSuggest } from "../hooks/useIngredientSuggest";
-import { CONTAINER_UNITS, unitLabel } from "../utils/menu";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { AlertTriangle, ArrowLeft, ArrowRight, Ban, Boxes, CheckCircle2, ChevronRight, Eye, EyeOff, History, Loader2, MapPin, Package, Plus, RefreshCw, RotateCcw, Search, Trash2, Wallet, X } from "lucide-react";
+import { del, get, getCurrentWorkspace, post } from "../api";
+import { WarehouseDeleted, WarehouseDeleteDialog, WarehouseError, WarehouseHistoryDialog, WarehouseInventoryDialog, WarehousePurchaseDialog, WarehouseWriteOffDialog } from "../components/WarehouseDialogs";
+import { formatMoney } from "../utils/format";
+import { unitLabel } from "../utils/menu";
+import { enrichWarehouseItem, sortWarehouse, STOCK_STATUSES, summarizeWarehouse, warehouseDate, warehouseMovement, warehouseQuantity as qty, warehouseUnitPrice } from "../utils/warehouse";
+import "./WarehousePage.css";
 
-// Форматирование количеств: округляет и убирает хвостовые нули + артефакты float
-// (981.4599999999999 → «981,46», 966.6666666 → «966,667», целые → «981»).
-const fmtQty = (value) =>
-  num(value).toLocaleString("ru-RU", { maximumFractionDigits: 3 });
-
-// Единые тёмные токены полей и кнопок для модалок склада (Modal legacyLight={false}):
-// глобальные .input/.btn-white/.btn-blue светлые, поэтому здесь задаём тёмные явно.
-const WH_INPUT =
-  "w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-3 font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10";
-const WH_SELECT =
-  "w-full rounded-2xl border border-white/[0.08] bg-slate-900 px-4 py-3 font-bold text-white outline-none transition focus:border-blue-400/70 focus:ring-4 focus:ring-blue-500/10";
-const WH_BTN_GHOST =
-  "rounded-2xl border border-white/[0.08] bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/15";
-const WH_BTN_PRIMARY =
-  "rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:brightness-110";
-const WH_BTN_DANGER =
-  "rounded-2xl bg-red-600 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-red-500";
-
-const SMART_UNIT_SETTINGS = {
-  g: { controlMode: "approximate", lossPercent: "3", inventoryMethod: "average", packagingQuantity: "1", hint: "Для граммов система считает расход приблизительно и добавляет небольшой запас на потери." },
-  kg: { controlMode: "approximate", lossPercent: "3", inventoryMethod: "average", packagingQuantity: "1000", hint: "1 кг = 1000 г. Удобно закупать килограммами, а списывать по граммам." },
-  ml: { controlMode: "approximate", lossPercent: "5", inventoryMethod: "average", packagingQuantity: "1", hint: "Для жидкостей система учитывает проливы и перерасход кухни." },
-  l: { controlMode: "approximate", lossPercent: "5", inventoryMethod: "average", packagingQuantity: "1000", hint: "1 литр = 1000 мл. Удобно для молока, сиропов и соусов." },
-  pcs: { controlMode: "piece", lossPercent: "0", inventoryMethod: "fifo", packagingQuantity: "1", hint: "Штучный товар: стаканы, десерты, бутылки, упаковки. Списывается по штукам." },
-  bottle: { controlMode: "piece", lossPercent: "0", inventoryMethod: "fifo", packagingQuantity: "1", hint: "Бутылочный учёт: удобно для сиропов, воды и напитков." },
-  pack: { controlMode: "piece", lossPercent: "0", inventoryMethod: "fifo", packagingQuantity: "1", hint: "Упаковочный учёт: удобно для пачек, пакетов и коробок." },
-  box: { controlMode: "piece", lossPercent: "0", inventoryMethod: "fifo", packagingQuantity: "1", hint: "Коробочный учёт: удобно для закупок коробками и пересчёта остатков." },
-};
-
-const getSmartSettings = (unit) =>
-  SMART_UNIT_SETTINGS[unit] || SMART_UNIT_SETTINGS.pcs;
-
-const cleanWarehouseProductName = (value = "") => {
-  let n = String(value || "").toLowerCase().replace(/ё/g, "е");
-  n = n
-    .replace(/\b\d{4}[-./]\d{2}[-./]\d{2}t?\d{0,2}:?\d{0,2}:?\d{0,2}\b/gi, " ")
-    .replace(/\b(купил|купила|купили|купи|купить|докупил|докупила|докупили|закупил|закупила|закупили|взял|взяла|взяли|добавил|добавила|добавили|приход|поступил|поступила|поступили|мой|закуп|закупка)\b/gi, " ")
-    .replace(/\d+(?:[,.]\d+)?\s*(?:кг|килограмм\w*|гр|грамм\w*|мл|миллилитр\w*|л\b|литр\w*|шт|штук\w*|шту\w*|₽|руб\w*|р\b)/gi, " ")
-    .replace(/\b(руб|рубль|рублей|рубля|лей|за|ща|по|цена|стоимость|сумма|и|а|я|мы|товар|сырье|сырьё|примерно|граммовк\w*)\b/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  const dict = { ганату: "гранат", ганата: "гранат", гранату: "гранат", граната: "гранат", гранаты: "гранат", помидоры: "помидоры", помидор: "помидоры", апельсины: "апельсин", апельсина: "апельсин", ананасы: "ананас", ананаса: "ананас" };
-  return dict[n] || n.split(" ").map((w) => dict[w] || w).join(" ").trim();
-};
-
-const getSmartModeLabel = (item) => {
-  const mode = item?.controlMode || item?.control_mode;
-  if (mode === "piece") return "Штучный";
-  if (mode === "exact") return "Точный";
-  return "Умный";
-};
-
-
-
-
-const computeWarehouseAmount = (form) => {
-  const purchaseQty = num(form.purchaseQuantity || form.quantity);
-  const purchaseUnit = form.purchaseUnit || form.unit || "g";
-  const storageUnit = form.unit || "g";
-  const unitsPerPackage = Math.max(num(form.unitsPerPackage) || 1, 1);
-  const basePerUnit = Math.max(num(form.basePerUnit) || 1, 1);
-
-  if (purchaseQty <= 0) {
-    return { quantity: 0, unit: storageUnit, unitCost: 0, text: "На склад попадёт: 0" };
-  }
-
-  let total = purchaseQty;
-  let unit = storageUnit;
-  let detail = "";
-
-  if (purchaseUnit === "kg") {
-    unit = "g";
-    total = purchaseQty * 1000;
-    detail = `${purchaseQty} кг × 1000 = ${total} г`;
-  } else if (purchaseUnit === "l") {
-    unit = "ml";
-    total = purchaseQty * 1000;
-    detail = `${purchaseQty} л × 1000 = ${total} мл`;
-  } else if (purchaseUnit === "g" || purchaseUnit === "ml" || purchaseUnit === "pcs") {
-    unit = purchaseUnit;
-    total = purchaseQty;
-    detail = `${purchaseQty} ${unitLabel(unit)}`;
-  } else if (CONTAINER_UNITS.includes(purchaseUnit)) {
-    unit = storageUnit;
-    total = purchaseQty * unitsPerPackage * basePerUnit;
-    detail = `${purchaseQty} ${unitLabel(purchaseUnit)} × ${unitsPerPackage} шт внутри × ${basePerUnit} ${unitLabel(unit)} = ${total} ${unitLabel(unit)}`;
-  }
-
-  const unitCost = total > 0 ? num(form.price) / total : 0;
-
-  return { quantity: total, unit, unitCost, text: `На склад попадёт: ${total} ${unitLabel(unit)}`, detail };
-};
-
-const smartPieceSuggestion = (name, unit) => {
-  const n = String(name || "").toLowerCase();
-  if (unit === "g") {
-    if (n.includes("апельсин")) return "180";
-    if (n.includes("лимон")) return "100";
-    if (n.includes("яблок")) return "180";
-    if (n.includes("банан")) return "120";
-    if (n.includes("лайм")) return "70";
-    if (n.includes("яйц")) return "60";
-    return "100";
-  }
-  if (unit === "ml") {
-    if (n.includes("сироп")) return "700";
-    return "1000";
-  }
-  return "1";
-};
-
-// ── Статусы остатка: тон, порядок приоритета (проблемные выше), чипы ──
-const STATUS_ORDER = { neg: 0, out: 1, low: 2, norm: 3 };
-const CHIP = {
-  all: "border-blue-400/40 bg-blue-500/20 text-blue-100",
-  neg: "border-red-400/40 bg-red-500/20 text-red-200",
-  out: "border-slate-400/30 bg-slate-500/20 text-slate-200",
-  low: "border-amber-400/40 bg-amber-500/20 text-amber-200",
-  norm: "border-emerald-400/40 bg-emerald-500/20 text-emerald-200",
-};
-
-function StatusChip({ id, label, count, active, onClick }) {
-  const dim = count === 0 && !active;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={dim}
-      className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition ${
-        active ? CHIP[id] : dim ? "border-white/[0.08] bg-white/[0.02] text-slate-600" : "border-white/[0.08] bg-white/[0.06] text-slate-300 hover:bg-white/10"
-      }`}
-    >
-      {label}
-      {count != null && <span className={`rounded-full px-1.5 py-0.5 text-[11px] tabular-nums ${active ? "bg-black/25" : "bg-white/10"}`}>{count}</span>}
-    </button>
-  );
+function StockBadge({ item }) {
+  return <span className={`wh-status is-${item.status}`}><i />{item.hidden ? "Скрыто" : STOCK_STATUSES[item.status]}</span>;
 }
 
-// Меню «…» строки: главное действие «+ Закупка» видно, остальное — здесь.
-function RowMenu({ hidden, onHistory, onInventory, onWriteOff, onToggleHidden, onDelete }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
-    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
-  }, [open]);
-  const Item = ({ icon: Icon, label, onClick, cls = "text-slate-200" }) => (
-    <button type="button" role="menuitem" onClick={() => { setOpen(false); onClick(); }} className={`flex min-h-[40px] w-full items-center gap-2 rounded-lg px-3 text-left text-[12px] font-semibold transition hover:bg-white/10 ${cls}`}>
-      <Icon size={15} className="shrink-0" /> {label}
-    </button>
-  );
+function WarehouseItemDetail({ item, blocked, onAction, onBack }) {
+  const mode = item.controlMode || item.control_mode;
   return (
-    <div className="relative" ref={ref}>
-      <button type="button" aria-label="Ещё действия" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.08] text-slate-200 transition hover:bg-white/15">
-        <MoreHorizontal size={16} />
-      </button>
-      {open && (
-        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-white/[0.08] bg-slate-900 p-1.5">
-          <Item icon={History} label="История закупок" onClick={onHistory} />
-          <Item icon={RotateCcw} label="Пересчёт остатка" onClick={onInventory} cls="text-amber-300" />
-          <Item icon={Ban} label="Списать" onClick={onWriteOff} />
-          <Item icon={hidden ? Eye : EyeOff} label={hidden ? "Показать" : "Скрыть"} onClick={onToggleHidden} />
-          <div className="my-1 border-t border-white/[0.08]" />
-          <Item icon={Trash2} label="Удалить" onClick={onDelete} cls="text-red-300" />
-        </div>
-      )}
+    <div className="wh-detail wh-panel bg-white/[0.02] shadow-sm backdrop-blur-xl">
+      <header><span className="wh-item-icon"><Package size={21} /></span><div><p className="wh-eyebrow">Карточка сырья</p><h2>{item.name}</h2></div><button type="button" className="wh-icon-button wh-detail-back" onClick={onBack} aria-label="К списку сырья"><ArrowLeft size={17} /></button></header>
+      <div className="wh-detail-balance"><StockBadge item={item} /><strong>{qty(item.quantity)}<small>{unitLabel(item.unit)}</small></strong><span>Текущий остаток по учёту</span>
+        {item.minimum > 0 && <div className="wh-stock-level"><div><i style={{ width: `${Math.max(0, Math.min(100, item.quantity / item.minimum * 100))}%` }} /></div><span>Минимальный остаток<strong>{qty(item.minimum)} {unitLabel(item.unit)}</strong></span></div>}
+      </div>
+      <dl className="wh-detail-facts">
+        <div><dt>Стоимость остатка</dt><dd>{formatMoney(item.value)} ₽</dd></div>
+        <div><dt>Себестоимость 1 {unitLabel(item.unit)}</dt><dd>{warehouseUnitPrice(item.unitCost)} ₽</dd></div>
+        <div><dt>Поставщик</dt><dd>{item.supplier || "Не указан"}</dd></div>
+        <div><dt>Срок годности</dt><dd>{item.expiryDate || item.expiry_date ? warehouseDate(item.expiryDate || item.expiry_date) : "Не указан"}</dd></div>
+        <div><dt>Режим учёта</dt><dd>{mode === "piece" ? "Штучный" : mode === "exact" ? "Точный" : "Приблизительный"}</dd></div>
+      </dl>
+      {item.note && <p className="wh-detail-note">{item.note}</p>}
+      <div className="wh-detail-actions">
+        <button type="button" className="wh-primary" disabled={blocked} onClick={() => onAction("purchase", item)}><Plus size={17} />Новая закупка</button>
+        <div><button type="button" className="wh-button" disabled={blocked} onClick={() => onAction("inventory", item)}><RotateCcw size={15} />Пересчитать</button><button type="button" className="wh-button" disabled={blocked || item.hidden || item.quantity <= 0} onClick={() => onAction("writeoff", item)}><Ban size={15} />Списать</button></div>
+        <button type="button" className="wh-button" onClick={() => onAction("history", item)}><History size={15} />Партии и закупки<ChevronRight size={14} /></button>
+      </div>
+      <footer><button type="button" className="wh-text-button" disabled={blocked} onClick={() => onAction("visibility", item)}>{item.hidden ? <Eye size={14} /> : <EyeOff size={14} />}{item.hidden ? "Показать сырьё" : "Скрыть сырьё"}</button><button type="button" className="wh-text-button wh-danger" disabled={blocked} onClick={() => onAction("delete", item)}><Trash2 size={14} />Удалить</button></footer>
     </div>
   );
 }
 
-export default function WarehousePage() {
-  const isXl = useMediaQuery("(min-width: 1280px)"); // рендерим таблицу ЛИБО карточки, не обе
-  const [items, setItems] = useState([]);
-  const [movements, setMovements] = useState([]);
-  const [submitting, setSubmitting] = useState(false); // защита от двойного запроса + показ ошибки
+function WarehouseAttention({ items, summary, available, onSelect, onFilter }) {
+  const attention = sortWarehouse(items.filter((item) => !item.hidden && item.status !== "norm")).slice(0, 4);
+  return (
+    <div className="wh-attention">
+      <section className="wh-panel bg-white/[0.02] shadow-sm backdrop-blur-xl"><p className="wh-eyebrow">Контроль остатков</p><h2>Требуют внимания</h2>
+        {attention.length ? <><div className="wh-attention-list">{attention.map((item) => <button type="button" key={item.id} onClick={() => onSelect(item)}><span><strong>{item.name}</strong><small>{STOCK_STATUSES[item.status]}</small></span><b className={`wh-quantity is-${item.status}`}>{qty(item.quantity)}<small>{unitLabel(item.unit)}</small></b><ChevronRight size={14} /></button>)}</div><button className="wh-text-button" type="button" onClick={() => onFilter("attention")}>Все проблемные позиции<ArrowRight size={14} /></button></> : <div className="wh-attention-empty"><CheckCircle2 size={25} /><p>{!available ? "Дождитесь загрузки данных" : summary.count ? "Остатки активных позиций в норме" : "Добавьте первую закупку, чтобы начать учёт"}</p></div>}
+      </section>
+      <section className="wh-panel wh-health bg-white/[0.02]"><p className="wh-eyebrow">Активные позиции</p><h2>Состояние склада</h2><div className="wh-health-track">{Object.keys(STOCK_STATUSES).map((key) => <i key={key} className={`is-${key}`} style={{ width: `${summary.count ? summary.counts[key] / summary.count * 100 : 0}%` }} />)}</div><div className="wh-health-labels">{Object.entries(STOCK_STATUSES).map(([key, label]) => <button type="button" key={key} onClick={() => onFilter(key)}><i className={`is-${key}`} /><span>{label}</span><strong>{available ? summary.counts[key] : "—"}</strong></button>)}</div></section>
+      <Link to="/ai-warehouse" className="wh-assistant-link wh-panel bg-white/[0.02]"><Boxes size={20} /><span><strong>Закупка по накладной</strong><small>Прикрепите фото помощнику</small></span><ArrowRight size={16} /></Link>
+    </div>
+  );
+}
 
-  const [addModal, setAddModal] = useState(false);
-  const [writeOffModal, setWriteOffModal] = useState(false);
-  const [historyModal, setHistoryModal] = useState(false);
-  const [deletedModal, setDeletedModal] = useState(false);
-  const [deleteModal, setDeleteModal] = useState(false);
-  const [duplicateModal, setDuplicateModal] = useState(false);
-  const [purchaseTargetItem, setPurchaseTargetItem] = useState(null);
-
-  const [historyItem, setHistoryItem] = useState(null);
-  const [historyBatches, setHistoryBatches] = useState([]);
-  const [deletedItems, setDeletedItems] = useState([]);
-  const [deleteTargetItem, setDeleteTargetItem] = useState(null);
-  const [deleteReason, setDeleteReason] = useState("Дубль / ошибочно добавили");
-  const [deleteNote, setDeleteNote] = useState("");
-  const [duplicateSuggestions, setDuplicateSuggestions] = useState([]);
-
-  const [showHidden, setShowHidden] = useState(false);
+function WarehouseMovements({ movements, loaded, loading, error }) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all"); // all | neg | out | low | norm
-  const [sortBy, setSortBy] = useState("triage"); // triage | value | deficit | name
-  const [error, setError] = useState("");
-  const [form, setForm] = useState({
-    name: "",
-    quantity: "",
-    purchaseQuantity: "",
-    purchaseUnit: "g",
-    unit: "g",
-    price: "",
-    minQuantity: "",
-    supplier: "",
-    expiryDate: "",
-    note: "",
-    controlMode: getSmartSettings("g").controlMode,
-    lossPercent: getSmartSettings("g").lossPercent,
-    inventoryMethod: getSmartSettings("g").inventoryMethod,
-    packagingQuantity: getSmartSettings("g").packagingQuantity,
-    unitsPerPackage: "1",
-    basePerUnit: "1",
-  });
-  // AI-подсказка каноничного названия позиции (чтобы имена на складе и в составе совпадали)
-  // AI-подсказка правильного названия позиции (общий хук: гонки + кэш).
-  // Активна только при открытой форме добавления, порог 3 символа.
-  const { suggestions: nameAiRaw, loading: nameAiLoading } = useIngredientSuggest(
-    addModal ? form.name : "",
-    items,
-    { minLen: 3, debounce: 600 }
+  const [type, setType] = useState("all");
+  const types = [...new Set(movements.map((movement) => warehouseMovement(movement).type))];
+  const rows = movements.filter((movement) => (type === "all" || warehouseMovement(movement).type === type) && [movement.itemName, movement.item_name, movement.reason, movement.note].some((value) => String(value || "").toLowerCase().includes(search.trim().toLowerCase())));
+  return (
+    <section className="wh-panel wh-movements bg-white/[0.02]" aria-label="Движения склада">
+      <div className="wh-section-heading"><div><h2>Движения склада <span>{loaded ? rows.length : "—"}</span></h2><p>Последние 300 приходов, продаж, списаний и корректировок.</p></div></div>
+      <div className="wh-search-toolbar"><label className="wh-search"><Search size={17} /><input aria-label="Поиск движений склада" placeholder="Сырьё, причина или комментарий…" value={search} onChange={(event) => setSearch(event.target.value)} /></label><select aria-label="Вид движения" value={type} onChange={(event) => setType(event.target.value)}><option value="all">Все операции</option>{types.map((value) => <option key={value} value={value}>{warehouseMovement({ movementType: value }).label}</option>)}</select></div>
+      {loading && !loaded ? <div className="wh-empty" role="status"><Loader2 size={25} className="animate-spin" /><p>Загружаем движения…</p></div> : !loaded && error ? <div className="wh-empty"><AlertTriangle size={28} /><h3>Движения пока недоступны</h3><p>Обновите данные склада.</p></div> : rows.length ? <div className="wh-movement-list">{rows.map((movement) => {
+        const meta = warehouseMovement(movement);
+        return <article key={movement.id}><span className={`wh-movement-icon ${meta.direction > 0 ? "is-positive" : meta.direction < 0 ? "is-negative" : ""}`}>{meta.direction > 0 ? <Plus size={16} /> : <History size={16} />}</span><div><h3>{movement.itemName || movement.item_name || "Сырьё"}</h3><p>{meta.label}{movement.reason ? ` · ${movement.reason}` : ""}</p>{movement.note && <p>{movement.note}</p>}</div><span className="wh-movement-date">{warehouseDate(movement.createdAt || movement.created_at, true)}</span><strong className={meta.direction > 0 ? "wh-positive" : meta.direction < 0 ? "wh-danger" : ""}>{meta.direction > 0 ? "+" : meta.direction < 0 ? "−" : ""}{qty(meta.quantity)}<small>{unitLabel(movement.unit)}</small></strong></article>;
+      })}</div> : <div className="wh-empty"><History size={28} /><h3>{search || type !== "all" ? "Подходящих движений нет" : "Движений пока нет"}</h3><p>{search || type !== "all" ? "Измените поиск или вид операции." : "Здесь появятся закупки, продажи и изменения остатков."}</p></div>}
+    </section>
   );
-  const nameAiSuggestions = (nameAiRaw || [])
-    .filter((s) => s?.name && s.name.trim().toLowerCase() !== (form.name || "").trim().toLowerCase())
-    .slice(0, 3);
-  // Раскрытая карточка товара на телефоне (тап по строке — разворачивает действия)
-  const [expandedId, setExpandedId] = useState(null);
+}
 
-  const [writeOffForm, setWriteOffForm] = useState({
-    warehouseItemId: "",
-    quantity: "",
-    reason: "Негодно / утиль",
-    note: "",
-  });
+export default function WarehousePage({ workspaceName }) {
+  const [data, setData] = useState({ items: [], movements: [] });
+  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [view, setView] = useState("stock");
+  const [search, setSearch] = useState("");
+  const [visibility, setVisibility] = useState("active");
+  const [status, setStatus] = useState("all");
+  const [sort, setSort] = useState("priority");
+  const [selectedId, setSelectedId] = useState(null);
+  const [limit, setLimit] = useState(30);
+  const [dialog, setDialog] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [operationError, setOperationError] = useState("");
+  const [success, setSuccess] = useState("");
+  const requestSeq = useRef(0), operationRef = useRef(false), dialogOpen = useRef(false);
+  const detailRef = useRef(null), listRef = useRef(null);
+  const pointName = workspaceName || getCurrentWorkspace()?.name || "Текущая точка";
+  useEffect(() => { dialogOpen.current = !!dialog; }, [dialog]);
 
-  const [inventoryModal, setInventoryModal] = useState(false);
-  const [inventoryForm, setInventoryForm] = useState({ item: null, actual: "", note: "" });
-
-  // Safe array guards
-  const safe_items = Array.isArray(items) ? items : [];
-  const safe_movements = Array.isArray(movements) ? movements : [];
-  const safe_historyBatches = Array.isArray(historyBatches) ? historyBatches : [];
-  const safe_deletedItems = Array.isArray(deletedItems) ? deletedItems : [];
-  const safe_duplicateSuggestions = Array.isArray(duplicateSuggestions) ? duplicateSuggestions : [];
-
-  const load = async () => {
-    const [warehouseList, movementList] = await Promise.all([
-      get("/warehouse/items").catch(() => []),
-      get("/warehouse/movements").catch(() => []),
-    ]);
-
-    setItems(warehouseList || []);
-    setMovements(movementList || []);
-  };
-
-  useEffect(() => {
-    load().catch((e) => setError(e.message || "Ошибка загрузки склада"));
-  }, []);
-
-  const isHidden = (item) =>
-    Boolean(item.hidden || item.isHidden || item.is_hidden);
-
-  const minQty = (item) => num(item.minQuantity ?? item.min_quantity);
-
-  const getUnitCost = (item) => {
-    const direct =
-      item?.unitCost ??
-      item?.unit_cost ??
-      item?.costPerUnit ??
-      item?.cost_per_unit;
-
-    if (direct !== undefined && direct !== null && Number(direct) > 0) {
-      return money(direct);
-    }
-
-    const totalPrice = money(item?.price || item?.purchasePrice || 0);
-    const quantity = num(item?.initialQuantity || item?.quantity || 0);
-
-    if (!quantity) return 0;
-
-    return totalPrice / quantity;
-  };
-
-  const visibleItems = useMemo(() => {
-    const q = search.trim().toLowerCase();
-
-    return (Array.isArray(items) ? items : []).filter((item) => {
-      const hidden = isHidden(item);
-      const byHidden = showHidden ? true : !hidden;
-      const bySearch = !q || String(item.name || "").toLowerCase().includes(q);
-
-      return byHidden && bySearch;
-    });
-  }, [items, search, showHidden]);
-
-  const activeItems = useMemo(
-    () => (Array.isArray(items) ? items : []).filter((item) => !isHidden(item)),
-    [items]
-  );
-
-  const stats = useMemo(() => {
-    const totalValue = activeItems.reduce(
-      (sum, item) => sum + num(item.quantity) * getUnitCost(item),
-      0
-    );
-
-    // Низкий остаток = положительный, но ниже минимума (минусовые считаем отдельно «в минусе»).
-    const lowItems = activeItems.filter(
-      (item) => minQty(item) > 0 && num(item.quantity) > 0.000001 && num(item.quantity) <= minQty(item)
-    );
-    // Товары, ушедшие в минус — продано больше, чем было на складе (нужно пополнить/сверить).
-    const negativeItems = activeItems.filter((item) => num(item.quantity) < -0.000001);
-
-    return {
-      count: activeItems.length,
-      value: totalValue,
-      low: lowItems.length,
-      negative: negativeItems.length,
-      hidden: (Array.isArray(items) ? items : []).length - activeItems.length,
-    };
-  }, [items, activeItems]);
-
-  // ── Триаж остатков: статус, дефицит, счётчики, фильтр+сортировка ──
-  const enriched = useMemo(() => visibleItems.map((item) => {
-    const qty = num(item.quantity);
-    const min = minQty(item);
-    const neg = qty < -0.000001;
-    const out = !neg && qty <= 0.000001;
-    const low = !neg && !out && min > 0 && qty <= min;
-    const status = neg ? "neg" : out ? "out" : low ? "low" : "norm";
-    const unitCost = getUnitCost(item);
-    const deficit = min > 0 ? Math.max(0, min - qty) : (neg ? -qty : 0);
-    return { ...item, _qty: qty, _min: min, _status: status, _unitCost: unitCost, _deficit: deficit, _value: qty * unitCost };
-  }), [visibleItems]);
-
-  const counts = useMemo(() => {
-    const c = { neg: 0, out: 0, low: 0, norm: 0 };
-    enriched.forEach((e) => { c[e._status]++; });
-    return c;
-  }, [enriched]);
-
-  const displayItems = useMemo(() => {
-    const rows = statusFilter === "all" ? enriched : enriched.filter((e) => e._status === statusFilter);
-    const arr = [...rows];
-    if (sortBy === "value") return arr.sort((a, b) => b._value - a._value);
-    if (sortBy === "deficit") return arr.sort((a, b) => b._deficit * b._unitCost - a._deficit * a._unitCost);
-    if (sortBy === "name") return arr.sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ru"));
-    // triage: проблемные сверху, внутри — по сумме дефицита, затем имя
-    return arr.sort((a, b) =>
-      STATUS_ORDER[a._status] - STATUS_ORDER[b._status] ||
-      b._deficit * b._unitCost - a._deficit * a._unitCost ||
-      String(a.name || "").localeCompare(String(b.name || ""), "ru")
-    );
-  }, [enriched, statusFilter, sortBy]);
-
-  const computedPurchase = computeWarehouseAmount(form);
-
-  const resetForm = () => {
-    setForm({
-      name: "",
-      quantity: "",
-      purchaseQuantity: "",
-      purchaseUnit: "g",
-      unit: "g",
-      price: "",
-      minQuantity: "",
-      supplier: "",
-      expiryDate: "",
-      note: "",
-      controlMode: getSmartSettings("g").controlMode,
-      lossPercent: getSmartSettings("g").lossPercent,
-      inventoryMethod: getSmartSettings("g").inventoryMethod,
-      packagingQuantity: getSmartSettings("g").packagingQuantity,
-      unitsPerPackage: "1",
-      basePerUnit: "1",
-    });
-    setDuplicateSuggestions([]);
-    setPurchaseTargetItem(null);
-  };
-
-  const validateForm = () => {
-    if (!form.name.trim()) {
-      fail("Введите название сырья");
-      return false;
-    }
-
-    const computed = computeWarehouseAmount(form);
-    if (computed.quantity <= 0) {
-      fail("Введите количество закупки больше 0");
-      return false;
-    }
-
-    const price = num(form.price);
-    if (price < 0) {
-      fail("Цена закупки не может быть отрицательной");
-      return false;
-    }
-    if (price === 0 && !window.confirm("Цена закупки не указана — себестоимость будет 0. Сохранить?")) {
-      return false;
-    }
-
-    return true;
-  };
-
-  const applySmartUnit = (unit) => {
-    const smart = getSmartSettings(unit);
-
-    setForm((p) => ({
-      ...p,
-      unit,
-      controlMode: smart.controlMode,
-      lossPercent: smart.lossPercent,
-      inventoryMethod: smart.inventoryMethod,
-      packagingQuantity: unit === "g" || unit === "kg" ? smartPieceSuggestion(p.name, "g") : unit === "ml" || unit === "l" ? smartPieceSuggestion(p.name, "ml") : smart.packagingQuantity,
-    }));
-  };
-
-  const payloadFromAnyForm = (sourceForm) => {
-    const computed = computeWarehouseAmount(sourceForm);
-    const noteParts = [];
-    if (String(sourceForm.note || "").trim()) noteParts.push(String(sourceForm.note || "").trim());
-    if (computed.detail) noteParts.push(`AI расчёт: ${computed.detail}`);
-
-    return {
-      name: cleanWarehouseProductName(sourceForm.name),
-      quantity: computed.quantity,
-      unit: computed.unit,
-      price: num(sourceForm.price),
-      minQuantity: num(sourceForm.minQuantity),
-      min_quantity: num(sourceForm.minQuantity),
-      supplier: String(sourceForm.supplier || "").trim(),
-      expiryDate: sourceForm.expiryDate || "",
-      expiry_date: sourceForm.expiryDate || "",
-      note: noteParts.join(" · "),
-      controlMode: sourceForm.controlMode,
-      lossPercent: num(sourceForm.lossPercent),
-      inventoryMethod: sourceForm.inventoryMethod,
-      packagingQuantity: num(sourceForm.basePerUnit || sourceForm.packagingQuantity || 1),
-    };
-  };
-
-  const payloadFromForm = () => payloadFromAnyForm(form);
-
-  const checkDuplicatesAndCreate = async () => {
-    setError("");
-
-    if (!validateForm()) return;
-
-    const query = new URLSearchParams({
-      name: cleanWarehouseProductName(form.name),
-      unit: form.unit,
-    }).toString();
-
-    const suggestions = await get(`/warehouse/items/similar?${query}`).catch(
-      () => []
-    );
-
-    if (suggestions?.length) {
-      setDuplicateSuggestions(suggestions);
-      setDuplicateModal(true);
-      return;
-    }
-
-    await createNewItemAnyway();
-  };
-
-  // Единая защита операций склада: не даём двойной запрос (ref — синхронный, устойчив к
-  // двойному тапу без ре-рендера), ловим ошибку и показываем её.
-  const submittingRef = useRef(false);
-  const guarded = async (fn) => {
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-    setSubmitting(true);
+  const load = useCallback(async ({ allowBusy = false } = {}) => {
+    if (operationRef.current && !allowBusy) return;
+    const seq = ++requestSeq.current;
+    setLoading(true);
+    setLoadError("");
     try {
-      await fn();
-    } catch (e) {
-      const msg = e?.message || "Операция не выполнена. Попробуйте снова.";
-      setError(msg);
-      window.notify?.(msg, "error"); // тост поверх модалки — виден, даже если баннер под ней
+      const [items, movements] = await Promise.all([get("/warehouse/items"), get("/warehouse/movements")]);
+      if (seq !== requestSeq.current) return;
+      if (![items, movements].every(Array.isArray)) throw new Error("Сервер вернул неполные данные склада. Обновите страницу.");
+      setData({ items, movements });
+      setLoaded(true);
+      setRefreshKey((old) => old + 1);
+    } catch (failure) {
+      if (seq === requestSeq.current) setLoadError(failure.message || "Не удалось загрузить склад");
     } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
+  }, []);
+  useEffect(() => {
+    load();
+    const onVisible = () => { if (!document.hidden && !dialogOpen.current) load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      // Invalidate all outstanding reads, including manual refreshes.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      requestSeq.current++;
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [load]);
+
+  const items = useMemo(() => data.items.map(enrichWarehouseItem), [data.items]);
+  const summary = useMemo(() => summarizeWarehouse(items), [items]);
+  const filtered = useMemo(() => items.filter((item) => {
+    if (visibility === "active" && item.hidden || visibility === "hidden" && !item.hidden) return false;
+    const query = search.trim().toLowerCase();
+    return !query || [item.name, item.supplier, item.note].some((value) => String(value || "").toLowerCase().includes(query));
+  }), [items, visibility, search]);
+  const counts = { all: filtered.length, neg: 0, out: 0, low: 0, norm: 0 };
+  filtered.forEach((item) => counts[item.status]++);
+  const visible = sortWarehouse(filtered.filter((item) => status === "all" || status === "attention" && item.status !== "norm" || item.status === status), sort);
+  const selected = visible.find((item) => item.id === selectedId) || null;
+  const blocked = busy || loading || !!loadError;
+  const hasFilters = !!search || visibility !== "active" || status !== "all";
+  const reset = () => { setSearch(""); setVisibility("active"); setStatus("all"); };
+  const select = (item) => {
+    setSelectedId(item.id);
+    if (window.matchMedia("(max-width: 1050px)").matches) requestAnimationFrame(() => { detailRef.current?.focus({ preventScroll: true }); detailRef.current?.scrollIntoView({ block: "start", behavior: "auto" }); });
   };
-
-  // Ошибка до guarded(): баннер в теле страницы прячется за оверлеем модалки,
-  // поэтому дублируем её тостом поверх модалки, чтобы она была видна.
-  const fail = (m) => {
-    setError(m);
-    window.notify?.(m, "error");
-  };
-
-  const createNewItemAnyway = async () => {
-    setError("");
-    if (!validateForm()) return;
-    await guarded(async () => {
-      await post("/warehouse/items", payloadFromForm());
-      resetForm();
-      setAddModal(false);
-      setDuplicateModal(false);
-      await load();
-    });
-  };
-
-  const addPurchaseToExisting = async (item) => {
-    setError("");
-    if (!validateForm()) return;
-    await guarded(async () => {
-      await post(`/warehouse/items/${item.id}/purchase`, payloadFromForm());
-      resetForm();
-      setAddModal(false);
-      setDuplicateModal(false);
-      await load();
-    });
-  };
-
-  const openPurchaseForItem = (item) => {
-    setError("");
-    setDuplicateSuggestions([]);
-    setPurchaseTargetItem(item);
-    setForm({
-      name: item.name || "",
-      quantity: "",
-      purchaseQuantity: "",
-      purchaseUnit: item.unit || "g",
-      unit: item.unit || "g",
-      price: "",
-      minQuantity: String(minQty(item) || ""),
-      supplier: item.supplier || "",
-      expiryDate: "",
-      note: "",
-      controlMode: item.controlMode || item.control_mode || "exact",
-      lossPercent: String(item.lossPercent ?? item.loss_percent ?? "0"),
-      inventoryMethod: item.inventoryMethod || item.inventory_method || "fifo",
-      packagingQuantity: String(item.packagingQuantity ?? item.packaging_quantity ?? "1"),
-      unitsPerPackage: "1",
-      basePerUnit: String(item.packagingQuantity ?? item.packaging_quantity ?? "1"),
-    });
-    setAddModal(true);
-  };
-
-  const openWriteOff = (itemId = "") => {
-    setWriteOffForm({
-      warehouseItemId: itemId ? String(itemId) : "",
-      quantity: "",
-      reason: "Негодно / утиль",
-      note: "",
-    });
-    setWriteOffModal(true);
-  };
-
-  const writeOffItem = async () => {
-    setError("");
-
-    if (!writeOffForm.warehouseItemId) {
-      return fail("Выберите сырьё для списания");
-    }
-
-    if (num(writeOffForm.quantity) <= 0) {
-      return fail("Введите количество списания");
-    }
-
-    await guarded(async () => {
-      await post(`/warehouse/items/${writeOffForm.warehouseItemId}/writeoff`, {
-        quantity: num(writeOffForm.quantity),
-        reason: writeOffForm.reason,
-        note: writeOffForm.note,
-      });
-      setWriteOffModal(false);
-      await load();
-    });
-  };
-
-  const openInventory = (item) => {
-    setInventoryForm({ item, actual: String(item.quantity ?? ""), note: "" });
-    setError("");
-    setInventoryModal(true);
-  };
-
-  const doInventory = async () => {
-    setError("");
-    if (!inventoryForm.item) return;
-    if (inventoryForm.actual === "" || num(inventoryForm.actual) < 0) {
-      return fail("Введите фактический остаток");
-    }
-    await guarded(async () => {
-      await post(`/warehouse/items/${inventoryForm.item.id}/inventory`, {
-        actualQuantity: num(inventoryForm.actual),
-        note: inventoryForm.note,
-      });
-      setInventoryModal(false);
-      await load();
-    });
-  };
-
-  const toggleHidden = async (item) => {
-    setError("");
-    await guarded(async () => {
-      await post(`/warehouse/items/${item.id}/hide`, {
-        hidden: !isHidden(item),
-      });
-      await load();
-    });
-  };
-
-  const openDeleteModal = (item) => {
-    setError("");
-    setDeleteTargetItem(item);
-    setDeleteReason("Дубль / ошибочно добавили");
-    setDeleteNote(`Удаляю ${item.name || "сырьё"}. Остаток на момент удаления: ${fmtQty(item.quantity)} ${unitLabel(item.unit)}.`);
-    setDeleteModal(true);
-  };
-
-  const deleteItem = async () => {
-    if (!deleteTargetItem) return;
-    setError("");
-    await guarded(async () => {
-      await del(`/warehouse/items/${deleteTargetItem.id}`, {
-        reason: deleteReason,
-        note: deleteNote,
-      });
-      setDeleteModal(false);
-      setDeleteTargetItem(null);
-      await load();
-    });
-  };
-
-  const openDeletedHistory = async () => {
-    setError("");
-    const list = await get("/warehouse/deleted-items").catch(() => []);
-    setDeletedItems(list || []);
-    setDeletedModal(true);
-  };
-
-  const openHistory = async (item) => {
-    setError("");
-    setHistoryItem(item);
-    setHistoryModal(true);
-
-    const list = await get(`/warehouse/items/${item.id}/batches`).catch(
-      () => []
-    );
-    setHistoryBatches(list || []);
-  };
-
-  // Отмена конкретной закупки: снимает товар со склада и связанный расход (ИИ-закупка).
-  const cancelPurchase = async (batch) => {
-    if (!historyItem) return;
-    const partial = num(batch.remainingQuantity) < num(batch.quantity) - 0.000001;
-    const msg = partial
-      ? "Из этой закупки уже часть продали или списали — отменить, скорее всего, не получится. Всё равно попробовать?"
-      : `Отменить закупку: ${fmtQty(batch.quantity)} ${unitLabel(historyItem.unit)} от ${String(batch.createdAt || "").slice(0, 10)}? Товар снимется со склада, а связанный расход тоже отменится.`;
-    if (!window.confirm(msg)) return;
+  const open = (kind, item = null) => { if (!operationRef.current) { setOperationError(""); setDialog({ kind, item }); } };
+  const close = () => { if (!operationRef.current) { setDialog(null); setOperationError(""); } };
+  const perform = async (request, message) => {
+    if (operationRef.current) return;
+    operationRef.current = true;
+    requestSeq.current++;
+    setLoading(false);
+    setBusy(true);
+    setOperationError("");
+    setSuccess("");
     try {
-      const res = await del(`/warehouse/items/${historyItem.id}/batches/${batch.id}`);
-      const list = await get(`/warehouse/items/${historyItem.id}/batches`).catch(() => []);
-      setHistoryBatches(list || []);
-      await load();
-      const removed = num(res?.expenseRemoved);
-      window.notify?.(removed > 0 ? `Закупка отменена · расход −${formatMoney(removed)} снят` : "Закупка отменена", "success");
-    } catch (e) {
-      window.notify?.(e?.message || "Не удалось отменить закупку", "error");
-      setError(e?.message || "Не удалось отменить закупку");
+      const result = await request();
+      if (result === undefined) throw new Error("Сервер не подтвердил операцию. Проверьте историю перед повтором.");
+      setDialog(null);
+      setSuccess(message);
+      await load({ allowBusy: true });
+    } catch (failure) {
+      setOperationError(failure.message || "Операция не выполнена. Проверьте историю перед повтором.");
+    } finally {
+      operationRef.current = false;
+      setBusy(false);
     }
   };
+  const checkDuplicates = async (body) => {
+    if (operationRef.current) return null;
+    operationRef.current = true;
+    setBusy(true);
+    setOperationError("");
+    try {
+      const rows = await get(`/warehouse/items/similar?${new URLSearchParams({ name: body.name, unit: body.unit })}`);
+      if (!Array.isArray(rows)) throw new Error("Не удалось проверить похожие позиции. Попробуйте ещё раз.");
+      return rows;
+    } catch (failure) {
+      setOperationError(failure.message || "Не удалось проверить похожие позиции");
+      return null;
+    } finally { operationRef.current = false; setBusy(false); }
+  };
+  const purchase = (body, id) => perform(async () => {
+    const item = await post(id ? `/warehouse/items/${id}/purchase` : "/warehouse/items", body);
+    if (!item?.id) throw new Error("Сервер не подтвердил закупку. Проверьте партии перед повтором.");
+    setSelectedId(item.id);
+    return item;
+  }, `Закупка сохранена · ${body.name} · ${qty(body.quantity)} ${unitLabel(body.unit)}`);
+  const action = (kind, item) => {
+    if (kind === "visibility") perform(() => post(`/warehouse/items/${item.id}/hide`, { hidden: !item.hidden }), item.hidden ? "Сырьё снова показано в списке" : "Сырьё скрыто. Его можно найти через фильтр видимости.");
+    else open(kind, item);
+  };
+  const focusStatus = (next) => { setView("stock"); reset(); setStatus(next); setSelectedId(null); listRef.current?.scrollIntoView({ block: "start", behavior: "auto" }); };
 
   return (
-    <div className="relative -m-4 px-3 pb-nav pt-3 text-white sm:-m-6 sm:px-4 sm:pb-10 lg:px-5">
-      <div className="relative z-10 mx-auto max-w-[1480px]">
-      <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-        <div className="max-w-2xl">
-          <p className="inline-flex rounded-full border border-blue-400/20 bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-300">Склад</p>
-
-          <h2 className="mt-2 text-2xl font-semibold leading-none tracking-tight text-white sm:text-3xl">
-            Склад сырья
-          </h2>
-
-          <p className="mt-2 max-w-xl text-sm font-semibold leading-5 text-slate-300/80">
-            Приход, остатки, себестоимость, защита от дублей, партии закупок и
-            автоматическое списание при продаже.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 xl:justify-end xl:pt-0">
-          <button
-            type="button"
-            onClick={() => {
-              resetForm();
-              setPurchaseTargetItem(null);
-              setAddModal(true);
-            }}
-            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] xl:flex-none"
-          >
-            <Plus size={18} strokeWidth={2.4} className="shrink-0" />
-            <span className="truncate">Добавить закупку</span>
-          </button>
-
-          {/* Второстепенные действия — компактные иконки (с подписями для доступности) */}
-          <button
-            type="button"
-            onClick={() => openWriteOff()}
-            aria-label="Списание сырья"
-            title="Списание сырья"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
-          ><Ban size={18} strokeWidth={2.2} /></button>
-
-          <button
-            type="button"
-            onClick={openDeletedHistory}
-            aria-label="История удалений"
-            title="История удалений"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
-          ><Trash2 size={17} strokeWidth={2.2} /></button>
-
-          <button
-            type="button"
-            onClick={load}
-            aria-label="Обновить"
-            title="Обновить"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.06] text-slate-200 transition hover:bg-white/10"
-          ><RefreshCw size={18} strokeWidth={2.4} /></button>
-        </div>
-      </div>
-
-  {error && (
-        <div className="mb-4 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 font-bold text-red-200">
-          {error}
+    <div className="warehouse-page pb-nav sm:pb-10">
+      <header className="wh-page-heading"><div><p className="wh-eyebrow">Запасы / учёт сырья</p><h1>Склад сырья</h1><p>Остатки, закупки и движение каждой позиции.</p><span className="wh-workspace"><MapPin size={13} />{pointName}</span></div><div className="wh-heading-actions"><button className="wh-icon-button" type="button" onClick={() => load()} disabled={busy || loading} aria-label="Обновить склад"><RefreshCw size={18} className={loading ? "animate-spin" : ""} /></button><button className="wh-button" type="button" onClick={() => open("writeoff")} disabled={blocked || !items.some((item) => !item.hidden && item.quantity > 0)}><Ban size={16} />Списание</button><button className="wh-primary" type="button" disabled={blocked} onClick={() => open("purchase")}><Plus size={18} />Новая закупка</button></div></header>
+      <WarehouseError>{loadError && `${loadError}${loaded ? " Показаны последние загруженные данные." : ""}`}</WarehouseError>
+      {success && <div className="wh-success" role="status"><CheckCircle2 size={18} /><span>{success}</span><button type="button" aria-label="Скрыть сообщение" onClick={() => setSuccess("")}><X size={16} /></button></div>}
+      {!dialog && <WarehouseError>{operationError}</WarehouseError>}
+      <section className="wh-metrics" aria-label="Сводка склада">
+        <div className="wh-panel bg-white/[0.02] shadow-sm"><span><Wallet size={16} />Стоимость остатков</span><strong>{loaded ? formatMoney(summary.value) : "—"}<small>₽</small></strong><p>По учёту · активные позиции</p></div>
+        <button type="button" className="wh-panel bg-white/[0.02]" onClick={() => focusStatus("all")}><span><Package size={16} />Позиций в учёте</span><strong>{loaded ? summary.count : "—"}</strong><p>{loaded ? `Ещё ${summary.hidden} скрыто` : loading ? "Загружаем склад" : "Данные не загружены"}</p></button>
+        <button type="button" className="wh-panel bg-white/[0.02]" onClick={() => focusStatus("attention")}><span><Boxes size={16} />Нужно пополнить</span><strong className={summary.attention ? "wh-caution" : ""}>{loaded ? summary.attention : "—"}</strong><p>Низкие, нулевые и отрицательные</p></button>
+        <button type="button" className="wh-panel bg-white/[0.02]" onClick={() => focusStatus("neg")}><span><AlertTriangle size={16} />В минусе</span><strong className={summary.counts.neg ? "wh-danger" : ""}>{loaded ? summary.counts.neg : "—"}</strong><p>Сверьте факт или добавьте закупку</p></button>
+      </section>
+      <nav className="wh-view-tabs" aria-label="Разделы склада">{[["stock", "Остатки", Package], ["movements", "Движения", History], ["deleted", "История удалений", Trash2]].map(([key, label, Icon]) => <button type="button" key={key} aria-pressed={view === key} onClick={() => setView(key)}><Icon size={16} />{label}</button>)}</nav>
+      {view === "deleted" ? <WarehouseDeleted refreshKey={refreshKey} /> : view === "movements" ? <WarehouseMovements movements={data.movements} loaded={loaded} loading={loading} error={loadError} /> : (
+        <div className="wh-stock-layout">
+          <section className="wh-stock wh-panel bg-white/[0.02] shadow-sm" ref={listRef} aria-label="Остатки сырья">
+            <div className="wh-section-heading"><div><h2>Остатки сырья <span>{loaded ? visible.length : "—"}</span></h2><p>Выберите позицию для просмотра и работы с остатком.</p></div></div>
+            <div className="wh-search-toolbar"><label className="wh-search"><Search size={18} /><input aria-label="Найти сырьё" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Название, поставщик или комментарий…" />{search && <button type="button" aria-label="Очистить поиск сырья" onClick={() => setSearch("")}><X size={15} /></button>}</label><select aria-label="Видимость сырья" value={visibility} onChange={(event) => setVisibility(event.target.value)}><option value="active">Активные</option><option value="all">Включая скрытые</option><option value="hidden">Только скрытые</option></select></div>
+            <div className="wh-stock-filters"><div role="group" aria-label="Статус остатка">{[["all", "Все"], ...Object.entries(STOCK_STATUSES)].map(([key, label]) => <button type="button" key={key} aria-pressed={status === key} onClick={() => setStatus(key)}>{label}<span>{counts[key]}</span></button>)}</div><select aria-label="Сортировка сырья" value={sort} onChange={(event) => setSort(event.target.value)}><option value="priority">Проблемные сверху</option><option value="deficit">По сумме пополнения</option><option value="value">По стоимости остатка</option><option value="name">По названию</option></select></div>
+            {hasFilters && <div className="wh-active-filters"><span>{status === "attention" ? "Требуют пополнения" : "Применены фильтры"}</span><button type="button" onClick={reset}>Сбросить всё<X size={12} /></button></div>}
+            {loading && !loaded ? <div className="wh-empty" role="status"><Loader2 size={27} className="animate-spin" /><p>Загружаем остатки…</p></div> : visible.length ? <>
+              <div className="wh-stock-columns" aria-hidden="true"><span>Сырьё</span><span>Остаток</span><span>Стоимость</span><span>Приход</span></div>
+              <div className="wh-stock-rows">{visible.slice(0, limit).map((item) => <article key={item.id} className={`wh-stock-row ${selected?.id === item.id ? "is-selected" : ""} ${item.hidden ? "is-hidden" : ""}`}><button type="button" className="wh-select-item" aria-label={`Открыть: ${item.name}`} aria-pressed={selected?.id === item.id} onClick={() => select(item)}><span className="wh-stock-name"><strong>{item.name}</strong><span><StockBadge item={item} />{item.supplier && <small>{item.supplier}</small>}</span></span><span className={`wh-stock-quantity is-${item.status}`}><strong>{qty(item.quantity)}<small>{unitLabel(item.unit)}</small></strong><small>Мин. {qty(item.minimum)} {unitLabel(item.unit)}</small></span><span className="wh-stock-value"><strong>{formatMoney(item.value)} ₽</strong><small>{warehouseUnitPrice(item.unitCost)} ₽ / {unitLabel(item.unit)}</small></span></button><button type="button" className="wh-row-purchase" disabled={blocked} aria-label={`Закупка: ${item.name}`} onClick={() => open("purchase", item)}><Plus size={16} /><span>Закупка</span></button></article>)}</div>
+              {visible.length > limit && <button type="button" className="wh-button wh-load-more" onClick={() => setLimit((old) => old + 30)}>Показать ещё · {visible.length - limit}</button>}
+            </> : <div className="wh-empty">{!loaded && loadError ? <><AlertTriangle size={30} /><h3>Склад пока недоступен</h3><p>Обновите данные после восстановления соединения.</p><button className="wh-button" onClick={() => load()}>Попробовать снова</button></> : <><Package size={30} /><h3>{hasFilters ? "Сырьё не найдено" : "Добавьте первую закупку"}</h3><p>{hasFilters ? "Измените запрос, статус или видимость." : "После закупки здесь появятся количество и стоимость остатка."}</p>{hasFilters && <button type="button" className="wh-button" onClick={reset}>Сбросить фильтры</button>}</>}</div>}
+            <footer className="wh-stock-footer">{loaded ? `Показано ${Math.min(limit, visible.length)} из ${visible.length} позиций` : "Данные пока не загружены"}<span>Количество — в единицах хранения</span></footer>
+          </section>
+          <aside className="wh-stock-aside" ref={detailRef} tabIndex={-1} aria-label="Карточка сырья">{selected ? <WarehouseItemDetail item={selected} blocked={blocked} onAction={action} onBack={() => listRef.current?.scrollIntoView({ block: "start", behavior: "auto" })} /> : <WarehouseAttention items={items} summary={summary} available={loaded} onSelect={(item) => { reset(); select(item); }} onFilter={focusStatus} />}</aside>
         </div>
       )}
-
-      {stats.negative > 0 && (
-        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-red-400/30 bg-red-500/[0.09] px-4 py-3">
-          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-500/25 text-red-200"><AlertTriangle size={14} strokeWidth={2.4} /></span>
-          <div>
-            <p className="text-sm font-semibold text-red-200">{stats.negative} {stats.negative === 1 ? "товар ушёл" : "товаров ушли"} в минус</p>
-            <p className="mt-0.5 text-xs font-bold leading-snug text-red-200/70">
-              Продали больше, чем было на складе. Продажи прошли (их не блокируем), но остаток стал отрицательным — пополните закупкой или проведите инвентаризацию, чтобы себестоимость и отчёты были точными.
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.05] p-3 sm:p-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300 sm:h-9 sm:w-9 sm:rounded-xl"><Package className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-            <p className="min-w-0 text-[11px] font-semibold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Позиций сырья</p>
-          </div>
-          <p className="mt-2 text-xl font-semibold text-white sm:text-2xl">{stats.count}</p>
-        </div>
-
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.05] p-3 sm:p-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-300 sm:h-9 sm:w-9 sm:rounded-xl"><Wallet className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-            <p className="min-w-0 text-[11px] font-semibold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Стоимость остатков</p>
-          </div>
-          <p className="mt-2 text-xl font-semibold tabular-nums text-white sm:text-2xl">{formatMoney(stats.value)}</p>
-        </div>
-
-        <div className={`rounded-2xl border p-3 sm:p-4 ${stats.low > 0 ? "border-red-500/25 bg-red-500/[0.07]" : "border-white/[0.08] bg-white/[0.05]"}`}>
-          <div className="flex items-center gap-2">
-            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${stats.low > 0 ? "bg-red-500/20 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}><AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-            <p className="min-w-0 text-[11px] font-semibold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">Низкий остаток</p>
-          </div>
-          <p className={`mt-2 text-xl font-semibold sm:text-2xl ${stats.low > 0 ? "text-red-400" : "text-emerald-400"}`}>{stats.low}</p>
-        </div>
-
-        <button type="button" onClick={() => setStatusFilter((f) => (f === "neg" ? "all" : "neg"))} className={`rounded-2xl border p-3 text-left transition sm:p-4 ${stats.negative > 0 ? "border-red-500/25 bg-red-500/[0.07] hover:bg-red-500/[0.12]" : "border-white/[0.08] bg-white/[0.05]"}`}>
-          <div className="flex items-center gap-2">
-            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${stats.negative > 0 ? "bg-red-500/20 text-red-300" : "bg-emerald-500/15 text-emerald-300"}`}><AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
-            <p className="min-w-0 text-[11px] font-semibold uppercase leading-[1.15] tracking-wide text-slate-400 sm:text-[11px]">В минусе</p>
-          </div>
-          <p className={`mt-2 text-xl font-semibold sm:text-2xl ${stats.negative > 0 ? "text-red-400" : "text-emerald-400"}`}>{stats.negative}</p>
-        </button>
-      </div>
-
-      {/* ── Здоровье склада ── */}
-      {stats.count > 0 && (
-        <div className="mb-4 rounded-2xl border border-white/[0.08] bg-white/[0.06] p-4">
-          <div className="mb-2.5 flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-white">Здоровье склада</p>
-            <p className="text-xs font-bold text-slate-400"><b className="text-emerald-300">{counts.norm}</b> из {stats.count} в норме</p>
-          </div>
-          <div className="flex h-3 w-full overflow-hidden rounded-full bg-white/10">
-            {counts.neg > 0 && <div className="bg-red-500" style={{ width: `${(counts.neg / stats.count) * 100}%` }} />}
-            {counts.out > 0 && <div className="bg-slate-500" style={{ width: `${(counts.out / stats.count) * 100}%` }} />}
-            {counts.low > 0 && <div className="bg-amber-400" style={{ width: `${(counts.low / stats.count) * 100}%` }} />}
-            {counts.norm > 0 && <div className="bg-emerald-500" style={{ width: `${(counts.norm / stats.count) * 100}%` }} />}
-          </div>
-          <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-bold">
-            <span className="inline-flex items-center gap-1.5 text-red-300"><span className="h-2 w-2 rounded-full bg-red-500" /> В минусе {counts.neg}</span>
-            <span className="inline-flex items-center gap-1.5 text-slate-300"><span className="h-2 w-2 rounded-full bg-slate-500" /> Нет в наличии {counts.out}</span>
-            <span className="inline-flex items-center gap-1.5 text-amber-300"><span className="h-2 w-2 rounded-full bg-amber-400" /> Низкий {counts.low}</span>
-            <span className="inline-flex items-center gap-1.5 text-emerald-300"><span className="h-2 w-2 rounded-full bg-emerald-500" /> В норме {counts.norm}</span>
-          </div>
-        </div>
-      )}
-
-      <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06]">
-        <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h3 className="text-xl font-semibold text-white">
-              Остатки на складе
-            </h3>
-            <p className="mt-1 text-xs font-semibold text-slate-400">
-              Остаток считается после приходов, продаж и списаний.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск по названию..."
-              className="w-full rounded-xl border border-white/[0.08] bg-slate-950/50 px-3 py-2.5 text-sm font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400 sm:w-72"
-            />
-
-            <button
-              type="button"
-              onClick={() => setShowHidden((p) => !p)}
-              className={
-                showHidden
-                  ? "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/20 px-3 py-2.5 text-sm font-semibold text-blue-100 whitespace-nowrap"
-                  : "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.08] px-3 py-2.5 text-sm font-semibold text-white whitespace-nowrap"
-              }
-            >
-              {showHidden ? <EyeOff size={16} strokeWidth={2.2} /> : <Eye size={16} strokeWidth={2.2} />}
-              {showHidden ? "Скрыть скрытые" : "Показать скрытые"}
-            </button>
-          </div>
-        </div>
-
-        {/* Триаж: фильтры по статусу + сортировка */}
-        <div className="flex flex-col gap-2 border-t border-white/[0.08] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
-            <StatusChip id="all" label="Все" count={enriched.length} active={statusFilter === "all"} onClick={() => setStatusFilter("all")} />
-            <StatusChip id="neg" label="В минусе" count={counts.neg} active={statusFilter === "neg"} onClick={() => setStatusFilter((f) => (f === "neg" ? "all" : "neg"))} />
-            <StatusChip id="out" label="Нет в наличии" count={counts.out} active={statusFilter === "out"} onClick={() => setStatusFilter((f) => (f === "out" ? "all" : "out"))} />
-            <StatusChip id="low" label="Низкий" count={counts.low} active={statusFilter === "low"} onClick={() => setStatusFilter((f) => (f === "low" ? "all" : "low"))} />
-            <StatusChip id="norm" label="В норме" count={counts.norm} active={statusFilter === "norm"} onClick={() => setStatusFilter((f) => (f === "norm" ? "all" : "norm"))} />
-          </div>
-          <div className="relative shrink-0">
-            <ArrowDownWideNarrow size={16} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-11 rounded-xl border border-white/[0.08] bg-slate-950/50 pl-8 pr-3 text-sm font-bold text-white outline-none">
-              <option value="triage" className="bg-slate-900">Проблемные сверху</option>
-              <option value="deficit" className="bg-slate-900">По сумме пополнения</option>
-              <option value="value" className="bg-slate-900">По стоимости остатка</option>
-              <option value="name" className="bg-slate-900">По названию</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="hidden overflow-x-auto xl:block">
-          <table className="w-full min-w-[1180px] table-fixed text-left text-xs">
-            <colgroup>
-              <col className="w-[20%]" />
-              <col className="w-[7%]" />
-              <col className="w-[11%]" />
-              <col className="w-[10%]" />
-              <col className="w-[12%]" />
-              <col className="w-[10%]" />
-              <col className="w-[30%]" />
-            </colgroup>
-
-            <thead className="border-y border-white/[0.08] bg-slate-950/45 text-[11px] uppercase tracking-[0.14em] text-slate-400">
-              <tr>
-                <th className="px-3 py-2">Сырьё</th>
-                <th className="px-3 py-2" title="Единица измерения">Ед. изм.</th>
-                <th className="px-3 py-2">Остаток</th>
-                <th className="px-3 py-2" title="Минимальный остаток">Мин. остаток</th>
-                <th className="px-3 py-2" title="Стоимость текущего остатка (количество × себестоимость)">Стоимость остатка</th>
-                <th className="px-3 py-2">Поставщик</th>
-                <th className="px-3 py-2 text-center">Действия</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {isXl && displayItems.map((item) => {
-                const hidden = isHidden(item);
-                const min = minQty(item);
-                const qty = num(item.quantity);
-                const unit = unitLabel(item.unit);
-                const unitCost = getUnitCost(item);
-                const totalValue = qty * unitCost;
-                const low = min > 0 && qty <= min;
-                const neg = qty < -0.000001; // продано в минус — нужно пополнить/сверить
-                const out = !neg && qty <= 0.000001; // закончилось (нет в наличии)
-                const railCls = neg ? "border-l-red-500" : out ? "border-l-slate-500" : low ? "border-l-amber-400" : "border-l-transparent";
-                const deficit = min > 0 ? Math.max(0, min - qty) : (neg ? -qty : 0);
-
-                return (
-                  <tr
-                    key={item.id}
-                    className={`border-b border-white/[0.08] ${
-                      hidden ? "bg-white/[0.02] opacity-55" : "bg-transparent hover:bg-white/[0.02]"
-                    }`}
-                  >
-                    <td className={`border-l-4 px-3 py-2 align-middle ${railCls}`}>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate font-semibold text-white">
-                            {item.name}
-                          </span>
-
-                          <span className="shrink-0 rounded-lg bg-blue-500/15 px-2 py-1 text-[10px] font-semibold text-blue-300">
-                            {getSmartModeLabel(item)}
-                          </span>
-
-                          {hidden && (
-                            <span className="shrink-0 rounded-lg bg-slate-700 px-2 py-1 text-[10px] font-semibold text-slate-300">
-                              скрыто
-                            </span>
-                          )}
-                        </div>
-
-                        {item.note && (
-                          <p className="mt-1 truncate text-xs font-bold text-slate-400">
-                            {item.note}
-                          </p>
-                        )}
-                      </div>
-                    </td>
-
-                    <td className="px-3 py-2 align-middle font-bold text-slate-300">
-                      {unit}
-                    </td>
-
-                    <td
-                      className={`px-3 py-2 align-middle font-semibold ${
-                        neg ? "text-red-400" : out ? "text-slate-300" : low ? "text-amber-400" : "text-emerald-400"
-                      }`}
-                    >
-                      {fmtQty(qty)} {unit}
-                      {neg && <span className="ml-1 rounded bg-red-500/20 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-red-300">в минусе</span>}
-                      {out && <span className="ml-1 rounded bg-slate-500/20 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-300">нет в наличии</span>}
-                      {deficit > 0 && <p className="mt-0.5 text-[10px] font-bold text-slate-500">пополнить ~{fmtQty(deficit)} {unit}</p>}
-                    </td>
-
-                    <td className="px-3 py-2 align-middle font-bold text-slate-300">
-                      {fmtQty(min)} {unit}
-                    </td>
-
-                    <td className="px-3 py-2 align-middle font-semibold text-white">
-                      {formatMoney(totalValue)}
-                    </td>
-
-                    <td className="px-3 py-2 align-middle text-slate-400">
-                      <span className="block truncate">
-                        {item.supplier || "—"}
-                      </span>
-                    </td>
-
-                    <td className="px-3 py-2 align-middle">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => openPurchaseForItem(item)}
-                          className="flex h-9 items-center justify-center gap-1 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-2.5 text-[11px] font-semibold leading-none text-emerald-300 transition hover:bg-emerald-400/20"
-                          title="Добавить новую закупку к этому товару"
-                        >
-                          <Plus size={13} strokeWidth={2.4} />Закупка
-                        </button>
-                        <RowMenu
-                          hidden={hidden}
-                          onHistory={() => openHistory(item)}
-                          onInventory={() => openInventory(item)}
-                          onWriteOff={() => openWriteOff(item.id)}
-                          onToggleHidden={() => toggleHidden(item)}
-                          onDelete={() => openDeleteModal(item)}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {!displayItems.length && (
-                <tr>
-                  <td colSpan="7" className="p-10 text-center text-slate-400">
-                    Сырья пока нет
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="divide-y divide-white/10 xl:hidden">
-          {!isXl && displayItems.map((item) => {
-            const hidden = isHidden(item);
-            const min = minQty(item);
-            const qty = num(item.quantity);
-            const unit = unitLabel(item.unit);
-            const low = min > 0 && qty <= min;
-            const neg = qty < -0.000001;
-            const out = !neg && qty <= 0.000001; // закончилось (нет в наличии)
-
-            const open = expandedId === item.id;
-
-            return (
-              <div
-                key={item.id}
-                className={`relative ${hidden ? "opacity-55" : ""} ${neg || low ? "before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:bg-red-500" : out ? "before:absolute before:inset-y-3 before:left-0 before:w-1 before:rounded-full before:bg-slate-500" : ""}`}
-              >
-                {/* Свёрнутая строка — тап разворачивает действия */}
-                <button
-                  type="button"
-                  onClick={() => setExpandedId(open ? null : item.id)}
-                  aria-expanded={open}
-                  className="flex w-full items-center justify-between gap-3 p-3.5 text-left"
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${neg ? "bg-red-500/15 text-red-300" : "bg-white/[0.06] text-slate-300"}`}>{neg ? <AlertTriangle className="h-[18px] w-[18px]" strokeWidth={2.2} /> : <Package className="h-[18px] w-[18px]" strokeWidth={2.2} />}</span>
-                    <div className="min-w-0">
-                      <p className="truncate text-base font-semibold text-white">{item.name}</p>
-                      <p className={`truncate text-xs ${neg ? "font-semibold text-red-300" : "text-slate-400"}`}>
-                        {neg ? "В минусе — пополните" : out ? "Нет в наличии" : low ? "Ниже минимума" : "В наличии"}{item.supplier ? ` · ${item.supplier}` : ""}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span className={`rounded-xl px-2.5 py-1 text-sm font-semibold tabular-nums ${neg || low ? "bg-red-500/15 text-red-300" : out ? "bg-slate-600/30 text-slate-300" : "bg-emerald-500/15 text-emerald-300"}`}>
-                      {fmtQty(qty)} {unit}
-                    </span>
-                    <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`} strokeWidth={2.4} />
-                  </div>
-                </button>
-
-                {open && (
-                  <div className="px-3.5 pb-3.5">
-                    <div className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.08] bg-slate-950/40 px-3 py-2 text-xs">
-                      <div>
-                        <span className="text-slate-500">Минимум: </span>
-                        <span className={`font-semibold ${low ? "text-red-300" : "text-slate-200"}`}>{fmtQty(min)} {unit}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-slate-500">Единица: </span>
-                        <span className="font-semibold text-slate-200">{unit}</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openPurchaseForItem(item)}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500/15 px-3 py-2.5 text-sm font-semibold text-emerald-300 transition active:scale-95 hover:bg-emerald-500/25"
-                      >
-                        <Plus size={16} strokeWidth={2.4} />Закупка
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openInventory(item)}
-                        className="flex-1 rounded-xl bg-amber-500/15 px-3 py-2.5 text-sm font-semibold text-amber-300 transition active:scale-95 hover:bg-amber-500/25"
-                      >
-                        Пересчёт
-                      </button>
-                    </div>
-
-                    <div className="mt-2 grid grid-cols-3 gap-1.5 text-xs">
-                      <button type="button" onClick={() => openHistory(item)} className="flex min-h-[44px] min-w-0 items-center justify-center gap-1 rounded-lg bg-white/[0.02] px-2 font-semibold text-slate-300 transition active:scale-95 hover:bg-white/10"><History size={13} strokeWidth={2.2} className="shrink-0" /><span className="min-w-0 truncate">История</span></button>
-                      <button type="button" onClick={() => openWriteOff(item.id)} className="min-h-[44px] min-w-0 rounded-lg bg-white/[0.02] px-2 font-semibold text-slate-300 transition active:scale-95 hover:bg-white/10"><span className="block min-w-0 truncate">Списать</span></button>
-                      <button type="button" onClick={() => toggleHidden(item)} className="min-h-[44px] min-w-0 rounded-lg bg-white/[0.02] px-2 font-semibold text-slate-300 transition active:scale-95 hover:bg-white/10"><span className="block min-w-0 truncate">{hidden ? "Показать" : "Скрыть"}</span></button>
-                    </div>
-                    <button type="button" onClick={() => openDeleteModal(item)} className="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 px-2 text-xs font-semibold text-red-400/90 transition active:scale-95 hover:bg-red-500/20">Удалить</button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {!displayItems.length && (
-            <div className="p-4">
-              <EmptyState
-                title={search ? "Ничего не найдено" : "На складе пока пусто"}
-                text={search ? "Попробуйте изменить запрос." : "Добавьте первую позицию сырья — молоко, зёрна, сиропы. Остатки будут списываться автоматически при продажах."}
-                actionLabel={search ? undefined : "+ Добавить сырьё"}
-                onAction={search ? undefined : () => setAddModal(true)}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2 border-t border-white/[0.08] px-4 py-3 text-xs font-semibold text-slate-400 sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            Показано {displayItems.length} из {safe_items.length}
-            {stats.hidden > 0 && (
-              <>
-                {" · "}
-                <button type="button" onClick={() => setShowHidden(true)} className="font-semibold text-slate-300 underline-offset-2 hover:text-white hover:underline">Скрытых: {stats.hidden}</button>
-              </>
-            )}
-          </span>
-
-          <span>Движений склада: {safe_movements.length}</span>
-        </div>
-      </div>
-
-      {safe_movements.length > 0 && (
-        <div className="mt-5 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06]">
-          <div className="p-4">
-            <h3 className="text-xl font-semibold text-white">
-              Последние движения
-            </h3>
-            <p className="mt-1 text-xs font-semibold text-slate-400">
-              Приходы, продажи и списания по складу.
-            </p>
-          </div>
-
-          <div className="divide-y divide-white/10">
-            {safe_movements.slice(0, 8).map((m) => {
-              const type = String(m.movementType || m.movement_type || "");
-              const unit = unitLabel(m.unit);
-              // Направление нельзя брать по type==='in' или знаку количества:
-              // бэкенд пишет и излишек, и недостачу инвентаризации как положительное число.
-              const reason = String(m.reason || m.movement_type || "");
-              const isIncome = type === "in" || (type === "inventory" && /излиш/i.test(reason));
-
-              return (
-                <div
-                  key={m.id}
-                  className="flex items-center justify-between gap-3 px-4 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-white">
-                      {m.itemName || m.item_name || "Сырьё"}
-                    </p>
-                    <p className="truncate text-xs text-slate-400 sm:text-sm">
-                      {m.reason || type}{m.note ? ` · ${m.note}` : ""}
-                    </p>
-                  </div>
-
-                  <p
-                    className={`shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base ${
-                      isIncome ? "text-emerald-400" : "text-red-400"
-                    }`}
-                  >
-                    {isIncome ? "+" : "−"}{fmtQty(m.quantity)} {unit}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      </div>
-
-      {deleteModal && (
-        <Modal title={`Удалить товар: ${deleteTargetItem?.name || "сырьё"}`} wide onClose={() => setDeleteModal(false)} legacyLight={false}>
-          <div className="rounded-3xl border border-red-400/20 bg-red-500/10 p-4 text-red-200">
-            <p className="font-semibold">Товар уйдёт из активного склада, но останется в истории удалений.</p>
-            <p className="mt-1 text-sm font-bold">
-              Остаток на момент удаления: {fmtQty(deleteTargetItem?.quantity)} {unitLabel(deleteTargetItem?.unit)} · сумма {formatMoney(num(deleteTargetItem?.quantity) * getUnitCost(deleteTargetItem || {}))}
-            </p>
-          </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <select
-              value={deleteReason}
-              onChange={(e) => setDeleteReason(e.target.value)}
-              className={`${WH_SELECT} sm:col-span-2`}
-            >
-              <option>Дубль / ошибочно добавили</option>
-              <option>Больше не используем</option>
-              <option>Испорчено / списано полностью</option>
-              <option>Перенесли в другой товар</option>
-              <option>Другая причина</option>
-            </select>
-
-            <textarea
-              rows={2}
-              value={deleteNote}
-              onChange={(e) => setDeleteNote(e.target.value)}
-              placeholder="Объяснение для истории"
-              aria-label="Объяснение для истории"
-              className={`${WH_INPUT} resize-none leading-5 sm:col-span-2`}
-            />
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <button type="button" onClick={() => setDeleteModal(false)} className={`${WH_BTN_GHOST} flex-1`}>
-              Отмена
-            </button>
-            <button type="button" onClick={deleteItem} disabled={submitting} className={`${WH_BTN_DANGER} flex-1 disabled:opacity-60`}>
-              {submitting ? "Удаляю…" : "Удалить и записать в историю"}
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {deletedModal && (
-        <Modal title="История удалённых товаров" wide onClose={() => setDeletedModal(false)} legacyLight={false}>
-          <div className="rounded-3xl border border-white/[0.08] bg-slate-950/40 p-4 text-sm font-bold text-slate-300">
-            Здесь видно, что удалили, когда, какой был остаток и почему. Это не смешивается со скрытыми товарами.
-          </div>
-
-          <div className="mt-4 hidden overflow-x-auto rounded-3xl border border-white/[0.08] lg:block">
-            <table className="w-full min-w-[840px] text-left text-sm">
-              <thead className="bg-slate-950/45 text-xs uppercase tracking-wide text-slate-400">
-                <tr>
-                  <th className="px-3 py-2">Дата удаления</th>
-                  <th className="px-3 py-2">Товар</th>
-                  <th className="px-3 py-2">Остаток</th>
-                  <th className="px-3 py-2">Сумма</th>
-                  <th className="px-3 py-2">Причина</th>
-                  <th className="px-3 py-2">Объяснение</th>
-                </tr>
-              </thead>
-              <tbody>
-                {safe_deletedItems.map((item) => (
-                  <tr key={item.id} className="border-t border-white/[0.08]">
-                    <td className="p-3 font-bold text-slate-300">{String(item.deletedAt || "").slice(0, 16).replace("T", " ") || "—"}</td>
-                    <td className="p-3 font-semibold text-white">{item.name}</td>
-                    <td className="p-3 font-semibold text-red-300">{fmtQty(item.quantity)} {unitLabel(item.unit)}</td>
-                    <td className="p-3 font-semibold text-white">{formatMoney(item.totalValue || num(item.quantity) * num(item.unitCost))}</td>
-                    <td className="p-3 font-bold text-slate-300">{item.deleteReason || "—"}</td>
-                    <td className="p-3 text-slate-400">{item.deleteNote || item.note || "—"}</td>
-                  </tr>
-                ))}
-                {!safe_deletedItems.length && (
-                  <tr>
-                    <td colSpan="6" className="p-8 text-center text-slate-400">Удалённых товаров пока нет</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Карточки — телефон и планшет */}
-          <div className="mt-4 space-y-2.5 lg:hidden">
-            {safe_deletedItems.map((item) => (
-              <div key={item.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="min-w-0 break-words font-semibold text-white">{item.name}</p>
-                  <span className="shrink-0 text-sm font-semibold text-red-300">{fmtQty(item.quantity)} {unitLabel(item.unit)}</span>
-                </div>
-                <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                  <span className="text-slate-400">Дата</span><span className="text-right font-bold text-slate-200">{String(item.deletedAt || "").slice(0, 16).replace("T", " ") || "—"}</span>
-                  <span className="text-slate-400">Сумма</span><span className="text-right font-bold text-slate-200">{formatMoney(item.totalValue || num(item.quantity) * num(item.unitCost))}</span>
-                  <span className="text-slate-400">Причина</span><span className="text-right font-bold text-slate-200">{item.deleteReason || "—"}</span>
-                </div>
-                {(item.deleteNote || item.note) && <p className="mt-2 text-xs text-slate-400">{item.deleteNote || item.note}</p>}
-              </div>
-            ))}
-            {!safe_deletedItems.length && (
-              <div className="rounded-2xl border border-dashed border-white/[0.08] p-8 text-center text-sm text-slate-400">Удалённых товаров пока нет</div>
-            )}
-          </div>
-
-          <div className="mt-6 flex justify-end">
-            <button type="button" onClick={() => setDeletedModal(false)} className={WH_BTN_PRIMARY}>Закрыть</button>
-          </div>
-        </Modal>
-      )}
-
-      {historyModal && (
-        <Modal title={`История закупок: ${historyItem?.name || "сырьё"}`} wide onClose={() => setHistoryModal(false)} legacyLight={false}>
-          <div className="mb-4 rounded-3xl border border-white/[0.08] bg-slate-950/40 p-4">
-            <p className="text-sm font-bold text-slate-400">Текущий остаток</p>
-            <p className="mt-1 text-2xl font-semibold text-white">
-              {fmtQty(historyItem?.quantity)} {unitLabel(historyItem?.unit)} ·
-              средняя цена {formatMoney(getUnitCost(historyItem || {}))}
-            </p>
-          </div>
-
-          <div className="hidden overflow-x-auto rounded-3xl border border-white/[0.08] lg:block">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="bg-slate-950/45 text-xs uppercase tracking-wide text-slate-400">
-                <tr>
-                  <th className="px-3 py-2">Дата</th>
-                  <th className="px-3 py-2">Купили</th>
-                  <th className="px-3 py-2">Осталось</th>
-                  <th className="px-3 py-2">Цена закупки</th>
-                  <th className="px-3 py-2">Цена ед.</th>
-                  <th className="px-3 py-2">Поставщик</th>
-                  <th className="px-3 py-2">Комментарий</th>
-                  <th className="px-3 py-2 text-right">Действие</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {safe_historyBatches.map((b) => (
-                  <tr key={b.id} className="border-t border-white/[0.08]">
-                    <td className="p-3 font-bold text-slate-300">
-                      {String(b.createdAt || "").slice(0, 10) || "—"}
-                    </td>
-                    <td className="p-3 font-semibold text-white">
-                      {fmtQty(b.quantity)} {unitLabel(historyItem?.unit)}
-                    </td>
-                    <td className="p-3 font-semibold text-emerald-300">
-                      {fmtQty(b.remainingQuantity)}{" "}
-                      {unitLabel(historyItem?.unit)}
-                    </td>
-                    <td className="p-3 font-semibold text-white">
-                      {formatMoney(b.purchasePrice)}
-                    </td>
-                    <td className="p-3 font-bold text-slate-200">
-                      {formatMoney(b.unitCost)}
-                    </td>
-                    <td className="p-3 text-slate-300">
-                      {b.supplier || "—"}
-                    </td>
-                    <td className="p-3 text-slate-300">{b.note || "—"}</td>
-                    <td className="p-3 text-right">
-                      <button type="button" onClick={() => cancelPurchase(b)} title="Отменить закупку"
-                        className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2.5 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-500/20 active:scale-95">
-                        <Ban size={12} strokeWidth={2.4} /> Отменить
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-
-                {!safe_historyBatches.length && (
-                  <tr>
-                    <td colSpan="8" className="p-8 text-center text-slate-400">
-                      Истории закупок пока нет
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Карточки — телефон и планшет */}
-          <div className="space-y-2.5 lg:hidden">
-            {safe_historyBatches.map((b) => (
-              <div key={b.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold text-white">{String(b.createdAt || "").slice(0, 10) || "—"}</span>
-                  <span className="text-sm font-semibold text-slate-200">{fmtQty(b.quantity)} {unitLabel(historyItem?.unit)}</span>
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
-                  <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Осталось</p><b className="text-sm text-emerald-300">{fmtQty(b.remainingQuantity)} {unitLabel(historyItem?.unit)}</b></div>
-                  <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Цена закупки</p><b className="text-sm text-white">{formatMoney(b.purchasePrice)}</b></div>
-                  <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Цена ед.</p><b className="text-sm text-white">{formatMoney(b.unitCost)}</b></div>
-                  <div className="rounded-xl bg-slate-950/40 px-2.5 py-1.5"><p className="text-[11px] text-slate-400">Поставщик</p><b className="text-sm text-slate-200">{b.supplier || "—"}</b></div>
-                </div>
-                {b.note && <p className="mt-2 text-xs text-slate-400">{b.note}</p>}
-                <button type="button" onClick={() => cancelPurchase(b)}
-                  className="mt-2.5 flex min-h-[40px] w-full items-center justify-center gap-1.5 rounded-xl bg-red-500/10 px-3 font-semibold text-red-300 transition active:scale-95 hover:bg-red-500/20">
-                  <Ban size={14} strokeWidth={2.4} /> Отменить закупку
-                </button>
-              </div>
-            ))}
-            {!safe_historyBatches.length && (
-              <div className="rounded-2xl border border-dashed border-white/[0.08] p-8 text-center text-sm text-slate-400">Истории закупок пока нет</div>
-            )}
-          </div>
-
-          <div className="mt-6 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setHistoryModal(false)}
-              className={WH_BTN_PRIMARY}
-            >
-              Закрыть
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {duplicateModal && (
-        <Modal title="Похожий товар уже есть" wide onClose={() => setDuplicateModal(false)} legacyLight={false}>
-          <div className="rounded-3xl border border-amber-400/20 bg-amber-500/10 p-4 text-amber-200">
-            <p className="font-semibold">Защита от дублей</p>
-            <p className="mt-1 text-sm font-bold">
-              Вы вводите «{form.name}». Возможно, это уже есть на складе.
-              Лучше добавить новую закупку к существующему товару, чтобы
-              остатки и себестоимость считались правильно.
-            </p>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {safe_duplicateSuggestions.map((item) => (
-              <div
-                key={item.id}
-                className="flex flex-col gap-3 rounded-3xl border border-white/[0.08] bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="text-xl font-semibold text-white">
-                    {item.name}
-                  </p>
-                  <p className="text-sm font-bold text-slate-400">
-                    Остаток: {fmtQty(item.quantity)} {unitLabel(item.unit)} ·
-                    похожесть {Math.round(num(item.score) * 100)}%
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => addPurchaseToExisting(item)}
-                  className={WH_BTN_PRIMARY}
-                >
-                  Добавить закупку сюда
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => setDuplicateModal(false)}
-              className={`${WH_BTN_GHOST} flex-1`}
-            >
-              Вернуться
-            </button>
-
-            <button
-              type="button"
-              onClick={createNewItemAnyway}
-              className={`${WH_BTN_DANGER} flex-1`}
-            >
-              Всё равно создать новый
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {addModal && (
-        <Modal title={purchaseTargetItem ? `Новая закупка: ${purchaseTargetItem.name}` : "Добавить закупку вручную"} wide onClose={() => { setAddModal(false); resetForm(); }} legacyLight={false}>
-          <div className="mb-3 flex items-center gap-2 rounded-2xl border border-blue-400/25 bg-blue-500/10 px-3.5 py-2.5 text-sm font-semibold text-blue-200">
-            <MapPin size={16} strokeWidth={2.2} className="shrink-0" />
-            <span className="shrink-0">Склад точки:</span> <span className="truncate text-white">{getCurrentWorkspace()?.name || "текущая"}</span>
-          </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-white/5 p-4 sm:p-5">
-            <p className="mb-4 text-sm font-bold leading-6 text-slate-400">
-              Заполните поля ниже — система сама посчитает остаток и себестоимость.
-            </p>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input
-                value={form.name}
-                onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    name: e.target.value,
-                    packagingQuantity: (p.unit === "g" || p.unit === "ml") ? smartPieceSuggestion(e.target.value, p.unit) : p.packagingQuantity,
-                  }))
-                }
-                placeholder="Зерно, рис, курица, молоко..."
-                className={`${WH_INPUT} sm:col-span-2`}
-              />
-
-              {(nameAiLoading || nameAiSuggestions.length > 0) && (
-                <div className="sm:col-span-2 -mt-1 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-violet-300">
-                    <Sparkles size={14} strokeWidth={2.2} className="shrink-0" />
-                    {nameAiLoading ? "AI подбирает название…" : "Правильнее:"}
-                  </span>
-                  {nameAiSuggestions.map((s) => (
-                    <button
-                      key={s.warehouseId || s.name}
-                      type="button"
-                      onClick={() => setForm((p) => ({ ...p, name: s.name }))}
-                      className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-1.5 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/20"
-                    >
-                      {s.name}{s.warehouseId ? " · уже на складе" : ""}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <input
-                value={form.purchaseQuantity || form.quantity}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, purchaseQuantity: e.target.value, quantity: e.target.value }))
-                }
-                placeholder="Сколько купили"
-                type="number"
-                inputMode="decimal"
-                className={WH_INPUT}
-              />
-
-              <select
-                value={form.purchaseUnit || form.unit}
-                onChange={(e) => {
-                  const purchaseUnit = e.target.value;
-                  setForm((p) => {
-                    const storageUnit = purchaseUnit === "kg" ? "g" : purchaseUnit === "l" ? "ml" : purchaseUnit === "g" || purchaseUnit === "ml" || purchaseUnit === "pcs" ? purchaseUnit : p.unit;
-                    return {
-                      ...p,
-                      purchaseUnit,
-                      unit: storageUnit,
-                      controlMode: getSmartSettings(storageUnit).controlMode,
-                      lossPercent: getSmartSettings(storageUnit).lossPercent,
-                      inventoryMethod: getSmartSettings(storageUnit).inventoryMethod,
-                      basePerUnit: storageUnit === "pcs" ? "1" : p.basePerUnit,
-                    };
-                  });
-                }}
-                className={WH_SELECT}
-              >
-                <option value="g">Закупаю граммами</option>
-                <option value="kg">Закупаю килограммами</option>
-                <option value="ml">Закупаю миллилитрами</option>
-                <option value="l">Закупаю литрами</option>
-                <option value="pcs">Закупаю штуками</option>
-                <option value="bottle">Закупаю бутылками</option>
-                <option value="pack">Закупаю упаковками</option>
-                <option value="box">Закупаю коробками</option>
-              </select>
-
-              {CONTAINER_UNITS.includes(form.purchaseUnit) && (
-                <>
-                  <input
-                    value={form.unitsPerPackage}
-                    onChange={(e) => setForm((p) => ({ ...p, unitsPerPackage: e.target.value }))}
-                    placeholder="Сколько шт внутри"
-                    type="number"
-                    inputMode="numeric"
-                    className={WH_INPUT}
-                  />
-
-                  <input
-                    value={form.basePerUnit}
-                    onChange={(e) => setForm((p) => ({ ...p, basePerUnit: e.target.value, packagingQuantity: e.target.value }))}
-                    placeholder={`Сколько ${unitLabel(form.unit)} в 1 штуке`}
-                    type="number"
-                    inputMode="decimal"
-                    className={WH_INPUT}
-                  />
-
-                  <select
-                    value={form.unit}
-                    onChange={(e) => applySmartUnit(e.target.value)}
-                    className={`${WH_SELECT} sm:col-span-2`}
-                  >
-                    <option value="g">Хранить/списывать граммами</option>
-                    <option value="ml">Хранить/списывать миллилитрами</option>
-                    <option value="pcs">Хранить/списывать штуками</option>
-                  </select>
-                </>
-              )}
-
-              <input
-                value={form.price}
-                onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
-                placeholder="Общая цена закупки"
-                type="number"
-                min="0"
-                inputMode="decimal"
-                className={WH_INPUT}
-              />
-
-              <div className="sm:col-span-2">
-                <input
-                  value={form.minQuantity}
-                  onChange={(e) => setForm((p) => ({ ...p, minQuantity: e.target.value }))}
-                  placeholder={`Мин. остаток, ${unitLabel(form.unit)}`}
-                  type="number"
-                  inputMode="decimal"
-                  className={WH_INPUT}
-                />
-                <p className="mt-1 text-xs font-bold text-slate-400">
-                  В единицах хранения — {unitLabel(form.unit) || "г/мл"}. Ниже этого остатка сырьё пометится как «Низкий остаток».
-                </p>
-              </div>
-
-              <input
-                value={form.supplier}
-                onChange={(e) => setForm((p) => ({ ...p, supplier: e.target.value }))}
-                placeholder="Поставщик"
-                className={WH_INPUT}
-              />
-
-              <input
-                value={form.expiryDate}
-                onChange={(e) => setForm((p) => ({ ...p, expiryDate: e.target.value }))}
-                type="date"
-                aria-label="Срок годности"
-                className={`${WH_INPUT} [color-scheme:dark]`}
-              />
-
-              <input
-                value={form.note}
-                onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))}
-                placeholder="Комментарий / партия"
-                className={`${WH_INPUT} sm:col-span-2`}
-              />
-            </div>
-
-            <div className="mt-4 rounded-3xl border border-white/[0.08] bg-slate-950/40 p-4">
-              <p className="text-sm font-bold text-slate-400">Проверка перед сохранением</p>
-              <p className="mt-1 text-xl font-semibold text-white">{computedPurchase.text}</p>
-              {computedPurchase.detail && (
-                <p className="mt-1 text-sm font-bold text-slate-400">{computedPurchase.detail}</p>
-              )}
-              <p className="mt-3 text-sm font-bold text-slate-400">Себестоимость 1 {unitLabel(computedPurchase.unit)}</p>
-              <p className="text-2xl font-semibold text-blue-300">{formatMoney(computedPurchase.unitCost)}</p>
-            </div>
-
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => {
-                  setAddModal(false);
-                  resetForm();
-                }}
-                className={`${WH_BTN_GHOST} flex-1`}
-              >
-                Закрыть
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  purchaseTargetItem
-                    ? addPurchaseToExisting(purchaseTargetItem)
-                    : checkDuplicatesAndCreate()
-                }
-                disabled={submitting}
-                className={`${WH_BTN_PRIMARY} flex-1 disabled:cursor-not-allowed disabled:opacity-60`}
-              >
-                {submitting ? "Сохраняю…" : "Сохранить закупку"}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      
-{writeOffModal && (() => {
-        // Выбранное сырьё — чтобы показать единицу у поля количества и предпросмотр «останется».
-        const woSelected = items.find((i) => String(i.id) === String(writeOffForm.warehouseItemId));
-        return (
-        <Modal title="Списание сырья" onClose={() => setWriteOffModal(false)} legacyLight={false}>
-          <div className="space-y-3">
-            <select
-              value={writeOffForm.warehouseItemId}
-              onChange={(e) =>
-                setWriteOffForm((p) => ({
-                  ...p,
-                  warehouseItemId: e.target.value,
-                }))
-              }
-              className={WH_SELECT}
-            >
-              <option value="">Выберите сырьё</option>
-              {items
-                .filter((item) => !isHidden(item))
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} — остаток {fmtQty(item.quantity)}{" "}
-                    {unitLabel(item.unit)}
-                  </option>
-                ))}
-            </select>
-
-            <input
-              value={writeOffForm.quantity}
-              onChange={(e) =>
-                setWriteOffForm((p) => ({
-                  ...p,
-                  quantity: e.target.value,
-                }))
-              }
-              placeholder={woSelected ? `Сколько списать, ${unitLabel(woSelected.unit)}` : "Количество списания"}
-              type="number"
-              inputMode="decimal"
-              className={WH_INPUT}
-            />
-
-            {woSelected && writeOffForm.quantity !== "" && (() => {
-              const left = num(woSelected.quantity) - num(writeOffForm.quantity);
-              return (
-                <p className={`text-sm font-bold ${left < 0 ? "text-red-300" : "text-slate-400"}`}>
-                  {left < 0
-                    ? `Недостаточно: не хватает ${fmtQty(Math.abs(left))} ${unitLabel(woSelected.unit)}`
-                    : `Останется: ${fmtQty(left)} ${unitLabel(woSelected.unit)}`}
-                </p>
-              );
-            })()}
-
-            <select
-              value={writeOffForm.reason}
-              onChange={(e) =>
-                setWriteOffForm((p) => ({
-                  ...p,
-                  reason: e.target.value,
-                }))
-              }
-              className={WH_SELECT}
-            >
-              <option value="Негодно / утиль">Негодно / утиль</option>
-              <option value="Просрочилось">Просрочилось</option>
-              <option value="Брак">Брак</option>
-              <option value="Потеря">Потеря</option>
-              <option value="Другое">Другое</option>
-            </select>
-
-            <input
-              value={writeOffForm.note}
-              onChange={(e) =>
-                setWriteOffForm((p) => ({
-                  ...p,
-                  note: e.target.value,
-                }))
-              }
-              placeholder="Комментарий"
-              className={WH_INPUT}
-            />
-          </div>
-
-          <div className="mt-6 flex gap-3">
-            <button
-              type="button"
-              onClick={() => setWriteOffModal(false)}
-              className={`${WH_BTN_GHOST} flex-1`}
-            >
-              Отмена
-            </button>
-
-            <button
-              type="button"
-              onClick={writeOffItem}
-              disabled={submitting}
-              className={`${WH_BTN_DANGER} flex-1 disabled:cursor-not-allowed disabled:opacity-60`}
-            >
-              {submitting ? "Списываю…" : "Списать"}
-            </button>
-          </div>
-        </Modal>
-        );
-      })()}
-
-      {inventoryModal && inventoryForm.item && (
-        <Modal title="Пересчёт остатка" section="Инвентаризация" onClose={() => setInventoryModal(false)} legacyLight={false}>
-          <p className="mb-4 text-sm text-slate-400">
-            Пересчитали по факту? Укажите, сколько реально на складе — система сама проведёт недостачу или излишек.
-          </p>
-          <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3">
-            <div className="min-w-0">
-              <p className="truncate text-base font-semibold text-white">{inventoryForm.item.name}</p>
-              <p className="text-xs text-slate-400">По учёту: {fmtQty(inventoryForm.item.quantity)} {unitLabel(inventoryForm.item.unit)}</p>
-            </div>
-          </div>
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-400">Фактический остаток ({unitLabel(inventoryForm.item.unit)})</span>
-            <input
-              value={inventoryForm.actual}
-              onChange={(e) => setInventoryForm((p) => ({ ...p, actual: e.target.value }))}
-              placeholder="Сколько реально на складе"
-              type="number" inputMode="decimal" autoFocus
-              className={WH_INPUT}
-            />
-          </label>
-          {inventoryForm.actual !== "" && (
-            <p className={`mt-2 text-sm font-bold ${
-              num(inventoryForm.actual) - num(inventoryForm.item.quantity) < 0 ? "text-red-300"
-              : num(inventoryForm.actual) - num(inventoryForm.item.quantity) > 0 ? "text-emerald-300" : "text-slate-400"
-            }`}>
-              {(() => {
-                const d = num(inventoryForm.actual) - num(inventoryForm.item.quantity);
-                if (Math.abs(d) < 0.001) return "Совпадает с учётом";
-                return d < 0 ? `Недостача: ${fmtQty(Math.abs(d))} ${unitLabel(inventoryForm.item.unit)} (спишется)` : `Излишек: +${fmtQty(d)} ${unitLabel(inventoryForm.item.unit)} (оприходуется)`;
-              })()}
-            </p>
-          )}
-          <label className="mt-3 block">
-            <span className="mb-2 block text-sm font-semibold text-slate-400">Комментарий <span className="font-bold text-slate-500">(необязательно)</span></span>
-            <input
-              value={inventoryForm.note}
-              onChange={(e) => setInventoryForm((p) => ({ ...p, note: e.target.value }))}
-              placeholder="Например: пересчёт смены"
-              className={WH_INPUT}
-            />
-          </label>
-          <div className="mt-6 flex gap-3">
-            <button type="button" onClick={() => setInventoryModal(false)} className={`${WH_BTN_GHOST} flex-1`}>Отмена</button>
-            <button
-              type="button"
-              onClick={doInventory}
-              disabled={submitting}
-              className="flex-1 rounded-2xl bg-amber-500 px-5 py-3 font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? "Провожу…" : "Провести"}
-            </button>
-          </div>
-        </Modal>
-      )}
+      {dialog?.kind === "purchase" && <WarehousePurchaseDialog item={dialog.item} items={data.items} workspaceName={pointName} busy={busy} error={operationError} onCheck={checkDuplicates} onSave={purchase} onClose={close} />}
+      {dialog?.kind === "writeoff" && <WarehouseWriteOffDialog item={dialog.item} items={items} busy={busy} error={operationError} onSave={(id, body) => perform(() => post(`/warehouse/items/${id}/writeoff`, body), "Списание проведено. Остаток обновлён.")} onClose={close} />}
+      {dialog?.kind === "inventory" && <WarehouseInventoryDialog item={dialog.item} busy={busy} error={operationError} onSave={(id, body) => perform(() => post(`/warehouse/items/${id}/inventory`, body), "Пересчёт проведён. Остаток обновлён.")} onClose={close} />}
+      {dialog?.kind === "delete" && <WarehouseDeleteDialog item={dialog.item} busy={busy} error={operationError} onSave={(id, body) => perform(() => del(`/warehouse/items/${id}`, body), "Сырьё удалено из активного учёта и сохранено в истории.")} onClose={close} />}
+      {dialog?.kind === "history" && <WarehouseHistoryDialog item={dialog.item} busy={busy} blocked={blocked} error={operationError} onCancel={(id, batch) => perform(() => del(`/warehouse/items/${id}/batches/${batch}`), "Закупка отменена. Остаток обновлён.")} onClose={close} />}
     </div>
   );
 }

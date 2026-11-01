@@ -1,12 +1,13 @@
+import "./WorkPage.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowDown, ArrowUp, Boxes, Check, Copy, Crown, EyeOff, FileUp, Lightbulb, MoreHorizontal, Package, PackageX, Pencil, Search, Settings, SlidersHorizontal, Sparkles, Trash2, TrendingDown, TrendingUp, Wallet, X, Zap } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, ChevronRight, LayoutGrid, List, Plus, RotateCcw, Boxes, Check, Copy, EyeOff, FileUp, Lightbulb, MoreHorizontal, Package, PackageX, Pencil, Search, Settings, SlidersHorizontal, Sparkles, Trash2, TrendingDown, TrendingUp, Wallet, X, Zap } from "lucide-react";
 import { del, get, post, put, getSession } from "../api";
 import Modal from "../components/Modal";
 import MenuTransferModal from "../components/MenuTransferModal";
 import MenuPdfImportModal from "../components/MenuPdfImportModal";
 import EmptyState from "../components/EmptyState";
-import { TrendSparkline, HeroStat } from "../components/Metrics";
+import { TrendSparkline } from "../components/Metrics";
 import { formatMoney, money, num, businessISO, prettyName } from "../utils/format";
 import { getWarehouseUnitCost } from "../utils/menu";
 import { csvCell, csvNum, downloadCsv } from "../utils/csv";
@@ -199,10 +200,6 @@ const needsBackendGuess = (inputUnit, storageUnit, packagingQuantity = 0) => {
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Активна ли ширина xl (≥1280px). По ней рендерим ТОЛЬКО одну ветку каталога —
-// таблицу ИЛИ карточки, а не обе сразу: вдвое меньше DOM-узлов и реконсиляции,
-// особенно заметно при 5-секундном поллинге на планшете.
-
 // ── P&L-пороги и тон прибыльности ─────────────────────────────────────
 const MARGIN_GOOD = 55;
 const MARGIN_LOW = 30;
@@ -210,127 +207,96 @@ const MARGIN_LOW = 30;
 const marginToneCls = (m) =>
   m < 0 ? "text-rose-300" : m >= MARGIN_GOOD ? "text-emerald-300" : m >= MARGIN_LOW ? "text-amber-300" : "text-orange-300";
 
-const TONE = {
-  emerald: { bl: "border-l-emerald-400/70", text: "text-emerald-300", bar: "from-emerald-500 to-emerald-400", chip: "border-emerald-400/30 bg-emerald-500/15 text-emerald-300", ring: "stroke-emerald-400" },
-  amber: { bl: "border-l-amber-400/70", text: "text-amber-300", bar: "from-amber-500 to-amber-400", chip: "border-amber-400/30 bg-amber-500/15 text-amber-300", ring: "stroke-amber-400" },
-  orange: { bl: "border-l-orange-400/70", text: "text-orange-300", bar: "from-orange-500 to-orange-400", chip: "border-orange-400/30 bg-orange-500/15 text-orange-300", ring: "stroke-orange-400" },
-  rose: { bl: "border-l-rose-500/70", text: "text-rose-300", bar: "from-rose-500 to-rose-400", chip: "border-rose-400/30 bg-rose-500/15 text-rose-300", ring: "stroke-rose-400" },
-  slate: { bl: "border-l-slate-500/60", text: "text-slate-300", bar: "from-slate-500 to-slate-400", chip: "border-white/[0.08] bg-slate-600/30 text-slate-300", ring: "stroke-slate-500" },
-};
-
-// Тинты аватара по категории (хэш → палитра, НЕ пересекается с health-тонами выше).
-const CAT_TINTS = [
-  "bg-blue-500/20 text-blue-200", "bg-indigo-500/20 text-indigo-200", "bg-violet-500/20 text-violet-200",
-  "bg-fuchsia-500/20 text-fuchsia-200", "bg-cyan-500/20 text-cyan-200", "bg-sky-500/20 text-sky-200",
-  "bg-teal-500/20 text-teal-200", "bg-pink-500/20 text-pink-200",
-];
-const catTint = (key) => {
-  const s = String(key || "?");
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 997;
-  return CAT_TINTS[h % CAT_TINTS.length];
-};
 const initialsOf = (name) => {
   const w = String(name || "?").trim().split(/\s+/).filter(Boolean);
   const s = w.length >= 2 ? w[0][0] + w[1][0] : String(name || "?").slice(0, 2);
   return s.toUpperCase();
 };
 
-function CategoryAvatar({ name, category, type, size = 44 }) {
-  const radius = size <= 36 ? "rounded-lg" : "rounded-2xl";
-  return (
-    <span className={`grid shrink-0 place-items-center font-semibold ${radius} ${catTint(category || type)}`}
-      style={{ width: size, height: size, fontSize: size * 0.34 }}>
-      {initialsOf(name)}
-    </span>
-  );
+function CategoryAvatar({ name }) {
+  return <span className="catalog-avatar" aria-hidden="true">{initialsOf(name)}</span>;
 }
 
-// Мини-тайл сводки (мобильная сетка 2×2) — единый язык со страницей «Долги».
-function MiniTile({ label, value, sub, valueClass = "text-white" }) {
-  return (
-    <div className="min-w-0 rounded-lg bg-white/[0.02] px-3 py-2">
-      <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`truncate text-base font-semibold tabular-nums ${valueClass}`}>{value}</p>
-      {sub && <p className="truncate text-[10px] font-semibold text-slate-500">{sub}</p>}
-    </div>
-  );
-}
-
-// Плоская компактная карточка-«ценник»: аватар + имя + %-маржа, мета + статус,
-// цена + с/с·продажи + прибыль; доля прибыли меню — хэйрлайн у нижнего края.
+// Current cost can be incomplete even when historical sales have recorded costs.
 function ProductCard({ p, onEdit, onDuplicate, onDelete }) {
-  const t = TONE[p.tone] || TONE.slate;
-  const hasRecipe = Array.isArray(p.recipe) && p.recipe.length > 0;
-  const unlinked = hasRecipe ? p.recipe.filter((r) => r.unlinked).length : 0;
+  const uncertainCost = p.incompleteCost || (p.noRecipe && money(p.cost) <= 0);
+  const status = p.hidden ? "hidden"
+    : uncertainCost ? "warning"
+    : p.lossmaking ? "loss"
+    : "ready";
+  const statusLabel = p.hidden ? "Скрыт в кассе"
+    : p.incompleteCost ? "Уточнить состав"
+    : uncertainCost ? "Нет себестоимости"
+    : p.lossmaking ? "Без прибыли"
+    : "Готов к продаже";
+
   return (
-    <div className={`group relative flex h-full flex-col overflow-hidden rounded-xl border border-l-2 border-white/[0.08] bg-white/[0.02] px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.06] ${t.bl} ${p.lossmaking ? "ring-1 ring-rose-500/30" : ""} ${p.hidden ? "opacity-60" : ""}`}>
-      {/* Шапка: аватар + имя + %-чип маржи */}
-      <div className="flex items-center gap-2.5">
-        <CategoryAvatar name={p.name} category={p.category} type={p.typeName || p.type} size={34} />
-        <p className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-tight text-white">{p.name}</p>
-        <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold tabular-nums transition group-hover:opacity-0 ${t.chip}`} title={p.marginIsPotential ? "Маржа расчётная (нет продаж)" : "Маржа"}>
-          {Math.round(num(p.marginPct))}%{p.marginIsPotential && <span className="opacity-60">*</span>}
-        </span>
-      </div>
-
-      {/* Мета + компактный статус */}
-      <div className="mt-1.5 flex items-center gap-1.5">
-        <span className="min-w-0 flex-1 truncate text-[10px] font-bold text-slate-500">{prettyName(p.typeName || p.type)} · {prettyName(p.category)}</span>
-        {hasRecipe ? (
-          unlinked > 0 ? (
-            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold text-amber-300" title={`${unlinked} ингр. не на складе`}><AlertTriangle size={11} /> {unlinked}</span>
-          ) : (
-            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold text-emerald-300" title={`${p.recipe.length} ингр. в составе`}><Check size={11} /> {p.recipe.length}</span>
-          )
-        ) : (
-          <span className="inline-flex shrink-0 items-center text-slate-400" title="Без состава"><PackageX size={11} /></span>
-        )}
-        {p.hidden && <span className="inline-flex shrink-0 items-center text-slate-400" title="Скрыт в кассе"><EyeOff size={11} /></span>}
-      </div>
-
-      {/* Цена + с/с·продажи + прибыль */}
-      <div className="mt-auto flex items-end justify-between gap-2 pt-2">
-        <div className="min-w-0">
-          <p className="truncate text-xl font-semibold leading-none tabular-nums text-white">{formatMoney(p.price)}</p>
-          <p className="mt-1 truncate text-[10px] font-semibold text-slate-500">с/с {formatMoney(p.cost)}{p.incompleteCost && <span className="text-amber-300"> неполн.</span>} · ×{num(p.quantity)}</p>
+    <article className={`catalog-product catalog-product-${status} bg-white/[0.02] shadow-sm backdrop-blur-xl`}>
+      <div className="catalog-product-heading">
+        <CategoryAvatar name={p.name} />
+        <div className="catalog-product-title">
+          <button type="button" onClick={() => onEdit(p)}>{p.name}</button>
+          <p>
+            {prettyName(p.typeName || p.type)}
+            <span> / </span>
+            {prettyName(p.category) || "Без категории"}
+          </p>
         </div>
-        <div className="shrink-0 text-right">
-          <p className={`text-[13px] font-semibold leading-none tabular-nums ${p.cleanProfit < 0 ? "text-rose-300" : "text-emerald-400"}`}>{formatMoney(p.cleanProfit)}</p>
-          <p className="mt-0.5 text-[9px] font-semibold text-slate-500">прибыль</p>
+        {p.hidden && <EyeOff size={16} aria-label="Скрыт в кассе" />}
+      </div>
+      <div className={`catalog-product-status catalog-status-${status}`}>
+        {uncertainCost ? <AlertTriangle size={13} />
+          : p.hidden ? <EyeOff size={13} />
+          : p.lossmaking ? <TrendingDown size={13} />
+          : <Check size={13} />}
+        {statusLabel}
+        {p.isExtra && <span className="catalog-extra">Дополнение</span>}
+      </div>
+      <div className="catalog-product-pricing">
+        <div>
+          <span>Цена продажи</span>
+          <strong>{formatMoney(p.price)}</strong>
+        </div>
+        <div>
+          <span>Себестоимость</span>
+          <strong className={uncertainCost ? "catalog-warning-text" : ""}>
+            {p.noRecipe && money(p.cost) <= 0 ? "Не задана" : `${formatMoney(p.cost)}${p.incompleteCost ? " +" : ""}`}
+          </strong>
         </div>
       </div>
-
-      {/* Доля прибыли меню — хэйрлайн у низа (0 высоты) */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-white/5">
-        <div className={`h-full bg-gradient-to-r ${t.bar}`} style={{ width: `${Math.max(2, Math.min(100, num(p.barPct)))}%` }} />
+      <div className="catalog-product-results">
+        <div>
+          <span>Продано / мес.</span>
+          <strong>{num(p.quantity).toLocaleString("ru-RU")} <small>шт.</small></strong>
+        </div>
+        <div>
+          <span>Прибыль / мес.</span>
+          <strong className={p.cleanProfit < 0 ? "catalog-loss-text" : ""}>
+            {p.notSelling ? "—" : formatMoney(p.cleanProfit)}
+          </strong>
+        </div>
+        <div>
+          <span>{p.marginIsPotential ? "Расч. маржа" : "Маржа"}</span>
+          <strong className={!uncertainCost ? marginToneCls(p.marginPct) : "catalog-muted"}>
+            {uncertainCost ? "—" : `${Math.round(num(p.marginPct))}%`}
+          </strong>
+        </div>
       </div>
-
-      {/* Экшены: инлайн на мобиле (всегда), по ховеру на десктопе */}
-      <div className="mt-2 flex justify-end gap-1 sm:absolute sm:right-1.5 sm:top-1.5 sm:mt-0 sm:-translate-y-0.5 sm:opacity-0 sm:transition sm:group-hover:translate-y-0 sm:group-hover:opacity-100">
-        <button onClick={() => onEdit(p)} aria-label="Изменить" title="Изменить" className="grid h-7 w-7 place-items-center rounded-md bg-blue-500/15 text-blue-300 transition hover:bg-blue-500/25"><Pencil size={14} /></button>
-        <button onClick={() => onDuplicate(p)} aria-label="Дублировать" title="Дублировать" className="grid h-7 w-7 place-items-center rounded-md bg-white/10 text-slate-300 transition hover:bg-white/20"><Copy size={14} /></button>
-        <button onClick={() => onDelete(p.id)} aria-label="Удалить" title="Удалить" className="grid h-7 w-7 place-items-center rounded-md bg-white/10 text-slate-300 transition hover:bg-rose-500/20 hover:text-rose-300"><Trash2 size={14} /></button>
+      <div className="catalog-product-footer">
+        <span>{p.noRecipe ? "Состав не задан" : `${p.recipe.length} ингр. в составе`}</span>
+        <div className="catalog-product-actions">
+          <button type="button" onClick={() => onDuplicate(p)} aria-label={`Дублировать ${p.name}`} title="Дублировать">
+            <Copy size={15} />
+          </button>
+          <button type="button" onClick={() => onDelete(p.id)} aria-label={`Удалить ${p.name}`} title="Удалить" className="catalog-delete">
+            <Trash2 size={15} />
+          </button>
+          <button type="button" onClick={() => onEdit(p)} aria-label={`Изменить ${p.name}`} className="catalog-edit">
+            <Pencil size={14} /><span>Изменить</span>
+          </button>
+        </div>
       </div>
-    </div>
-  );
-}
-
-function ProblemChip({ active, onClick, icon: Icon, label, count, tone = "slate" }) {
-  const t = TONE[tone] || TONE.slate;
-  const dim = count === 0 && !active;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={dim}
-      className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition ${
-        active ? t.chip : dim ? "border-white/[0.08] bg-white/[0.02] text-slate-600" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"
-      }`}
-    >
-      <Icon size={13} /> {label}
-      {count != null && <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-black/25" : "bg-white/10"}`}>{count}</span>}
-    </button>
+    </article>
   );
 }
 
@@ -370,6 +336,8 @@ export default function WorkPage() {
   const [sortKey, setSortKey] = useState("profit"); // profit | margin | qty | revenue | name
   const [sortDir, setSortDir] = useState("desc");    // desc | asc
   const [problemFilter, setProblemFilter] = useState("all"); // all|top|noRecipe|incomplete|notSelling|loss|hidden
+  const [catalogView, setCatalogView] = useState("cards");
+  const [initialLoading, setInitialLoading] = useState(true);
   const [moreOpen, setMoreOpen] = useState(false);   // меню «Ещё» (вторичные действия)
 
   const [newTypeName, setNewTypeName] = useState("");
@@ -400,7 +368,7 @@ export default function WorkPage() {
 
   // Ставим состояние ТОЛЬКО когда данные реально поменялись. Иначе ссылка массива
   // остаётся прежней → React бейлит рендер, а цепочка useMemo (salesStatsByProduct →
-  // productRows → totals) не пересчитывается. Это убирает периодический фриз тика.
+  // productRows) не пересчитывается. Это убирает периодический фриз тика.
   const setIfChanged = (key, next, setter) => {
     const arr = Array.isArray(next) ? next : [];
     let sig;
@@ -436,8 +404,10 @@ export default function WorkPage() {
       setIfChanged("products", productList, setProducts);
       setIfChanged("sales", salesList, setSales);
       setIfChanged("warehouse", warehouseList, setWarehouseItems);
+      setError("");
     } finally {
       loadingRef.current = false;
+      setInitialLoading(false);
     }
   };
 
@@ -628,7 +598,7 @@ export default function WorkPage() {
   }, [monthSales]);
 
   const heroLoss = monthTotals.cleanProfit < 0;
-  const heroTrendColor = heroLoss ? "#fb7185" : "#34d399";
+  const heroTrendColor = heroLoss ? "var(--color-rose-400)" : "var(--color-emerald-400)";
   const monthMargin = monthTotals.revenue > 0 ? (monthTotals.cleanProfit / monthTotals.revenue) * 100 : null;
 
   const visibleProducts = useMemo(() => {
@@ -660,40 +630,19 @@ export default function WorkPage() {
       const revenue = stat && stat.revenue ? stat.revenue : money(p.price) * quantity;
       const totalCost = stat && stat.cost ? stat.cost : money(p.cost) * quantity;
       const cleanProfit = revenue - totalCost;
-      const profitOne = quantity > 0 ? cleanProfit / quantity : money(p.price) - money(p.cost);
 
       return {
         ...p,
         quantity,
         totalCost,
         revenue,
-        profitOne,
         cleanProfit,
       };
     });
   }, [visibleProducts, salesStatsByProduct]);
 
-  const totals = useMemo(() => {
-    return productRows.reduce(
-      (acc, p) => {
-        acc.quantity += p.quantity;
-        acc.cost += p.totalCost;
-        acc.revenue += p.revenue;
-        acc.cleanProfit += p.cleanProfit;
-        return acc;
-      },
-      {
-        quantity: 0,
-        cost: 0,
-        revenue: 0,
-        cleanProfit: 0,
-      }
-    );
-  }, [productRows]);
-
-  // ── P&L: обогащение строк (маржа, наценка, доля, тон, проблемы) ──
+  // Маржа и состояние состава для каталога.
   const enriched = useMemo(() => {
-    const maxProfit = Math.max(1, ...productRows.map((p) => Math.max(0, num(p.cleanProfit))));
     return productRows.map((p) => {
       const price = money(p.price);
       const cost = money(p.cost);
@@ -706,35 +655,21 @@ export default function WorkPage() {
         ? (p.cleanProfit / p.revenue) * 100
         : (price > 0 ? ((price - cost) / price) * 100 : 0);
       const marginIsPotential = num(p.revenue) <= 0;
-      const markupPct = cost > 0 ? ((price - cost) / cost) * 100 : null;
-      const profitShare = totals.cleanProfit > 0 ? (p.cleanProfit / totals.cleanProfit) * 100 : 0;
-      const barPct = Math.max(0, (num(p.cleanProfit) / maxProfit) * 100);
-      let tone;
-      if (lossmaking) tone = "rose";
-      else if (noRecipe && cost <= 0) tone = "slate"; // себестоимость правда неизвестна
-      else if (marginPct >= MARGIN_GOOD) tone = "emerald";
-      else if (marginPct >= MARGIN_LOW) tone = "amber";
-      else tone = "orange";
-      return { ...p, hasRecipe, incompleteCost, noRecipe, notSelling, lossmaking, marginPct, marginIsPotential, markupPct, profitShare, barPct, tone };
+      return { ...p, hasRecipe, incompleteCost, noRecipe, notSelling, lossmaking, marginPct, marginIsPotential };
     });
-  }, [productRows, totals.cleanProfit]);
+  }, [productRows]);
 
   const menuHealth = useMemo(() => {
     const counts = { noRecipe: 0, incompleteCost: 0, notSelling: 0, lossmaking: 0, hidden: 0 };
-    let anchor = null;
-    enriched.forEach((p) => {
-      if (p.noRecipe) counts.noRecipe++;
-      if (p.incompleteCost) counts.incompleteCost++;
-      if (p.notSelling) counts.notSelling++;
-      if (p.lossmaking) counts.lossmaking++;
-      if (p.hidden) counts.hidden++;
-      if (num(p.cleanProfit) > 0 && (!anchor || p.cleanProfit > anchor.cleanProfit)) anchor = p;
+    enriched.forEach((product) => {
+      if (product.noRecipe) counts.noRecipe++;
+      if (product.incompleteCost) counts.incompleteCost++;
+      if (product.notSelling) counts.notSelling++;
+      if (product.lossmaking) counts.lossmaking++;
+      if (product.hidden) counts.hidden++;
     });
-    const avgMargin = totals.revenue > 0 ? (totals.cleanProfit / totals.revenue) * 100 : null;
-    const anchorShare = anchor && totals.cleanProfit > 0 ? (anchor.cleanProfit / totals.cleanProfit) * 100 : 0;
-    const problemTotal = counts.noRecipe + counts.incompleteCost + counts.notSelling + counts.lossmaking;
-    return { counts, anchor, anchorShare, avgMargin, problemTotal };
-  }, [enriched, totals.cleanProfit, totals.revenue]);
+    return { counts };
+  }, [enriched]);
 
   const displayRows = useMemo(() => {
     let rows = enriched;
@@ -1340,254 +1275,253 @@ export default function WorkPage() {
   };
 
   const SORT_LABELS = { profit: "По прибыли", margin: "По марже", qty: "По продажам", revenue: "По выручке", name: "По названию" };
+  const categoryCounts = new Map();
+  const typeCounts = new Map();
+  (Array.isArray(products) ? products : []).forEach((product) => {
+    const categoryId = String(product.categoryId);
+    const typeId = String(product.typeId || "");
+    categoryCounts.set(categoryId, (categoryCounts.get(categoryId) || 0) + 1);
+    typeCounts.set(typeId, (typeCounts.get(typeId) || 0) + 1);
+  });
+  const hasFilters = !!(search || selectedTypeId || selectedFolderId || problemFilter !== "all");
+  const resetCatalogFilters = () => {
+    setSearch("");
+    setSelectedTypeId("");
+    setSelectedFolderId("");
+    setProblemFilter("all");
+  };
+  const healthFilters = [
+    { key: "loss", label: "Без прибыли", count: menuHealth.counts.lossmaking, icon: TrendingDown, tone: "loss" },
+    { key: "incomplete", label: "Уточнить состав", count: menuHealth.counts.incompleteCost, icon: AlertTriangle, tone: "warning" },
+    { key: "noRecipe", label: "Без состава", count: menuHealth.counts.noRecipe, icon: PackageX, tone: "muted" },
+    { key: "notSelling", label: "Без продаж", count: menuHealth.counts.notSelling, icon: Package, tone: "muted" },
+    { key: "hidden", label: "Скрытые", count: menuHealth.counts.hidden, icon: EyeOff, tone: "muted" },
+  ];
   const avgMarginShown = displayTotals.revenue > 0 ? (displayTotals.cleanProfit / displayTotals.revenue) * 100 : null;
 
   return (
-    <div className="relative -m-4 px-3 pb-nav pt-4 text-slate-100 sm:-m-6 sm:p-6 sm:pb-10">
-      <div className="relative">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-sm font-bold text-blue-400">Работа</p>
-          <h2 className="text-2xl font-semibold leading-none text-white sm:text-3xl">Меню товаров</h2>
-          <p className="mt-2 text-sm text-slate-400">Прибыльность меню за месяц · количество из продаж</p>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2.5">
-          <div className="relative">
-            <button
-              onClick={() => setMoreOpen((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-2xl border border-white/[0.08] bg-white/5 px-3 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-white/10 sm:px-4 sm:py-3"
-            >
-              <MoreHorizontal size={18} /> <span className="hidden sm:inline">Ещё</span>
-            </button>
-            {moreOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
-                <div className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b1020] p-1.5 shadow-lg backdrop-blur-xl">
-                  {[
-                    { Ic: Settings, label: "Разделы и категории", on: () => setStructureModal(true) },
-                    isOwner && { Ic: Copy, label: "Перенос в точку", on: () => setTransferModal(true) },
-                    { Ic: FileUp, label: "Импорт из PDF", on: () => setPdfImportModal(true) },
-                    { Ic: FileUp, label: "Импорт Excel", on: () => setImportModal(true) },
-                    { Ic: FileUp, label: "Экспорт Excel", on: exportExcel },
-                  ].filter(Boolean).map(({ Ic, label, on }) => (
-                    <button
-                      key={label}
-                      onClick={() => { setMoreOpen(false); on(); }}
-                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-slate-200 transition hover:bg-white/10"
-                    >
-                      <Ic size={16} className="text-slate-400" /> {label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+    <div className="work-page pb-nav sm:pb-10">
+      <div className="catalog-page-inner">
+        <header className="catalog-header">
+          <div>
+            <p className="catalog-eyebrow">Управление ассортиментом</p>
+            <h1>Товары и меню</h1>
+            <p className="catalog-subtitle">Цены, состав и результаты продаж — в одном месте.</p>
           </div>
-
-          <button
-            onClick={openProductModal}
-            className="hidden rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white  transition hover:scale-[1.01] sm:block"
-          >
-            + Товар
-          </button>
-        </div>
-      </div>
-
-      {/* Герой: чистая прибыль + тренд по дням + факты */}
-      <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          {/* Главное число + маржа-дельта */}
-          <div className="min-w-0 shrink-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Чистая прибыль · месяц</p>
-            <p className={`mt-1 whitespace-nowrap text-4xl font-semibold leading-none tabular-nums xl:text-5xl ${heroLoss ? "text-rose-400" : "text-emerald-400"}`}>{formatMoney(monthTotals.cleanProfit)}</p>
-            {monthMargin != null && (
-              <p className={`mt-2.5 inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-semibold ${heroLoss ? "text-rose-400" : "text-emerald-400"}`}>
-                {heroLoss ? <TrendingDown size={15} /> : <TrendingUp size={15} />}
-                <span className="tabular-nums">{Math.round(monthMargin)}%</span>
-                <span className="font-medium text-slate-500">ср. маржа</span>
-              </p>
-            )}
-          </div>
-
-          {/* Тренд прибыли по дням — инлайн между числом и фактами (широкий экран) */}
-          <div className="hidden min-w-0 flex-1 xl:block">
-            <TrendSparkline values={dailyProfit.map((d) => d.profit)} color={heroTrendColor} className="h-[76px] w-full" />
-          </div>
-
-          {/* Факты: иконки + значения с разделителями (десктоп/планшет) */}
-          <div className="hidden min-w-0 lg:flex lg:divide-x lg:divide-white/10 lg:border-l lg:border-white/10 lg:pl-4 xl:pl-5">
-            <HeroStat icon={Boxes} label="Продано" value={num(monthTotals.quantity).toLocaleString("ru-RU")} sub={`${productRows.length} поз.`} />
-            <HeroStat icon={Wallet} label="Выручка" value={formatMoney(monthTotals.revenue)} />
-            <HeroStat icon={PackageX} label="Себест." value={formatMoney(monthTotals.cost)} />
-            <HeroStat icon={Crown} label="Якорь" tone="text-amber-300" value={menuHealth.anchor ? prettyName(menuHealth.anchor.name) : "—"} sub={menuHealth.anchor ? `${Math.round(menuHealth.anchorShare)}%` : null} />
-          </div>
-        </div>
-
-        {/* Тренд во всю ширину — планшет/ноут (между sm и xl, где нет места инлайн) */}
-        <div className="mt-4 hidden lg:block xl:hidden">
-          <TrendSparkline values={dailyProfit.map((d) => d.profit)} color={heroTrendColor} className="h-16 w-full" />
-        </div>
-
-        {/* Мобайл: мини-тренд + 2×2 факты */}
-        <div className="mt-4 lg:hidden">
-          <TrendSparkline values={dailyProfit.map((d) => d.profit)} color={heroTrendColor} className="mb-3 h-14 w-full" />
-          <div className="grid grid-cols-2 gap-2">
-            <MiniTile label="Выручка" value={formatMoney(monthTotals.revenue)} />
-            <MiniTile label="Себест." value={formatMoney(monthTotals.cost)} valueClass="text-slate-200" />
-            <MiniTile label="Продано" value={num(monthTotals.quantity).toLocaleString("ru-RU")} sub={`${productRows.length} поз.`} />
-            <MiniTile label="Якорь" value={menuHealth.anchor ? prettyName(menuHealth.anchor.name) : "—"} sub={menuHealth.anchor ? `${Math.round(menuHealth.anchorShare)}%` : "нет данных"} valueClass="text-amber-300" />
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div className="mb-4 rounded-2xl bg-red-500/10 px-4 py-3 font-bold text-red-400">
-          {error}
-        </div>
-      )}
-
-      <div className="space-y-4">
-        <div className="flex flex-col gap-2.5">
-          {/* Ряд 1: заголовок + поиск + фильтр + товар */}
-          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
-              <h3 className="truncate text-lg font-semibold leading-tight text-white sm:text-xl">
-                {selectedFolder?.name || (selectedType ? `Все: ${selectedType.name}` : "Все товары")}
-              </h3>
-              <p className="text-xs font-semibold text-slate-400">
-                {selectedType?.name || "Все типы"} · {displayRows.length} поз.{problemFilter !== "all" ? " · фильтр" : ""}
-              </p>
+          <div className="catalog-header-actions">
+            <div className="relative">
+              <button type="button" className="catalog-button" aria-expanded={moreOpen} aria-label="Действия с меню" onClick={() => setMoreOpen((v) => !v)}>
+                <MoreHorizontal size={18} /><span>Действия</span>
+              </button>
+              {moreOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
+                  <div className="catalog-more-menu bg-white/[0.02] shadow-lg" onKeyDown={(e) => { if (e.key === "Escape") setMoreOpen(false); }}>
+                    {[
+                      { icon: Settings, label: "Разделы и категории", action: () => setStructureModal(true) },
+                      isOwner && { icon: Copy, label: "Перенос в другую точку", action: () => setTransferModal(true) },
+                      { icon: FileUp, label: "Импорт из PDF", action: () => setPdfImportModal(true) },
+                      { icon: FileUp, label: "Импорт Excel", action: () => setImportModal(true) },
+                      { icon: FileUp, label: "Экспорт Excel", action: exportExcel },
+                    ].filter(Boolean).map(({ icon: Icon, label, action }) => (
+                      <button type="button" key={label} onClick={() => { setMoreOpen(false); action(); }}><Icon size={16} />{label}</button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
+            <button type="button" onClick={openProductModal} className="catalog-button catalog-button-primary"><Plus size={18} />Добавить товар</button>
+          </div>
+        </header>
 
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 lg:flex-none">
-                <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+        <section className="catalog-overview" aria-label="Продажи за текущий месяц" aria-busy={initialLoading}>
+          <div className="catalog-period"><span className="catalog-eyebrow">Результаты меню</span><span>{new Date(`${currentSalesMonth}-01T12:00:00`).toLocaleDateString("ru-RU", { month: "long", year: "numeric" })}</span></div>
+          <div className="catalog-metrics">
+            <div className="catalog-metric bg-white/[0.02] shadow-sm backdrop-blur-xl">
+              <div className="catalog-metric-label"><Wallet size={16} />Выручка</div>
+              <strong>{initialLoading ? "—" : formatMoney(monthTotals.revenue)}</strong>
+              <span>По продажам за месяц</span>
+            </div>
+            <div className="catalog-metric bg-white/[0.02] shadow-sm backdrop-blur-xl">
+              <div className="catalog-metric-label"><PackageX size={16} />Себестоимость</div>
+              <strong>{initialLoading ? "—" : formatMoney(monthTotals.cost)}</strong>
+              <span>Зафиксирована в чеках</span>
+            </div>
+            <div className={`catalog-metric catalog-metric-profit bg-white/[0.02] shadow-sm backdrop-blur-xl ${heroLoss ? "is-loss" : ""}`}>
+              <div className="catalog-metric-label">{heroLoss ? <TrendingDown size={16} /> : <TrendingUp size={16} />}Валовая прибыль</div>
+              <strong>{initialLoading ? "—" : formatMoney(monthTotals.cleanProfit)}</strong>
+              <div className="catalog-profit-caption"><span>{monthMargin === null ? "Нет продаж за месяц" : `Маржа ${Math.round(monthMargin)}%`}</span><TrendSparkline values={dailyProfit.map((d) => d.profit)} color={heroTrendColor} className="h-6 w-24" /></div>
+            </div>
+            <div className="catalog-metric bg-white/[0.02] shadow-sm backdrop-blur-xl">
+              <div className="catalog-metric-label"><Boxes size={16} />Продано товаров</div>
+              <strong>{initialLoading ? "—" : num(monthTotals.quantity).toLocaleString("ru-RU")}<small>шт.</small></strong>
+              <span>Позиций в меню · {products.length}</span>
+            </div>
+          </div>
+          <p className="catalog-metrics-note">Прибыль рассчитана как выручка минус себестоимость по чекам, без расходов точки. Сводка включает все продажи месяца.</p>
+        </section>
+
+        {error && <div className="catalog-error" role="alert"><AlertTriangle size={18} /><p>{error}</p><button type="button" onClick={() => load().catch((e) => setError(e.message))}>Повторить</button></div>}
+
+        <div className="catalog-workspace">
+          <aside className="catalog-sidebar bg-white/[0.02] shadow-sm backdrop-blur-xl" aria-label="Разделы меню">
+            <div className="catalog-sidebar-heading"><span>Каталог</span><button type="button" onClick={() => setStructureModal(true)} aria-label="Управление разделами и категориями" title="Разделы и категории"><Settings size={16} /></button></div>
+            <nav className="catalog-category-nav" aria-label="Категории товаров">
+              <button type="button" className={!selectedTypeId ? "is-selected" : ""} aria-pressed={!selectedTypeId} onClick={() => { setSelectedTypeId(""); setSelectedFolderId(""); }}><LayoutGrid size={16} /><span>Все товары</span><b>{products.length}</b></button>
+              {safeTypes.map((type) => (
+                <div key={type.id} className="catalog-type-group">
+                  <button type="button" className={String(selectedTypeId) === String(type.id) && !selectedFolderId ? "is-selected" : ""} aria-pressed={String(selectedTypeId) === String(type.id) && !selectedFolderId} onClick={() => { setSelectedTypeId(String(type.id)); setSelectedFolderId(""); }}>
+                    <ChevronRight size={15} className={String(selectedTypeId) === String(type.id) ? "is-expanded" : ""} /><span>{type.name}</span><b>{typeCounts.get(String(type.id)) || 0}</b>
+                  </button>
+                  {String(selectedTypeId) === String(type.id) && <div className="catalog-subcategories">{typeFolders.map((folder) => (
+                    <button type="button" key={folder.id} className={String(selectedFolderId) === String(folder.id) ? "is-selected" : ""} aria-pressed={String(selectedFolderId) === String(folder.id)} onClick={() => setSelectedFolderId(String(folder.id))}><span>{folder.name}</span><b>{categoryCounts.get(String(folder.id)) || 0}</b></button>
+                  ))}</div>}
+                </div>
+              ))}
+            </nav>
+            <button type="button" className="catalog-manage-link" onClick={() => setStructureModal(true)}><Plus size={15} />Разделы и категории</button>
+            <div className="catalog-sidebar-note"><Package size={22} /><p>Меню связано с кассой</p><span>Цена и состав товара используются при оформлении новых продаж.</span></div>
+          </aside>
+
+          <section className="catalog-content" aria-label="Список товаров">
+            <div className="catalog-toolbar">
+              <label className="catalog-search">
+                <Search size={18} />
                 <input
+                  aria-label="Найти товар"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Найти товар"
-                  className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/5 pl-10 pr-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60 lg:w-64"
+                  placeholder="Поиск по названию товара…"
                 />
-              </div>
+                {search && (
+                  <button type="button" onClick={() => setSearch("")} aria-label="Очистить поиск">
+                    <X size={16} />
+                  </button>
+                )}
+              </label>
               <button
+                type="button"
+                className={`catalog-button ${selectedFolderId ? "is-active" : ""}`}
+                aria-label="Фильтры товаров"
                 onClick={() => setFilterModal(true)}
-                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/5 px-4 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
               >
-                <SlidersHorizontal size={16} /> <span className="hidden sm:inline">Фильтр</span>
+                <SlidersHorizontal size={17} /><span>Фильтры</span>
               </button>
-              <button
-                onClick={openProductModal}
-                className="hidden h-10 shrink-0 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white transition hover:scale-[1.01] sm:block"
-              >
-                + Товар
-              </button>
+              <div className="catalog-view-switch" role="group" aria-label="Вид каталога">
+                <button type="button" aria-label="Карточки" aria-pressed={catalogView === "cards"} onClick={() => setCatalogView("cards")}>
+                  <LayoutGrid size={17} />
+                </button>
+                <button type="button" aria-label="Список" aria-pressed={catalogView === "list"} onClick={() => setCatalogView("list")}>
+                  <List size={18} />
+                </button>
+              </div>
             </div>
-          </div>
-
-          {/* Ряд 2: чипы типов + сортировка */}
-          <div className="flex items-center gap-2">
-            <div className="no-scrollbar -mx-1 flex flex-1 gap-2 overflow-x-auto px-1">
-              <button
-                onClick={() => setSelectedTypeId("")}
-                className={`inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-xs font-semibold transition ${selectedTypeId === "" ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"}`}
-              >
-                Все
-              </button>
-              {safeTypes.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setSelectedTypeId(String(t.id))}
-                  className={`inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-xs font-semibold transition ${String(selectedTypeId) === String(t.id) ? "border-blue-400/50 bg-blue-500/15 text-white" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"}`}
+            <div className="catalog-mobile-categories">
+              <label>
+                Раздел
+                <select
+                  aria-label="Раздел меню"
+                  value={selectedTypeId}
+                  onChange={(e) => { setSelectedTypeId(e.target.value); setSelectedFolderId(""); }}
                 >
-                  {t.name}
+                  <option value="">Все товары</option>
+                  {safeTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
+                </select>
+              </label>
+              {selectedTypeId && (
+                <label>
+                  Категория
+                  <select aria-label="Категория меню" value={selectedFolderId} onChange={(e) => setSelectedFolderId(e.target.value)}>
+                    <option value="">Все категории</option>
+                    {typeFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
+                  </select>
+                </label>
+              )}
+            </div>
+            <div className="catalog-health-filters" role="group" aria-label="Быстрые фильтры товаров">
+              <button type="button" aria-pressed={problemFilter === "all"} onClick={() => setProblemFilter("all")}>
+                Все<span>{enriched.length}</span>
+              </button>
+              {healthFilters.map(({ key, label, count, icon: Icon, tone }) => (
+                <button
+                  type="button"
+                  key={key}
+                  className={`catalog-health-${tone}`}
+                  aria-pressed={problemFilter === key}
+                  onClick={() => setProblemFilter((value) => value === key ? "all" : key)}
+                >
+                  <Icon size={14} />{label}<span>{count}</span>
                 </button>
               ))}
             </div>
-
-            <div className="flex shrink-0 items-center gap-2">
-              <select
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value)}
-                className="h-8 rounded-lg border border-white/[0.08] bg-white/5 px-2.5 text-xs font-bold text-white outline-none focus:border-blue-400/60"
-              >
-                {Object.entries(SORT_LABELS).map(([k, l]) => (
-                  <option key={k} value={k} className="bg-slate-900">{l}</option>
+            <div className="catalog-results-heading">
+              <div>
+                <h2>{selectedFolder?.name || selectedType?.name || "Все товары"}<span>{displayRows.length}</span></h2>
+                <p>{search ? `Результаты поиска «${search}»` : "Показатели продаж за текущий месяц"}</p>
+              </div>
+              <div className="catalog-sort">
+                <label className="sr-only" htmlFor="catalog-sort">Сортировка товаров</label>
+                <select id="catalog-sort" value={sortKey} onChange={(e) => setSortKey(e.target.value)}>
+                  {Object.entries(SORT_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                </select>
+                <button
+                  type="button"
+                  aria-label={sortDir === "asc" ? "По возрастанию. Изменить направление" : "По убыванию. Изменить направление"}
+                  onClick={() => setSortDir((value) => value === "asc" ? "desc" : "asc")}
+                >
+                  {sortDir === "asc" ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+                </button>
+              </div>
+            </div>
+            {hasFilters && (
+              <div className="catalog-active-filters">
+                <span>Показано {displayRows.length} из {products.length}</span>
+                <button type="button" onClick={resetCatalogFilters}><RotateCcw size={13} />Сбросить фильтры</button>
+              </div>
+            )}
+            {initialLoading ? (
+              <div className="catalog-products" role="status" aria-label="Загрузка товаров">
+                {Array.from({ length: 6 }, (_, index) => <div key={index} className="catalog-skeleton animate-pulse bg-white/[0.02]" />)}
+              </div>
+            ) : displayRows.length ? (
+              <div className={`catalog-products catalog-view-${catalogView}`}>
+                {displayRows.map((product) => (
+                  <ProductCard key={product.id} p={product} onEdit={openEditProduct} onDuplicate={duplicateProduct} onDelete={deleteProduct} />
                 ))}
-              </select>
-              <button
-                onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-                aria-label="Направление сортировки"
-                title={sortDir === "asc" ? "По возрастанию" : "По убыванию"}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/[0.08] bg-white/5 text-slate-200 transition hover:bg-white/10"
-              >
-                {sortDir === "asc" ? <ArrowUp size={15} /> : <ArrowDown size={15} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Ряд 3: быстрые фильтры проблем */}
-          {menuHealth.problemTotal > 0 && (
-            <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
-              <ProblemChip active={problemFilter === "loss"} onClick={() => setProblemFilter((f) => (f === "loss" ? "all" : "loss"))} icon={TrendingDown} label="Убыточные" count={menuHealth.counts.lossmaking} tone="rose" />
-              <ProblemChip active={problemFilter === "noRecipe"} onClick={() => setProblemFilter((f) => (f === "noRecipe" ? "all" : "noRecipe"))} icon={PackageX} label="Без состава" count={menuHealth.counts.noRecipe} tone="slate" />
-              <ProblemChip active={problemFilter === "incomplete"} onClick={() => setProblemFilter((f) => (f === "incomplete" ? "all" : "incomplete"))} icon={AlertTriangle} label="Неполная с/с" count={menuHealth.counts.incompleteCost} tone="amber" />
-              <ProblemChip active={problemFilter === "notSelling"} onClick={() => setProblemFilter((f) => (f === "notSelling" ? "all" : "notSelling"))} icon={Package} label="Не продаётся" count={menuHealth.counts.notSelling} tone="slate" />
-            </div>
-          )}
+              </div>
+            ) : (
+              <div className="catalog-empty bg-white/[0.02]">
+                <EmptyState
+                  title={hasFilters ? "Товары не найдены" : "Создайте ваше меню"}
+                  text={hasFilters ? "Измените запрос или сбросьте фильтры, чтобы увидеть остальные товары." : "Добавьте первый товар, укажите цену и состав. Он появится в кассе."}
+                  actionLabel={hasFilters ? "Сбросить фильтры" : "Добавить товар"}
+                  onAction={hasFilters ? resetCatalogFilters : openProductModal}
+                />
+              </div>
+            )}
+            {!initialLoading && displayRows.length > 0 && (
+              <footer className="catalog-totals bg-white/[0.02]">
+                <p>Итоги выборки<span>Всего {displayRows.length}</span></p>
+                <div>
+                  <span>Продано</span>
+                  <strong>{displayTotals.quantity.toLocaleString("ru-RU")} шт.</strong>
+                </div>
+                <div>
+                  <span>Выручка</span>
+                  <strong>{formatMoney(displayTotals.revenue)}</strong>
+                </div>
+                <div>
+                  <span>Валовая прибыль</span>
+                  <strong className={displayTotals.cleanProfit < 0 ? "catalog-loss-text" : ""}>{formatMoney(displayTotals.cleanProfit)}</strong>
+                </div>
+                {avgMarginShown !== null && <div><span>Маржа</span><strong>{Math.round(avgMarginShown)}%</strong></div>}
+              </footer>
+            )}
+          </section>
         </div>
 
-        {displayRows.length > 0 ? (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            {displayRows.map((p) => (
-              <ProductCard key={p.id} p={p} onEdit={openEditProduct} onDuplicate={duplicateProduct} onDelete={deleteProduct} />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <EmptyState
-              title={problemFilter !== "all" ? "Под фильтр ничего не попало" : (search ? "Ничего не найдено" : "Товаров пока нет")}
-              text={problemFilter !== "all" ? "Сбросьте быстрый фильтр, чтобы увидеть остальные товары." : (search ? "Попробуйте изменить запрос." : "Добавьте первый товар в меню — из него будут складываться продажи и себестоимость.")}
-              actionLabel={problemFilter !== "all" ? "Сбросить фильтр" : (search ? undefined : "+ Добавить товар")}
-              onAction={problemFilter !== "all" ? () => setProblemFilter("all") : (search ? undefined : openProductModal)}
-            />
-          </div>
-        )}
-
-        {/* Итого по выбранным */}
-        {displayRows.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Итого по выбранным</p>
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm font-semibold">
-              <span className="text-slate-400">Продано <b className="tabular-nums text-white">{displayTotals.quantity}</b></span>
-              <span className="text-slate-400">Выручка <b className="tabular-nums text-white">{formatMoney(displayTotals.revenue)}</b></span>
-              <span className="text-slate-400">Себест. <b className="tabular-nums text-slate-200">{formatMoney(displayTotals.cost)}</b></span>
-              <span className="text-slate-400">Чистая прибыль <b className="tabular-nums text-emerald-400">{formatMoney(displayTotals.cleanProfit)}</b></span>
-              {avgMarginShown != null && <span className="text-slate-400">Ср. маржа <b className={`tabular-nums ${marginToneCls(avgMarginShown)}`}>{Math.round(avgMarginShown)}%</b></span>}
-            </div>
-          </div>
-        )}
-
-      </div>
-
-      {/* Резерв под плавающую кнопку, чтобы она не перекрывала итог/последнюю карточку на телефоне */}
-      <div className="h-24 sm:hidden" aria-hidden="true" />
-
-      <button
-        onClick={openProductModal}
-        style={{ bottom: "calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 10px)" }}
-        className="fixed left-4 right-4 z-30 rounded-2xl bg-indigo-600 px-5 py-4 font-semibold text-white  sm:hidden"
-      >
-        + Товар
-      </button>
-
-      {transferModal && <MenuTransferModal onClose={() => setTransferModal(false)} />}
-
-      {pdfImportModal && (
-        <MenuPdfImportModal
-          onClose={() => setPdfImportModal(false)}
-          onImported={() => load()}
-        />
-      )}
+        {transferModal && <MenuTransferModal onClose={() => setTransferModal(false)} />}
+        {pdfImportModal && <MenuPdfImportModal onClose={() => setPdfImportModal(false)} onImported={() => load()} />}
 
       {filterModal && (
         <Modal title="Фильтр товаров" onClose={() => setFilterModal(false)}>
@@ -1635,6 +1569,7 @@ export default function WorkPage() {
                 setSelectedTypeId("");
                 setSelectedFolderId("");
                 setSearch("");
+                setProblemFilter("all");
               }}
               className="rounded-2xl border border-white/[0.08] bg-white/5 px-4 py-3 font-semibold text-slate-100 shadow-lg shadow-black/10 transition hover:bg-white/10 flex-1"
             >

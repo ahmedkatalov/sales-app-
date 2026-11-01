@@ -1,501 +1,411 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { AlarmClock, ArrowDownWideNarrow, CheckCircle2, ChevronDown, ChevronUp, Clock, Crown, Filter, History, ReceiptText, RotateCcw, Search, Users, Wallet } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { NavLink } from "react-router-dom";
+import {
+  AlertTriangle, Archive, ArrowDownLeft, ArrowLeft, ArrowRight, Banknote, Check,
+  CheckCircle2, ChevronRight, Clock, CreditCard, History, Loader2, Plus,
+  ReceiptText, RefreshCw, RotateCcw, Search, Users, Wallet, X,
+} from "lucide-react";
 import { del, get, post } from "../api";
-import EmptyState from "../components/EmptyState";
 import Modal from "../components/Modal";
-import DatePicker from "../components/DatePicker";
-import { HeroStat } from "../components/Metrics";
-import { formatMoney } from "../utils/format";
+import { formatMoney, num } from "../utils/format";
+import { buildDebtCustomers, debtTimestamp } from "../utils/debts";
+import "./DebtsPage.css";
 
-// ── чистые хелперы (react-hooks/purity: new Date с аргументом — ок) ──
-const dayMs = 86400000;
-const ageDays = (ms) => Math.floor(ms / dayMs);
-const plural = (n, forms) => {
-  const m10 = n % 10, m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return forms[0];
-  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return forms[1];
-  return forms[2];
+const formatDate = (value) => {
+  const timestamp = typeof value === "number" ? value : debtTimestamp(value);
+  return timestamp === null ? "Дата не указана" : new Date(timestamp).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" });
 };
-const fmtAge = (ms) => {
-  const d = ageDays(ms);
-  return d < 1 ? "сегодня" : `${d} ${plural(d, ["день", "дня", "дней"])}`;
+const ageLabel = (days) => {
+  if (days === null) return "Дата не указана";
+  if (days === 0) return "Сегодня";
+  const last = days % 10;
+  const lastTwo = days % 100;
+  const unit = last === 1 && lastTwo !== 11 ? "день" : last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14) ? "дня" : "дней";
+  return `${days} ${unit}`;
 };
-const tierOf = (ms) => {
-  const d = ageDays(ms);
-  return d >= 30 ? "urgent" : d >= 14 ? "hot" : d >= 7 ? "warm" : "fresh";
-};
-const TIER = {
-  fresh: { bl: "border-l-slate-500/50", badge: "border-white/[0.08] bg-white/5 text-slate-300", text: "text-slate-400" },
-  warm: { bl: "border-l-amber-400/70", badge: "border-amber-400/30 bg-amber-400/10 text-amber-300", text: "text-amber-300" },
-  hot: { bl: "border-l-orange-400/80", badge: "border-orange-400/30 bg-orange-500/10 text-orange-300", text: "text-orange-300" },
-  urgent: { bl: "border-l-red-500/80", badge: "border-red-500/30 bg-red-500/15 text-red-300", text: "text-red-300" },
-};
+const initials = (name) => String(name || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+const parseAmount = (value) => Number(String(value).trim().replace(/\s/g, "").replace(",", "."));
 
-// Мини-тайл сводки (мобильная сетка 2×2).
-function MiniTile({ label, value, sub, valueClass = "text-white" }) {
+function CustomerLedger({ customer, blocked, onPay, onReverse, onBack }) {
+  const [tab, setTab] = useState("all");
+  const events = [
+    ...customer.records.map((record) => ({ ...record, kind: "purchase", key: `debt-${record.id}` })),
+    ...customer.payments.map((payment) => ({ ...payment, kind: "payment", key: `payment-${payment.id}` })),
+  ].filter((event) => tab === "all" || event.kind === tab)
+    .sort((a, b) => (debtTimestamp(b.createdAt) ?? -Infinity) - (debtTimestamp(a.createdAt) ?? -Infinity) || num(b.id) - num(a.id));
+
   return (
-    <div className="min-w-0 rounded-lg bg-white/[0.02] px-3 py-2">
-      <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`truncate text-base font-semibold tabular-nums ${valueClass}`}>{value}</p>
-      {sub && <p className="truncate text-[10px] font-semibold text-slate-500">{sub}</p>}
+    <div className="debt-ledger bg-white/[0.02] shadow-sm backdrop-blur-xl">
+      <div className="debt-ledger-heading">
+        <span className="debt-avatar" aria-hidden="true">{initials(customer.name)}</span>
+        <div><p className="debt-eyebrow">Карточка клиента</p><h2>{customer.name}</h2></div>
+        <button type="button" className="debt-icon-button debt-back" onClick={onBack} disabled={blocked} aria-label="К списку клиентов"><ArrowLeft size={18} /></button>
+      </div>
+      <div className="debt-balance">
+        <span>{customer.isPaid ? "Все долги погашены" : "Остаток долга"}</span>
+        <strong className={customer.isPaid ? "is-settled" : ""}>{formatMoney(customer.remaining)}<small>₽</small></strong>
+        <div className="debt-progress" role="progressbar" aria-label="Погашенная часть долга" aria-valuenow={Math.round(customer.percentPaid)} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${customer.percentPaid}%` }} /></div>
+        <div className="debt-balance-breakdown"><span>Покупки в долг<strong>{formatMoney(customer.borrowed)} ₽</strong></span><span>Погашено<strong>{formatMoney(customer.paid)} ₽</strong></span></div>
+        {!customer.isPaid && <p className="debt-first-purchase"><Clock size={13} />Первая открытая покупка · {customer.firstOpenAt === null ? "дата не указана" : formatDate(customer.firstOpenAt)}</p>}
+        {customer.remaining > 0 ? (
+          <button type="button" className="debt-primary" onClick={() => onPay(customer)} disabled={blocked || customer.id <= 0}><Plus size={17} />Записать погашение</button>
+        ) : <p className="debt-settled-message"><CheckCircle2 size={16} />Клиент полностью рассчитался</p>}
+        {customer.id <= 0 && <p className="debt-help">В старой записи не указан клиент. Проверьте исходный чек.</p>}
+      </div>
+      <div className="debt-history-heading"><h3><History size={16} />История операций</h3><span>{customer.records.length + customer.payments.length}</span></div>
+      <div className="debt-history-tabs" role="group" aria-label="История клиента">
+        <button type="button" aria-pressed={tab === "all"} onClick={() => setTab("all")}>Все</button>
+        <button type="button" aria-pressed={tab === "purchase"} onClick={() => setTab("purchase")}>Покупки<span>{customer.records.length}</span></button>
+        <button type="button" aria-pressed={tab === "payment"} onClick={() => setTab("payment")}>Погашения<span>{customer.payments.length}</span></button>
+      </div>
+      <div className="debt-history-list">
+        {events.length ? events.map((event) => (
+          <article className={`debt-event is-${event.kind}`} key={event.key}>
+            <div className="debt-event-heading">
+              <span className="debt-event-icon">{event.kind === "payment" ? <ArrowDownLeft size={17} /> : <ReceiptText size={17} />}</span>
+              <div><h4>{event.kind === "payment" ? "Погашение долга" : "Покупка в долг"}</h4><p>{formatDate(event.createdAt)}{event.kind === "purchase" && event.saleId ? ` · чек №${event.saleId}` : ""}</p></div>
+              <strong>{event.kind === "payment" ? "−" : "+"}{formatMoney(event.amount)} ₽</strong>
+            </div>
+            {event.kind === "payment" ? (
+              <div className="debt-event-payment">
+                <span>{event.method === "transfer" ? <CreditCard size={13} /> : <Banknote size={13} />}{event.method === "transfer" ? "Перевод" : "Наличные"}{event.createdBy ? ` · ${event.createdBy}` : ""}</span>
+                {event.note && <p>{event.note}</p>}
+                <button type="button" onClick={() => onReverse(event, customer)} disabled={blocked} aria-label={`Отменить погашение №${event.id}`}><RotateCcw size={13} />Отменить погашение</button>
+              </div>
+            ) : (
+              <div className="debt-event-purchase">
+                {Array.isArray(event.items) && event.items.length > 0 ? (
+                  <details><summary>Состав покупки · {event.items.length} поз.</summary><ul>{event.items.map((item, index) => <li key={index}><span>{item.name || "Товар"} × {num(item.qty ?? 1)}</span><span>{formatMoney(item.total ?? num(item.price) * num(item.qty ?? 1))} ₽</span></li>)}</ul></details>
+                ) : <p>Состав покупки не сохранён</p>}
+                {event.status === "paid" && <span className="debt-legacy-settled"><Check size={12} />Закрыт ранее</span>}
+              </div>
+            )}
+          </article>
+        )) : <div className="debt-history-empty"><History size={24} /><p>В этой вкладке пока нет операций.</p></div>}
+      </div>
     </div>
   );
 }
 
-// Возраст долга: какая часть остатка «свежая», а какая зависла надолго.
-const AGING_TIERS = [
-  { key: "fresh", label: "до 7 дней", bar: "bg-slate-400", dot: "bg-slate-400" },
-  { key: "warm", label: "7–14 дней", bar: "bg-amber-400", dot: "bg-amber-400" },
-  { key: "hot", label: "14–30 дней", bar: "bg-orange-400", dot: "bg-orange-400" },
-  { key: "urgent", label: "30+ дней", bar: "bg-red-500", dot: "bg-red-500" },
-];
+function RepaymentForm({ customer, busy, error, onSave, onClose }) {
+  const [amount, setAmount] = useState(String(customer.remaining));
+  const [method, setMethod] = useState("cash");
+  const [date, setDate] = useState("");
+  const [note, setNote] = useState("");
+  const [validationError, setValidationError] = useState("");
+  const value = parseAmount(amount);
+  const valid = amount.trim() !== "" && Number.isFinite(value) && value > 0;
+  const excessive = valid && value > customer.remaining + 0.005;
+  const remaining = valid && !excessive ? Math.max(0, Number((customer.remaining - value).toFixed(2))) : customer.remaining;
 
-function AgingBar({ aging, total }) {
-  const active = total > 0 ? AGING_TIERS.filter((t) => aging[t.key] > 0) : [];
+  const save = () => {
+    if (!valid || excessive) {
+      setValidationError(excessive ? "Сумма больше остатка долга" : "Введите сумму больше нуля");
+      return;
+    }
+    onSave(customer, { customerId: customer.id, amount: value, method, date: date || undefined, note: note.trim() });
+  };
+
   return (
-    <div className="w-full">
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Возраст долга</p>
-      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-white/10">
-        {active.length
-          ? active.map((t) => <div key={t.key} className={t.bar} style={{ width: `${(aging[t.key] / total) * 100}%` }} />)
-          : <div className="h-full w-full rounded-full bg-emerald-400/60" />}
+    <Modal title="Записать погашение" section={customer.name} legacyLight={false} onClose={onClose}>
+      <div className="debt-repayment-summary"><span>Остаток долга</span><strong>{formatMoney(customer.remaining)} ₽</strong></div>
+      <div className="debt-form-field">
+        <label htmlFor="debt-payment-amount">Сколько вернул клиент</label>
+        <div className="debt-amount-input"><input id="debt-payment-amount" value={amount} onChange={(event) => { setAmount(event.target.value); setValidationError(""); }} inputMode="decimal" disabled={busy} /><span>₽</span></div>
+        <div className="debt-amount-presets"><button type="button" disabled={busy} onClick={() => { setAmount(String(customer.remaining)); setValidationError(""); }}>Весь остаток</button>{customer.remaining > .01 && <button type="button" disabled={busy} onClick={() => { setAmount(String(Number((customer.remaining / 2).toFixed(2)))); setValidationError(""); }}>Половина</button>}</div>
+        {(!valid || excessive) && amount.trim() !== "" && <p className="debt-invalid" role="alert">{excessive ? "Сумма больше остатка долга" : "Введите сумму больше нуля"}</p>}
       </div>
-      <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
-        {active.length
-          ? active.map((t) => (
-              <span key={t.key} className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold">
-                <span className={`h-2 w-2 rounded-full ${t.dot}`} />
-                <span className="text-slate-400">{t.label}</span>
-                <span className="tabular-nums text-white">{formatMoney(aging[t.key])}</span>
-              </span>
-            ))
-          : <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Всё собрано</span>}
+      <div className="debt-methods" role="group" aria-label="Способ погашения">
+        <button type="button" aria-pressed={method === "cash"} disabled={busy} onClick={() => setMethod("cash")}><Banknote size={18} />Наличные</button>
+        <button type="button" aria-pressed={method === "transfer"} disabled={busy} onClick={() => setMethod("transfer")}><CreditCard size={18} />Перевод</button>
       </div>
-    </div>
+      <p className="debt-help">{method === "cash" ? "Наличные учитываются в кассе на дату погашения." : "Перевод учитывается как безналичное погашение."}</p>
+      <div className="debt-form-field">
+        <label htmlFor="debt-payment-date">Дата погашения<span>Необязательно</span></label>
+        <input
+          id="debt-payment-date"
+          type="date"
+          value={date}
+          onInput={(event) => setDate(event.currentTarget.value)}
+          onChange={(event) => setDate(event.target.value)}
+          disabled={busy}
+        />
+        <p className="debt-help">Пустая дата — текущий момент. При выборе даты платёж будет записан за этот день.</p>
+      </div>
+      <div className="debt-form-field"><label htmlFor="debt-payment-note">Комментарий<span>Необязательно</span></label><input id="debt-payment-note" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Например, часть долга за прошлую неделю" disabled={busy} /></div>
+      <div className="debt-after-payment"><span>Останется после оплаты</span><strong>{formatMoney(remaining)} ₽</strong></div>
+      {(error || validationError) && <div className="debt-error" role="alert"><AlertTriangle size={16} /><span>{error || validationError}</span></div>}
+      <div className="debt-modal-actions"><button type="button" className="debt-button" onClick={onClose} disabled={busy}>Отмена</button><button type="button" className="debt-primary" onClick={save} disabled={busy || !valid || excessive}>{busy ? <><Loader2 size={17} className="animate-spin" />Сохраняем…</> : "Записать оплату"}</button></div>
+    </Modal>
   );
 }
 
 export default function DebtsPage() {
-  const [debts, setDebts] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [payments, setPayments] = useState([]);
+  const [data, setData] = useState({ customers: [], debts: [], payments: [] });
+  const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [now, setNow] = useState(() => Date.now());
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("all"); // all | debtors | paid
-  const [sort, setSort] = useState("remaining"); // remaining | age | name
-  const [error, setError] = useState("");
-  const [openedCustomer, setOpenedCustomer] = useState(null);
-  const [now] = useState(() => Date.now());
+  const [filter, setFilter] = useState("all");
+  const [sort, setSort] = useState("remaining");
+  const [olderOnly, setOlderOnly] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+  const [payCustomerId, setPayCustomerId] = useState(null);
+  const [review, setReview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [operationError, setOperationError] = useState("");
+  const [success, setSuccess] = useState("");
+  const operationRef = useRef(false);
+  const requestSeq = useRef(0);
+  const ledgerRef = useRef(null);
+  const listRef = useRef(null);
+  const openDialogRef = useRef(false);
+  useEffect(() => { openDialogRef.current = payCustomerId !== null || review !== null; }, [payCustomerId, review]);
 
-  const [payModal, setPayModal] = useState(null);
-  const [payForm, setPayForm] = useState({ amount: "", method: "cash", date: "", note: "" });
-
-  const load = async () => {
-    const [debtList, customerList, paymentList] = await Promise.all([
-      get("/debts").catch(() => []),
-      get("/debt-customers").catch(() => []),
-      get("/debt-payments").catch(() => []),
-    ]);
-    setDebts(debtList || []);
-    setCustomers(customerList || []);
-    setPayments(paymentList || []);
-  };
-
-  useEffect(() => {
-    load().catch((e) => setError(e.message));
+  const load = useCallback(async ({ allowBusy = false } = {}) => {
+    if (operationRef.current && !allowBusy) return false;
+    const seq = ++requestSeq.current;
+    setLoading(true);
+    setLoadError("");
+    try {
+      const [customers, debts, payments] = await Promise.all([get("/debt-customers"), get("/debts"), get("/debt-payments")]);
+      if (seq !== requestSeq.current) return false;
+      if (![customers, debts, payments].every(Array.isArray)) throw new Error("Сервер вернул неполные данные. Обновите список.");
+      setData({ customers, debts, payments });
+      setHasLoaded(true);
+      setNow(Date.now());
+      return true;
+    } catch (error) {
+      if (seq === requestSeq.current) setLoadError(error?.message || "Не удалось загрузить долги. Проверьте соединение.");
+      return false;
+    } finally {
+      if (seq === requestSeq.current) setLoading(false);
+    }
   }, []);
 
-  const customerGroups = useMemo(() => {
-    const byId = new Map();
-    (Array.isArray(customers) ? customers : []).forEach((customer) => {
-      byId.set(customer.id, { ...customer, records: [], payments: [], lastDate: customer.createdAt || "" });
-    });
-    (Array.isArray(debts) ? debts : []).forEach((debt) => {
-      const customerId = debt.customerId || 0;
-      const existing = byId.get(customerId) || { id: customerId, name: debt.customerName || "Без имени", records: [], payments: [], lastDate: debt.createdAt || "" };
-      existing.records.push(debt);
-      if (!existing.lastDate || new Date(debt.createdAt) > new Date(existing.lastDate)) existing.lastDate = debt.createdAt;
-      byId.set(customerId, existing);
-    });
-    (Array.isArray(payments) ? payments : []).forEach((payment) => {
-      const existing = byId.get(payment.customerId);
-      if (!existing) return;
-      existing.payments.push(payment);
-      if (!existing.lastDate || new Date(payment.createdAt) > new Date(existing.lastDate)) existing.lastDate = payment.createdAt;
-    });
-    return Array.from(byId.values())
-      .map((customer) => {
-        const borrowed = customer.records.filter((r) => r.status === "open").reduce((s, r) => s + Number(r.amount || 0), 0);
-        const paid = customer.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
-        const remaining = Math.max(0, borrowed - paid);
-        return { ...customer, borrowed, paid, remaining };
-      })
-      .filter((customer) => customer.borrowed > 0 || customer.paid > 0)
-      .sort((a, b) => Number(b.remaining || 0) - Number(a.remaining || 0) || new Date(b.lastDate) - new Date(a.lastDate));
-  }, [customers, debts, payments]);
+  useEffect(() => {
+    load();
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    const onVisible = () => { if (!document.hidden && !openDialogRef.current) load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      // This ref is a counter. Invalidate the latest request, not a captured value.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      requestSeq.current++;
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [load]);
 
-  // Обогащение: % возврата, возраст долга, тир, статус.
-  const enriched = useMemo(
-    () =>
-      customerGroups.map((g) => {
-        const pct = g.borrowed > 0 ? Math.min(100, Math.round((g.paid / g.borrowed) * 100)) : (g.paid > 0 ? 100 : 0);
-        const openDates = (g.records || []).filter((r) => r.status === "open").map((r) => new Date(r.createdAt).getTime()).filter((t) => t > 0);
-        const ageMs = openDates.length ? now - Math.min(...openDates) : 0;
-        const isPaid = g.borrowed > 0 && g.remaining === 0;
-        return { ...g, pct, ageMs, tier: tierOf(ageMs), isPaid };
-      }),
-    [customerGroups, now]
-  );
+  const customers = useMemo(() => buildDebtCustomers(data, now), [data, now]);
+  const debtors = customers.filter((customer) => customer.remaining > 0);
+  const settled = customers.filter((customer) => customer.isPaid);
+  const total = debtors.reduce((sum, customer) => sum + customer.remaining, 0);
+  const repaid = customers.reduce((sum, customer) => sum + customer.paid, 0);
+  const oldest = debtors.filter((customer) => customer.ageDays !== null).sort((a, b) => b.ageDays - a.ageDays)[0];
+  const oldestCaption = !hasLoaded
+    ? (loadError ? "Нет данных" : "Загружаем данные")
+    : oldest?.name || (debtors.length ? "Дата покупки не указана" : "Открытых долгов нет");
+  const olderCount = debtors.filter((customer) => customer.ageDays >= 30).length;
+  const visible = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    const rows = customers.filter((customer) => {
+      if (search && !customer.name.toLowerCase().includes(search)) return false;
+      if (filter === "debtors" && customer.isPaid) return false;
+      if (filter === "paid" && !customer.isPaid) return false;
+      if (olderOnly && !(customer.remaining > 0 && customer.ageDays >= 30)) return false;
+      return true;
+    });
+    if (sort === "name") return rows.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+    if (sort === "age") return rows.sort((a, b) => (b.ageDays ?? -1) - (a.ageDays ?? -1));
+    return rows.sort((a, b) => b.remaining - a.remaining || (b.lastActivity ?? 0) - (a.lastActivity ?? 0));
+  }, [customers, query, filter, olderOnly, sort]);
+  const selectedCustomer = visible.find((customer) => customer.id === selectedId) || null;
+  const payCustomer = customers.find((customer) => customer.id === payCustomerId) || null;
+  const blocked = busy || loading || !!loadError;
+  const hasFilters = !!query || filter !== "all" || olderOnly;
 
-  const displayGroups = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    let rows = enriched.filter((g) => !q || String(g.name || "").toLowerCase().includes(q));
-    if (filter === "debtors") rows = rows.filter((g) => g.remaining > 0);
-    else if (filter === "paid") rows = rows.filter((g) => g.isPaid);
-    if (sort === "age") return [...rows].sort((a, b) => b.ageMs - a.ageMs);
-    if (sort === "name") return [...rows].sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ru"));
-    return [...rows].sort((a, b) => b.remaining - a.remaining || new Date(b.lastDate) - new Date(a.lastDate));
-  }, [enriched, query, filter, sort]);
-
-  const [submitting, setSubmitting] = useState(false);
-  const submittingRef = useRef(false);
-  const guarded = async (fn) => {
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-    setSubmitting(true);
-    try {
-      await fn();
-    } catch (e) {
-      window.notify?.(e?.message || "Не удалось выполнить операцию. Попробуйте снова.", "error");
-    } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
+  const selectCustomer = (customer) => {
+    if (operationRef.current) return;
+    setSelectedId(customer.id);
+    if (window.matchMedia("(max-width: 1000px)").matches) {
+      requestAnimationFrame(() => {
+        ledgerRef.current?.focus({ preventScroll: true });
+        ledgerRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+      });
     }
   };
-
   const openPay = (customer) => {
-    setPayForm({ amount: customer.remaining ? String(customer.remaining) : "", method: "cash", date: "", note: "" });
-    setPayModal(customer);
+    if (blocked || customer.remaining <= 0 || customer.id <= 0) return;
+    setOperationError("");
+    setSuccess("");
+    setPayCustomerId(customer.id);
   };
-
-  const savePayment = async () => {
-    const amount = Number(payForm.amount);
-    if (!amount || amount <= 0) { window.notify?.("Введите сумму больше нуля", "error"); return; }
-    await guarded(async () => {
-      await post("/debt-payments", { customerId: payModal.id, amount, method: payForm.method, date: payForm.date || undefined, note: payForm.note });
-      setPayModal(null);
-      await load();
-      window.notify?.("Оплата записана", "success");
-    });
+  const closeDialog = () => {
+    if (operationRef.current) return;
+    setPayCustomerId(null);
+    setReview(null);
+    setOperationError("");
   };
-
-  const undoPayment = async (id) => {
-    if (!window.confirm("Отменить это погашение? Долг вернётся, а касса откатится на эту сумму.")) return;
-    await guarded(async () => {
-      await del(`/debt-payments/${id}`);
-      await load();
-      window.notify?.("Погашение отменено", "success");
-    });
+  const perform = async (request, afterSuccess) => {
+    if (operationRef.current) return;
+    operationRef.current = true;
+    requestSeq.current++;
+    setLoading(false);
+    setBusy(true);
+    setOperationError("");
+    setSuccess("");
+    try {
+      await request();
+      afterSuccess();
+      setPayCustomerId(null);
+      setReview(null);
+      await load({ allowBusy: true });
+    } catch (error) {
+      setOperationError(error?.message || "Не удалось выполнить операцию. Проверьте историю перед повтором.");
+    } finally {
+      operationRef.current = false;
+      setBusy(false);
+    }
   };
-
-  const clearHistory = async () => {
-    if (!window.confirm("Убрать из истории полностью погашенных клиентов? Открытые долги останутся.")) return;
-    await guarded(async () => {
-      await del("/debts/history");
-      await load();
-    });
+  const savePayment = (customer, payment) => perform(
+    () => post("/debt-payments", payment),
+    () => setSuccess(`Погашение записано · ${customer.name} · ${formatMoney(payment.amount)} ₽`)
+  );
+  const confirmReview = () => {
+    if (!review) return;
+    if (review.kind === "archive") {
+      perform(() => del("/debts/history"), () => { setSuccess("Полностью погашенные клиенты скрыты из списка"); setSelectedId(null); });
+    } else {
+      perform(() => del(`/debt-payments/${review.payment.id}`), () => setSuccess(`Погашение отменено · ${review.customer.name} · ${formatMoney(review.payment.amount)} ₽`));
+    }
   };
-
-  const totalOpen = customerGroups.reduce((sum, c) => sum + Number(c.remaining || 0), 0);
-  const totalPaid = customerGroups.reduce((sum, c) => sum + Number(c.paid || 0), 0);
-
-  const debtorsCount = enriched.filter((g) => g.remaining > 0).length;
-  const paidFullCount = enriched.filter((g) => g.isPaid).length;
-  const oldest = enriched.filter((g) => g.remaining > 0).reduce((acc, g) => (acc && acc.ageMs >= g.ageMs ? acc : g), null);
-  const topDebtor = enriched.find((g) => g.remaining > 0) || null;
-  const collectRate = totalPaid + totalOpen > 0 ? (totalPaid / (totalPaid + totalOpen)) * 100 : 100;
-  const rateText = collectRate >= 80 ? "text-emerald-300" : collectRate >= 50 ? "text-amber-300" : "text-red-300";
-  const oldestTier = oldest ? TIER[tierOf(oldest.ageMs)] : TIER.fresh;
-
-  // Остаток долга по возрасту (для шкалы «возраст долга» в герое).
-  const aging = useMemo(() => {
-    const b = { fresh: 0, warm: 0, hot: 0, urgent: 0 };
-    enriched.forEach((g) => { if (g.remaining > 0) b[tierOf(g.ageMs)] += g.remaining; });
-    return b;
-  }, [enriched]);
-
-  const methodLabel = (m) => (m === "transfer" ? "Перевод" : "Наличные");
+  const resetFilters = () => { setQuery(""); setFilter("all"); setOlderOnly(false); };
 
   return (
-    <div className="relative min-h-screen pb-nav text-white sm:pb-10" style={{ WebkitTapHighlightColor: "transparent" }}>
-      <div className="relative z-10 mx-auto w-full max-w-[1400px]">
-        {/* ── Шапка ── */}
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-blue-400">Клиенты</p>
-            <h2 className="text-2xl font-semibold leading-none text-white sm:text-3xl">Долги</h2>
-            {debtorsCount > 0 ? (
-              <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold text-slate-400">
-                <span><b className="text-white">{debtorsCount}</b> {plural(debtorsCount, ["должник", "должника", "должников"])} на <b className="tabular-nums text-red-300">{formatMoney(totalOpen)}</b></span>
-                {oldest && (<><span className="text-slate-600">·</span><span className={`inline-flex items-center gap-1 ${oldestTier.text}`}><Clock size={13} /> старейший {fmtAge(oldest.ageMs)}</span></>)}
-              </p>
-            ) : (
-              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-400">Отмечайте оплату долга: сумма, дата и способ. Наличные попадают в кассу. Любое погашение можно отменить.</p>
-            )}
-          </div>
-
-          <div className="flex shrink-0 gap-2">
-            <button onClick={load} aria-label="Обновить" className="flex h-9 min-w-9 items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/5 px-0 text-sm font-semibold text-slate-200 transition hover:bg-white/10 sm:px-3">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
-              <span className="hidden sm:inline">Обновить</span>
-            </button>
-            {paidFullCount > 0 && (
-              <button onClick={clearHistory} disabled={submitting} aria-label="Скрыть оплаченных" className="flex h-9 min-w-9 items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/5 px-0 text-sm font-semibold text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60 sm:px-3">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg>
-                <span className="hidden sm:inline">Скрыть оплаченных</span>
-              </button>
-            )}
-          </div>
+    <div className="debts-page pb-nav sm:pb-10">
+      <header className="debts-page-heading">
+        <div><p className="debt-eyebrow">Клиенты / взаиморасчёты</p><h1>Долги клиентов</h1><p className="debt-subtitle">Остатки, покупки и возвраты — вся история по каждому клиенту.</p></div>
+        <div className="debt-page-actions">
+          <button type="button" className="debt-button" onClick={() => load()} disabled={busy || loading} aria-label="Обновить долги"><RefreshCw size={17} className={loading ? "animate-spin" : ""} /><span>Обновить</span></button>
+          <button type="button" className="debt-button" disabled={blocked || !settled.length} onClick={() => { setOperationError(""); setReview({ kind: "archive" }); }}><Archive size={16} /><span>Скрыть погашенных</span></button>
         </div>
-
-        {error && <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 font-bold text-red-300">{error}</div>}
-
-        {customerGroups.length > 0 && (
-          <>
-            {/* ── Герой-сводка: «вам должны» + возраст долга + факты ── */}
-            <div className="mb-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                {/* Главное число + собираемость */}
-                <div className="min-w-0 shrink-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Вам должны · остаток</p>
-                  <p className="mt-1 whitespace-nowrap text-4xl font-semibold leading-none tabular-nums text-rose-400 xl:text-5xl">{formatMoney(totalOpen)}</p>
-                  <p className={`mt-2.5 inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-semibold ${rateText}`}>
-                    <CheckCircle2 size={15} />
-                    <span className="tabular-nums">{Math.round(collectRate)}%</span>
-                    <span className="font-medium text-slate-500">собрано · {formatMoney(totalPaid)} из {formatMoney(totalPaid + totalOpen)}</span>
-                  </p>
-                </div>
-
-                {/* Возраст долга — инлайн на широком экране */}
-                <div className="hidden min-w-0 flex-1 xl:block">
-                  <AgingBar aging={aging} total={totalOpen} />
-                </div>
-
-                {/* Факты: иконки + значения с разделителями */}
-                <div className="hidden min-w-0 lg:flex lg:divide-x lg:divide-white/10 lg:border-l lg:border-white/10 lg:pl-4 xl:pl-5">
-                  <HeroStat icon={Users} label="Должников" value={debtorsCount} sub={`из ${customerGroups.length}`} />
-                  <HeroStat icon={Wallet} label="Погашено" tone="text-emerald-300" value={formatMoney(totalPaid)} />
-                  <HeroStat icon={AlarmClock} label="Старейший" tone={oldestTier.text} value={oldest ? fmtAge(oldest.ageMs) : "—"} sub={oldest ? oldest.name : null} />
-                  <HeroStat icon={Crown} label="Крупнейший" tone="text-amber-300" value={topDebtor ? topDebtor.name : "—"} sub={topDebtor ? formatMoney(topDebtor.remaining) : null} />
-                </div>
-              </div>
-
-              {/* Возраст долга во всю ширину — планшет/ноут */}
-              <div className="mt-4 hidden lg:block xl:hidden">
-                <AgingBar aging={aging} total={totalOpen} />
-              </div>
-
-              {/* Мобайл: возраст долга + 2×2 факты */}
-              <div className="mt-4 lg:hidden">
-                <div className="mb-3"><AgingBar aging={aging} total={totalOpen} /></div>
-                <div className="grid grid-cols-2 gap-2">
-                  <MiniTile label="Погашено" value={formatMoney(totalPaid)} valueClass="text-emerald-300" />
-                  <MiniTile label="Должников" value={debtorsCount} sub={`всего ${customerGroups.length}`} />
-                  <MiniTile label="Старейший" value={oldest ? fmtAge(oldest.ageMs) : "—"} sub={oldest ? oldest.name : "нет открытых"} valueClass={oldestTier.text} />
-                  <MiniTile label="Крупнейший" value={topDebtor ? formatMoney(topDebtor.remaining) : "—"} sub={topDebtor ? topDebtor.name : "никто"} valueClass="text-amber-300" />
-                </div>
-              </div>
-            </div>
-
-            {/* ── Поиск + фильтры + сортировка ── */}
-            <div className="mb-3 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative flex-1">
-                <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Найти клиента" className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/5 pl-10 pr-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-400/60" />
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="no-scrollbar flex gap-2 overflow-x-auto">
-                  {[["all", "Все"], ["debtors", "Должники"], ["paid", "Оплаченные"]].map(([v, l]) => (
-                    <button key={v} onClick={() => setFilter(v)} className={`inline-flex h-8 shrink-0 items-center rounded-full border px-3 text-xs font-semibold transition ${filter === v ? "border-emerald-400/60 bg-emerald-500/15 text-white" : "border-white/[0.08] bg-white/5 text-slate-300 hover:bg-white/10"}`}>{l}</button>
-                  ))}
-                </div>
-                <div className="relative shrink-0">
-                  <ArrowDownWideNarrow size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <select value={sort} onChange={(e) => setSort(e.target.value)} className="h-8 rounded-lg border border-white/[0.08] bg-white/5 pl-8 pr-2.5 text-xs font-bold text-white outline-none">
-                    <option value="remaining" className="bg-slate-900">По остатку</option>
-                    <option value="age" className="bg-slate-900">По давности</option>
-                    <option value="name" className="bg-slate-900">По имени</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ── Реестр должников ── */}
-        <div className="space-y-1.5">
-          {displayGroups.map((customer) => {
-            const isOpen = openedCustomer === customer.id;
-            const t = TIER[customer.tier] || TIER.fresh;
-            const isTop = topDebtor && customer.id === topDebtor.id;
-            return (
-              <div key={customer.id || customer.name} className={`overflow-hidden rounded-xl border border-l-2 border-white/[0.08] bg-white/[0.02] ${customer.isPaid ? "border-l-emerald-500/60" : t.bl} ${isTop ? "ring-1 ring-amber-400/30" : ""}`}>
-                <div role="button" tabIndex={0} onClick={() => setOpenedCustomer(isOpen ? null : customer.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenedCustomer(isOpen ? null : customer.id); } }} className="flex min-h-[60px] cursor-pointer items-center gap-3 px-3 py-2.5 text-left transition hover:bg-white/[0.02] sm:px-4">
-                  {/* Аватар */}
-                  <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg border text-sm font-semibold ${customer.isPaid ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300" : customer.tier === "urgent" ? "border-red-400/30 bg-red-500/10 text-red-300" : "border-blue-400/20 bg-blue-500/10 text-blue-300"}`}>
-                    {String(customer.name || "?").slice(0, 1).toUpperCase()}
-                  </div>
-
-                  {/* Центр: имя (своя строка) + бейдж давности + мини-прогресс */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-semibold text-white sm:text-base">{customer.name}</span>
-                      {isTop && <Crown size={13} className="shrink-0 text-amber-300" aria-label="Крупнейший должник" />}
-                    </div>
-                    <div className="mt-1.5 flex items-center gap-2">
-                      {customer.isPaid ? (
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300"><CheckCircle2 size={11} /> Оплачен</span>
-                      ) : (
-                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${t.badge}`}><Clock size={11} /> {fmtAge(customer.ageMs)}</span>
-                      )}
-                      <div className="h-1 w-full min-w-0 max-w-[160px] overflow-hidden rounded-full bg-white/10">
-                        <div className={`h-full rounded-full transition-[width] duration-500 ${customer.pct >= 100 ? "bg-emerald-400" : "bg-amber-400"}`} style={{ width: `${customer.pct}%` }} />
-                      </div>
-                      <span className="hidden shrink-0 text-[10px] font-semibold text-slate-500 lg:inline">{customer.records.length} {plural(customer.records.length, ["покупка", "покупки", "покупок"])} · {customer.payments.length} {plural(customer.payments.length, ["погашение", "погашения", "погашений"])}</span>
-                    </div>
-                  </div>
-
-                  {/* Остаток */}
-                  <div className="shrink-0 text-right">
-                    <p className={`text-lg font-semibold leading-none tabular-nums sm:text-xl ${customer.isPaid ? "text-emerald-300" : "text-red-300"}`}>{formatMoney(customer.remaining || 0)}</p>
-                    <p className="mt-0.5 text-[11px] text-slate-500">из {formatMoney(customer.borrowed || 0)}</p>
-                  </div>
-
-                  {/* Действие */}
-                  {customer.remaining > 0 && (
-                    <button
-                      type="button"
-                      aria-label="Клиент оплатил"
-                      onClick={(e) => { e.stopPropagation(); openPay(customer); }}
-                      disabled={submitting}
-                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-0 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/25 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-3"
-                    >
-                      <Wallet size={15} strokeWidth={2.4} /> <span className="hidden sm:inline">Оплатил</span>
-                    </button>
-                  )}
-
-                  <span className="shrink-0 text-slate-400" aria-hidden="true">{isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</span>
-                </div>
-
-                {isOpen && (
-                  <div className="space-y-3 border-t border-white/[0.08] px-3 py-3 sm:px-4">
-                    {/* мини-сводка */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-bold">
-                      <span className="text-slate-400">Взял в долг <b className="tabular-nums text-white">{formatMoney(customer.borrowed)}</b></span>
-                      <span className="text-slate-400">Оплатил <b className="tabular-nums text-emerald-300">{formatMoney(customer.paid)}</b></span>
-                      <span className="text-slate-500">{customer.records.length} {plural(customer.records.length, ["покупка", "покупки", "покупок"])} · {customer.payments.length} {plural(customer.payments.length, ["погашение", "погашения", "погашений"])}</span>
-                    </div>
-
-                    {/* покупки в долг */}
-                    <div>
-                      <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-300"><History size={14} className="text-blue-400" /> Покупки в долг</div>
-                      <div className="divide-y divide-white/10 overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.02]">
-                        {customer.records.map((debt) => (
-                          <div key={debt.id} className="flex items-start justify-between gap-3 px-3 py-2">
-                            <div className="min-w-0">
-                              <div className="flex items-start gap-1.5 text-sm font-bold text-slate-100">
-                                <ReceiptText size={15} className="mt-0.5 shrink-0 text-slate-500" />
-                                <span className="min-w-0">{(debt.items || []).map((item) => `${item.name} × ${item.qty}`).join(", ") || "Покупка в долг"}</span>
-                              </div>
-                              <p className="mt-0.5 pl-[22px] text-[11px] font-semibold text-slate-500">{debt.createdAt ? new Date(debt.createdAt).toLocaleDateString("ru-RU") : "—"}</p>
-                            </div>
-                            <span className="shrink-0 text-sm font-semibold tabular-nums text-white">{formatMoney(debt.amount)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* погашения */}
-                    {customer.payments.length > 0 && (
-                      <div>
-                        <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-emerald-300"><Wallet size={14} strokeWidth={2.4} /> Погашения</div>
-                        <div className="divide-y divide-white/10 overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.02]">
-                          {customer.payments.map((p) => (
-                            <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold tabular-nums text-emerald-300">{formatMoney(p.amount)} <span className="text-[11px] font-bold text-slate-400">· {methodLabel(p.method)}</span></p>
-                                <p className="mt-0.5 text-[11px] font-semibold text-slate-500">{p.createdAt ? new Date(p.createdAt).toLocaleDateString("ru-RU") : "—"}{p.note ? ` · ${p.note}` : ""}</p>
-                              </div>
-                              <button onClick={() => undoPayment(p.id)} disabled={submitting} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-2.5 text-[11px] font-semibold text-red-300 transition hover:bg-red-500/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
-                                <RotateCcw size={14} strokeWidth={2.6} /> Отменить
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      </header>
+      <section className="debt-metrics" aria-label="Сводка долгов">
+        <div className="bg-white/[0.02]">
+          <span><Wallet size={16} />Вам должны</span>
+          <strong>{hasLoaded ? formatMoney(total) : "—"}<small>₽</small></strong>
+          <p>Текущий остаток по клиентам</p>
         </div>
-
-        {!displayGroups.length && (
-          <EmptyState
-            className="mt-3"
-            icon={query.trim() || filter !== "all" ? <Filter size={26} /> : <CheckCircle2 size={26} />}
-            title={query.trim() ? "Никого не нашлось" : filter !== "all" ? "В этом фильтре пусто" : "Все долги закрыты"}
-            text={
-              query.trim()
-                ? `По запросу «${query.trim()}» клиентов нет.`
-                : filter !== "all"
-                  ? "Под этот фильтр клиентов нет."
-                  : "Сейчас вам никто не должен. Покупки в долг и их погашения появятся здесь автоматически."
-            }
-            actionLabel={query.trim() || filter !== "all" ? "Сбросить" : undefined}
-            onAction={query.trim() || filter !== "all" ? () => { setQuery(""); setFilter("all"); } : undefined}
-          />
-        )}
+        <div className="bg-white/[0.02]">
+          <span><Users size={16} />Клиентов с долгом</span>
+          <strong>{hasLoaded ? debtors.length : "—"}</strong>
+          <p>{hasLoaded ? `Из ${customers.length} в списке` : "Количество пока неизвестно"}</p>
+        </div>
+        <div className="bg-white/[0.02]">
+          <span><ArrowDownLeft size={16} />Погашено</span>
+          <strong className="debt-positive">{hasLoaded ? formatMoney(repaid) : "—"}<small>₽</small></strong>
+          <p>По клиентам в текущем списке</p>
+        </div>
+        <div className="bg-white/[0.02]">
+          <span><Clock size={16} />Первая открытая покупка</span>
+          <strong className="debt-age-value">{oldest ? ageLabel(oldest.ageDays) : "—"}</strong>
+          <p>{oldestCaption}</p>
+        </div>
+      </section>
+      {loadError && <div className="debt-error" role="alert"><AlertTriangle size={18} /><span>{loadError}{hasLoaded ? " Показаны последние загруженные данные." : ""}</span></div>}
+      {success && <div className="debt-success" role="status"><CheckCircle2 size={18} /><span>{success}</span><button type="button" onClick={() => setSuccess("")} aria-label="Скрыть сообщение"><X size={16} /></button></div>}
+      <div className="debts-body">
+        <section className="debt-customers" ref={listRef} aria-label="Список клиентов">
+          <div className="debt-toolbar">
+            <label className="debt-search bg-white/[0.02]"><Search size={18} /><input aria-label="Найти клиента" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти клиента по имени…" disabled={busy} />{query && <button type="button" onClick={() => setQuery("")} disabled={busy} aria-label="Очистить поиск"><X size={16} /></button>}</label>
+            <select aria-label="Сортировка клиентов" value={sort} onChange={(event) => setSort(event.target.value)} disabled={busy}><option value="remaining">По остатку долга</option><option value="age">По давности покупки</option><option value="name">По имени</option></select>
+          </div>
+          <div className="debt-list-filters" role="group" aria-label="Фильтр клиентов">
+            {[{ key: "all", label: "Все", count: customers.length }, { key: "debtors", label: "С долгом", count: debtors.length }, { key: "paid", label: "Погашены", count: settled.length }].map(({ key, label, count }) => <button type="button" key={key} aria-pressed={filter === key} disabled={busy} onClick={() => { setFilter(key); setOlderOnly(false); }}>{label}<span>{count}</span></button>)}
+          </div>
+          <button type="button" className="debt-age-filter" aria-pressed={olderOnly} disabled={busy} onClick={() => { setOlderOnly((value) => !value); setFilter("all"); }}><Clock size={14} /><span>Первая покупка 30+ дней назад</span><b>{olderCount}</b>{olderOnly && <X size={13} />}</button>
+          <div className="debt-list-heading"><h2>Клиенты<span>{visible.length}</span></h2><span>Выберите клиента для работы с долгом</span></div>
+          {loading && !hasLoaded ? (
+            <div className="debt-customer-list" role="status" aria-label="Загрузка клиентов">{Array.from({ length: 4 }, (_, index) => <div key={index} className="debt-skeleton bg-white/[0.02] animate-pulse" />)}</div>
+          ) : visible.length ? (
+            <div className="debt-customer-list">
+              {visible.map((customer) => <button type="button" key={customer.id} className="debt-customer-row bg-white/[0.02] shadow-sm" aria-pressed={selectedCustomer?.id === customer.id} aria-label={`Открыть клиента ${customer.name}`} disabled={busy} onClick={() => selectCustomer(customer)}>
+                <span className="debt-avatar" aria-hidden="true">{initials(customer.name)}</span>
+                <span className="debt-customer-name"><strong>{customer.name}</strong><span>{customer.isPaid ? <><CheckCircle2 size={12} />Долг погашен</> : <><Clock size={12} />Первая покупка · {ageLabel(customer.ageDays).toLowerCase()}</>}</span><small>Покупок · {customer.records.length} / погашений · {customer.payments.length}</small></span>
+                <span className="debt-customer-balance"><strong className={customer.isPaid ? "debt-positive" : ""}>{formatMoney(customer.remaining)}<small>₽</small></strong><span>Погашено {formatMoney(customer.paid)} ₽</span></span>
+                <span className="debt-row-indicator"><ChevronRight size={18} /></span>
+              </button>)}
+            </div>
+          ) : (
+            <div className="debt-empty bg-white/[0.02]">
+              {loadError && !hasLoaded ? (
+                <>
+                  <AlertTriangle size={32} />
+                  <h3>Данные пока недоступны</h3>
+                  <p>Обновите список после восстановления соединения.</p>
+                  <button type="button" className="debt-button" disabled={loading} onClick={() => load()}>Попробовать снова</button>
+                </>
+              ) : hasFilters ? (
+                <>
+                  <Search size={30} />
+                  <h3>Клиенты не найдены</h3>
+                  <p>Измените запрос или сбросьте фильтры.</p>
+                  <button type="button" className="debt-button" onClick={resetFilters}>Показать всех</button>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={34} />
+                  <h3>Здесь пока нет долгов</h3>
+                  <p>Покупки с оплатой в долг появятся здесь после оформления в кассе.</p>
+                  <NavLink to="/pos" className="debt-button">Перейти в кассу<ArrowRight size={16} /></NavLink>
+                </>
+              )}
+            </div>
+          )}
+          <p className="debt-list-note">Давность считается от первой открытой покупки клиента. Погашения уменьшают его общий остаток.</p>
+        </section>
+        <section className="debt-customer-detail" ref={ledgerRef} tabIndex={-1} aria-label="Карточка выбранного клиента">
+          {selectedCustomer ? (
+            <CustomerLedger
+              key={selectedCustomer.id}
+              customer={selectedCustomer}
+              blocked={blocked}
+              onPay={openPay}
+              onReverse={(payment, customer) => {
+                setOperationError("");
+                setReview({ kind: "reverse", payment, customer });
+              }}
+              onBack={() => listRef.current?.scrollIntoView({ block: "start", behavior: "auto" })}
+            />
+          ) : (
+            <div className="debt-detail-placeholder bg-white/[0.02]">
+              <Users size={38} strokeWidth={1.3} />
+              <h3>Вся история клиента</h3>
+              <p>Выберите клиента, чтобы посмотреть покупки, проверить остаток и записать погашение.</p>
+            </div>
+          )}
+        </section>
       </div>
-
-      {payModal && (
-        <Modal title="Клиент оплатил" section={payModal.name} onClose={() => setPayModal(null)} legacyLight={false}>
-          <div className="grid gap-4">
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-3">
-              <span className="text-sm text-slate-400">Остаток долга</span>
-              <b className="ml-2 text-lg font-semibold text-red-300">{formatMoney(payModal.remaining || 0)}</b>
+      {payCustomer && <RepaymentForm key={payCustomer.id} customer={payCustomer} busy={busy} error={operationError} onSave={savePayment} onClose={closeDialog} />}
+      {review && (
+        <Modal title={review.kind === "archive" ? "Скрыть погашенных клиентов?" : "Отменить погашение?"} section={review.kind === "reverse" ? review.customer.name : "История долгов"} legacyLight={false} onClose={closeDialog}>
+          {review.kind === "archive" ? (
+            <div className="debt-review-content">
+              <Archive size={30} />
+              <h3>Клиентов · {settled.length}</h3>
+              <p>Полностью погашенные клиенты будут скрыты. Их платежи сохранятся в кассе и финансовых отчётах. Новая покупка в долг вернёт клиента в список.</p>
             </div>
-
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Сколько оплатил</span>
-              <input value={payForm.amount} onChange={(e) => setPayForm((p) => ({ ...p, amount: e.target.value }))} type="text" inputMode="decimal" autoFocus placeholder="Например: 5000" className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-4 font-bold text-white outline-none placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-4 focus:ring-emerald-500/10" />
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Дата <span className="font-bold text-slate-500">— необязательно, по умолчанию сегодня</span></span>
-              <DatePicker value={payForm.date} onChange={(v) => setPayForm((p) => ({ ...p, date: v }))} placeholder="Сегодня" />
-            </label>
-
-            <div>
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Способ</span>
-              <div className="grid grid-cols-2 gap-2">
-                {[["cash", "Наличные"], ["transfer", "Перевод"]].map(([val, label]) => (
-                  <button key={val} type="button" onClick={() => setPayForm((p) => ({ ...p, method: val }))} className={`rounded-2xl border px-3 py-3 text-center text-sm font-semibold transition ${payForm.method === val ? "border-emerald-400/70 bg-emerald-500/15 text-white" : "border-white/[0.08] bg-slate-950/60 text-slate-300 hover:bg-white/5"}`}>{label}</button>
-                ))}
-              </div>
-              <p className="mt-2 text-[11px] font-bold text-slate-500">Наличные попадут в кассу на выбранную дату. Перевод — на счёт (банк).</p>
+          ) : (
+            <div className="debt-review-content">
+              <RotateCcw size={28} />
+              <strong>{formatMoney(review.payment.amount)} ₽</strong>
+              <p>Погашение от {formatDate(review.payment.createdAt)} будет отменено. Остаток долга увеличится на эту сумму.{review.payment.method !== "transfer" ? " Наличные в кассе также пересчитаются." : ""}</p>
             </div>
-
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-300">Комментарий <span className="font-bold text-slate-500">— необязательно</span></span>
-              <input value={payForm.note} onChange={(e) => setPayForm((p) => ({ ...p, note: e.target.value }))} type="text" placeholder="Например: часть долга" className="w-full rounded-2xl border border-white/[0.08] bg-slate-950/60 px-4 py-3 font-bold text-white outline-none placeholder:text-slate-500 focus:border-emerald-400/70" />
-            </label>
-
-            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-              <button onClick={() => setPayModal(null)} className="flex-1 rounded-2xl border border-white/[0.08] bg-white/10 px-5 py-4 font-semibold text-white transition hover:bg-white/15">Отмена</button>
-              <button onClick={savePayment} disabled={submitting} className="flex-1 rounded-2xl bg-emerald-600 px-5 py-4 font-semibold text-white shadow-lg shadow-emerald-950/30 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60">{submitting ? "Сохраняю…" : "Записать оплату"}</button>
-            </div>
-          </div>
+          )}
+          {operationError && <div className="debt-error" role="alert"><AlertTriangle size={16} /><span>{operationError}</span></div>}
+          <div className="debt-modal-actions"><button type="button" className="debt-button" onClick={closeDialog} disabled={busy}>Назад</button><button type="button" className="debt-button debt-destructive" onClick={confirmReview} disabled={busy}>{busy ? "Сохраняем…" : review.kind === "archive" ? "Скрыть погашенных" : "Отменить погашение"}</button></div>
         </Modal>
       )}
     </div>
